@@ -8,22 +8,22 @@ import (
 
 func TestConfiguredExternalEditorCommand(t *testing.T) {
 	oldConfig := AppConfig
-	oldProbe := probeGUIBackend
+	oldRunningGUI := runningGUI
 	t.Cleanup(func() {
 		AppConfig = oldConfig
-		probeGUIBackend = oldProbe
+		runningGUI = oldRunningGUI
 	})
 
 	AppConfig.ExternalEditorCommand = "legacy-editor"
 	AppConfig.ExternalEditorConsole = "micro"
 	AppConfig.ExternalEditorGUI = "gedit"
 
-	probeGUIBackend = func() string { return "" }
+	runningGUI = false
 	if got := configuredExternalEditorCommand(); got != "micro" {
 		t.Fatalf("console editor = %q, want micro", got)
 	}
 
-	probeGUIBackend = func() string { return "wayland" }
+	runningGUI = true
 	if got := configuredExternalEditorCommand(); got != "gedit" {
 		t.Fatalf("GUI editor = %q, want gedit", got)
 	}
@@ -35,9 +35,29 @@ func TestConfiguredExternalEditorCommand(t *testing.T) {
 
 	AppConfig.ExternalEditorCommand = ""
 	AppConfig.ExternalEditorConsole = ""
-	probeGUIBackend = func() string { return "" }
+	runningGUI = false
 	if got := configuredExternalEditorCommand(); got != "" {
 		t.Fatalf("empty editor configuration = %q, want empty", got)
+	}
+}
+
+func TestConfiguredExternalEditorCommandIgnoresDisplayBackendInTTY(t *testing.T) {
+	oldConfig := AppConfig
+	oldRunningGUI := runningGUI
+	oldProbe := probeGUIBackend
+	t.Cleanup(func() {
+		AppConfig = oldConfig
+		runningGUI = oldRunningGUI
+		probeGUIBackend = oldProbe
+	})
+
+	AppConfig.ExternalEditorConsole = "micro"
+	AppConfig.ExternalEditorGUI = "gedit"
+	runningGUI = false
+	probeGUIBackend = func() string { return "x11" }
+
+	if got := configuredExternalEditorCommand(); got != "micro" {
+		t.Fatalf("TTY editor with an available display = %q, want micro", got)
 	}
 }
 

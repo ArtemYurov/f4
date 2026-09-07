@@ -102,6 +102,7 @@ func removeSessionInfo(sockPath string) {
 }
 
 func ManageSessions() {
+	runningGUI = false
 	if len(os.Args) > 1 && os.Args[1] == "--server" {
 		runServer(os.Args[2])
 		return

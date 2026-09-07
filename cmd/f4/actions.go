@@ -795,11 +795,11 @@ func actionEditFileExternal(pf *PanelsFrame, v vfs.VFS, path string, size int64)
 }
 
 // configuredExternalEditorCommand selects the editor configured for the
-// renderer currently hosting f4. The old single command remains a fallback
-// so existing settings continue to work after the split configuration is
-// introduced.
+// renderer family that started this f4 session. The old single command
+// remains a fallback so existing settings continue to work after the split
+// configuration is introduced.
 func configuredExternalEditorCommand() string {
-	if probeGUIBackend() != "" {
+	if runningGUI {
 		if AppConfig.ExternalEditorGUI != "" {
 			return AppConfig.ExternalEditorGUI
 		}
