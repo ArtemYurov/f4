@@ -143,7 +143,7 @@ func showAttributesUnixForTargets(pf *PanelsFrame, v vfs.VFS, targets []attribut
 	if item.IsSymlink && len(targets) == 1 {
 		targetVal, _ := vfs.Readlink(context.Background(), v, path)
 		editTarget = vtui.NewEdit(0, 0, 35, targetVal)
-		lblTarget := vtui.NewLabel(0, 0, padLabel("T&arget:"), editTarget)
+		lblTarget := vtui.NewLabel(0, 0, padLabel(Msg("Attributes.Target")), editTarget)
 		rowTarget := vtui.NewHBoxLayout(0, 0, 66, 1)
 		rowTarget.Add(lblTarget, vtui.Margins{Left: 2, Right: 1}, vtui.AlignLeft)
 		rowTarget.Add(editTarget, vtui.Margins{}, vtui.AlignFill)
@@ -153,19 +153,19 @@ func showAttributesUnixForTargets(pf *PanelsFrame, v vfs.VFS, targets []attribut
 	}
 
 	// Ownership Group
-	gbOwnership := vtui.NewGroupBox(0, 0, 66, 4, " Ownership ")
+	gbOwnership := vtui.NewGroupBox(0, 0, 66, 4, " "+Msg("Attributes.Ownership")+" ")
 	dlg.AddItem(gbOwnership)
 	mainVBox.Add(gbOwnership, vtui.Margins{Top: 1}, vtui.AlignFill)
 
 	// Permissions Group
 	// Permissions Group
-	gbPerms := vtui.NewGroupBox(0, 0, 66, 7, " Permissions ")
+	gbPerms := vtui.NewGroupBox(0, 0, 66, 7, " "+Msg("Attributes.Permissions")+" ")
 	dlg.AddItem(gbPerms)
 	mainVBox.Add(gbPerms, vtui.Margins{Top: 0}, vtui.AlignFill)
 
 	// Time Row
 	editMTime := vtui.NewEdit(0, 0, 20, item.MTime.Format(timeFormat))
-	lblTime := vtui.NewLabel(0, 0, padLabel("M-Time:"), editMTime)
+	lblTime := vtui.NewLabel(0, 0, padLabel(Msg("Attributes.MTime")), editMTime)
 	rowTime := vtui.NewHBoxLayout(0, 0, 66, 1)
 	rowTime.Add(lblTime, vtui.Margins{Left: 2, Right: 1}, vtui.AlignLeft)
 	rowTime.Add(editMTime, vtui.Margins{}, vtui.AlignLeft)
@@ -209,7 +209,7 @@ func showAttributesUnixForTargets(pf *PanelsFrame, v vfs.VFS, targets []attribut
 	vboxOwner := vtui.NewVBoxLayout(gbOwnership.X1+2, gbOwnership.Y1+1, gbOwnership.X2-gbOwnership.X1-4, 2)
 
 	r1 := vtui.NewHBoxLayout(0, 0, 60, 1)
-	l1 := vtui.NewLabel(0, 0, padLabel("Owne&r:"), editOwner)
+	l1 := vtui.NewLabel(0, 0, padLabel(Msg("Attributes.Owner")), editOwner)
 	r1.Add(l1, vtui.Margins{Right: 1}, vtui.AlignLeft)
 	r1.Add(editOwner, vtui.Margins{}, vtui.AlignFill)
 	gbOwnership.AddItem(l1)
@@ -217,7 +217,7 @@ func showAttributesUnixForTargets(pf *PanelsFrame, v vfs.VFS, targets []attribut
 	vboxOwner.Add(r1, vtui.Margins{}, vtui.AlignFill)
 
 	r2 := vtui.NewHBoxLayout(0, 0, 60, 1)
-	l2 := vtui.NewLabel(0, 0, padLabel("&Group:"), editGroup)
+	l2 := vtui.NewLabel(0, 0, padLabel(Msg("Attributes.Group")), editGroup)
 	r2.Add(l2, vtui.Margins{Right: 1}, vtui.AlignLeft)
 	r2.Add(editGroup, vtui.Margins{}, vtui.AlignFill)
 	gbOwnership.AddItem(l2)
@@ -253,15 +253,15 @@ func showAttributesUnixForTargets(pf *PanelsFrame, v vfs.VFS, targets []attribut
 		allChecks = append(allChecks, r, w, x_)
 		row.Apply()
 	}
-	makeRow("User:", 0)
-	makeRow("Group:", 3)
-	makeRow("Other:", 6)
+	makeRow(Msg("Attributes.PermUser"), 0)
+	makeRow(Msg("Attributes.PermGroup"), 3)
+	makeRow(Msg("Attributes.PermOther"), 6)
 
 	editOctal := vtui.NewEdit(0, 0, 6, fmt.Sprintf("%04o", item.UnixMode))
 	editOctal.Validator = &vtui.OctalValidator{MaxDigits: 4}
 	editOctal.ClearSelection()
 	rowOct := vtui.NewHBoxLayout(0, 0, 60, 1)
-	lblOct := vtui.NewLabel(0, 0, padLabel("O&ct:"), editOctal)
+	lblOct := vtui.NewLabel(0, 0, padLabel(Msg("Attributes.Octal")), editOctal)
 	rowOct.Add(lblOct, vtui.Margins{Right: 2}, vtui.AlignLeft)
 	rowOct.Add(editOctal, vtui.Margins{}, vtui.AlignLeft)
 	gbPerms.AddItem(lblOct)
@@ -408,20 +408,20 @@ func showAttributesWindowsWithPropertiesForTargets(
 
 	mainVBox := vtui.NewVBoxLayout(x+3, y+2, width-6, height-4)
 
-	lblFile := vtui.NewText(0, 0, "File: "+vtui.TruncateMiddle(v.Base(path), 46), vtui.Palette[vtui.ColDialogText])
+	lblFile := vtui.NewText(0, 0, fmt.Sprintf(Msg("Attributes.File"), vtui.TruncateMiddle(v.Base(path), 46)), vtui.Palette[vtui.ColDialogText])
 	dlg.AddItem(lblFile)
 	mainVBox.Add(lblFile, vtui.Margins{}, vtui.AlignLeft)
 
-	gbAttr := vtui.NewGroupBox(0, 0, 54, 6, " Flags ")
+	gbAttr := vtui.NewGroupBox(0, 0, 54, 6, " "+Msg("Attributes.Flags")+" ")
 	dlg.AddItem(gbAttr)
 	mainVBox.Add(gbAttr, vtui.Margins{Top: 1}, vtui.AlignFill)
 
-	gbAdv := vtui.NewGroupBox(0, 0, 54, 3, " Advanced NTFS Flags ")
+	gbAdv := vtui.NewGroupBox(0, 0, 54, 3, " "+Msg("Attributes.AdvancedFlags")+" ")
 	dlg.AddItem(gbAdv)
 	mainVBox.Add(gbAdv, vtui.Margins{Top: 1}, vtui.AlignFill)
 
 	editMTime := vtui.NewEdit(0, 0, 20, item.MTime.Format(timeFormat))
-	lblTime := vtui.NewLabel(0, 0, padLabel("Last write:"), editMTime)
+	lblTime := vtui.NewLabel(0, 0, padLabel(Msg("Attributes.LastWrite")), editMTime)
 	rowTime := vtui.NewHBoxLayout(0, 0, 54, 1)
 	rowTime.Add(lblTime, vtui.Margins{Right: 1}, vtui.AlignLeft)
 	rowTime.Add(editMTime, vtui.Margins{}, vtui.AlignLeft)

@@ -124,7 +124,7 @@ func showMountList(pf *PanelsFrame) {
 	menu := vtui.NewVMenu(Msg("Mounts.Title"))
 	if live := liveRows(rows); len(live) > 1 {
 		menu.AddItem(vtui.MenuItem{
-			Text:     fmt.Sprintf("Unmount all (%d)", len(live)),
+			Text:     fmt.Sprintf(Msg("Mounts.UnmountAll"), len(live)),
 			UserData: -1,
 		})
 	}

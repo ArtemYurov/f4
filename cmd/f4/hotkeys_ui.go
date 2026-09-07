@@ -356,11 +356,11 @@ func actionHotkeyConfig(pf *PanelsFrame) {
 	draft := original.CloneForEdit()
 
 	dlg, table := vtui.NewTableDialog(w, h, Msg("Hotkeys.Title"), []vtui.TableColumn{
-		{Title: "Command", Width: 23},
-		{Title: "Key", Width: 14},
-		{Title: "Area", Width: 10},
-		{Title: "When", Width: 17},
-		{Title: "Description", Width: 0},
+		{Title: Msg("Hotkeys.ColCommand"), Width: 23},
+		{Title: Msg("Hotkeys.ColKey"), Width: 14},
+		{Title: Msg("Hotkeys.ColArea"), Width: 10},
+		{Title: Msg("Hotkeys.ColWhen"), Width: 17},
+		{Title: Msg("Hotkeys.ColDescription"), Width: 0},
 	}, btnAssign, btnUnbind, btnSave, btnCancel)
 	useDialogTableColors(table)
 	table.ShowScrollBar = true
@@ -532,10 +532,10 @@ func NewHotkeyAssignFrame(hm *HotkeyManager, actionName, area string, onComplete
 		onComplete: onComplete,
 	}
 
-	lblAction := vtui.NewText(0, 0, "Action: "+actionName, vtui.Palette[vtui.ColDialogText])
-	lblArea := vtui.NewText(0, 0, "Area: "+area, vtui.Palette[vtui.ColDialogText])
-	prompt := vtui.NewText(0, 0, "Press the desired key combination...", vtui.Palette[vtui.ColDialogText])
-	cancelPrompt := vtui.NewText(0, 0, "Press Esc to cancel", vtui.Palette[vtui.ColDialogText])
+	lblAction := vtui.NewText(0, 0, fmt.Sprintf(Msg("Hotkeys.AssignAction"), actionName), vtui.Palette[vtui.ColDialogText])
+	lblArea := vtui.NewText(0, 0, fmt.Sprintf(Msg("Hotkeys.AssignArea"), area), vtui.Palette[vtui.ColDialogText])
+	prompt := vtui.NewText(0, 0, Msg("Hotkeys.AssignPrompt"), vtui.Palette[vtui.ColDialogText])
+	cancelPrompt := vtui.NewText(0, 0, Msg("Hotkeys.AssignCancel"), vtui.Palette[vtui.ColDialogText])
 
 	f.AddItem(lblAction)
 	f.AddItem(lblArea)

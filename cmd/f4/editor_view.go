@@ -5696,7 +5696,7 @@ func buildSearchRegex(pattern string, caseSensitive, useRegex, wholeWord bool) (
 // by Find and Find All while the buffer scan runs in the background.
 func showSearchProgressDialog(pattern string) (dlg *vtui.Window, btnCancel *vtui.Button) {
 	dlg = vtui.NewCenteredDialog(50, 8, Msg("Search.Searching"))
-	lbl := vtui.NewLabel(0, 0, fmt.Sprintf("Looking for: %s", pattern), nil)
+	lbl := vtui.NewLabel(0, 0, fmt.Sprintf(Msg("Search.LookingFor"), pattern), nil)
 	dlg.AddItem(lbl)
 	btnCancel = vtui.NewButton(0, 0, Msg("vtui.Cancel"))
 	dlg.AddItem(btnCancel)

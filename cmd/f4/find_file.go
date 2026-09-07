@@ -555,9 +555,9 @@ func ShowSearchResults(pf *PanelsFrame, v vfs.VFS, found []FoundFile) {
 	}
 
 	cols := []vtui.TableColumn{
-		{Title: "Name", Width: 20},
-		{Title: "Size", Width: 10, Alignment: vtui.AlignRight},
-		{Title: "Path", Width: 38},
+		{Title: Msg("FindFile.ColName"), Width: 20},
+		{Title: Msg("FindFile.ColSize"), Width: 10, Alignment: vtui.AlignRight},
+		{Title: Msg("FindFile.ColPath"), Width: 38},
 	}
 	srw.table = vtui.NewTable(0, 0, 72, 12, cols)
 	srw.table.SetOwner(srw) // Explicit owner for command routing

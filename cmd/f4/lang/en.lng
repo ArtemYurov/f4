@@ -454,6 +454,7 @@ Search.HexPattern=He&x pattern
 Search.BtnFind=&Find
 Search.BtnAll=&All
 Search.Searching= Searching...
+Search.LookingFor=Looking for: %s
 Search.AllStatistics=Occurrences: %d, lines: %d
 Search.AllEditorMore=... and %d more matching lines, not listed
 Search.AllBottomHint= Ctrl+Enter Ctrl+Up/Down F4 F5
@@ -884,6 +885,9 @@ FindFile.NotContaining=Not &containing
 FindFile.Folders=Search &folders
 FindFile.Symlinks=Search symbolic &links
 FindFile.SearchResultsTitle= Search Results
+FindFile.ColName=Name
+FindFile.ColSize=Size
+FindFile.ColPath=Path
 FindFile.BtnGoTo=&Go to
 FindFile.BtnView=&View
 FindFile.BtnEdit=&Edit
@@ -1308,6 +1312,7 @@ KeyBar.SheetF10=Menu
 KeyBar.SheetShiftF2=SaveAs
 KeyBar.SheetShiftF3=Export
 
+Arkanoid.Title=A R K A N O I D
 Arkanoid.HighScores= High Scores
 
 PlugRing.Title= f4 PlugRing
@@ -1315,8 +1320,27 @@ PlugRing.BtnInstall=&Install/Update
 PlugRing.BtnRemove=&Remove
 PlugRing.BtnRefresh=Re&fresh
 PlugRing.BtnClose=&Close
+PlugRing.ColName=Name
+PlugRing.ColVersion=Version
+PlugRing.ColStatus=Status
+PlugRing.ColAuthor=Author
+PlugRing.ColDescription=Description
 
 Attributes.Title= Attributes
+Attributes.File=File: %s
+Attributes.Target=T&arget:
+Attributes.MTime=M-Time:
+Attributes.LastWrite=Last write:
+Attributes.Ownership=Ownership
+Attributes.Owner=Owne&r:
+Attributes.Group=&Group:
+Attributes.Permissions=Permissions
+Attributes.PermUser=User:
+Attributes.PermGroup=Group:
+Attributes.PermOther=Other:
+Attributes.Octal=O&ct:
+Attributes.Flags=Flags
+Attributes.AdvancedFlags=Advanced NTFS Flags
 Attributes.BtnSet=Set
 Attributes.BtnSecurity=&Security
 Attributes.Read=Read
@@ -1391,6 +1415,11 @@ SaveAs.EmptyPath=Enter a file name.
 SaveAs.OverwriteQuestion=The file already exists:\n%s\nOverwrite it?
 
 Hotkeys.Title= Hotkey Configurator
+Hotkeys.ColCommand=Command
+Hotkeys.ColKey=Key
+Hotkeys.ColArea=Area
+Hotkeys.ColWhen=When
+Hotkeys.ColDescription=Description
 Hotkeys.BtnAssign=&Assign
 Hotkeys.BtnUnbind=&Unbind
 Hotkeys.BtnClose=&Close
@@ -1399,6 +1428,10 @@ Hotkeys.BtnNext=Next >
 Hotkeys.LabelArea=Area:
 Hotkeys.LabelWhen=When:
 Hotkeys.AssignTitle= Assign Hotkey
+Hotkeys.AssignAction=Action: %s
+Hotkeys.AssignArea=Area: %s
+Hotkeys.AssignPrompt=Press the desired key combination...
+Hotkeys.AssignCancel=Press Esc to cancel
 
 CommandPalette.Title= Command Palette
 CommandPalette.QueryPrompt=>
@@ -1563,6 +1596,7 @@ CommandPalette.Bookmark.Home.Desc=Open the home folder in the active panel
 Drive.Title= Drive
 
 Mounts.Title= Mounts
+Mounts.UnmountAll=Unmount all (%d)
 
 NetFox.ConnectionTitle= Site Connection
 NetFox.Command.EditConnection=Edit connection
@@ -1599,8 +1633,15 @@ NetFox.ProxyModeDirect=No proxy
 NetFox.ProxyModeHTTP=HTTP proxy
 NetFox.ProxyModeSOCKS5=SOCKS5 proxy
 
+Queue.Title=Operations Queue
 Queue.BtnCancel=C&ancel Task
 Queue.BtnClear=Clear &Done
+Queue.ColID=ID
+Queue.ColState=State
+Queue.ColType=Type
+Queue.ColDescription=Description / Current File
+Queue.ColProgress=Progress
+Queue.ColSpeed=Speed
 
 Session.Title= Select Session
 
@@ -1664,11 +1705,13 @@ CloudFox.Command.EditConnection=&Edit cloud connection
 CloudFox.Command.EditConnection.Desc=Edit the selected CloudFox storage connection
 CloudFox.Command.DeleteConnection=&Delete cloud connection
 CloudFox.Command.DeleteConnection.Desc=Delete the selected CloudFox storage connections
+CloudFox.ProfileTitle=CloudFox: %s
 CloudFox.VaultMasterPassword=&Master password:
 CloudFox.VaultRepeatPassword=&Repeat password:
 CloudFox.VaultUnlock=&Unlock
 CloudFox.YandexAuthorizationTitle=Yandex authorization
 CloudFox.YandexAuthorizationCode=Authorization &code:
+CloudFox.YandexAuthorizationPrompt=Authorize in the browser, then paste the displayed code here:
 CloudFox.Continue=&Continue
 
 Sheet.Title= Spreadsheet 
