@@ -271,6 +271,8 @@ func main() {
 	var attachedMode bool
 	var wineProbe bool
 	var dumpScreenAfter float64
+	var updateRequested bool
+	var updateChannelArg string
 
 	exeName := filepath.Base(absExecPath)
 	if strings.Contains(strings.ToLower(exeName), "gui") {
@@ -296,6 +298,14 @@ func main() {
 			version = true
 		case "--debug":
 			os.Setenv("VTUI_DEBUG", "1")
+		case "--update":
+			updateRequested = true
+			if flagVal != "" {
+				updateChannelArg = flagVal
+			} else if i+1 < len(os.Args) && !strings.HasPrefix(os.Args[i+1], "-") {
+				updateChannelArg = os.Args[i+1]
+				i++
+			}
 		case "--gui":
 			guiMode = true
 			startupChoiceGiven = true
@@ -455,6 +465,11 @@ The following switches may be used in the command line:
                          [Backend] values: "ansi", "winapi" (or "win32"),
                          "auto"; if Backend omited, the configured default
                          is used ([Startup] TTYBackend)
+ --update [Channel]     Download and install the newest build, then exit;
+                         [Channel] values: "stable" (or "latest"), "nightly";
+                         if Channel omited, the configured update channel is
+                         used ([Update] Channel, Options > Auto update), and
+                         a named channel becomes the configured one
  --wine-probe           Print console/terminal environment facts and exit
                          (renderer backend, console geometry, shell mode)
 
@@ -475,6 +490,13 @@ see in vtinput project: https://github.com/unxed/vtinput
 `,
 			getFormattedVersionInfo())
 		return
+	}
+
+	// Updating is a command, not a way to start the file manager: no panels
+	// and no session come up here. os.Exit skips the deferred SaveSession on
+	// purpose, this run never touched the session.
+	if updateRequested {
+		os.Exit(runUpdateCLI(updateChannelArg))
 	}
 
 	for _, arg := range os.Args {
