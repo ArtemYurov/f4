@@ -2251,6 +2251,30 @@ func init() {
 		Handler:     withEditor(func(ev *EditorView) { ev.DuplicateLines() }),
 	})
 	RegisterAction(Action{
+		Name:        "Editor.MoveLineUp",
+		Area:        "Editor",
+		Label:       "Move Line Up",
+		LabelKey:    "Action.Editor.MoveLineUp",
+		Description: "Move the current line or the selected lines up",
+		DescKey:     "Action.Editor.MoveLineUp.Desc",
+		// Alt+Arrows already draw the block selection here, so these take
+		// the Notepad++ spelling rather than the VS Code one.
+		DefaultKeys: []string{"CtrlShiftUp"},
+		MenuPath:    "Edit",
+		Handler:     withEditor(func(ev *EditorView) { ev.MoveLines(-1) }),
+	})
+	RegisterAction(Action{
+		Name:        "Editor.MoveLineDown",
+		Area:        "Editor",
+		Label:       "Move Line Down",
+		LabelKey:    "Action.Editor.MoveLineDown",
+		Description: "Move the current line or the selected lines down",
+		DescKey:     "Action.Editor.MoveLineDown.Desc",
+		DefaultKeys: []string{"CtrlShiftDown"},
+		MenuPath:    "Edit",
+		Handler:     withEditor(func(ev *EditorView) { ev.MoveLines(1) }),
+	})
+	RegisterAction(Action{
 		Name:        "Editor.Base64Menu",
 		Area:        "Editor",
 		Label:       "Base64 Tools",

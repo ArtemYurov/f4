@@ -5805,6 +5805,167 @@ func (ev *EditorView) DuplicateLines() {
 	ev.ensureCursorVisible()
 }
 
+// trailingLineTerminator returns the end-of-line bytes data ends with, or nil
+// when it ends with none.
+func trailingLineTerminator(data []byte) []byte {
+	if len(data) == 0 || data[len(data)-1] != '\n' {
+		return nil
+	}
+	if len(data) > 1 && data[len(data)-2] == '\r' {
+		return data[len(data)-2:]
+	}
+	return data[len(data)-1:]
+}
+
+// MoveLines swaps the current line, or every line the selection touches, with
+// the single line above (delta -1) or below (delta +1) the block.
+//
+// Both lines are rewritten in one edit, as raw bytes, so their contents and
+// their line breaks come through untouched. The one thing that does not travel
+// with a line is the missing terminator of a file that does not end with a
+// line break: it belongs to whichever line ends up last, so it is left behind
+// rather than carried along, and the file keeps not ending with a line break.
+//
+// The cursor and the selection follow the text they were on, keeping their
+// columns, so a selected block can be walked up or down by holding the key.
+func (ev *EditorView) MoveLines(delta int) {
+	if delta != -1 && delta != 1 {
+		return
+	}
+	if ev.li.LineCount() == 0 {
+		return
+	}
+
+	first, last := ev.selectedLineSpan()
+	if first < 0 {
+		first = 0
+	}
+	ev.ensureIndexedToLine(last + 2)
+	if last >= ev.li.LineCount() {
+		last = ev.li.LineCount() - 1
+	}
+	if last < first {
+		return
+	}
+
+	// The neighbour the block trades places with. There is none at either
+	// end of the file, and then the keypress does nothing.
+	neighbour := first - 1
+	if delta > 0 {
+		neighbour = last + 1
+	}
+	if neighbour < 0 || neighbour >= ev.li.LineCount() {
+		return
+	}
+
+	// The two chunks are adjacent, so one region covers both: head is the
+	// upper one, tail the lower one, and the edit puts them back the other
+	// way round.
+	regionFirst, regionLast := first, last
+	if delta > 0 {
+		regionLast = neighbour
+	} else {
+		regionFirst = neighbour
+	}
+	regionStart := ev.li.GetLineOffset(regionFirst)
+	mid := ev.li.GetLineOffset(regionFirst + 1)
+	if delta > 0 {
+		mid = ev.li.GetLineOffset(neighbour)
+	}
+	regionEnd := ev.pt.Size()
+	if regionLast+1 < ev.li.LineCount() {
+		regionEnd = ev.li.GetLineOffset(regionLast + 1)
+	}
+	if mid <= regionStart || regionEnd < mid {
+		return
+	}
+
+	region, err := ev.pt.GetRange(regionStart, regionEnd-regionStart)
+	if err != nil {
+		return
+	}
+	head := region[:mid-regionStart]
+	tail := region[mid-regionStart:]
+
+	swapped := make([]byte, 0, len(region))
+	if len(tail) > 0 && tail[len(tail)-1] == '\n' {
+		swapped = append(swapped, tail...)
+		swapped = append(swapped, head...)
+	} else {
+		// The region ends the file without a line break. The head needs
+		// one now that it no longer comes first, and the tail must give
+		// up nothing but its place: the terminator stays at the end.
+		term := trailingLineTerminator(head)
+		if len(term) == 0 {
+			return
+		}
+		swapped = append(swapped, tail...)
+		swapped = append(swapped, term...)
+		swapped = append(swapped, head[:len(head)-len(term)]...)
+	}
+
+	blockLen := last - first + 1
+	// A selection that stops at the start of the line after the block ends
+	// the block rather than starting that line, and has to be mapped as
+	// such or moving down would leave it one line short.
+	blockEnd := -1
+	if ev.selActive && !ev.rectSelActive {
+		if minOff, maxOff := ev.getSelectionRange(); maxOff > minOff {
+			end := ev.pt.Size()
+			if last+1 < ev.li.LineCount() {
+				end = ev.li.GetLineOffset(last + 1)
+			}
+			if maxOff == end {
+				blockEnd = maxOff
+			}
+		}
+	}
+	mapLine := func(line, offset int) int {
+		if offset >= 0 && offset == blockEnd {
+			return last + delta + 1
+		}
+		switch {
+		case line >= first && line <= last:
+			return line + delta
+		case line == neighbour:
+			return line - delta*blockLen
+		}
+		return line
+	}
+
+	cursorLine := ev.CursorLine
+	cursorPos := ev.CursorPos
+	cursorOffset := ev.li.GetLineOffset(cursorLine) + cursorPos
+	anchorLine, anchorPos := 0, 0
+	if ev.selActive {
+		anchorLine = ev.li.GetLineAtOffset(ev.selAnchorOffset)
+		anchorPos = ev.selAnchorOffset - ev.li.GetLineOffset(anchorLine)
+	}
+
+	ev.noteBufferEdit()
+	ev.saveUndo(opOther)
+	ev.lastOp = opOther
+	ev.modified = true
+
+	ev.pt.Delete(regionStart, len(region))
+	ev.li.UpdateAfterDelete(regionStart, len(region))
+	ev.pt.Insert(regionStart, swapped)
+	ev.li.UpdateAfterInsert(regionStart, swapped)
+	ev.invalidateStates(regionFirst)
+	ev.engine.InvalidateFrom(regionFirst)
+
+	if ev.selActive {
+		ev.selAnchorOffset = ev.li.GetLineOffset(mapLine(anchorLine, ev.selAnchorOffset)) + anchorPos
+	}
+	if ev.rectSelActive {
+		ev.rectSelStartLine = mapLine(ev.rectSelStartLine, -1)
+	}
+	ev.CursorLine = mapLine(cursorLine, cursorOffset)
+	ev.CursorPos = cursorPos
+	ev.updateDesiredVisualCol()
+	ev.ensureCursorVisible()
+}
+
 func (ev *EditorView) DeleteCurrentLine() {
 	if ev.pt.Size() == 0 {
 		return
