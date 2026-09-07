@@ -184,11 +184,19 @@ themselves mixed, and moving one whole is what would break the build:
 | file | layer-0 part | stays with the views |
 |---|---|---|
 | `action_registry.go` | the `Action` type and `RegisterAction`; its fields are `func() bool` closures, so the mechanism depends on nothing above layer 0 | the 2553-line `init()` registration table, which names `PanelsFrame` 109 times and `EditorView` 48 |
-| `actions.go` | the 20 functions free of view types | the other 61 — 52 of them take `*PanelsFrame` in the signature |
-| `framework_actions.go` | the functions that touch no view | `forkNearestPanelsFrame` and its seven neighbours |
+| `actions.go` | four functions — the far2l history helpers | everything else, and it does not go to one place: 61 carry a view type (52 take `*PanelsFrame` in the signature), and of the remaining view-free ones eight belong to `dialog`, three to `i18n`, three to `viewer`, one to `editor` |
 | `misc.go` | the numeric helpers (`bounded*`, `nonNegativeUint64`, `runeCodepoint`) — called from eight future packages, the most widely shared code in the file | `ScreenRow` (used only by four test files) and `ReleaseHeavyMemory` (two files) |
 
-`toast`, `path_identity`, `search_history` and `menu_history` move whole.
+`toast` and `path_identity` move whole. The history files — `history_provider.go`,
+`history_dialog.go`, `command_history_paths.go`, `search_history.go`,
+`menu_history.go` — are a cluster rather than strays: none of them touches a
+message, a config field, a toast or a view type, so they form a layer-0 package
+of their own.
+
+`framework_actions.go` is not in this table: 18 of its 25 functions have no
+external callers at all — they are `Handler:` values referenced from the
+registration table. It reads as widely used only because registration looks like
+calling. It travels whole with the composition root.
 
 **`sysinfo` keeps its own copy of the one numeric helper it needs.** Its single
 outbound edge is one call to `boundedUint64ToInt` (`cpu_info_darwin.go:33`).
@@ -410,11 +418,13 @@ means updating the `replace` directive that points at it (`go.mod:187`).
 
    Per-issue reviews are named `docs/ISSUES/ISSUE_<number>_<SLUG>.md`, keeping
    the existing SCREAMING_SNAKE style — `ISSUE_165_SORT_GROUPS.md`,
-   `ISSUE_546_CONPTY_FOLLOWUP.md`. Today all 41 read `ISSUE_<n>_SOLUTION_REVIEW.md`:
-   41 identical names distinguished only by a number, so finding the review of a
-   subject requires already knowing its issue number. The slug replaces the
-   constant `SOLUTION_REVIEW` tail, which carried no information — every file in
-   the directory is a solution review. Renaming updates the links that point at
+   `ISSUE_546_CONPTY_FOLLOWUP.md`. The convention is not invented here:
+   `ISSUE_91_FREEBSD_CONSOLE_DIAGNOSIS.md` already carries a slug and is the
+   precedent. The other 40 read `ISSUE_<n>_SOLUTION_REVIEW.md` — names
+   distinguished only by a number, so finding the review of a subject requires
+   already knowing its issue number. The slug replaces the constant
+   `SOLUTION_REVIEW` tail, which carried no information: every file in the
+   directory is a solution review. Renaming updates the links that point at
    them, by the same rule as any other move.
 
 ## Legacy vs New Code Policy
