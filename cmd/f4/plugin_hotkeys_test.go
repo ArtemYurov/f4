@@ -1,11 +1,139 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/unxed/f4/vfs"
+	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
+
+func TestPluginMenuItemTextPlacesShortcutInLeftColumn(t *testing.T) {
+	if got := pluginMenuItemText("SQLite client", "Q", 3); got != "  &Q SQLite client" {
+		t.Fatalf("plugin menu item = %q, want left-aligned shortcut", got)
+	}
+	if got := pluginMenuItemText("Русский плагин", "Ф", 3); got != "  &Ф Русский плагин" {
+		t.Fatalf("Cyrillic plugin menu item = %q, want left-aligned shortcut", got)
+	}
+	if got := pluginMenuItemText("No shortcut", "", 3); got != "    No shortcut" {
+		t.Fatalf("plugin menu item without shortcut = %q, want aligned label", got)
+	}
+}
+
+func TestEventToHotkeyStringSupportsUnicodeLetters(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		key  *vtinput.InputEvent
+		want string
+	}{
+		{
+			name: "text-only terminal input",
+			key:  &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: 'ф'},
+			want: "Ф",
+		},
+		{
+			name: "Windows key with translated character",
+			key:  &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_Q, Char: 'й'},
+			want: "Й",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := EventToHotkeyString(tc.key); got != tc.want {
+				t.Fatalf("EventToHotkeyString = %q, want %q", got, tc.want)
+			}
+		})
+	}
+	parsed := ParseFarKey("Ф")
+	if got := EventToHotkeyString(parsed); got != "Ф" {
+		t.Fatalf("Unicode shortcut round trip = %q, want Ф", got)
+	}
+}
+
+func TestPluginMenuItemShortcutActivatesWithItsCharacter(t *testing.T) {
+	restoreManager := swapFrameManager(t)
+	defer restoreManager()
+	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
+
+	called := false
+	menu := vtui.NewVMenu("Plugins")
+	menu.AddItem(vtui.MenuItem{
+		Text: pluginMenuItemText("SQLite client", "Q", 1),
+		OnClick: func() {
+			called = true
+		},
+	})
+	vtui.FrameManager.Push(menu)
+	if !menu.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: 'q'}) {
+		t.Fatal("plugin menu did not consume its character hotkey")
+	}
+	if !called {
+		t.Fatal("plugin menu character hotkey did not activate the item")
+	}
+}
+
+func TestPluginMenuKeyLabelsAdvertiseF4(t *testing.T) {
+	labels := pluginMenuKeyLabels(nil)
+	if labels == nil || labels.Normal[3] != "F4" {
+		t.Fatalf("plugin menu F4 keybar label = %#v, want F4", labels)
+	}
+}
+
+func TestPanelsFrameDoesNotConsumePluginMenuShortcut(t *testing.T) {
+	previousHotkeys := GlobalHotkeysMgr
+	GlobalHotkeysMgr = &HotkeyManager{
+		Bindings: map[string]map[string]string{
+			"Shell": {"Q": "Plugin.Command.test.menu-only"},
+		},
+		Defaults: map[string]map[string]string{},
+	}
+	t.Cleanup(func() { GlobalHotkeysMgr = previousHotkeys })
+	registration, err := (&coreAPI{}).RegisterPluginCommand(vfs.PluginCommand{
+		ID:       "test.menu-only",
+		Location: vfs.PluginCommandPanel,
+		Label:    "Menu-only plugin command",
+		Run:      func(vfs.App) {},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(registration.Unregister)
+	restoreManager := swapFrameManager(t)
+	defer restoreManager()
+	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
+
+	pf := &PanelsFrame{showPanels: true}
+	defer setFrameManagerScreensForTest(t, []*vtui.AppScreen{{Frames: []vtui.Frame{pf}}}, 0)()
+	e := &vtinput.InputEvent{
+		Type:           vtinput.KeyEventType,
+		KeyDown:        true,
+		VirtualKeyCode: vtinput.VK_Q,
+		Char:           'q',
+	}
+	if pf.InterceptPluginKey(e) {
+		t.Fatal("plugin menu shortcut must remain available to the panel command line")
+	}
+}
+
+func TestDeletePluginHotkeyRemovesBinding(t *testing.T) {
+	hm := &HotkeyManager{
+		Bindings: map[string]map[string]string{
+			"Shell": {"Q": "Plugin.Command.test.delete"},
+		},
+		Defaults: map[string]map[string]string{},
+		iniPath:  filepath.Join(t.TempDir(), "hotkeys.ini"),
+	}
+	if !deletePluginHotkey(hm, "Shell", "Q") {
+		t.Fatal("deletePluginHotkey returned false")
+	}
+	if _, ok := hm.Bindings["Shell"]["Q"]; ok {
+		t.Fatal("plugin hotkey binding was not removed")
+	}
+	if _, err := os.Stat(hm.iniPath); err != nil {
+		t.Fatalf("deletePluginHotkey did not persist the change: %v", err)
+	}
+}
 
 func TestPluginCommandHotkeyUsesConfiguredShortcutAndRunsCommand(t *testing.T) {
 	previousHotkeys := GlobalHotkeysMgr

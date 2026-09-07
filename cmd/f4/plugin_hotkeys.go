@@ -1,10 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
+	"unicode"
 
+	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -128,15 +131,50 @@ func pluginCommandShortcut(command vfs.PluginCommand) string {
 	return command.Shortcut
 }
 
-func pluginActionConfiguredBinding(name string) (string, string) {
-	if GlobalHotkeysMgr == nil {
+// pluginMenuItemShortcut returns the shortcut which should be shown in the
+// left-hand shortcut column of the F11 menu. Legacy menu items can carry an
+// ampersand marker in their label instead of a persisted hotkey binding.
+func pluginMenuItemShortcut(label, shortcut string) string {
+	if shortcut = strings.TrimSpace(shortcut); shortcut != "" {
+		return shortcut
+	}
+	_, hotkey, _ := vtui.ParseAmpersandString(label)
+	if hotkey == 0 {
+		return ""
+	}
+	return string(unicode.ToUpper(hotkey))
+}
+
+// pluginMenuItemText renders the shortcut in a stable column before the
+// command name. A single unmodified character remains an ampersand hotkey so
+// it can also activate the item while the F11 menu is open. Longer chords are
+// display-only metadata; their actual dispatch happens in PanelsFrame.
+func pluginMenuItemText(label, shortcut string, shortcutWidth int) string {
+	cleanLabel, _, _ := vtui.ParseAmpersandString(label)
+	shortcut = pluginMenuItemShortcut(label, shortcut)
+	if shortcutWidth < runewidth.StringWidth(shortcut) {
+		shortcutWidth = runewidth.StringWidth(shortcut)
+	}
+	prefix := strings.Repeat(" ", shortcutWidth-runewidth.StringWidth(shortcut))
+	if shortcut != "" {
+		if len([]rune(shortcut)) == 1 && !unicode.IsSpace([]rune(shortcut)[0]) {
+			prefix += "&" + shortcut
+		} else {
+			prefix += shortcut
+		}
+	}
+	return prefix + " " + cleanLabel
+}
+
+func configuredHotkeyBinding(hm *HotkeyManager, actionName string) (string, string) {
+	if hm == nil {
 		return "", ""
 	}
 	for _, area := range []string{"Shell", "Common"} {
 		var keys []string
-		for key, binding := range GlobalHotkeysMgr.Bindings[area] {
+		for key, binding := range hm.Bindings[area] {
 			namePart := strings.SplitN(binding, ":", 2)[0]
-			if strings.EqualFold(namePart, name) {
+			if strings.EqualFold(namePart, actionName) {
 				keys = append(keys, key)
 			}
 		}
@@ -146,6 +184,10 @@ func pluginActionConfiguredBinding(name string) (string, string) {
 		}
 	}
 	return "", ""
+}
+
+func pluginActionConfiguredBinding(name string) (string, string) {
+	return configuredHotkeyBinding(GlobalHotkeysMgr, name)
 }
 
 func pluginActionConfiguredKey(name string) string {
@@ -175,9 +217,9 @@ func assignPluginHotkey(menu *vtui.VMenu, index int, actionName string) {
 	if hm == nil || vtui.FrameManager == nil || !isPluginActionName(actionName) {
 		return
 	}
-	oldArea, oldKey := pluginActionConfiguredBinding(actionName)
+	oldArea, oldKey := configuredHotkeyBinding(hm, actionName)
 	frame := NewHotkeyAssignFrame(hm, actionName, "Shell", func() {
-		newArea, newKey := pluginActionConfiguredBinding(actionName)
+		newArea, newKey := configuredHotkeyBinding(hm, actionName)
 		if oldArea != "" && (oldArea != newArea || oldKey != newKey) {
 			hm.Unbind(oldArea, oldKey)
 		}
@@ -188,6 +230,30 @@ func assignPluginHotkey(menu *vtui.VMenu, index int, actionName string) {
 		vtui.FrameManager.Redraw()
 	})
 	vtui.FrameManager.Push(frame)
+}
+
+func deletePluginHotkey(hm *HotkeyManager, area, key string) bool {
+	if hm == nil || area == "" || key == "" {
+		return false
+	}
+	hm.Unbind(area, key)
+	hm.Save()
+	return true
+}
+
+func pluginHotkeyDeleteQuestion(key string) string {
+	return fmt.Sprintf("Remove plugin hotkey %s?", FormatKeyForUI(key))
+}
+
+func pluginMenuKeyLabels(pf *PanelsFrame) *vtui.KeySet {
+	if pf != nil && MacroMgr != nil {
+		if base := pf.GetKeyLabels(); base != nil {
+			labels := *base
+			labels.Normal[3] = "F4"
+			return &labels
+		}
+	}
+	return &vtui.KeySet{Normal: vtui.KeyBarLabels{"", "", "", "F4"}}
 }
 
 // pluginHotkeyActionsSnapshot includes commands that are currently hidden from

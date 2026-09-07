@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -1827,18 +1828,6 @@ func (pf *PanelsFrame) InterceptPluginKey(e *vtinput.InputEvent) bool {
 	// Arkanoid easter egg: Ctrl+Alt+A
 	if e.VirtualKeyCode == 'A' && alt && ctrl {
 		return actionArkanoid()
-	}
-
-	// User-assigned plugin menu shortcuts are resolved here, before both the
-	// legacy raw plugin hotkeys and built-in actions. This gives F4-assigned
-	// commands the same priority as plugin callbacks registered through the
-	// original HostAPI.
-	if hm := GlobalHotkeysMgr; hm != nil {
-		if actionName := hm.GetAction("Shell", EventToHotkeyString(e)); isPluginActionName(actionName) {
-			if RunAction(actionName) {
-				return true
-			}
-		}
 	}
 
 	// Check global hotkeys (ignoring Lock and Enhanced keys)
@@ -4116,6 +4105,25 @@ func (pf *PanelsFrame) InputBox(title, prompt, defaultText string, callback func
 	})
 }
 
+type menuKeyLabelsFrame struct {
+	*vtui.VMenu
+	keyLabels *vtui.KeySet
+}
+
+func (f *menuKeyLabelsFrame) GetKeyLabels() *vtui.KeySet { return f.keyLabels }
+
+func (f *menuKeyLabelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
+	handled := f.VMenu.ProcessKey(e)
+	// VMenu compares FrameManager.GetTopFrame with its embedded menu when
+	// deciding whether Esc/F10 is consumed. The wrapper is the actual frame,
+	// so complete the same contract after forwarding the event.
+	if e != nil && e.KeyDown && f.IsDone() &&
+		(e.VirtualKeyCode == vtinput.VK_ESCAPE || e.VirtualKeyCode == vtinput.VK_F10) {
+		return true
+	}
+	return handled
+}
+
 func (pf *PanelsFrame) Menu(title string, items []string, callback func(int)) {
 	menuItems := make([]vtui.MenuItem, 0, len(items))
 	for _, item := range items {
@@ -4125,6 +4133,10 @@ func (pf *PanelsFrame) Menu(title string, items []string, callback func(int)) {
 }
 
 func (pf *PanelsFrame) menuItems(title string, items []vtui.MenuItem, onKeyDown func(*vtui.VMenu, *vtinput.InputEvent) bool, callback func(int)) {
+	pf.menuItemsWithKeyLabels(title, items, onKeyDown, callback, nil)
+}
+
+func (pf *PanelsFrame) menuItemsWithKeyLabels(title string, items []vtui.MenuItem, onKeyDown func(*vtui.VMenu, *vtinput.InputEvent) bool, callback func(int), keyLabels *vtui.KeySet) {
 	vtui.FrameManager.PostTask(func() {
 		menu := vtui.NewVMenu(title)
 
@@ -4174,7 +4186,11 @@ func (pf *PanelsFrame) menuItems(title string, items []vtui.MenuItem, onKeyDown 
 				callback(idx)
 			}
 		}
-		vtui.FrameManager.Push(menu)
+		if keyLabels != nil {
+			vtui.FrameManager.Push(&menuKeyLabelsFrame{VMenu: menu, keyLabels: keyLabels})
+		} else {
+			vtui.FrameManager.Push(menu)
+		}
 	})
 }
 
@@ -4727,33 +4743,87 @@ func (pf *PanelsFrame) showPluginMenu() {
 		vtui.ShowMessage(" Plugins ", "No plugins registered for F11 menu.", []string{"&Ok"})
 		return
 	}
-	menuItems := make([]vtui.MenuItem, 0, len(items)+len(commands))
-	actionNames := make([]string, 0, len(items)+len(commands))
+	type pluginMenuEntry struct {
+		label      string
+		actionName string
+		shortcut   string
+	}
+	entries := make([]pluginMenuEntry, 0, len(items)+len(commands))
 	for _, itm := range items {
 		actionName := itm.ActionName
 		if actionName == "" {
-			actionName = legacyPluginActionName(len(actionNames))
+			actionName = legacyPluginActionName(len(entries))
 		}
-		menuItems = append(menuItems, vtui.MenuItem{
-			Text:     itm.Label,
-			Shortcut: pluginActionShortcut(actionName),
+		entries = append(entries, pluginMenuEntry{
+			label:      itm.Label,
+			actionName: actionName,
+			shortcut:   pluginActionShortcut(actionName),
 		})
-		actionNames = append(actionNames, actionName)
 	}
 	for _, command := range commands {
-		menuItems = append(menuItems, vtui.MenuItem{
-			Text:     pluginCommandDisplayLabel(command),
-			Shortcut: pluginCommandShortcut(command),
+		entries = append(entries, pluginMenuEntry{
+			label:      pluginCommandDisplayLabel(command),
+			actionName: pluginCommandActionName(command.ID),
+			shortcut:   pluginCommandShortcut(command),
 		})
-		actionNames = append(actionNames, pluginCommandActionName(command.ID))
 	}
-	pf.menuItems(" Plugins ", menuItems, func(menu *vtui.VMenu, e *vtinput.InputEvent) bool {
+	shortcutWidth := 0
+	for i := range entries {
+		entries[i].shortcut = pluginMenuItemShortcut(entries[i].label, entries[i].shortcut)
+		if width := runewidth.StringWidth(entries[i].shortcut); width > shortcutWidth {
+			shortcutWidth = width
+		}
+	}
+	menuItems := make([]vtui.MenuItem, 0, len(entries))
+	for _, entry := range entries {
+		menuItems = append(menuItems, vtui.MenuItem{
+			Text: pluginMenuItemText(entry.label, entry.shortcut, shortcutWidth),
+		})
+	}
+
+	updateMenuItem := func(menu *vtui.VMenu, index int) {
+		if menu == nil || index < 0 || index >= len(entries) {
+			return
+		}
+		entry := &entries[index]
+		if index < len(items) {
+			entry.shortcut = pluginActionShortcut(entry.actionName)
+		} else {
+			entry.shortcut = pluginCommandShortcut(commands[index-len(items)])
+		}
+		menu.Items[index].Text = pluginMenuItemText(entry.label, entry.shortcut, shortcutWidth)
+		menu.Items[index].Shortcut = ""
+	}
+
+	pf.menuItemsWithKeyLabels(" Plugins ", menuItems, func(menu *vtui.VMenu, e *vtinput.InputEvent) bool {
 		if e.VirtualKeyCode != vtinput.VK_F4 || !e.KeyDown {
-			return false
+			if e.VirtualKeyCode != vtinput.VK_DELETE || !e.KeyDown {
+				return false
+			}
+			idx := menu.SelectPos
+			if idx < 0 || idx >= len(entries) {
+				return true
+			}
+			area, key := configuredHotkeyBinding(GlobalHotkeysMgr, entries[idx].actionName)
+			if area == "" || key == "" {
+				return true
+			}
+			question := pluginHotkeyDeleteQuestion(key)
+			vtui.ShowMessageOn(menu, " Remove plugin hotkey ", question, []string{"&Delete", "Cancel"}).OnResult = func(choice int) {
+				if choice != 0 || GlobalHotkeysMgr == nil {
+					return
+				}
+				if !deletePluginHotkey(GlobalHotkeysMgr, area, key) {
+					return
+				}
+				updateMenuItem(menu, idx)
+				vtui.FrameManager.Redraw()
+			}
+			return true
 		}
 		idx := menu.SelectPos
-		if idx >= 0 && idx < len(actionNames) {
-			assignPluginHotkey(menu, idx, actionNames[idx])
+		if idx >= 0 && idx < len(entries) {
+			assignPluginHotkey(menu, idx, entries[idx].actionName)
 		}
 		return true
 	}, func(idx int) {
@@ -4769,7 +4839,7 @@ func (pf *PanelsFrame) showPluginMenu() {
 				executeRegisteredPluginCommand(vfs.PluginCommandPanel, commandID, pf)
 			})
 		}
-	})
+	}, pluginMenuKeyLabels(pf))
 }
 
 func (pf *PanelsFrame) showDriveMenu(panelIdx int) {
@@ -4845,22 +4915,29 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 		pf.switchToVFS(fsp, newTempPanelVFS(nil, globalTempPanelStore, 0))
 	}})
 
-	// 2. Fixed platform paths (Root, Home)
+	// 2. Fixed platform paths (Root, Home, physical disks). The metadata is
+	// rendered at menu-open time, just like Far's ChangeDiskMenu, so labels,
+	// filesystem types and free space reflect the current state.
+	driveMenuOptions := AppConfig.DriveMenuOptions
 	for _, drv := range getPlatformDrives() {
+		if !driveMenuPlatformItemVisible(drv, driveMenuOptions) {
+			continue
+		}
 		factory := drv.Factory
-		name := drv.Name
+		name := driveMenuPlatformItemText(drv, driveMenuOptions)
 		if runtime.GOOS != "windows" {
-			if strings.HasPrefix(name, "/") {
+			if strings.HasPrefix(driveMenuNameWithoutMarker(drv.Name), "/") {
 				name = "&" + name
 				usedHotkeys['/'] = true
-			} else if strings.HasPrefix(name, "~") {
+			} else if strings.HasPrefix(driveMenuNameWithoutMarker(drv.Name), "~") {
 				name = "&" + name
 				usedHotkeys['~'] = true
 			}
 		} else {
-			if len(name) >= 2 && name[1] == ':' {
+			cleanName := driveMenuNameWithoutMarker(drv.Name)
+			if len(cleanName) >= 2 && cleanName[1] == ':' {
 				name = "&" + name
-				usedHotkeys[unicode.ToLower(rune(name[0]))] = true
+				usedHotkeys[unicode.ToLower(rune(cleanName[0]))] = true
 			}
 		}
 
@@ -4874,31 +4951,42 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 	// digit as the hotkey, so Alt+F1 followed by 6 lands on slot 6.
 	// Unassigned slots are left out.
 	bookmarkRows := map[int]int{} // menu row -> slot, for the keys below
-	if set, err := LoadBookmarks(BookmarksFilePath()); err == nil {
-		firstBookmark := true
-		for i := range set {
-			if set[i].IsEmpty() {
-				continue
+	if driveMenuOptionEnabled(driveMenuOptions, driveMenuShowBookmarks) {
+		if set, err := LoadBookmarks(BookmarksFilePath()); err == nil {
+			firstBookmark := true
+			for i := range set {
+				if set[i].IsEmpty() {
+					continue
+				}
+				if firstBookmark {
+					menu.AddSeparator()
+					firstBookmark = false
+				}
+				bookmark := set[i]
+				path := bookmark.Path
+				usedHotkeys[rune('0'+i)] = true
+				bookmarkRows[menu.GetItemCount()] = i
+				menu.AddItem(vtui.MenuItem{
+					Text: fmt.Sprintf("&%d  %s", i, escapeAmpersand(truncPathLeft(path, 64))),
+					UserData: func(fsp *FileSystemPanel) {
+						pf.navigateToBookmark(fsp, bookmark)
+					},
+				})
 			}
-			if firstBookmark {
-				menu.AddSeparator()
-				firstBookmark = false
-			}
-			bookmark := set[i]
-			path := bookmark.Path
-			usedHotkeys[rune('0'+i)] = true
-			bookmarkRows[menu.GetItemCount()] = i
-			menu.AddItem(vtui.MenuItem{
-				Text: fmt.Sprintf("&%d  %s", i, escapeAmpersand(truncPathLeft(path, 64))),
-				UserData: func(fsp *FileSystemPanel) {
-					pf.navigateToBookmark(fsp, bookmark)
-				},
-			})
 		}
 	}
 
 	// 4. Plugins & custom drives
-	drives := driveRegistrySnapshot()
+	drives := []DriveEntry(nil)
+	if driveMenuOptionEnabled(driveMenuOptions, driveMenuShowPlugins) {
+		drives = driveRegistrySnapshot()
+		if driveMenuOptionEnabled(driveMenuOptions, driveMenuSortPluginsByHotkey) {
+			sort.SliceStable(drives, func(i, j int) bool {
+				return strings.ToLower(driveMenuNameWithoutMarker(drives[i].Name)) <
+					strings.ToLower(driveMenuNameWithoutMarker(drives[j].Name))
+			})
+		}
+	}
 	if len(drives) > 0 {
 		menu.AddSeparator()
 		for _, drv := range drives {
@@ -4932,6 +5020,39 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 		}
 	}
 
+	// 5. Named folder links. These are deliberately separate from
+	// bookmarks.ini: the latter is far2l's ten-slot RCtrl bookmark table,
+	// while this list is the DiskMenuEditor-style, unbounded drive-menu list.
+	driveBookmarkRows := map[int]int{} // menu row -> named bookmark index
+	driveBookmarks := []DriveBookmark(nil)
+	headerRow := -1
+	if driveMenuOptionEnabled(driveMenuOptions, driveMenuShowBookmarks) {
+		var err error
+		driveBookmarks, err = LoadDriveBookmarks(DriveBookmarksFilePath())
+		if err != nil {
+			vtui.DebugLog("DRIVE BOOKMARKS: load %q failed: %v", DriveBookmarksFilePath(), err)
+			driveBookmarks = nil
+		}
+		menu.AddSeparator()
+		headerRow = menu.GetItemCount()
+		menu.AddItem(vtui.MenuItem{Text: Msg("Drive.Bookmarks"), Command: CmDriveBookmarksHeader})
+		for index, bookmark := range driveBookmarks {
+			bookmark := bookmark
+			driveBookmarkRows[menu.GetItemCount()] = index
+			menu.AddItem(vtui.MenuItem{
+				Text: driveBookmarkMenuText(bookmark),
+				UserData: func(fsp *FileSystemPanel) {
+					pf.navigateToBookmark(fsp, Bookmark{Path: bookmark.Path})
+				},
+			})
+		}
+		vtui.FrameManager.DisabledCommands.Disable(CmDriveBookmarksHeader)
+	}
+	oldSelectable := menu.IsSelectable
+	menu.IsSelectable = func(index int) bool {
+		return index != headerRow && oldSelectable(index)
+	}
+
 	// Обработка физических клавиш / и ~ (layout-independent)
 	menu.OnKeyDown = func(e *vtinput.InputEvent) bool {
 		// far2l binds three keys on the bookmark rows of this menu
@@ -4943,25 +5064,55 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 		if e.KeyDown && e.ControlKeyState&(vtinput.LeftCtrlPressed|vtinput.RightCtrlPressed|
 			vtinput.LeftAltPressed|vtinput.RightAltPressed|vtinput.ShiftPressed) == 0 {
 			pos := menu.SelectPos
+			driveBookmarkIndex, onDriveBookmark := driveBookmarkRows[pos]
 			slot, onBookmark := bookmarkRows[pos]
 			reopen := func() { pf.showDriveMenuAt(panelIdx, pos) }
 
 			switch e.VirtualKeyCode {
+			case vtinput.VK_F9:
+				// Far uses F9 for the drive-menu options dialog. Consume it
+				// here so the global F9 main-menu action never sees it.
+				pf.openDriveMenuOptions(panelIdx, menu)
+				return true
 			case vtinput.VK_INSERT:
-				// far2l opens the dialog from any row here, not just a
-				// bookmark one, and always at the first slot.
-				menu.Close()
-				vtui.FrameManager.PostTask(func() { ShowBookmarksDialogAt(pf, 0, reopen) })
+				// Ins adds a named drive-menu link from any row. The path
+				// defaults to the panel directory, while the user chooses
+				// the name and optional shortcut in the dialog.
+				pf.openDriveBookmarkEditor(panelIdx, menu, driveBookmarks, -1, reopen)
 				return true
 			case vtinput.VK_F4:
+				if onDriveBookmark {
+					pf.openDriveBookmarkEditor(panelIdx, menu, driveBookmarks, driveBookmarkIndex, reopen)
+					return true
+				}
 				if onBookmark {
 					menu.Close()
 					vtui.FrameManager.PostTask(func() { ShowBookmarksDialogAt(pf, slot, reopen) })
 					return true
 				}
 			case vtinput.VK_DELETE:
+				if onDriveBookmark {
+					pf.deleteDriveBookmark(menu, driveBookmarks, driveBookmarkIndex, reopen)
+					return true
+				}
 				if onBookmark {
 					pf.clearBookmarkSlot(slot, menu, reopen)
+					return true
+				}
+			}
+
+			// Chords and non-Latin keys cannot be represented by VMenu's
+			// ampersand accelerator. Match them against the same Far-style
+			// spelling captured by the editor.
+			key := EventToHotkeyString(e)
+			for row := 0; row < len(menu.Items); row++ {
+				index, ok := driveBookmarkRows[row]
+				if !ok {
+					continue
+				}
+				if index < len(driveBookmarks) && driveBookmarkKeyMatches(driveBookmarks[index], key) {
+					menu.SetSelectPos(row)
+					menu.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_RETURN})
 					return true
 				}
 			}
@@ -5037,7 +5188,7 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 			action(fsp)
 		}
 	}
-	vtui.FrameManager.Push(menu)
+	vtui.FrameManager.Push(&driveMenuFrame{VMenu: menu, bottomHint: Msg("Drive.BottomHint")})
 }
 
 // clearBookmarkSlot empties one slot straight from the drive menu, which

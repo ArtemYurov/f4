@@ -73,6 +73,10 @@ const (
 	// empty rows with it and keeps it in FrameManager.DisabledCommands so
 	// vtui renders them dimmed and ignores Enter on them.
 	CmBookmarkEmptySlot
+	// CmDriveBookmarksHeader marks the non-selectable section caption in the
+	// drive menu. It is kept separate from empty folder-bookmark rows so the
+	// two menus can be shown in any order.
+	CmDriveBookmarksHeader
 	// Sort-group toggles are appended here rather than next to the other sort
 	// commands so the existing command numbers keep their values.
 	CmSortGroups

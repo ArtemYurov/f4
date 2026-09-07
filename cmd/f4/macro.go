@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/unxed/vtinput"
@@ -112,6 +113,12 @@ func EventToFarString(e *vtinput.InputEvent) string {
 		sb.WriteString(name)
 	} else if vk >= vtinput.VK_F1 && vk <= vtinput.VK_F24 {
 		fmt.Fprintf(&sb, "F%d", vk-vtinput.VK_F1+1)
+	} else if unicode.IsLetter(e.Char) || unicode.IsDigit(e.Char) {
+		// Terminal readers expose non-Latin input as a text-only event, while
+		// Win32 supplies both the physical VK and the translated character.
+		// The translated rune is the only stable identity for a Cyrillic
+		// shortcut, so prefer it whenever it is a Unicode letter or digit.
+		sb.WriteRune(unicode.ToUpper(e.Char))
 	} else if vk >= 'A' && vk <= 'Z' {
 		// Hotkey key strings are always uppercase for A-Z ("CtrlV",
 		// "ShiftA"). Wayland/X11 gui backends deliver Ctrl+letter events
@@ -315,7 +322,7 @@ func ParseFarKey(s string) *vtinput.InputEvent {
 	}
 
 	if len(s) > 0 {
-		char := rune(s[0])
+		char := []rune(s)[0]
 		e.Char = char
 		if char >= 'a' && char <= 'z' {
 			e.VirtualKeyCode = uint16(char - 'a' + 'A')

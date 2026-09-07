@@ -202,10 +202,11 @@ type F4Config struct {
 	PanelScrollbarMode       PanelScrollbarMode
 	ShowPanelFileInfo        bool
 	SavePanelPaths           bool
-	InfoPanelBytes           bool // Ctrl+L info panel: true = raw bytes, false = human (GiB/MiB…)
-	InfoPanelCPUGPU          bool // Ctrl+L info panel: show CPU and GPU sections (off by default)
-	EscTogglePanels          bool // ESC toggles panels visibility (Far ships this as a macro; on by default)
-	TerminalCtrlNWorkspace   bool // reserve Ctrl+N in terminal views for cloning panels to a workspace
+	DriveMenuOptions         uint32 // display/filter flags for the Alt+F1/Alt+F2 menu
+	InfoPanelBytes           bool   // Ctrl+L info panel: true = raw bytes, false = human (GiB/MiB…)
+	InfoPanelCPUGPU          bool   // Ctrl+L info panel: show CPU and GPU sections (off by default)
+	EscTogglePanels          bool   // ESC toggles panels visibility (Far ships this as a macro; on by default)
+	TerminalCtrlNWorkspace   bool   // reserve Ctrl+N in terminal views for cloning panels to a workspace
 	KeepTerminalCursor       bool
 	ConsoleMode              string // "own" | "host" (default "own")
 	ConsoleOverlayUI         bool   // Show f4 command line and keybar overlay on top of host console (default false)
@@ -367,6 +368,7 @@ var AppConfig = F4Config{
 	PanelScrollbarMode:       PanelScrollbarMinimal,
 	ShowPanelFileInfo:        false,
 	SavePanelPaths:           true,
+	DriveMenuOptions:         defaultDriveMenuOptions,
 	InfoPanelBytes:           false,
 	InfoPanelCPUGPU:          false,
 	EscTogglePanels:          true,
@@ -563,6 +565,7 @@ func LoadConfig() {
 	}
 	AppConfig.ShowPanelFileInfo = ini.GetString("Panel", "ShowPanelFileInfo", "0") == "1"
 	AppConfig.SavePanelPaths = ini.GetString("Panel", "SavePanelPaths", "1") == "1"
+	AppConfig.DriveMenuOptions = parseDriveMenuOptions(ini.GetString("Panel", "DriveMenuOptions", ""))
 	AppConfig.InfoPanelBytes = ini.GetString("Panel", "InfoPanelBytes", "0") == "1"
 	AppConfig.InfoPanelCPUGPU = ini.GetString("Panel", "InfoPanelCPUGPU", "0") == "1"
 	AppConfig.EscTogglePanels = ini.GetString("Panel", "EscTogglePanels", "1") == "1"
@@ -852,6 +855,7 @@ func saveConfigWithWindowSize(windowSize bool) {
 	fmt.Fprintf(&sb, "PanelScrollbarMode = %s\n", AppConfig.PanelScrollbarMode.String())
 	fmt.Fprintf(&sb, "ShowPanelFileInfo = %d\n", map[bool]int{true: 1, false: 0}[AppConfig.ShowPanelFileInfo])
 	fmt.Fprintf(&sb, "SavePanelPaths = %d\n", map[bool]int{true: 1, false: 0}[AppConfig.SavePanelPaths])
+	fmt.Fprintf(&sb, "DriveMenuOptions = %d\n", AppConfig.DriveMenuOptions)
 	fmt.Fprintf(&sb, "InfoPanelBytes = %d\n", map[bool]int{true: 1, false: 0}[AppConfig.InfoPanelBytes])
 	fmt.Fprintf(&sb, "InfoPanelCPUGPU = %d\n", map[bool]int{true: 1, false: 0}[AppConfig.InfoPanelCPUGPU])
 	fmt.Fprintf(&sb, "EscTogglePanels = %d\n", map[bool]int{true: 1, false: 0}[AppConfig.EscTogglePanels])

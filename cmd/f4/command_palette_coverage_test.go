@@ -111,6 +111,15 @@ var commandPaletteProcessKeyAudit = map[string]commandPaletteSurfaceAudit{
 	"cmd/f4/panels_frame.go:(*PanelsFrame).ProcessKey": {
 		class: paletteAuditPanelProvider, rationale: "PanelsFrame combines registered actions with audited transient panel-context entries",
 	},
+	"cmd/f4/panels_frame.go:(*menuKeyLabelsFrame).ProcessKey": {
+		class: paletteAuditModalLocal, rationale: "the key-label menu wrapper only forwards menu navigation and local cancellation handling",
+	},
+	"cmd/f4/drive_bookmarks_ui.go:(*driveBookmarkEditDialog).ProcessKey": {
+		class: paletteAuditModalLocal, rationale: "the drive-bookmark editor captures its optional hotkey and delegates the remaining field and button handling locally",
+	},
+	"cmd/f4/drive_bookmarks_ui.go:(*driveMenuFrame).ProcessKey": {
+		class: paletteAuditDynamicProvider, rationale: "the drive menu wrapper preserves local menu handling while its runtime drive and bookmark entries come from dynamic providers",
+	},
 	"cmd/f4/panel_plugins.go:(*pluginPanelInstance).ProcessKey": {
 		class: paletteAuditPanelProvider, rationale: "native panel plugins receive raw input inside their registered panel surface; their semantic commands are plugin-owned",
 	},
@@ -186,8 +195,8 @@ var commandPaletteNewVMenuAudit = map[string]commandPaletteSurfaceAudit{
 	"cmd/f4/fuse_mount_list.go:showMountList#1": {
 		class: paletteAuditDynamicAction, rationale: "the registered mount-list action opens the current mount inventory",
 	},
-	"cmd/f4/panels_frame.go:(*PanelsFrame).menuItems#1": {
-		class: paletteAuditPluginDialogBridge, rationale: "vfs.App.Menu is the generic callback-based plugin dialog bridge; its rows are not globally enumerable commands",
+	"cmd/f4/panels_frame.go:(*PanelsFrame).menuItemsWithKeyLabels#1": {
+		class: paletteAuditPluginDialogBridge, rationale: "the generic callback-based plugin menu bridge adds runtime plugin rows and optional key labels that are not globally enumerable commands",
 	},
 	"cmd/f4/panels_frame.go:(*PanelsFrame).showDriveMenuAt#1": {
 		class: paletteAuditDynamicProvider, rationale: "registered drives are mirrored by commandPaletteDriveEntries with live factory re-resolution",
