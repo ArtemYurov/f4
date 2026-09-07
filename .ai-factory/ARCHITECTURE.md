@@ -109,7 +109,11 @@ f4/
 │   ├── colorer/      (extract)    # colorer4go integration + embedded radiola.hrd
 │   │
 │   │  # platform helpers, already here
-│   └── wincon/  ttyx/  netproxy/  hideconsole/
+│   ├── wincon/  ttyx/  netproxy/
+│   └── hideconsole/                # NOT our code: a vendored fork of
+│                                   # github.com/ebitengine/hideconsole, wired in
+│                                   # by `replace` in go.mod. Own go.mod, own
+│                                   # module path — leave the path alone.
 │
 ├── embedded.go                    # root package: embeds README.md, and only that.
 │                                  # Must stay in the root — //go:embed cannot
@@ -300,6 +304,14 @@ Rules:
 - ❌ Runtime `if runtime.GOOS == …` branching for platform differences. Use
   build-tag files (`*_windows.go`, `*_unix.go`, `*_other.go`).
 - ❌ New cgo. FFI goes through `purego` / `ffibridge`.
+
+**Not every directory here is one module.** The repository holds six `go.mod`
+files: the main module, `internal/hideconsole` (a vendored fork substituted via
+`replace`), and four under `tools/`. `go build ./...` and `go test ./...` see
+only the main module's 38 packages — the others are built and tested separately,
+which is why a broken test can sit in `tools/` unnoticed. Restructuring must not
+rewrite the module path of a vendored fork, and moving one of these directories
+means updating the `replace` directive that points at it (`go.mod:187`).
 
 ## Layer / Module Communication
 
