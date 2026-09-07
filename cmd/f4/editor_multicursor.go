@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"sort"
 	"strings"
 
 	"github.com/unxed/vtinput"
+	"github.com/unxed/vtui"
 )
 
 // Multi-caret editing. Every key that acts on the text through more than one
@@ -628,4 +630,199 @@ func farther(off, a, b int) bool {
 		db = -db
 	}
 	return db > da
+}
+
+// Putting carets on the copies of what is selected.
+//
+// The search is a plain byte scan over the piece table, done in chunks that
+// overlap by the length of the pattern so a copy lying across a chunk boundary
+// is still found. Nothing is indexed and nothing is cached: the text can be
+// larger than memory, and the answer is only needed one keystroke at a time.
+
+const (
+	// editorCaretSearchChunk is how much text is pulled out of the piece
+	// table at a time while scanning.
+	editorCaretSearchChunk = 1 << 16
+	// editorCaretSearchMax is the longest selection worth looking for. Past
+	// this it is a passage, not a term.
+	editorCaretSearchMax = 4096
+	// editorMaxOccurrenceCarets caps how many carets one keystroke may
+	// produce, so that selecting a space in a large file cannot fill memory
+	// with carets nobody asked for.
+	editorMaxOccurrenceCarets = 4096
+)
+
+// caretSearchNeedle is the primary caret's selection, which is the text the
+// occurrence commands look for.
+func (ev *EditorView) caretSearchNeedle() ([]byte, bool) {
+	if !ev.selActive || ev.rectSelActive {
+		return nil, false
+	}
+	start, end := ev.getSelectionRange()
+	if end <= start || end-start > editorCaretSearchMax {
+		return nil, false
+	}
+	needle, err := ev.pt.GetRange(start, end-start)
+	if err != nil || len(needle) != end-start {
+		return nil, false
+	}
+	return needle, true
+}
+
+// findBytesIn returns the offset of the first copy of needle that lies wholly
+// within [from, limit), or -1.
+func (ev *EditorView) findBytesIn(needle []byte, from, limit int) int {
+	if len(needle) == 0 {
+		return -1
+	}
+	if from < 0 {
+		from = 0
+	}
+	if size := ev.pt.Size(); limit > size {
+		limit = size
+	}
+	for pos := from; pos+len(needle) <= limit; {
+		end := pos + editorCaretSearchChunk
+		if end > limit {
+			end = limit
+		}
+		var err error
+		ev.caretSearchBuf, err = ev.pt.AppendRange(ev.caretSearchBuf[:0], pos, end-pos)
+		if err != nil {
+			return -1
+		}
+		if idx := bytes.Index(ev.caretSearchBuf, needle); idx >= 0 {
+			return pos + idx
+		}
+		if end >= limit {
+			break
+		}
+		// Overlap by one less than the pattern, so a copy sitting across
+		// the seam is found by the next round.
+		pos = end - (len(needle) - 1)
+	}
+	return -1
+}
+
+// AddCursorAtNextOccurrence puts a caret on the next copy of the selected
+// text, wrapping round the end of the file, and makes it the primary caret so
+// that the view follows and the key can be pressed again to walk on.
+//
+// With nothing selected it selects the word under the caret instead, which is
+// the first press of the same key in every editor that has this.
+func (ev *EditorView) AddCursorAtNextOccurrence() {
+	needle, ok := ev.caretSearchNeedle()
+	if !ok {
+		ev.clearExtraCursors()
+		ev.selectWordUnderCursor()
+		vtui.FrameManager.Redraw()
+		return
+	}
+
+	// Start after the last thing already selected, so repeated presses walk
+	// forwards rather than finding the copies already taken.
+	from := 0
+	for _, span := range ev.caretSpans() {
+		if span.selEnd > from {
+			from = span.selEnd
+		}
+	}
+	match := ev.findBytesIn(needle, from, ev.pt.Size())
+	if match < 0 {
+		match = ev.findBytesIn(needle, 0, from)
+	}
+	if match < 0 {
+		return
+	}
+	for _, span := range ev.caretSpans() {
+		if span.selStart == match {
+			// Every copy already has a caret on it.
+			return
+		}
+	}
+
+	ev.pushPrimaryToExtras()
+	ev.setPrimarySelection(match, match+len(needle))
+	ev.normalizeExtraCarets()
+	ev.ensureCursorVisible()
+	vtui.FrameManager.Redraw()
+}
+
+// SelectAllOccurrences puts a caret on every copy of the selected text.
+func (ev *EditorView) SelectAllOccurrences() {
+	needle, ok := ev.caretSearchNeedle()
+	if !ok {
+		ev.clearExtraCursors()
+		ev.selectWordUnderCursor()
+		needle, ok = ev.caretSearchNeedle()
+		if !ok {
+			vtui.FrameManager.Redraw()
+			return
+		}
+	}
+
+	selStart, _ := ev.getSelectionRange()
+	size := ev.pt.Size()
+	matches := make([]int, 0, 16)
+	for pos := 0; pos+len(needle) <= size && len(matches) < editorMaxOccurrenceCarets; {
+		match := ev.findBytesIn(needle, pos, size)
+		if match < 0 {
+			break
+		}
+		matches = append(matches, match)
+		pos = match + len(needle)
+	}
+	if len(matches) == 0 {
+		return
+	}
+
+	// The caret that was already on one of the copies stays the primary one,
+	// so the view does not jump away from what the user was looking at.
+	primary := 0
+	for i, match := range matches {
+		if match == selStart {
+			primary = i
+			break
+		}
+	}
+
+	ev.extraCursors = ev.extraCursors[:0]
+	for i, match := range matches {
+		if i == primary {
+			continue
+		}
+		ev.extraCursors = append(ev.extraCursors, extraCaret{
+			off:        match + len(needle),
+			desiredCol: ev.visualColAt(match + len(needle)),
+			anchor:     match,
+			hasSel:     true,
+		})
+	}
+	ev.setPrimarySelection(matches[primary], matches[primary]+len(needle))
+	ev.normalizeExtraCarets()
+	ev.ensureCursorVisible()
+	vtui.FrameManager.Redraw()
+}
+
+// pushPrimaryToExtras keeps the primary caret, and whatever it has selected,
+// as one of the secondary carets.
+func (ev *EditorView) pushPrimaryToExtras() {
+	off := ev.caretOffset()
+	caret := extraCaret{off: off, desiredCol: ev.visualColAt(off)}
+	if ev.selActive && !ev.rectSelActive && ev.selAnchorOffset != off {
+		caret.anchor, caret.hasSel = ev.selAnchorOffset, true
+	}
+	ev.extraCursors = append(ev.extraCursors, caret)
+}
+
+// setPrimarySelection moves the primary caret to the end of [start, end) and
+// selects that range.
+func (ev *EditorView) setPrimarySelection(start, end int) {
+	ev.CursorLine = ev.li.GetLineAtOffset(end)
+	ev.CursorPos = end - ev.li.GetLineOffset(ev.CursorLine)
+	ev.CursorVirtualSpaces = 0
+	ev.rectSelActive = false
+	ev.selAnchorOffset = start
+	ev.selActive = end != start
+	ev.updateDesiredVisualCol()
 }

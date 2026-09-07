@@ -133,6 +133,9 @@ type EditorView struct {
 	// allocate per painted line.
 	occSpans []matchSpan
 	occBytes []byte
+	// caretSearchBuf is the scratch the occurrence commands scan the text
+	// in, kept between calls so walking a file does not allocate per press.
+	caretSearchBuf []byte
 	// extraSelSpans is what the secondary carets have selected, collected
 	// once per paint: a handful of ranges checked against each cluster.
 	extraSelSpans []matchSpan

@@ -262,7 +262,9 @@ func init() {
 		}
 	}
 
-	withEditor := func(fn func(ev *EditorView)) func() bool {
+	// withMultiEditor is for the handful of actions that know about the
+	// multi-caret set and act on it themselves.
+	withMultiEditor := func(fn func(ev *EditorView)) func() bool {
 		return func() bool {
 			if vtui.FrameManager == nil {
 				return false
@@ -273,6 +275,17 @@ func init() {
 			}
 			return false
 		}
+	}
+
+	// Actions reach the editor without passing through its key handling, so
+	// the caret set is put down here. An action that knows nothing about it
+	// would work through the primary caret alone and leave the others
+	// painted over text they no longer describe.
+	withEditor := func(fn func(ev *EditorView)) func() bool {
+		return withMultiEditor(func(ev *EditorView) {
+			ev.clearExtraCursors()
+			fn(ev)
+		})
 	}
 
 	withViewer := func(fn func(vv *ViewerView)) func() bool {
@@ -2272,6 +2285,30 @@ func init() {
 		DefaultKeys: []string{"CtrlShiftD"},
 		MenuPath:    "Edit",
 		Handler:     withEditor(func(ev *EditorView) { ev.DuplicateLines() }),
+	})
+	RegisterAction(Action{
+		Name:        "Editor.AddCursorAtNextOccurrence",
+		Area:        "Editor",
+		Label:       "Add Cursor at Next Occurrence",
+		LabelKey:    "Action.Editor.AddCursorAtNextOccurrence",
+		Description: "Select the word under the cursor, then put another cursor on each following copy of it",
+		DescKey:     "Action.Editor.AddCursorAtNextOccurrence.Desc",
+		// Ctrl+D, which other editors use for this, is the WordStar
+		// right-arrow alias here and Ctrl+Shift+D duplicates a line.
+		DefaultKeys: []string{"CtrlShiftN"},
+		MenuPath:    "Edit",
+		Handler:     withMultiEditor(func(ev *EditorView) { ev.AddCursorAtNextOccurrence() }),
+	})
+	RegisterAction(Action{
+		Name:        "Editor.SelectAllOccurrences",
+		Area:        "Editor",
+		Label:       "Select All Occurrences",
+		LabelKey:    "Action.Editor.SelectAllOccurrences",
+		Description: "Put a cursor on every copy of the selected text",
+		DescKey:     "Action.Editor.SelectAllOccurrences.Desc",
+		DefaultKeys: []string{"CtrlShiftL"},
+		MenuPath:    "Edit",
+		Handler:     withMultiEditor(func(ev *EditorView) { ev.SelectAllOccurrences() }),
 	})
 	RegisterAction(Action{
 		Name:        "Editor.MoveLineUp",
