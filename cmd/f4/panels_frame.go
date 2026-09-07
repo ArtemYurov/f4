@@ -592,6 +592,7 @@ func (pf *PanelsFrame) leftMenu() vtui.MenuBarItem {
 			{Separator: true},
 			{Text: Msg("FileOp.BtnBackground"), Command: CmBackground},
 			{Text: Msg("Action.Workspace.New"), Command: CmWorkspaceNew, Shortcut: "Ctrl+N"},
+			{Text: Msg("Action.Workspace.NewTerminal"), Command: CmWorkspaceNewTerminal, Shortcut: "Ctrl+Shift+O"},
 			{Text: Msg("Action.Workspace.Close"), Command: CmWorkspaceClose, Shortcut: "Ctrl+W"},
 			{Text: Msg("Menu.Exit"), Command: vtui.CmQuit},
 		}}
@@ -613,6 +614,7 @@ func (pf *PanelsFrame) leftMenu() vtui.MenuBarItem {
 		{Separator: true},
 		{Text: Msg("FileOp.BtnBackground"), Command: CmBackground},
 		{Text: Msg("Action.Workspace.New"), Command: CmWorkspaceNew, Shortcut: "Ctrl+N"},
+		{Text: Msg("Action.Workspace.NewTerminal"), Command: CmWorkspaceNewTerminal, Shortcut: "Ctrl+Shift+O"},
 		{Text: Msg("Action.Workspace.Close"), Command: CmWorkspaceClose, Shortcut: "Ctrl+W"},
 		{Text: Msg("Menu.Exit"), Command: vtui.CmQuit},
 	}}
@@ -747,6 +749,7 @@ var commandToActionName = map[int]string{
 	CmRightAIMem:            "AI.Right.ViewMem",
 	CmBackground:            "App.Background",
 	CmWorkspaceNew:          "Workspace.New",
+	CmWorkspaceNewTerminal:  "Workspace.NewTerminal",
 	CmWorkspaceClose:        "Workspace.Close",
 	CmLeftDriveMenu:         "Panel.LeftDriveMenu",
 	CmRightDriveMenu:        "Panel.RightDriveMenu",
@@ -3455,6 +3458,8 @@ func (pf *PanelsFrame) HandleCommand(cmd int, args any) bool {
 		return actionBackground()
 	case CmWorkspaceNew:
 		return actionWorkspaceNew()
+	case CmWorkspaceNewTerminal:
+		return actionWorkspaceNewTerminal()
 	case CmWorkspaceClose:
 		return actionWorkspaceClose()
 	case CmLeftDriveMenu:
@@ -3465,21 +3470,7 @@ func (pf *PanelsFrame) HandleCommand(cmd int, args any) bool {
 		return true
 	case vtui.CmResize: // Used as a hack for 'fork' command from FrameManager
 		if s, ok := args.(string); ok && s == "fork" {
-			clone := pf.Clone()
-			// Ctrl+N means "fork the panels", including when it is invoked
-			// while the terminal is visible. Copying showPanels=false creates
-			// two visually identical cmd.exe workspaces and makes a successful
-			// switch look like it did nothing. Keep the running terminal in the
-			// original workspace and expose the cloned panels in the new one.
-			if !pf.showPanels {
-				clone.showPanels = true
-				if clone.lastW > 0 && clone.lastH > 0 {
-					clone.ResizeConsole(clone.lastW, clone.lastH)
-				} else {
-					clone.updateMenuCheckmarks()
-				}
-			}
-			vtui.FrameManager.AddScreen(clone)
+			vtui.FrameManager.AddScreen(pf.forkPanelsClone())
 			return true
 		}
 
@@ -4641,6 +4632,27 @@ func executeCapturedCommand(pf *PanelsFrame, action string, cmdStr string) {
 		}
 		pf.RefreshAll()
 	})
+}
+
+// forkPanelsClone builds the copy of these panels that gets handed to
+// AddScreen as a new workspace. Both Ctrl+N and the terminal-workspace action
+// go through it, so the two agree on what a fork looks like.
+func (pf *PanelsFrame) forkPanelsClone() *PanelsFrame {
+	clone := pf.Clone()
+	// Ctrl+N means "fork the panels", including when it is invoked
+	// while the terminal is visible. Copying showPanels=false creates
+	// two visually identical cmd.exe workspaces and makes a successful
+	// switch look like it did nothing. Keep the running terminal in the
+	// original workspace and expose the cloned panels in the new one.
+	if !pf.showPanels {
+		clone.showPanels = true
+		if clone.lastW > 0 && clone.lastH > 0 {
+			clone.ResizeConsole(clone.lastW, clone.lastH)
+		} else {
+			clone.updateMenuCheckmarks()
+		}
+	}
+	return clone
 }
 
 func (pf *PanelsFrame) Clone() *PanelsFrame {

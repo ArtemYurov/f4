@@ -395,6 +395,17 @@ func init() {
 		Handler:     actionWorkspaceNew,
 	})
 	RegisterAction(Action{
+		Name:        "Workspace.NewTerminal",
+		Area:        "Common",
+		Label:       "Terminal in New Workspace",
+		LabelKey:    "Action.Workspace.NewTerminal",
+		SearchKeys:  []string{"AppearanceSettings.WorkspaceTabs"},
+		Description: "Open the terminal in a workspace of its own",
+		DescKey:     "Action.Workspace.NewTerminal.Desc",
+		DefaultKeys: []string{"CtrlShiftO"},
+		Handler:     actionWorkspaceNewTerminal,
+	})
+	RegisterAction(Action{
 		Name:        "Workspace.Close",
 		Area:        "Common",
 		Label:       "Close Workspace",
@@ -1554,68 +1565,7 @@ func init() {
 		DefaultKeys:  []string{"CtrlO:NoAltScreenApp", "Esc:EscToggle", "Del:EscToggle", "NumDel:EscToggle"},
 		DefaultAreas: []string{"Terminal"},
 		Handler: withPF(func(pf *PanelsFrame) {
-			pf.showPanels = !pf.showPanels
-			if pf.showPanels && !pf.showLeftPanel && !pf.showRightPanel {
-				pf.showLeftPanel = true
-				pf.showRightPanel = true
-			}
-			// ShellModeSimpleInline manages its own geometry refresh below,
-			// timed to when the real terminal screen is actually the one f4
-			// is about to draw on (see the two branches). Calling the full,
-			// layout-and-repaint-triggering ResizeConsole() here, before that
-			// screen switch happens, let vtui's own panel/keybar repaint land
-			// on whichever screen (primary or alt) happened to still be
-			// active at that exact moment: sometimes the host console the
-			// user just switched to, leaving a stray copy of the keybar that
-			// a later Ctrl+O toggle would reveal stacked on top of the next
-			// one. Every other shell mode keeps the previous unconditional
-			// call.
-			if pf.shellMode == ShellModeSimpleInline {
-				pf.lastShowPanels = pf.showPanels
-			} else if pf.menuBar != nil && pf.lastW > 0 && pf.lastH > 0 {
-				pf.ResizeConsole(pf.lastW, pf.lastH)
-				pf.lastShowPanels = pf.showPanels
-			}
-			switch pf.shellMode {
-			case ShellModeHost:
-				if pf.showPanels {
-					pf.leaveHostConsole()
-				} else {
-					pf.enterHostConsole()
-				}
-			case ShellModeSimpleInline:
-				if !pf.showPanels {
-					vtui.SetAltScreen(false)
-					pf.SetBusy(true)
-					pf.syncAutoCompleteSuppression()
-					if w, h, err := vtui.GetTerminalSize(); err == nil && w > 0 && h > 0 {
-						pf.lastW, pf.lastH = w, h
-					}
-					clearConsoleViewBackground(pf.lastW, pf.lastH)
-					if pf.consoleStyle() == ConsoleViewFar {
-						pf.drawConsoleOverlay()
-					}
-				} else {
-					pf.clearConsoleOverlay()
-					vtui.SetAltScreen(true)
-					pf.SetBusy(false)
-					pf.syncAutoCompleteSuppression()
-					if pf.menuBar != nil && pf.lastW > 0 && pf.lastH > 0 {
-						pf.ResizeConsole(pf.lastW, pf.lastH)
-					}
-					vtui.FrameManager.HardRefresh()
-				}
-			case ShellModeSimpleCaptured:
-				// Captured mode has no separate console view to switch to;
-				// output already went to a dialog, so panels stay visible.
-				pf.showPanels = true
-				showToast(Msg("Terminal.NotAvailableInEnv"), 3*time.Second)
-			default:
-				vtui.FrameManager.HardRefresh()
-			}
-			if pf.showPanels {
-				pf.RefreshAll()
-			}
+			pf.togglePanelsVisibility()
 		}),
 	})
 	RegisterAction(Action{

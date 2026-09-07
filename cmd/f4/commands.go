@@ -82,4 +82,7 @@ const (
 	CmSortGroups
 	CmLeftSortGroups
 	CmRightSortGroups
+	// Appended for the same reason: opening the terminal in a workspace of
+	// its own is new, and the commands above keep the numbers they had.
+	CmWorkspaceNewTerminal
 )
