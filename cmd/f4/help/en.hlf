@@ -5,6 +5,7 @@ f4 — efficient and cozy file manager in go
 ~Viewer / Editor keys~ViewerEditor@
 ~Panel navigation~PanelNav@
 ~Mouse wheel settings~MouseWheel@
+~Portable mode~PortableSettings@
 ~Visual File Renamer (VisRen)~VisRen@
 ~View README.md~README@
 
@@ -795,3 +796,36 @@ lines per notch.
 
 Other scrolling surfaces (the help viewer, multi-line edits in dialogs)
 always follow the system setting.
+
+@PortableSettings
+$Portable mode
+
+Portable mode keeps f4's profile next to the program. It is useful when the
+program and its settings need to be moved together or stored on removable
+media.
+
+The mode is selected before the profile is opened, using an INI file beside
+the executable:
+
+  f4.ini          shared by f4, f4-gui, f4.exe and f4-gui.exe
+  <binary>.ini    for example f4.exe.ini; takes precedence over f4.ini
+
+The dialog shows the current profile and the mode file. Enabling the first
+option writes this setting to the mode file:
+
+  [General]
+  UseSystemProfiles=0
+
+The default portable profile directory is Profile beside the executable.
+The [General] Profile= option can select another directory. %F4HOME% (or
+the Unix forms $F4HOME and ${F4HOME}) means the executable directory;
+relative paths are also relative to it. UseSystemProfiles=1 selects the
+normal per-user profile.
+
+Copy the current profile when switching locations if its settings, history,
+macros, plugins and styles should be available there. Existing files are
+kept, and crash logs are not copied. Switching back does not delete the
+portable profile.
+
+Restart f4 after saving. The mode file is read before the profile is located,
+so this setting cannot be stored inside the profile itself.
