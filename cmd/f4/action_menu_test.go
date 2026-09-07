@@ -273,3 +273,85 @@ func TestBuildMenuBarItemsSkipsPluginVisibilityBeforePanelsFrameRegistration(t *
 
 	BuildMenuBarItems("Shell")
 }
+
+func TestBuildMenuBarItemsGroupsShellMenus(t *testing.T) {
+	old := GlobalHotkeysMgr
+	GlobalHotkeysMgr = NewHotkeyManager("")
+	defer func() { GlobalHotkeysMgr = old }()
+
+	for _, menu := range BuildMenuBarItems("Shell") {
+		separators := 0
+		for index, item := range menu.SubItems {
+			if !item.Separator {
+				continue
+			}
+			separators++
+			if index == 0 || index == len(menu.SubItems)-1 {
+				t.Errorf("%s menu has a separator at index %d, with no group on both sides", menu.Label, index)
+			}
+			if index > 0 && menu.SubItems[index-1].Separator {
+				t.Errorf("%s menu has two separators in a row at index %d", menu.Label, index)
+			}
+		}
+		if separators == 0 {
+			t.Errorf("%s menu is one undivided list of %d items", menu.Label, len(menu.SubItems))
+		}
+	}
+}
+
+func TestBuildMenuBarItemsSeparatesPluginCommandsFromBuiltIns(t *testing.T) {
+	t.Cleanup(setFrameManagerScreensForTest(t, []*vtui.AppScreen{{Frames: []vtui.Frame{&PanelsFrame{}}}}, 0))
+
+	api := &coreAPI{}
+	first, err := api.RegisterPluginCommand(vfs.PluginCommand{
+		ID:       "test.menu.separator-first",
+		Location: vfs.PluginCommandPanel,
+		Label:    "First plugin command",
+		MenuPath: "Files",
+		Run:      func(vfs.App) {},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(first.Unregister)
+	second, err := api.RegisterPluginCommand(vfs.PluginCommand{
+		ID:       "test.menu.separator-second",
+		Location: vfs.PluginCommandPanel,
+		Label:    "Second plugin command",
+		MenuPath: "Files",
+		Run:      func(vfs.App) {},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(second.Unregister)
+
+	old := GlobalHotkeysMgr
+	GlobalHotkeysMgr = NewHotkeyManager("")
+	t.Cleanup(func() { GlobalHotkeysMgr = old })
+
+	items := BuildMenuBarItems("Shell")
+	if len(items) == 0 || items[0].Label != "&Files" {
+		t.Fatalf("Files menu is missing: %+v", items)
+	}
+	files := items[0].SubItems
+	indexOf := func(label string) int {
+		for index := range files {
+			if plainLabel(files[index].Text) == label {
+				return index
+			}
+		}
+		return -1
+	}
+	firstIndex := indexOf("First plugin command")
+	secondIndex := indexOf("Second plugin command")
+	if firstIndex <= 0 || secondIndex < 0 {
+		t.Fatalf("plugin commands are missing from the Files menu: %+v", files)
+	}
+	if !files[firstIndex-1].Separator {
+		t.Errorf("plugin commands are not set off from the built-in items: %+v", files)
+	}
+	if secondIndex != firstIndex+1 {
+		t.Errorf("second plugin command at index %d, want %d: one separator opens the whole plugin group", secondIndex, firstIndex+1)
+	}
+}

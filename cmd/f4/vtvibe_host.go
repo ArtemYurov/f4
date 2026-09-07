@@ -111,15 +111,16 @@ func init() {
 	}
 
 	RegisterAction(Action{
-		Name:        "AI.TogglePanel",
-		Area:        "Shell",
-		Label:       "AI Panel",
-		LabelKey:    "Action.AI.TogglePanel",
-		Description: "Open or close the AI panel on the passive panel",
-		DescKey:     "Action.AI.TogglePanel.Desc",
-		DefaultKeys: []string{"RCtrlA"},
-		MenuPath:    "Commands",
-		Handler:     withAI(func(pf *PanelsFrame) { aiTogglePanel(pf) }),
+		Name:                "AI.TogglePanel",
+		Area:                "Shell",
+		Label:               "AI Panel",
+		LabelKey:            "Action.AI.TogglePanel",
+		Description:         "Open or close the AI panel on the passive panel",
+		DescKey:             "Action.AI.TogglePanel.Desc",
+		DefaultKeys:         []string{"RCtrlA"},
+		MenuPath:            "Commands",
+		MenuSeparatorBefore: true,
+		Handler:             withAI(func(pf *PanelsFrame) { aiTogglePanel(pf) }),
 	})
 	RegisterAction(Action{
 		Name:        "AI.Ask",

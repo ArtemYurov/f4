@@ -16,9 +16,14 @@ import (
 // the *active* bindings, including user overrides from hotkeys.ini.
 func BuildMenuBarItems(area string) []vtui.MenuBarItem {
 	type menu struct {
-		title  string
-		items  []vtui.MenuItem
-		pinned []vtui.MenuItem
+		title string
+		items []vtui.MenuItem
+		// pluginSeparator records that plugin-contributed commands have
+		// already been set off from the built-in ones, so a menu fed by
+		// several plugins gets one dividing line rather than one per
+		// command.
+		pluginSeparator bool
+		pinned          []vtui.MenuItem
 	}
 	var order []string
 	menus := make(map[string]*menu)
@@ -80,6 +85,14 @@ func BuildMenuBarItems(area string) []vtui.MenuBarItem {
 		if !strings.Contains(text, "&") {
 			text = "&" + text
 		}
+		if !m.pluginSeparator {
+			m.pluginSeparator = true
+			// A menu a plugin created itself opens with its own commands,
+			// so there is nothing above them to divide from.
+			if len(m.items) > 0 {
+				m.items = append(m.items, vtui.MenuItem{Separator: true})
+			}
+		}
 		m.items = append(m.items, vtui.MenuItem{
 			Text:     text,
 			Shortcut: pluginCommandShortcut(command),
@@ -127,7 +140,26 @@ func BuildMenuBarItems(area string) []vtui.MenuBarItem {
 		items := make([]vtui.MenuItem, 0, len(m.items)+len(m.pinned))
 		items = append(items, m.items...)
 		items = append(items, m.pinned...)
-		result = append(result, vtui.MenuBarItem{Label: m.title, SubItems: items})
+		result = append(result, vtui.MenuBarItem{Label: m.title, SubItems: normalizeMenuSeparators(items)})
+	}
+	return result
+}
+
+// normalizeMenuSeparators removes separators that would draw a line with
+// nothing to divide: a leading or trailing one, and any run left behind
+// when every item of a group is hidden. A separator belongs to the item
+// below it, so it disappears together with that item; without this pass
+// the neighbouring groups would silently merge into a doubled line.
+func normalizeMenuSeparators(items []vtui.MenuItem) []vtui.MenuItem {
+	result := make([]vtui.MenuItem, 0, len(items))
+	for _, item := range items {
+		if item.Separator && (len(result) == 0 || result[len(result)-1].Separator) {
+			continue
+		}
+		result = append(result, item)
+	}
+	for len(result) > 0 && result[len(result)-1].Separator {
+		result = result[:len(result)-1]
 	}
 	return result
 }

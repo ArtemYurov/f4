@@ -314,15 +314,16 @@ func init() {
 		Handler:     actionScreenGrab,
 	})
 	RegisterAction(Action{
-		Name:        "App.CopyWindowTitle",
-		Area:        "Common",
-		Label:       "Copy Window Identity",
-		LabelKey:    "Action.App.CopyWindowTitle",
-		Description: "Copy the active f4 frame help identity to the clipboard",
-		DescKey:     "Action.App.CopyWindowTitle.Desc",
-		DefaultKeys: []string{"CtrlAltShiftT"},
-		MenuPath:    "Commands",
-		Handler:     actionCopyWindowTitle,
+		Name:                "App.CopyWindowTitle",
+		Area:                "Common",
+		Label:               "Copy Window Identity",
+		LabelKey:            "Action.App.CopyWindowTitle",
+		Description:         "Copy the active f4 frame help identity to the clipboard",
+		DescKey:             "Action.App.CopyWindowTitle.Desc",
+		DefaultKeys:         []string{"CtrlAltShiftT"},
+		MenuPath:            "Commands",
+		MenuSeparatorBefore: true,
+		Handler:             actionCopyWindowTitle,
 	})
 	RegisterAction(Action{
 		Name:        "Macro.Reload",
@@ -513,15 +514,16 @@ func init() {
 		},
 	})
 	RegisterAction(Action{
-		Name:        "File.Copy",
-		Area:        "Shell",
-		Label:       "Copy",
-		LabelKey:    "Menu.Files.Copy",
-		Description: "Copy selected files or current file",
-		DescKey:     "Action.File.Copy.Desc",
-		DefaultKeys: []string{"F5"},
-		MenuPath:    "Files",
-		Handler:     withPF(func(pf *PanelsFrame) { actionCopyMove(pf, false) }),
+		Name:                "File.Copy",
+		Area:                "Shell",
+		Label:               "Copy",
+		LabelKey:            "Menu.Files.Copy",
+		Description:         "Copy selected files or current file",
+		DescKey:             "Action.File.Copy.Desc",
+		DefaultKeys:         []string{"F5"},
+		MenuPath:            "Files",
+		MenuSeparatorBefore: true,
+		Handler:             withPF(func(pf *PanelsFrame) { actionCopyMove(pf, false) }),
 	})
 	RegisterAction(Action{
 		Name:        "File.CopyInPlace",
@@ -602,15 +604,16 @@ func init() {
 		Handler:     withPF(func(pf *PanelsFrame) { actionDeletePermanent(pf) }),
 	})
 	RegisterAction(Action{
-		Name:        "File.Attributes",
-		Area:        "Shell",
-		Label:       "File Attributes",
-		LabelKey:    "Action.File.Attributes",
-		Description: "View and change file attributes",
-		DescKey:     "Action.File.Attributes.Desc",
-		DefaultKeys: []string{"CtrlA"},
-		MenuPath:    "Files",
-		Handler:     withPF(func(pf *PanelsFrame) { actionFileAttributes(pf) }),
+		Name:                "File.Attributes",
+		Area:                "Shell",
+		Label:               "File Attributes",
+		LabelKey:            "Action.File.Attributes",
+		Description:         "View and change file attributes",
+		DescKey:             "Action.File.Attributes.Desc",
+		DefaultKeys:         []string{"CtrlA"},
+		MenuPath:            "Files",
+		MenuSeparatorBefore: true,
+		Handler:             withPF(func(pf *PanelsFrame) { actionFileAttributes(pf) }),
 	})
 	RegisterAction(Action{
 		Name:        "File.Share",
@@ -681,14 +684,15 @@ func init() {
 	})
 
 	RegisterAction(Action{
-		Name:        "Panel.SelectGroup",
-		Area:        "Shell",
-		Label:       "Select Group",
-		LabelKey:    "Action.Panel.SelectGroup",
-		Description: "Select files by mask",
-		DescKey:     "Action.Panel.SelectGroup.Desc",
-		DefaultKeys: []string{"Add"},
-		MenuPath:    "Files",
+		Name:                "Panel.SelectGroup",
+		Area:                "Shell",
+		Label:               "Select Group",
+		LabelKey:            "Action.Panel.SelectGroup",
+		Description:         "Select files by mask",
+		DescKey:             "Action.Panel.SelectGroup.Desc",
+		DefaultKeys:         []string{"Add"},
+		MenuPath:            "Files",
+		MenuSeparatorBefore: true,
 		Handler: withPF(func(pf *PanelsFrame) {
 			if fsp := pf.getActivePanel(); fsp != nil {
 				var maskEdit *vtui.Edit
@@ -806,15 +810,16 @@ func init() {
 		Handler:     withPF(func(pf *PanelsFrame) { ShowFileAssociations(pf) }),
 	})
 	RegisterAction(Action{
-		Name:        "File.Find",
-		Area:        "Shell",
-		Label:       "Find File",
-		LabelKey:    "Menu.Commands.FindFile",
-		Description: "Search for files",
-		DescKey:     "Action.File.Find.Desc",
-		DefaultKeys: []string{"AltF7"},
-		MenuPath:    "Commands",
-		Handler:     withPF(func(pf *PanelsFrame) { actionFindFile(pf) }),
+		Name:                "File.Find",
+		Area:                "Shell",
+		Label:               "Find File",
+		LabelKey:            "Menu.Commands.FindFile",
+		Description:         "Search for files",
+		DescKey:             "Action.File.Find.Desc",
+		DefaultKeys:         []string{"AltF7"},
+		MenuPath:            "Commands",
+		MenuSeparatorBefore: true,
+		Handler:             withPF(func(pf *PanelsFrame) { actionFindFile(pf) }),
 	})
 	RegisterAction(Action{
 		Name:        "File.FindDuplicates",
@@ -860,15 +865,16 @@ func init() {
 		Handler:     withPF(func(pf *PanelsFrame) { ShowBackgroundJobs(pf) }),
 	})
 	RegisterAction(Action{
-		Name:        "Panel.Bookmarks",
-		Area:        "Shell",
-		Label:       "Bookmarks",
-		LabelKey:    "Menu.Commands.Bookmarks",
-		Description: "Show folder bookmarks dialog",
-		DescKey:     "Action.Panel.Bookmarks.Desc",
-		DefaultKeys: []string{"CtrlShiftVK_DC"},
-		MenuPath:    "Commands",
-		Handler:     withPF(func(pf *PanelsFrame) { ShowBookmarksDialog(pf) }),
+		Name:                "Panel.Bookmarks",
+		Area:                "Shell",
+		Label:               "Bookmarks",
+		LabelKey:            "Menu.Commands.Bookmarks",
+		Description:         "Show folder bookmarks dialog",
+		DescKey:             "Action.Panel.Bookmarks.Desc",
+		DefaultKeys:         []string{"CtrlShiftVK_DC"},
+		MenuPath:            "Commands",
+		MenuSeparatorBefore: true,
+		Handler:             withPF(func(pf *PanelsFrame) { ShowBookmarksDialog(pf) }),
 	})
 	RegisterAction(Action{
 		Name:        "Panel.PluginMenu",
@@ -893,15 +899,16 @@ func init() {
 		Handler:     withPF(func(pf *PanelsFrame) { actionOpenTempPanel(pf) }),
 	})
 	RegisterAction(Action{
-		Name:        "Panel.CommandHistory",
-		Area:        "Shell",
-		Label:       "Command History",
-		LabelKey:    "Action.Panel.CommandHistory",
-		Description: "Show command line history",
-		DescKey:     "Action.Panel.CommandHistory.Desc",
-		DefaultKeys: []string{"AltF8"},
-		MenuPath:    "Commands",
-		Handler:     withPF(func(pf *PanelsFrame) { actionCommandHistory(pf) }),
+		Name:                "Panel.CommandHistory",
+		Area:                "Shell",
+		Label:               "Command History",
+		LabelKey:            "Action.Panel.CommandHistory",
+		Description:         "Show command line history",
+		DescKey:             "Action.Panel.CommandHistory.Desc",
+		DefaultKeys:         []string{"AltF8"},
+		MenuPath:            "Commands",
+		MenuSeparatorBefore: true,
+		Handler:             withPF(func(pf *PanelsFrame) { actionCommandHistory(pf) }),
 	})
 	RegisterAction(Action{
 		Name:        "Panel.FoldersHistory",
@@ -934,14 +941,15 @@ func init() {
 		Handler:     withPF(func(pf *PanelsFrame) { actionImportFar2lHistory(pf) }),
 	})
 	RegisterAction(Action{
-		Name:        "Panel.GoParent",
-		Area:        "Shell",
-		Label:       "Parent Folder",
-		LabelKey:    "Action.Panel.GoParent",
-		Description: "Go to parent directory",
-		DescKey:     "Action.Panel.GoParent.Desc",
-		DefaultKeys: []string{"CtrlPgUp"},
-		MenuPath:    "Commands",
+		Name:                "Panel.GoParent",
+		Area:                "Shell",
+		Label:               "Parent Folder",
+		LabelKey:            "Action.Panel.GoParent",
+		Description:         "Go to parent directory",
+		DescKey:             "Action.Panel.GoParent.Desc",
+		DefaultKeys:         []string{"CtrlPgUp"},
+		MenuPath:            "Commands",
+		MenuSeparatorBefore: true,
 		Handler: withPF(func(pf *PanelsFrame) {
 			fsp := pf.getActivePanel()
 			if fsp == nil {
@@ -1084,14 +1092,15 @@ func init() {
 		}),
 	})
 	RegisterAction(Action{
-		Name:        "Panel.CopyPath",
-		Area:        "Shell",
-		Label:       "Copy Path",
-		LabelKey:    "Action.Panel.CopyPath",
-		Description: "Copy the full path of the current file to clipboard",
-		DescKey:     "Action.Panel.CopyPath.Desc",
-		DefaultKeys: []string{"CtrlD"},
-		MenuPath:    "Commands",
+		Name:                "Panel.CopyPath",
+		Area:                "Shell",
+		Label:               "Copy Path",
+		LabelKey:            "Action.Panel.CopyPath",
+		Description:         "Copy the full path of the current file to clipboard",
+		DescKey:             "Action.Panel.CopyPath.Desc",
+		DefaultKeys:         []string{"CtrlD"},
+		MenuPath:            "Commands",
+		MenuSeparatorBefore: true,
 		Handler: withPF(func(pf *PanelsFrame) {
 			if fsp := pf.getActivePanel(); fsp != nil {
 				if path := currentPanelEntryPath(fsp); path != "" {
@@ -1251,15 +1260,16 @@ func init() {
 		Handler: withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(CmSortGroups, nil) }),
 	})
 	RegisterAction(Action{
-		Name:        "Panel.SortMenu",
-		Area:        "Shell",
-		Label:       "Sort Modes",
-		LabelKey:    "Action.Panel.SortMenu",
-		Description: "Show sort modes menu",
-		DescKey:     "Action.Panel.SortMenu.Desc",
-		DefaultKeys: []string{"CtrlF12"},
-		MenuPath:    "Commands",
-		Handler:     withPF(func(pf *PanelsFrame) { actionSortMenu(pf) }),
+		Name:                "Panel.SortMenu",
+		Area:                "Shell",
+		Label:               "Sort Modes",
+		LabelKey:            "Action.Panel.SortMenu",
+		Description:         "Show sort modes menu",
+		DescKey:             "Action.Panel.SortMenu.Desc",
+		DefaultKeys:         []string{"CtrlF12"},
+		MenuPath:            "Commands",
+		MenuSeparatorBefore: true,
+		Handler:             withPF(func(pf *PanelsFrame) { actionSortMenu(pf) }),
 	})
 
 	RegisterAction(Action{

@@ -44,12 +44,13 @@ func runPanelMountProgressTask(
 // Unmount all / Go to) is a separate step.
 func init() {
 	RegisterAction(Action{
-		Name:        "Panel.Mount",
-		Area:        "Shell",
-		Label:       "Mount via FUSE",
-		Description: "Mount what the active panel shows as an ordinary directory",
-		DefaultKeys: []string{"CtrlAltM"},
-		MenuPath:    "Commands",
+		Name:                "Panel.Mount",
+		Area:                "Shell",
+		Label:               "Mount via FUSE",
+		Description:         "Mount what the active panel shows as an ordinary directory",
+		DefaultKeys:         []string{"CtrlAltM"},
+		MenuPath:            "Commands",
+		MenuSeparatorBefore: true,
 		// Hidden where nothing can be mounted, rather than offered and refused.
 		Visible: fusefs.Supported,
 		Handler: func() bool {
