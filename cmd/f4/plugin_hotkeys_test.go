@@ -56,20 +56,33 @@ func TestPluginMenuItemShortcutActivatesWithItsCharacter(t *testing.T) {
 	defer restoreManager()
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
-	called := false
-	menu := vtui.NewVMenu("Plugins")
-	menu.AddItem(vtui.MenuItem{
-		Text: pluginMenuItemText("SQLite client", "Q", 1),
-		OnClick: func() {
-			called = true
-		},
-	})
-	vtui.FrameManager.Push(menu)
-	if !menu.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: 'q'}) {
-		t.Fatal("plugin menu did not consume its character hotkey")
-	}
-	if !called {
-		t.Fatal("plugin menu character hotkey did not activate the item")
+	for _, tc := range []struct {
+		name string
+		text string
+		key  rune
+	}{
+		{name: "Latin", text: pluginMenuItemText("SQLite client", "Q", 1), key: 'q'},
+		{name: "Cyrillic", text: pluginMenuItemText("Русский клиент", "Ф", 1), key: 'ф'},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			called := false
+			menu := vtui.NewVMenu("Plugins")
+			menu.AddItem(vtui.MenuItem{
+				Text: tc.text,
+				OnClick: func() {
+					called = true
+				},
+			})
+			vtui.FrameManager.Push(menu)
+			if !menu.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: tc.key}) {
+				t.Fatal("plugin menu did not consume its character hotkey")
+			}
+			if !called {
+				t.Fatal("plugin menu character hotkey did not activate the item")
+			}
+			menu.Close()
+			vtui.FrameManager.Pop()
+		})
 	}
 }
 
@@ -82,18 +95,24 @@ func TestPluginMenuKeyLabelsAdvertiseF4(t *testing.T) {
 
 func TestPanelsFrameDoesNotConsumePluginMenuShortcut(t *testing.T) {
 	previousHotkeys := GlobalHotkeysMgr
+	previousMacro := MacroMgr
 	GlobalHotkeysMgr = &HotkeyManager{
 		Bindings: map[string]map[string]string{
 			"Shell": {"Q": "Plugin.Command.test.menu-only"},
 		},
 		Defaults: map[string]map[string]string{},
 	}
-	t.Cleanup(func() { GlobalHotkeysMgr = previousHotkeys })
+	MacroMgr = &MacroManager{Macros: make(map[string]map[string][]*vtinput.InputEvent)}
+	t.Cleanup(func() {
+		GlobalHotkeysMgr = previousHotkeys
+		MacroMgr = previousMacro
+	})
+	called := 0
 	registration, err := (&coreAPI{}).RegisterPluginCommand(vfs.PluginCommand{
 		ID:       "test.menu-only",
 		Location: vfs.PluginCommandPanel,
 		Label:    "Menu-only plugin command",
-		Run:      func(vfs.App) {},
+		Run:      func(vfs.App) { called++ },
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -110,6 +129,15 @@ func TestPanelsFrameDoesNotConsumePluginMenuShortcut(t *testing.T) {
 		KeyDown:        true,
 		VirtualKeyCode: vtinput.VK_Q,
 		Char:           'q',
+	}
+	if MacroMgr.Filter(e) {
+		t.Fatal("plugin menu shortcut must remain available to the panel command line")
+	}
+	if MacroMgr.LookupHotkey(e) {
+		t.Fatal("injected plugin menu shortcut must remain available to the panel command line")
+	}
+	if called != 0 {
+		t.Fatalf("plugin menu shortcut ran a command %d times", called)
 	}
 	if pf.InterceptPluginKey(e) {
 		t.Fatal("plugin menu shortcut must remain available to the panel command line")

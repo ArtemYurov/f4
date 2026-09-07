@@ -588,6 +588,13 @@ func (m *MacroManager) Filter(e *vtinput.InputEvent) bool {
 	if hm := GlobalHotkeysMgr; hm != nil {
 		keyStr := EventToHotkeyString(e)
 		if actionName := configuredHotkeyAction(hm, currentArea, keyStr); actionName != "" {
+			// F4-assigned plugin shortcuts are menu accelerators, matching
+			// far2l: the F11 plugin menu renders them as ampersand hotkeys.
+			// They must not steal printable characters from the panel command
+			// line while remaining persisted for that menu and its display.
+			if isPluginActionName(actionName) {
+				return false
+			}
 			if strings.EqualFold(actionName, "none") {
 				return true // Intercept and silence (explicitly unbound)
 			}
@@ -642,6 +649,13 @@ func (m *MacroManager) LookupHotkey(e *vtinput.InputEvent) bool {
 	area := m.GetCurrentArea()
 	actionName := configuredHotkeyAction(hm, area, keyStr)
 	if actionName == "" {
+		return false
+	}
+	// Plugin menu shortcuts are activated by the F11 menu's ampersand
+	// accelerators. They are deliberately not global Shell hotkeys, so an
+	// injected key (for example from a key-bar click) must not bypass that
+	// rule either.
+	if isPluginActionName(actionName) {
 		return false
 	}
 	if strings.EqualFold(actionName, "none") {
