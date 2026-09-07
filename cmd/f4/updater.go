@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -119,28 +120,38 @@ func shouldCheck() bool {
 	return false
 }
 
-func CheckForUpdates(pf *PanelsFrame, manual bool) {
-	if !manual && !shouldCheck() {
-		return
-	}
+// Каналы обновления перечислены в том же порядке, что комбобокс в настройках.
+const (
+	updateChannelStable  = 0
+	updateChannelNightly = 1
+)
 
-	AppConfig.LastUpdateCheck = time.Now().Unix()
-	SaveConfig()
+// updateCandidate — сборка, которую канал предлагает поставить.
+type updateCandidate struct {
+	downloadURL    string
+	archiveKind    string
+	displayVersion string
+	tagName        string
+	// updateKey расходится с tagName только на ночном канале: тег там
+	// всегда "nightly", поэтому отметкой уже поставленной сборки служит
+	// время загрузки asset'а.
+	updateKey   string
+	needsUpdate bool
+}
 
+// fetchUpdateCandidate спрашивает GitHub, что предлагает канал, и решает,
+// новее ли это запущенной сборки. Общая часть для диалога и для --update.
+func fetchUpdateCandidate(ctx context.Context, channel int) (updateCandidate, error) {
 	url := githubAPIURL + "/latest"
-	if AppConfig.UpdateChannel == 1 {
+	if channel == updateChannelNightly {
 		url = githubAPIURL + "/tags/nightly"
 	}
 
 	vtui.DebugLog("UPDATER: Checking for updates at %s", url)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		reportUpdateError(manual, "Failed to create request: "+err.Error())
-		return
+		return updateCandidate{}, fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("User-Agent", "f4-updater")
@@ -148,8 +159,7 @@ func CheckForUpdates(pf *PanelsFrame, manual bool) {
 	// Everything f4 fetches goes through the configured proxy, if any.
 	resp, err := netproxy.HTTPClient(0).Do(req)
 	if err != nil {
-		reportUpdateError(manual, "Network error: "+err.Error())
-		return
+		return updateCandidate{}, fmt.Errorf("network error: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -158,65 +168,103 @@ func CheckForUpdates(pf *PanelsFrame, manual bool) {
 		vtui.DebugLog("UPDATER ERROR: HTTP %d from %s (Proxy: %s, Proxy-Authenticate: %q)",
 			resp.StatusCode, url, netproxy.Global().Describe(), proxyAuthHeader)
 		if resp.StatusCode == http.StatusProxyAuthRequired {
-			reportUpdateError(manual, fmt.Sprintf("GitHub API returned status 407 (Proxy Authentication Required).\nProxy: %s, Proxy-Authenticate: %s", netproxy.Global().Describe(), proxyAuthHeader))
-			return
+			return updateCandidate{}, fmt.Errorf("GitHub API returned status 407 (Proxy Authentication Required).\nProxy: %s, Proxy-Authenticate: %s", netproxy.Global().Describe(), proxyAuthHeader)
 		}
-		reportUpdateError(manual, fmt.Sprintf("GitHub API returned status %d", resp.StatusCode))
-		return
+		if msg := githubRateLimitMessage(resp); msg != "" {
+			return updateCandidate{}, fmt.Errorf("%s", msg)
+		}
+		return updateCandidate{}, fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
 	}
 
 	var release githubRelease
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-		reportUpdateError(manual, "Failed to parse API response: "+err.Error())
-		return
+		return updateCandidate{}, fmt.Errorf("failed to parse API response: %w", err)
 	}
 
-	assetSuffixes := updateAssetSuffixes(currentOS, currentArch, currentLibc)
-
-	downloadURL, assetUpdated, archiveKind := pickAsset(release.Assets, assetSuffixes)
-
+	downloadURL, assetUpdated, archiveKind := pickAsset(release.Assets, updateAssetSuffixes(currentOS, currentArch, currentLibc))
 	if downloadURL == "" {
-		reportUpdateError(manual, "No suitable build found for your OS/Arch.")
+		return updateCandidate{}, fmt.Errorf("no suitable build found for your OS/Arch")
+	}
+
+	cand := updateCandidate{
+		downloadURL:    downloadURL,
+		archiveKind:    archiveKind,
+		displayVersion: release.TagName,
+		tagName:        release.TagName,
+		updateKey:      release.TagName,
+	}
+
+	if channel == updateChannelNightly {
+		cand.updateKey = assetUpdated
+		cand.displayVersion = nightlyDisplayVersion(release, assetUpdated)
+		cand.needsUpdate = AppConfig.LastUpdateVersion != cand.updateKey
+		return cand, nil
+	}
+
+	_, _, buildTimeText := getVCSInfo()
+	cand.needsUpdate = stableReleaseNeedsUpdate(release, getCurrentVersion(), parseUpdateBuildTime(buildTimeText))
+	return cand, nil
+}
+
+// nightlyDisplayVersion называет ночную сборку так же, как её потом покажет
+// F1 > Help Index.
+//
+// Asset'у известно только время окончания загрузки, которое отстаёт от
+// коммита на всё время многоплатформенной сборки; ночной workflow кладёт в
+// тело релиза сам коммит и время сборки, поэтому предпочитаем их. См. #343.
+func nightlyDisplayVersion(release githubRelease, assetUpdated string) string {
+	if commit, builtOn := commitInfoFromReleaseBody(release.Body); commit != "" {
+		if builtOn != "" {
+			return "Nightly (" + commit + " [" + formatBuildTimeForDisplay(builtOn) + "])"
+		}
+		return "Nightly (" + commit + ")"
+	}
+
+	displayTime := assetUpdated
+	if t, err := time.Parse(time.RFC3339, assetUpdated); err == nil {
+		displayTime = t.Local().Format("2006-01-02 15:04")
+	} else if len(displayTime) >= 16 {
+		displayTime = strings.Replace(displayTime[:16], "T", " ", 1)
+	}
+	return "Nightly (" + displayTime + ")"
+}
+
+// githubRateLimitMessage объясняет 403 от GitHub, если тот пришёл из-за
+// исчерпанного лимита запросов: без токена на один IP отводится 60 запросов
+// в час, поэтому упереться в лимит можно из общей сети, ничего не нажимая
+// самому. Пустая строка означает, что 403 пришёл по другой причине.
+func githubRateLimitMessage(resp *http.Response) string {
+	if resp.StatusCode != http.StatusForbidden && resp.StatusCode != http.StatusTooManyRequests {
+		return ""
+	}
+	if resp.Header.Get("X-RateLimit-Remaining") != "0" {
+		return ""
+	}
+	msg := "GitHub limits anonymous requests to 60 per hour per address,\nand this address has used them all up."
+	if sec, err := strconv.ParseInt(resp.Header.Get("X-RateLimit-Reset"), 10, 64); err == nil && sec > 0 {
+		msg += "\nTry again after " + time.Unix(sec, 0).Local().Format("15:04") + "."
+	}
+	return msg
+}
+
+func CheckForUpdates(pf *PanelsFrame, manual bool) {
+	if !manual && !shouldCheck() {
 		return
 	}
 
-	needsUpdate := false
-	displayVersion := release.TagName
-	updateKey := release.TagName
+	AppConfig.LastUpdateCheck = time.Now().Unix()
+	SaveConfig()
 
-	if AppConfig.UpdateChannel == 1 {
-		updateKey = assetUpdated
-		displayTime := assetUpdated
-		if t, err := time.Parse(time.RFC3339, assetUpdated); err == nil {
-			displayTime = t.Local().Format("2006-01-02 15:04")
-		} else if len(displayTime) >= 16 {
-			displayTime = strings.Replace(displayTime[:16], "T", " ", 1)
-		}
-		displayVersion = "Nightly (" + displayTime + ")"
-		// The asset's updated_at is when the upload finished, which can
-		// trail the actual commit by however long the full multi-OS build
-		// matrix took — the nightly workflow embeds the commit hash and
-		// its own build time in the release body, which is what F1's Help
-		// Index shows after installing. Prefer that so the prompt and the
-		// post-update version line agree. See #343.
-		if commit, builtOn := commitInfoFromReleaseBody(release.Body); commit != "" {
-			if builtOn != "" {
-				builtOn = formatBuildTimeForDisplay(builtOn)
-				displayVersion = "Nightly (" + commit + " [" + builtOn + "])"
-			} else {
-				displayVersion = "Nightly (" + commit + ")"
-			}
-		}
-		if AppConfig.LastUpdateVersion != updateKey {
-			needsUpdate = true
-		}
-	} else {
-		current := getCurrentVersion()
-		_, _, buildTimeText := getVCSInfo()
-		needsUpdate = stableReleaseNeedsUpdate(release, current, parseUpdateBuildTime(buildTimeText))
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cand, err := fetchUpdateCandidate(ctx, AppConfig.UpdateChannel)
+	if err != nil {
+		reportUpdateError(manual, err.Error())
+		return
 	}
 
-	if !needsUpdate {
+	if !cand.needsUpdate {
 		if manual {
 			vtui.FrameManager.PostTask(func() {
 				vtui.ShowMessage(" Auto Update ", "You are using the latest version.", []string{"&Ok"})
@@ -230,17 +278,17 @@ func CheckForUpdates(pf *PanelsFrame, manual bool) {
 	// the next interval-driven check does not nag; a manual "Check
 	// for updates" from the settings dialog goes through regardless
 	// (see #374).
-	if !manual && sessionDismissedUpdateKey == updateKey {
-		vtui.DebugLog("UPDATER: skipping prompt — update %q dismissed this session", updateKey)
+	if !manual && sessionDismissedUpdateKey == cand.updateKey {
+		vtui.DebugLog("UPDATER: skipping prompt — update %q dismissed this session", cand.updateKey)
 		return
 	}
 
 	vtui.FrameManager.PostTask(func() {
-		msg := fmt.Sprintf("An update is available: %s\n\nDo you want to download and install it now?", displayVersion)
+		msg := fmt.Sprintf("An update is available: %s\n\nDo you want to download and install it now?", cand.displayVersion)
 		dlg := vtui.ShowMessage(" Auto Update ", msg, []string{"&Yes", "&No"})
 		dlg.OnResult = func(code int) {
 			if code == 0 {
-				performUpdate(pf, downloadURL, archiveKind, release.TagName, updateKey)
+				performUpdate(pf, cand.downloadURL, cand.archiveKind, cand.tagName, cand.updateKey)
 				return
 			}
 			// User declined. Remember only for this session — the
@@ -249,7 +297,7 @@ func CheckForUpdates(pf *PanelsFrame, manual bool) {
 			// here: that field is the "we already installed this
 			// version" marker and must survive across restarts, while
 			// a declined prompt must not (see #374).
-			sessionDismissedUpdateKey = updateKey
+			sessionDismissedUpdateKey = cand.updateKey
 		}
 	})
 }
@@ -331,79 +379,16 @@ func performUpdate(pf *PanelsFrame, url, archiveKind, newTag, publishedAt string
 		return
 	}
 	pf.RunProgressTask(" Updating f4 ", "Downloading...", false, func(ctx context.Context, update func(msg string, percent int)) error {
-		exePath, err := osExecutable()
-		if err != nil {
-			return fmt.Errorf("failed to get executable path: %w", err)
-		}
-		exePath, err = filepath.EvalSymlinks(exePath)
-		if err != nil {
-			return fmt.Errorf("failed to resolve symlinks for executable: %w", err)
-		}
-
-		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+		data, err := downloadUpdateArchive(ctx, url, func(percent int) {
+			update("Downloading update...", percent)
+		})
 		if err != nil {
 			return err
-		}
-		req.Header.Set("User-Agent", "f4-updater")
-
-		resp, err := netproxy.HTTPClient(0).Do(req)
-		if err != nil {
-			return err
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != 200 {
-			proxyAuthHeader := resp.Header.Get("Proxy-Authenticate")
-			vtui.DebugLog("UPDATER ERROR: Download failed HTTP %d from %s (Proxy: %s, Proxy-Authenticate: %q)",
-				resp.StatusCode, url, netproxy.Global().Describe(), proxyAuthHeader)
-			if resp.StatusCode == http.StatusProxyAuthRequired {
-				return fmt.Errorf("download failed with status 407 (Proxy Authentication Required).\nProxy: %s, Proxy-Authenticate: %s", netproxy.Global().Describe(), proxyAuthHeader)
-			}
-			return fmt.Errorf("download failed with status %d", resp.StatusCode)
-		}
-
-		contentLength := resp.ContentLength
-		var archiveData bytes.Buffer
-		buf := make([]byte, 32*1024)
-		var downloaded int64
-
-		for {
-			if ctx.Err() != nil {
-				return ctx.Err()
-			}
-			n, readErr := readUpdateChunk(ctx, resp.Body, buf)
-			if n > 0 {
-				archiveData.Write(buf[:n])
-				downloaded += int64(n)
-				pct := 0
-				if contentLength > 0 {
-					pct = int((downloaded * 100) / contentLength)
-				}
-				update("Downloading update...", pct)
-			}
-			if readErr != nil {
-				if readErr == io.EOF {
-					break
-				}
-				return readErr
-			}
 		}
 
 		update("Extracting and installing...", -1)
 
-		exeDir := filepath.Dir(exePath)
-		if updateDirNeedsElevation(exeDir) {
-			vtui.DebugLog("UPDATER: %q is not writable, requesting UAC elevation", exeDir)
-			err = runElevatedUpdate(archiveData.Bytes(), archiveKind)
-		} else {
-			err = extractUpdateArchive(archiveData.Bytes(), archiveKind, exeDir)
-			if err != nil && isPermissionErrorForUpdate(err) {
-				vtui.DebugLog("UPDATER: extraction needs elevation, retrying through UAC: %v", err)
-				err = runElevatedUpdate(archiveData.Bytes(), archiveKind)
-			}
-		}
-
-		if err != nil {
+		if err := installUpdateArchive(data, archiveKind); err != nil {
 			return fmt.Errorf("failed to extract/install update: %w\n(Close other f4 instances, check Task Manager for ghost f4 processes, or try running as admin/root)", err)
 		}
 
@@ -416,7 +401,7 @@ func performUpdate(pf *PanelsFrame, url, archiveKind, newTag, publishedAt string
 			return
 		}
 
-		if AppConfig.UpdateChannel == 1 {
+		if AppConfig.UpdateChannel == updateChannelNightly {
 			AppConfig.LastUpdateVersion = publishedAt
 		} else {
 			AppConfig.LastUpdateVersion = newTag
@@ -431,6 +416,87 @@ func performUpdate(pf *PanelsFrame, url, archiveKind, newTag, publishedAt string
 			}
 		}
 	})
+}
+
+// downloadUpdateArchive забирает архив релиза целиком в память, сообщая ход
+// загрузки в процентах. Общая часть для диалога обновления и для --update.
+func downloadUpdateArchive(ctx context.Context, url string, progress func(percent int)) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", "f4-updater")
+
+	resp, err := netproxy.HTTPClient(0).Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		proxyAuthHeader := resp.Header.Get("Proxy-Authenticate")
+		vtui.DebugLog("UPDATER ERROR: Download failed HTTP %d from %s (Proxy: %s, Proxy-Authenticate: %q)",
+			resp.StatusCode, url, netproxy.Global().Describe(), proxyAuthHeader)
+		if resp.StatusCode == http.StatusProxyAuthRequired {
+			return nil, fmt.Errorf("download failed with status 407 (Proxy Authentication Required).\nProxy: %s, Proxy-Authenticate: %s", netproxy.Global().Describe(), proxyAuthHeader)
+		}
+		return nil, fmt.Errorf("download failed with status %d", resp.StatusCode)
+	}
+
+	contentLength := resp.ContentLength
+	var archiveData bytes.Buffer
+	buf := make([]byte, 32*1024)
+	var downloaded int64
+
+	for {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		n, readErr := readUpdateChunk(ctx, resp.Body, buf)
+		if n > 0 {
+			archiveData.Write(buf[:n])
+			downloaded += int64(n)
+			pct := 0
+			if contentLength > 0 {
+				pct = int((downloaded * 100) / contentLength)
+			}
+			progress(pct)
+		}
+		if readErr != nil {
+			if readErr == io.EOF {
+				break
+			}
+			return nil, readErr
+		}
+	}
+
+	return archiveData.Bytes(), nil
+}
+
+// installUpdateArchive распаковывает архив поверх каталога работающего
+// бинарника, при отказе в правах — через эскалацию.
+func installUpdateArchive(data []byte, archiveKind string) error {
+	exePath, err := osExecutable()
+	if err != nil {
+		return fmt.Errorf("failed to get executable path: %w", err)
+	}
+	exePath, err = filepath.EvalSymlinks(exePath)
+	if err != nil {
+		return fmt.Errorf("failed to resolve symlinks for executable: %w", err)
+	}
+
+	exeDir := filepath.Dir(exePath)
+	if updateDirNeedsElevation(exeDir) {
+		vtui.DebugLog("UPDATER: %q is not writable, requesting UAC elevation", exeDir)
+		return runElevatedUpdate(data, archiveKind)
+	}
+
+	err = extractUpdateArchive(data, archiveKind, exeDir)
+	if err != nil && isPermissionErrorForUpdate(err) {
+		vtui.DebugLog("UPDATER: extraction needs elevation, retrying through UAC: %v", err)
+		return runElevatedUpdate(data, archiveKind)
+	}
+	return err
 }
 
 func extractUpdateArchive(data []byte, archiveKind, destDir string) error {

@@ -18,6 +18,16 @@
 
 *These builds are automated and represent the current state of the `main` branch.*
 
+An installed f4 updates itself from the command line, no browser needed:
+
+```sh
+f4 --update nightly   # newest nightly build
+f4 --update stable    # newest tagged release
+f4 --update           # whichever channel is configured (Options > Auto update)
+```
+
+A named channel also becomes the one f4 checks automatically from then on.
+
 ### 🍺 Install on macOS via Homebrew
 
 Tagged releases (`vX.Y.Z`) are published to a Homebrew tap, so you can install with one command:

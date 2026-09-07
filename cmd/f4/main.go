@@ -271,6 +271,8 @@ func main() {
 	var attachedMode bool
 	var wineProbe bool
 	var dumpScreenAfter float64
+	var updateRequested bool
+	var updateChannelArg string
 
 	exeName := filepath.Base(absExecPath)
 	if strings.Contains(strings.ToLower(exeName), "gui") {
@@ -296,6 +298,14 @@ func main() {
 			version = true
 		case "--debug":
 			os.Setenv("VTUI_DEBUG", "1")
+		case "--update":
+			updateRequested = true
+			if flagVal != "" {
+				updateChannelArg = flagVal
+			} else if i+1 < len(os.Args) && !strings.HasPrefix(os.Args[i+1], "-") {
+				updateChannelArg = os.Args[i+1]
+				i++
+			}
 		case "--gui":
 			guiMode = true
 			startupChoiceGiven = true
@@ -417,6 +427,11 @@ func main() {
 		fmt.Println(getFormattedVersionInfo())
 		return
 	}
+	// Обновление — команда, а не способ запустить файловый менеджер: ни
+	// панелей, ни сессии здесь не поднимается.
+	if updateRequested {
+		os.Exit(runUpdateCLI(updateChannelArg))
+	}
 	if print_help {
 		fmt.Printf(`f4 version: %s
 f4 is efficient and cozy two-panel file manager in go
@@ -451,6 +466,11 @@ The following switches may be used in the command line:
  --new-plugin [pluginName]
  --server [serverPath]
  -test-plugins          Plugin test mode
+ --update [Channel]     Download and install the newest build, then exit;
+                         [Channel] values: "stable" (or "latest"), "nightly";
+                         if Channel omited, the configured update channel is
+                         used ([Update] Channel, Options > Auto update), and
+                         a named channel becomes the configured one
  --tty [Backend]        Force run in TTY-mode
                          [Backend] values: "ansi", "winapi" (or "win32"),
                          "auto"; if Backend omited, the configured default
