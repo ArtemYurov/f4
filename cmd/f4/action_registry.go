@@ -2384,7 +2384,7 @@ func init() {
 				ev.disableUnsafeWordWrap()
 				return
 			}
-			ev.WordWrap = !ev.WordWrap
+			ev.setWordWrap(!ev.WordWrap)
 			ev.ScrollLeft = 0
 			ev.clearCaches()
 			ev.ensureCursorVisible()

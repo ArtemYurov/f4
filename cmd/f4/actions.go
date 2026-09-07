@@ -933,7 +933,7 @@ func showEditor(pf *PanelsFrame, v vfs.VFS, path string, f vfs.ReadAtCloser) {
 	// A saved position is a line number, meaningless for a hex view.
 	if GlobalFileState != nil && path != "" && !binary {
 		if state := GlobalFileState.GetState(FileStateKey(v, path)); state != nil {
-			editor.WordWrap = state.EditorWrap
+			editor.applyRememberedWordWrap(state.EditorWrap)
 			editor.targetLine = state.EditorLine
 			editor.targetPos = state.EditorPos
 			editor.targetTopRow = state.EditorTopRow
@@ -1377,7 +1377,7 @@ func actionSwitchViewerToEditor(vv *ViewerView) {
 	editor.Codepage = cpID
 	editor.binaryFile = vv.HexMode
 	editor.utf8BOM = cpID == 65001 && vv.backend != nil && vv.backend.dataOffset != 0
-	editor.WordWrap = vv.WrapMode
+	editor.applyRememberedWordWrap(vv.WrapMode)
 	editor.HexMode = vv.HexMode
 	editor.DecodeMode = vv.DecodeMode
 	editor.DisasmMode = vv.DisasmMode

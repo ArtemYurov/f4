@@ -53,6 +53,7 @@ type EditorView struct {
 	ScrollLeft   int // Горизонтальный скролл (когда WordWrap=false)
 
 	WordWrap           bool
+	wordWrapWanted     bool // The choice made for this file, which is what gets remembered.
 	wordWrapSuppressed bool // Unsafe binary/long-line content forbids re-enabling wrapping.
 	binaryFile         bool // Binary files stay editable as text, but syntax parsers must not scan them.
 	HexMode            bool
@@ -293,7 +294,7 @@ func (ev *EditorView) ConfirmClose() bool {
 
 func (ev *EditorView) Close() {
 	if GlobalFileState != nil && ev.filePath != "" {
-		GlobalFileState.SaveEditorStateAsync(FileStateKey(ev.vfs, ev.filePath), ev.CursorLine, ev.CursorPos, ev.ScrollTopRow, ev.ScrollLeft, ev.WordWrap)
+		GlobalFileState.SaveEditorStateAsync(FileStateKey(ev.vfs, ev.filePath), ev.CursorLine, ev.CursorPos, ev.ScrollTopRow, ev.ScrollLeft, ev.wordWrapWanted)
 	}
 	if ev.highlightCancel != nil {
 		ev.highlightCancel()
@@ -946,6 +947,29 @@ func (ev *EditorView) ensureEngineWidth() {
 	}
 	ev.engine.SetWidth(width)
 	ev.engine.ToggleWrap(ev.WordWrap)
+}
+
+// setWordWrap turns wrapping on or off because the user asked for it, and
+// remembers the choice for this file straight away rather than at close.
+// An editor left open when f4 exits never reaches Close, and the file the
+// user was reading is exactly the one they are most likely to open next.
+//
+// The choice is written on its own, without the cursor position: a restore
+// that has not finished yet would otherwise have the position it is on its
+// way to restoring overwritten with the top of the file.
+func (ev *EditorView) setWordWrap(on bool) {
+	ev.WordWrap = on
+	ev.wordWrapWanted = on
+	if GlobalFileState != nil && ev.filePath != "" {
+		GlobalFileState.SaveEditorWrapAsync(FileStateKey(ev.vfs, ev.filePath), on)
+	}
+}
+
+// applyRememberedWordWrap opens a file with the wrapping it was left with.
+// The value came from the store, so it is not written back to it.
+func (ev *EditorView) applyRememberedWordWrap(on bool) {
+	ev.WordWrap = on
+	ev.wordWrapWanted = on
 }
 
 func (ev *EditorView) updateDesiredVisualCol() {
