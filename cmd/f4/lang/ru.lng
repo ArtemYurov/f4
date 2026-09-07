@@ -405,6 +405,8 @@ Action.App.Spreadsheet.Desc=Открыть рабочее пространств
 Action.App.SQLite=&Клиент SQLite
 Action.App.SQLite.Desc=Открыть клиент SQLite для базы данных под курсором
 Action.Panel.TempPanel.Desc=Открыть временную панель или выбрать сохранённый список
+Action.Settings.MacKeyboard=Клавиатура &Mac
+Action.Settings.MacKeyboard.Desc=Раскладка macOS для правки текста: Cmd — начало и конец строки и файла, Opt — переходы по словам
 
 Editor.GotoTitle=Перейти к позиции
 Editor.GotoLine=Строка:

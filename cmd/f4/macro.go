@@ -451,7 +451,11 @@ func (m *MacroManager) Filter(e *vtinput.InputEvent) bool {
 	// The user's key remap (keymap.ini) substitutes the key before anything
 	// else sees the event, so macros, plugin interception, configurable
 	// hotkeys and the frames themselves all agree on which key was pressed.
-	applyKeyRemap(m.GetCurrentArea(), e)
+	if !applyKeyRemap(m.GetCurrentArea(), e) {
+		// The built-in Mac layout only sees what keymap.ini left behind, so
+		// a rule the user wrote by hand still wins over it.
+		applyMacKeys(m.GetCurrentArea(), e)
+	}
 
 	// Ctrl+. toggles recording. We check both VK and Char for better terminal compatibility.
 	isCtrlDot := (e.VirtualKeyCode == vtinput.VK_OEM_PERIOD || e.Char == '.') &&

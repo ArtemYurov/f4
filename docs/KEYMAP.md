@@ -83,6 +83,14 @@ so `Alt+1` shows and runs the plain `F1` command rather than the `Alt+F1` one.
   answers Right Ctrl unless an `RCtrl` rule says otherwise.
 * **Bare modifiers are untouched.** Pressing Ctrl alone is not a chord.
 
+## The Mac layout
+
+macOS needs the same layer for a different reason: `Cmd` and `Opt` carry the
+editing chords there, and Far gives several of those keys other meanings. That
+one is built in and does not have to be written out by hand — see
+[Mac keyboard mode](MACKEYS.md). A rule here still wins over it, so a key you
+have remapped yourself keeps what you gave it.
+
 ## Choosing between the two files
 
 Rebinding a command is still the better tool when a command is what you want

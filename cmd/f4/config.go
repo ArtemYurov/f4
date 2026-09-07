@@ -194,6 +194,7 @@ type F4Config struct {
 	AltNumberSwitchesTabs    bool
 	RestoreWorkspaceTabs     bool
 	WorkspaceTabNumbering    WorkspaceTabNumberingMode
+	MacKeyboard              string
 	ShowHiddenFiles          bool
 	ShowDirPrefix            bool
 	ShowHighlightMarks       bool
@@ -358,6 +359,7 @@ var AppConfig = F4Config{
 	AltNumberSwitchesTabs:    true,
 	RestoreWorkspaceTabs:     true,
 	WorkspaceTabNumbering:    WorkspaceTabNumbersAlways,
+	MacKeyboard:              MacKeysAuto,
 	ShowHiddenFiles:          true,
 	ShowDirPrefix:            false,
 	ShowHighlightMarks:       false,
@@ -538,6 +540,7 @@ func LoadConfig() {
 	AppConfig.AltNumberSwitchesTabs = ini.GetString("Interface", "AltNumberSwitchesTabs", "1") != "0"
 	AppConfig.RestoreWorkspaceTabs = ini.GetString("Interface", "RestoreWorkspaceTabs", "1") != "0"
 	AppConfig.WorkspaceTabNumbering = ParseWorkspaceTabNumberingMode(ini.GetString("Interface", "WorkspaceTabNumbering", "always"))
+	AppConfig.MacKeyboard = ParseMacKeysMode(ini.GetString("Interface", "MacKeyboard", MacKeysAuto))
 	if AppConfig.ConsoleTitleTemplate == "f4 - %State" {
 		AppConfig.ConsoleTitleTemplate = "f4 %Ver %Platform %Admin - %State"
 	}
@@ -839,7 +842,8 @@ func saveConfigWithWindowSize(windowSize bool) {
 	fmt.Fprintf(&sb, "CtrlTabMode = %s\n", ctrlTabMode)
 	fmt.Fprintf(&sb, "AltNumberSwitchesTabs = %d\n", map[bool]int{true: 1, false: 0}[AppConfig.AltNumberSwitchesTabs])
 	fmt.Fprintf(&sb, "RestoreWorkspaceTabs = %d\n", map[bool]int{true: 1, false: 0}[AppConfig.RestoreWorkspaceTabs])
-	fmt.Fprintf(&sb, "WorkspaceTabNumbering = %s\n\n", AppConfig.WorkspaceTabNumbering.String())
+	fmt.Fprintf(&sb, "WorkspaceTabNumbering = %s\n", AppConfig.WorkspaceTabNumbering.String())
+	fmt.Fprintf(&sb, "MacKeyboard = %s\n\n", ParseMacKeysMode(AppConfig.MacKeyboard))
 	sb.WriteString("[Panel]\n")
 	fmt.Fprintf(&sb, "ShowHiddenFiles = %d\n", map[bool]int{true: 1, false: 0}[AppConfig.ShowHiddenFiles])
 	fmt.Fprintf(&sb, "ShowDirPrefix = %d\n", map[bool]int{true: 1, false: 0}[AppConfig.ShowDirPrefix])

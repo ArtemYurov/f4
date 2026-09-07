@@ -412,6 +412,8 @@ Action.App.SQLite=SQLite &client
 Action.App.SQLite.Desc=Open the SQLite client on the database under the cursor
 Action.Panel.TempPanel.Desc=Open the temporary panel or switch its saved list
 Action.Panel.Player.Desc=Toggle the audio player panel
+Action.Settings.MacKeyboard=&Mac keyboard
+Action.Settings.MacKeyboard.Desc=Use the macOS editing chords: Cmd for line and document edges, Opt for word navigation
 
 Editor.GotoTitle=Go to position
 Editor.GotoLine=Line:

@@ -1492,6 +1492,29 @@ func init() {
 			pf.ResizeConsole(pf.lastW, pf.lastH)
 		}),
 	})
+	RegisterAction(Action{
+		Name:        "Settings.MacKeyboard",
+		Area:        "Shell",
+		Label:       "Mac keyboard",
+		LabelKey:    "Action.Settings.MacKeyboard",
+		Description: "Use the macOS editing chords: Cmd for line and document edges, Opt for word navigation",
+		DescKey:     "Action.Settings.MacKeyboard.Desc",
+		MenuPath:    "Options",
+		// The menu entry is offered where the keyboard it describes is, and
+		// stays reachable for anyone who has already asked for the layout on
+		// another platform, so the switch is never one-way.
+		Visible: func() bool { return runtime.GOOS == "darwin" || macKeysEnabled() },
+		Checked: macKeysEnabled,
+		Handler: func() bool {
+			if macKeysEnabled() {
+				AppConfig.MacKeyboard = MacKeysOff
+			} else {
+				AppConfig.MacKeyboard = MacKeysOn
+			}
+			RequestSaveConfig()
+			return true
+		},
+	})
 
 	// --- Shell key-only actions (no menu entries) ---
 	RegisterAction(Action{
