@@ -3067,7 +3067,11 @@ func (pf *PanelsFrame) ProcessMouse(e *vtinput.InputEvent) bool {
 		}
 		active := pf.getActivePTY()
 		if active != nil && terminalWantsMouseEvent(pf.termView.MouseTrackingMode, e) {
-			seq := TranslateMouseInput(e)
+			seq := TranslateMouseInput(rebaseTerminalMouseEvent(
+				e,
+				pf.termView.X1, pf.termView.Y1,
+				pf.termView.Width, pf.termView.Height,
+			))
 			pf.writePTY(active, []byte(seq))
 			return true
 		}
