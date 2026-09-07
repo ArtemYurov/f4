@@ -4911,14 +4911,26 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 
 	// 2. Fixed platform paths (Root, Home, physical disks). The metadata is
 	// rendered at menu-open time, just like Far's ChangeDiskMenu, so labels,
-	// filesystem types and free space reflect the current state.
+	// filesystem types and free space reflect the current state. Collect all
+	// rows first: the formatter needs the whole list to align its columns.
 	driveMenuOptions := AppConfig.DriveMenuOptions
+	platformDrives := make([]DriveEntry, 0)
 	for _, drv := range getPlatformDrives() {
 		if !driveMenuPlatformItemVisible(drv, driveMenuOptions) {
 			continue
 		}
+		platformDrives = append(platformDrives, drv)
+	}
+	platformNames := driveMenuPlatformRowsText(func() []driveMenuPlatformRow {
+		rows := make([]driveMenuPlatformRow, len(platformDrives))
+		for i, drv := range platformDrives {
+			rows[i] = driveMenuPlatformRowFor(drv, driveMenuOptions)
+		}
+		return rows
+	}(), driveMenuOptions)
+	for i, drv := range platformDrives {
 		factory := drv.Factory
-		name := driveMenuPlatformItemText(drv, driveMenuOptions)
+		name := platformNames[i]
 		if runtime.GOOS != "windows" {
 			if strings.HasPrefix(driveMenuNameWithoutMarker(drv.Name), "/") {
 				name = "&" + name

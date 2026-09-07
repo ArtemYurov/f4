@@ -1601,6 +1601,7 @@ Drive.TypeFixed=фиксированный
 Drive.TypeRemovable=сменный
 Drive.TypeCD=CD
 Drive.TypeRemote=сетевой
+Drive.TypeSubstitute=SUBST
 Drive.TypePhysical=физический
 
 DriveLink.CreateTitle= Создать ссылку

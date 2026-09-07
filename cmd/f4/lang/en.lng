@@ -1659,6 +1659,7 @@ Drive.TypeFixed=fixed
 Drive.TypeRemovable=removable
 Drive.TypeCD=CD
 Drive.TypeRemote=network
+Drive.TypeSubstitute=SUBST
 Drive.TypePhysical=physical
 
 DriveLink.CreateTitle= Create link

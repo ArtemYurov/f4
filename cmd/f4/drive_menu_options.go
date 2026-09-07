@@ -59,6 +59,7 @@ const (
 	driveMenuKindRemovable
 	driveMenuKindCD
 	driveMenuKindRemote
+	driveMenuKindSubstitute
 	driveMenuKindPhysical
 )
 
@@ -141,7 +142,11 @@ func driveMenuKindLabel(kind driveMenuKind) string {
 	case driveMenuKindRemote:
 		return Msg("Drive.TypeRemote")
 	case driveMenuKindPhysical:
-		return Msg("Drive.TypePhysical")
+		// The row already says "Physical Disks"; repeating "physical" is
+		// noise and is not how Far presents this synthetic entry.
+		return ""
+	case driveMenuKindSubstitute:
+		return Msg("Drive.TypeSubstitute")
 	default:
 		return ""
 	}
@@ -162,19 +167,26 @@ func driveMenuSize(b uint64, decimal bool) string {
 	return fmt.Sprintf("%d %ciB", b/div, "KMGTPE"[exp])
 }
 
-// driveMenuPlatformItemText renders the platform rows as Far-style columns.
-// fsInfo is deliberately used only for built-in local rows: plugin VFSes can
-// be remote and may block while resolving their metadata.
-func driveMenuPlatformItemText(drv DriveEntry, options uint32) string {
-	base := driveMenuBaseName(drv.Name)
+type driveMenuPlatformRow struct {
+	base, kind, label, filesystem string
+	total, free, network          string
+}
+
+type driveMenuPlatformColumn struct {
+	text       string
+	rightAlign bool
+}
+
+// driveMenuPlatformRowFor collects the metadata for one built-in drive. fsInfo
+// is deliberately used only for built-in local rows: plugin VFSes can be
+// remote and may block while resolving their metadata.
+func driveMenuPlatformRowFor(drv DriveEntry, options uint32) driveMenuPlatformRow {
+	row := driveMenuPlatformRow{base: driveMenuBaseName(drv.Name)}
 	path := driveMenuInfoPath(drv.Name)
 	kind := driveMenuKindFor(drv.Name, path)
-	parts := []string{base}
 
 	if driveMenuOptionEnabled(options, driveMenuShowType) {
-		if label := driveMenuKindLabel(kind); label != "" {
-			parts = append(parts, label)
-		}
+		row.kind = driveMenuKindLabel(kind)
 	}
 
 	info, infoOK := FSInfo{}, false
@@ -183,20 +195,130 @@ func driveMenuPlatformItemText(drv DriveEntry, options uint32) string {
 	}
 	if infoOK {
 		if driveMenuOptionEnabled(options, driveMenuShowLabel) && info.Label != "" {
-			parts = append(parts, info.Label)
+			row.label = info.Label
 		}
 		if driveMenuOptionEnabled(options, driveMenuShowFilesystem) && info.Type != "" {
-			parts = append(parts, info.Type)
+			row.filesystem = info.Type
 		}
 		if driveMenuOptionEnabled(options, driveMenuShowSize) {
 			decimal := driveMenuOptionEnabled(options, driveMenuShowSizeFloat)
-			parts = append(parts, driveMenuSize(info.Total, decimal), driveMenuSize(info.Free, decimal))
+			row.total = driveMenuSize(info.Total, decimal)
+			row.free = driveMenuSize(info.Free, decimal)
 		}
 		if driveMenuOptionEnabled(options, driveMenuShowNetworkName) && info.Mount != "" && info.Mount != path {
-			parts = append(parts, info.Mount)
+			row.network = info.Mount
 		}
 	}
-	return strings.Join(parts, " | ")
+	return row
+}
+
+func (row driveMenuPlatformRow) columns(options uint32) []driveMenuPlatformColumn {
+	columns := make([]driveMenuPlatformColumn, 0, 7)
+	if driveMenuOptionEnabled(options, driveMenuShowType) {
+		columns = append(columns, driveMenuPlatformColumn{text: row.kind})
+	}
+	if driveMenuOptionEnabled(options, driveMenuShowLabel) {
+		columns = append(columns, driveMenuPlatformColumn{text: row.label})
+	}
+	if driveMenuOptionEnabled(options, driveMenuShowFilesystem) {
+		columns = append(columns, driveMenuPlatformColumn{text: row.filesystem})
+	}
+	if driveMenuOptionEnabled(options, driveMenuShowSize) {
+		columns = append(columns,
+			driveMenuPlatformColumn{text: row.total, rightAlign: true},
+			driveMenuPlatformColumn{text: row.free, rightAlign: true})
+	}
+	if driveMenuOptionEnabled(options, driveMenuShowNetworkName) {
+		columns = append(columns, driveMenuPlatformColumn{text: row.network})
+	}
+	return columns
+}
+
+func driveMenuPlatformRowHasDetails(columns []driveMenuPlatformColumn) bool {
+	for _, column := range columns {
+		if column.text != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func driveMenuPadColumn(column driveMenuPlatformColumn, width int, last bool) string {
+	if last {
+		if column.rightAlign {
+			return strings.Repeat(" ", width-vtui.StringWidth(column.text)) + column.text
+		}
+		return column.text
+	}
+	padding := width - vtui.StringWidth(column.text)
+	if column.rightAlign {
+		return strings.Repeat(" ", padding) + column.text
+	}
+	return column.text + strings.Repeat(" ", padding)
+}
+
+// driveMenuPlatformRowsText renders the platform rows as Far-style columns.
+// Widths are calculated across the complete visible platform list, so a long
+// label on one drive no longer makes the following columns jump between rows.
+func driveMenuPlatformRowsText(rows []driveMenuPlatformRow, options uint32) []string {
+	columnWidths := make([]int, 0, 7)
+	rowColumns := make([][]driveMenuPlatformColumn, len(rows))
+	for i, row := range rows {
+		rowColumns[i] = row.columns(options)
+		if len(rowColumns[i]) > len(columnWidths) {
+			columnWidths = append(columnWidths, make([]int, len(rowColumns[i])-len(columnWidths))...)
+		}
+		for column, value := range rowColumns[i] {
+			if width := vtui.StringWidth(value.text); width > columnWidths[column] {
+				columnWidths[column] = width
+			}
+		}
+	}
+
+	texts := make([]string, len(rows))
+	for i, row := range rows {
+		columns := rowColumns[i]
+		if !driveMenuPlatformRowHasDetails(columns) {
+			texts[i] = row.base
+			continue
+		}
+		last := len(columns) - 1
+		for column := last; column >= 0; column-- {
+			if columns[column].text != "" {
+				last = column
+				break
+			}
+		}
+		parts := make([]string, 1, last+2)
+		parts[0] = row.base
+		for column := 0; column <= last; column++ {
+			parts = append(parts, driveMenuPadColumn(columns[column], columnWidths[column], column == last))
+		}
+		texts[i] = strings.Join(parts, " | ")
+	}
+	return texts
+}
+
+// driveMenuPlatformItemText is kept for callers and small formatting tests;
+// the live menu uses driveMenuPlatformRowsText so all rows share widths.
+func driveMenuPlatformItemText(drv DriveEntry, options uint32) string {
+	return driveMenuPlatformRowsText([]driveMenuPlatformRow{driveMenuPlatformRowFor(drv, options)}, options)[0]
+}
+
+func driveMenuOptionsDialogSize() (int, int) {
+	width := vtui.StringWidth(Msg("Drive.OptionsTitle")) + 6
+	for _, spec := range driveMenuOptionSpecs {
+		label, _, _ := vtui.ParseAmpersandString(Msg(spec.label))
+		// Four columns are the checkbox prefix and four are dialog chrome.
+		if candidate := vtui.StringWidth(label) + 8; candidate > width {
+			width = candidate
+		}
+	}
+	buttonWidth := vtui.StringWidth(Msg("vtui.Ok")) + vtui.StringWidth(Msg("vtui.Cancel")) + 8
+	if buttonWidth > width {
+		width = buttonWidth
+	}
+	return width, len(driveMenuOptionSpecs) + 7
 }
 
 func driveMenuPlatformItemVisible(drv DriveEntry, options uint32) bool {
@@ -214,7 +336,7 @@ func driveMenuPlatformItemVisible(drv DriveEntry, options uint32) bool {
 }
 
 func (pf *PanelsFrame) openDriveMenuOptions(panelIdx int, menu *vtui.VMenu) {
-	const width, height = 78, 21
+	width, height := driveMenuOptionsDialogSize()
 	dlg := vtui.NewCenteredDialog(width, height, Msg("Drive.OptionsTitle"))
 	dlg.ShowClose = true
 
