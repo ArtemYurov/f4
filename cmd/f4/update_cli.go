@@ -67,6 +67,11 @@ func runUpdateCLI(channelArg string) int {
 		return 0
 	}
 
+	if _, err := updateTargetDir(); err != nil {
+		fmt.Printf("f4: %v\n", err)
+		return 1
+	}
+
 	fmt.Printf("Installing %s\n", cand.displayVersion)
 	lastPct := -1
 	data, err := downloadUpdateArchive(ctx, cand.downloadURL, func(percent int) {

@@ -379,6 +379,10 @@ func performUpdate(pf *PanelsFrame, url, archiveKind, newTag, publishedAt string
 		return
 	}
 	pf.RunProgressTask(" Updating f4 ", "Downloading...", false, func(ctx context.Context, update func(msg string, percent int)) error {
+		if _, err := updateTargetDir(); err != nil {
+			return err
+		}
+
 		data, err := downloadUpdateArchive(ctx, url, func(percent int) {
 			update("Downloading update...", percent)
 		})
@@ -473,19 +477,29 @@ func downloadUpdateArchive(ctx context.Context, url string, progress func(percen
 	return archiveData.Bytes(), nil
 }
 
-// installUpdateArchive распаковывает архив поверх каталога работающего
-// бинарника, при отказе в правах — через эскалацию.
-func installUpdateArchive(data []byte, archiveKind string) error {
+// updateTargetDir — каталог, поверх которого ляжет обновление. Вызывается
+// до загрузки тоже: узнать про нечитаемый путь дешевле, чем после
+// скачанных мегабайт.
+func updateTargetDir() (string, error) {
 	exePath, err := osExecutable()
 	if err != nil {
-		return fmt.Errorf("failed to get executable path: %w", err)
+		return "", fmt.Errorf("failed to get executable path: %w", err)
 	}
 	exePath, err = filepath.EvalSymlinks(exePath)
 	if err != nil {
-		return fmt.Errorf("failed to resolve symlinks for executable: %w", err)
+		return "", fmt.Errorf("failed to resolve symlinks for executable: %w", err)
+	}
+	return filepath.Dir(exePath), nil
+}
+
+// installUpdateArchive распаковывает архив поверх каталога работающего
+// бинарника, при отказе в правах — через эскалацию.
+func installUpdateArchive(data []byte, archiveKind string) error {
+	exeDir, err := updateTargetDir()
+	if err != nil {
+		return err
 	}
 
-	exeDir := filepath.Dir(exePath)
 	if updateDirNeedsElevation(exeDir) {
 		vtui.DebugLog("UPDATER: %q is not writable, requesting UAC elevation", exeDir)
 		return runElevatedUpdate(data, archiveKind)
