@@ -3,8 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
+
+	"golang.org/x/term"
 )
 
 // updateChannelName называет канал так, как он пишется в командной строке.
@@ -73,15 +76,21 @@ func runUpdateCLI(channelArg string) int {
 	}
 
 	fmt.Printf("Installing %s\n", cand.displayVersion)
+	// Проценты перерисовываются возвратом каретки, поэтому в файл или в
+	// журнал CI они не печатаются вовсе: там от них остаётся мусорная
+	// строка вместо хода загрузки.
+	showProgress := term.IsTerminal(int(os.Stdout.Fd()))
 	lastPct := -1
 	data, err := downloadUpdateArchive(ctx, cand.downloadURL, func(percent int) {
-		if percent == lastPct {
+		if !showProgress || percent == lastPct {
 			return
 		}
 		lastPct = percent
 		fmt.Printf("\rDownloading... %d%%", percent)
 	})
-	fmt.Println()
+	if showProgress {
+		fmt.Println()
+	}
 	if err != nil {
 		fmt.Printf("f4: download failed: %v\n", err)
 		return 1
