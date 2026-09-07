@@ -131,10 +131,9 @@ type updateCandidate struct {
 	downloadURL    string
 	archiveKind    string
 	displayVersion string
-	tagName        string
-	// updateKey расходится с tagName только на ночном канале: тег там
-	// всегда "nightly", поэтому отметкой уже поставленной сборки служит
-	// время загрузки asset'а.
+	// updateKey — отметка «эта сборка уже стоит»: тег на стабильном
+	// канале и время загрузки asset'а на ночном, где тег всегда
+	// "nightly" и потому ничего не различает.
 	updateKey   string
 	needsUpdate bool
 }
@@ -190,7 +189,6 @@ func fetchUpdateCandidate(ctx context.Context, channel int) (updateCandidate, er
 		downloadURL:    downloadURL,
 		archiveKind:    archiveKind,
 		displayVersion: release.TagName,
-		tagName:        release.TagName,
 		updateKey:      release.TagName,
 	}
 
@@ -288,7 +286,7 @@ func CheckForUpdates(pf *PanelsFrame, manual bool) {
 		dlg := vtui.ShowMessage(" Auto Update ", msg, []string{"&Yes", "&No"})
 		dlg.OnResult = func(code int) {
 			if code == 0 {
-				performUpdate(pf, cand.downloadURL, cand.archiveKind, cand.tagName, cand.updateKey)
+				performUpdate(pf, cand)
 				return
 			}
 			// User declined. Remember only for this session — the
@@ -374,7 +372,7 @@ func reportUpdateError(manual bool, msg string) {
 	}
 }
 
-func performUpdate(pf *PanelsFrame, url, archiveKind, newTag, publishedAt string) {
+func performUpdate(pf *PanelsFrame, cand updateCandidate) {
 	if pf == nil {
 		return
 	}
@@ -383,7 +381,7 @@ func performUpdate(pf *PanelsFrame, url, archiveKind, newTag, publishedAt string
 			return err
 		}
 
-		data, err := downloadUpdateArchive(ctx, url, func(percent int) {
+		data, err := downloadUpdateArchive(ctx, cand.downloadURL, func(percent int) {
 			update("Downloading update...", percent)
 		})
 		if err != nil {
@@ -392,7 +390,7 @@ func performUpdate(pf *PanelsFrame, url, archiveKind, newTag, publishedAt string
 
 		update("Extracting and installing...", -1)
 
-		if err := installUpdateArchive(data, archiveKind); err != nil {
+		if err := installUpdateArchive(data, cand.archiveKind); err != nil {
 			return fmt.Errorf("failed to extract/install update: %w\n(Close other f4 instances, check Task Manager for ghost f4 processes, or try running as admin/root)", err)
 		}
 
@@ -405,11 +403,7 @@ func performUpdate(pf *PanelsFrame, url, archiveKind, newTag, publishedAt string
 			return
 		}
 
-		if AppConfig.UpdateChannel == updateChannelNightly {
-			AppConfig.LastUpdateVersion = publishedAt
-		} else {
-			AppConfig.LastUpdateVersion = newTag
-		}
+		AppConfig.LastUpdateVersion = cand.updateKey
 		SaveConfig()
 
 		dlg := vtui.ShowMessage(" Update Successful ", "f4 has been updated successfully.\nPlease restart the application to apply changes.", []string{"E&xit now", "&Later"})
