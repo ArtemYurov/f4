@@ -204,21 +204,32 @@ func (s *historySearch) displayText(record HistoryRecord) string {
 	}
 
 	var result strings.Builder
-	if s.showTimes && !record.Timestamp.IsZero() {
-		switch s.timeMode {
-		case historyShowDate:
-			result.WriteString(record.Timestamp.Format("2006-01-02 "))
-		case historyShowNone:
-			// Timestamp is intentionally hidden.
-		default:
-			result.WriteString(record.Timestamp.Format("2006-01-02 15:04:05 "))
-		}
+	if s.showTimes {
+		result.WriteString(historyTimeColumn(record.Timestamp, s.timeMode))
 	}
 	if s.showDirPrefix {
 		result.WriteString(historyDirectoryPrefix(record.directory(), s.dirPrefixLen))
 	}
 	result.WriteString(record.Name)
 	return result.String()
+}
+
+// historyTimeColumn renders the leading timestamp of one history row. A record
+// stored before its history learned about timestamps has none; it gets a blank
+// column of the same width so the entries below and above it stay aligned,
+// the way far2l pads the command-history directory prefix.
+func historyTimeColumn(stamp time.Time, mode int) string {
+	layout := "2006-01-02 15:04:05 "
+	switch mode {
+	case historyShowDate:
+		layout = "2006-01-02 "
+	case historyShowNone:
+		return ""
+	}
+	if stamp.IsZero() {
+		return strings.Repeat(" ", len(layout))
+	}
+	return stamp.Format(layout)
 }
 
 func historyDirectoryPrefix(dir string, width int) string {
