@@ -2237,6 +2237,20 @@ func init() {
 		Handler:     withEditor(func(ev *EditorView) { ev.DeleteCurrentLine() }),
 	})
 	RegisterAction(Action{
+		Name:        "Editor.DuplicateLine",
+		Area:        "Editor",
+		Label:       "Duplicate Line",
+		LabelKey:    "Action.Editor.DuplicateLine",
+		Description: "Duplicate the current line or the selected lines",
+		DescKey:     "Action.Editor.DuplicateLine.Desc",
+		// Ctrl+D is the classic WordStar right-arrow alias in the editor
+		// and Alt+Arrows draw the block selection, so neither the
+		// Notepad++ nor the VS Code spelling of this command is free.
+		DefaultKeys: []string{"CtrlShiftD"},
+		MenuPath:    "Edit",
+		Handler:     withEditor(func(ev *EditorView) { ev.DuplicateLines() }),
+	})
+	RegisterAction(Action{
 		Name:        "Editor.Base64Menu",
 		Area:        "Editor",
 		Label:       "Base64 Tools",

@@ -5653,6 +5653,158 @@ func (ev *EditorView) DeleteSelection() {
 	}
 }
 
+// lineTerminator returns the end-of-line bytes that terminate the given
+// logical line, or nil when the line carries no terminator of its own — the
+// last line of a file that does not end with a line break.
+//
+// Line breaks are kept in the buffer exactly as the file had them, so this is
+// how a CRLF file is told from an LF one without scanning it.
+func (ev *EditorView) lineTerminator(line int) []byte {
+	if line < 0 || line+1 >= ev.li.LineCount() {
+		return nil
+	}
+	start := ev.li.GetLineOffset(line)
+	end := ev.li.GetLineOffset(line + 1)
+	n := 2
+	if end-start < n {
+		n = end - start
+	}
+	if n <= 0 {
+		return nil
+	}
+	data, err := ev.pt.GetRange(end-n, n)
+	if err != nil || len(data) == 0 || data[len(data)-1] != '\n' {
+		return nil
+	}
+	if len(data) > 1 && data[len(data)-2] == '\r' {
+		return []byte("\r\n")
+	}
+	return []byte("\n")
+}
+
+// preferredLineEnding picks the terminator a newly appended line should use,
+// copying the style of the nearest line at or above the given one that has
+// one. Appending to a CRLF file otherwise leaves a lone LF behind.
+func (ev *EditorView) preferredLineEnding(line int) []byte {
+	for l := line; l >= 0 && line-l < 8; l-- {
+		if term := ev.lineTerminator(l); term != nil {
+			return term
+		}
+	}
+	return []byte("\n")
+}
+
+// selectedLineSpan reports the first and last logical line the selection
+// touches, or the cursor line twice when nothing is selected.
+//
+// A stream selection that ends exactly at the start of a line does not count
+// that line: Shift+Down over one line selects one line, not two.
+func (ev *EditorView) selectedLineSpan() (int, int) {
+	if ev.rectSelActive {
+		first, last := ev.rectSelStartLine, ev.CursorLine
+		if first > last {
+			first, last = last, first
+		}
+		return first, last
+	}
+	if !ev.selActive {
+		return ev.CursorLine, ev.CursorLine
+	}
+	minOff, maxOff := ev.getSelectionRange()
+	first := ev.li.GetLineAtOffset(minOff)
+	last := ev.li.GetLineAtOffset(maxOff)
+	if last > first && maxOff == ev.li.GetLineOffset(last) {
+		last--
+	}
+	return first, last
+}
+
+// DuplicateLines copies the current line, or every line the selection touches,
+// and inserts the copy directly below the original block.
+//
+// The copy is taken as a raw byte range, so whatever line breaks the file uses
+// survive untouched. The cursor, and the selection when there is one, land on
+// the copy rather than staying on the original: repeating the key duplicates
+// what was just made, which is how the same key behaves elsewhere and what
+// makes holding it produce a run of copies instead of an ever-growing block.
+func (ev *EditorView) DuplicateLines() {
+	if ev.li.LineCount() == 0 {
+		return
+	}
+
+	first, last := ev.selectedLineSpan()
+	if first < 0 {
+		first = 0
+	}
+	ev.ensureIndexedToLine(last + 1)
+	if last >= ev.li.LineCount() {
+		last = ev.li.LineCount() - 1
+	}
+	if last < first {
+		return
+	}
+
+	start := ev.li.GetLineOffset(first)
+	end := ev.pt.Size()
+	terminated := last+1 < ev.li.LineCount()
+	if terminated {
+		end = ev.li.GetLineOffset(last + 1)
+	}
+	if end < start {
+		return
+	}
+
+	block, err := ev.pt.GetRange(start, end-start)
+	if err != nil {
+		return
+	}
+
+	// The final line of a file need not end with a line break. Duplicating it
+	// has to supply one, or the copy would be glued onto the original.
+	data := block
+	if !terminated {
+		eol := ev.preferredLineEnding(last)
+		data = make([]byte, 0, len(eol)+len(block))
+		data = append(data, eol...)
+		data = append(data, block...)
+	}
+	if len(data) == 0 {
+		return
+	}
+
+	cursorOffset := ev.li.GetLineOffset(ev.CursorLine) + ev.CursorPos
+
+	ev.noteBufferEdit()
+	ev.saveUndo(opOther)
+	ev.lastOp = opOther
+	ev.modified = true
+
+	ev.pt.Insert(end, data)
+	ev.li.UpdateAfterInsert(end, data)
+	ev.invalidateStates(first)
+	ev.engine.InvalidateFrom(first)
+
+	// Every position in the original block has its twin exactly len(data)
+	// bytes further on, which moves the cursor and the selection anchor onto
+	// the copy without re-deriving either from line numbers and columns.
+	shift := len(data)
+	if ev.rectSelActive {
+		ev.rectSelStartLine += last - first + 1
+	}
+	if ev.selActive {
+		ev.selAnchorOffset += shift
+	}
+
+	newOffset := cursorOffset + shift
+	if newOffset > ev.pt.Size() {
+		newOffset = ev.pt.Size()
+	}
+	ev.CursorLine = ev.li.GetLineAtOffset(newOffset)
+	ev.CursorPos = newOffset - ev.li.GetLineOffset(ev.CursorLine)
+	ev.updateDesiredVisualCol()
+	ev.ensureCursorVisible()
+}
+
 func (ev *EditorView) DeleteCurrentLine() {
 	if ev.pt.Size() == 0 {
 		return
