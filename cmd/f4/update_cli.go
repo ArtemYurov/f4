@@ -21,7 +21,7 @@ func parseUpdateChannelArg(arg string, configured int) (channel int, explicit bo
 	switch strings.ToLower(strings.TrimSpace(arg)) {
 	case "":
 		return configured, false, nil
-	case "stable", "latest", "release":
+	case "stable", "latest":
 		return updateChannelStable, true, nil
 	case "nightly":
 		return updateChannelNightly, true, nil
