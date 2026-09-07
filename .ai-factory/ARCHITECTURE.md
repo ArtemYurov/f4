@@ -69,7 +69,10 @@ f4/
 ├── plugins/                       # ── SHIPPED PLUGINS: implementations of sdk/ ──
 │   ├── archive/ cloudfox/ netfox/ mediainfo/ envman/
 │   ├── ios/ android/ sqlite/ visren/ id3editor/ chroma/
-│   └── dummy_internal/ dummy_rpc/ dummy_lua/   # transport fixtures
+│   ├── dummy_internal/ dummy_rpc/ dummy_lua/   # transport fixtures
+│   └── plugring/     (move)       # installable-plugin catalogue: index.yaml and
+│                                  # the plugins it points at. Data, no Go files.
+│                                  # Keeps the Far-era name it is modelled on.
 │
 ├── internal/                      # ── THE APPLICATION CORE IS MODULE-PRIVATE ──
 │   │
@@ -87,7 +90,10 @@ f4/
 │   ├── media/        (extract)    # image, audio, video decode and preview
 │   ├── sysinfo/      (extract)    # cpu / mem / fs / gpu info, drives
 │   ├── update/       (extract)    # self-update, elevation, helper args
-│   ├── settings/     (extract)    # ini, config, lang packs, colors, keymap, hotkeys
+│   ├── config/       (extract)    # F4Config, ini parsing, config overlay
+│   ├── i18n/         (extract)    # language packs + embedded lang/
+│   ├── theme/        (extract)    # colours, colour space, styles + embedded styles/
+│   ├── keymap/       (extract)    # key remap, hotkeys, input translation
 │   ├── fileops/      (extract)    # copy/move/delete, background jobs, clipboard
 │   │
 │   │  # self-contained subsystems, module-private (moved off the root)
@@ -97,24 +103,24 @@ f4/
 │   ├── fusefs/       (move)       # FUSE mounting
 │   ├── vtvibe/       (move)       # vtvibe session/provider layer
 │   ├── luaplug/      (move)       # Lua plugin engine
+│   ├── colorer/      (extract)    # colorer4go integration + embedded radiola.hrd
 │   │
 │   │  # platform helpers, already here
 │   └── wincon/  ttyx/  netproxy/  hideconsole/
 │
-├── embedded.go                    # root package: embeds README.md and the .hrd
-│                                  # scheme. Must stay in the root — //go:embed
-│                                  # cannot reach above its own directory.
-│
-├── assets/           (new)        # screenshot.png, colour schemes, plugin ring data
-│   ├── colorer/      (move)       #   colorer4go .hrd schemes (data, not Go)
-│   └── plugring/     (move)       #   plugin ring index.yaml + Lua (data, not Go)
+├── embedded.go                    # root package: embeds README.md, and only that.
+│                                  # Must stay in the root — //go:embed cannot
+│                                  # reach above its own directory, and README.md
+│                                  # has to sit there to render on GitHub.
 │
 ├── scripts/          (new)        # *.sh moved out of the repository root
 ├── docs/                          # subsystem documents; SPREADSHEET.md and
 │   └── ISSUES/                    #   ISSUE_*.md land here, not in the root
 ├── tools/                         # developer tooling incl. the ttytest harness
 ├── packaging/                     # distribution packaging
-├── .github/workflows/             # CI build matrix, nightly and tagged releases
+├── .github/
+│   ├── workflows/                 # CI build matrix, nightly and tagged releases
+│   └── assets/       (new)        # screenshot.png and other README media
 │
 └── README.md  LICENSE  go.mod  go.sum  f4.example.ini  highlight.ini
                                    # reference configs stay next to the README
@@ -133,6 +139,18 @@ implementations live at the top; the application core lives under `internal/`.**
   They are leaves of the dependency graph: hiding them buys no enforcement, and
   297 files of extensions sitting beside `panel/` and `editor/` would blur the line
   between the core and what plugs into it.
+- `plugins/plugring/` — the catalogue of installable plugins, named after the
+  Far-era plugin ring it reproduces, next to the plugins
+  that ship in the binary. It holds data, not Go files, so `./...` ignores it.
+  Its `index.yaml` is fetched over HTTP from its repository path
+  (`PlugRingCatalogURL`, `cmd/f4/plugring.go:20`), which makes that path a
+  published contract: moving it means already-installed builds stop resolving
+  the catalogue until they update. That is accepted here — the catalogue holds a
+  single demonstration plugin, and application updates go through GitHub
+  Releases, not this URL — but it is called out in the pull request rather than
+  buried, and three references move with it: `PlugRingCatalogURL`, the developer
+  fallback at `cmd/f4/plugring.go:48-49`, and the `url:` inside `index.yaml`
+  that points at its own neighbour.
 - `cmd/f4` — the entry point; it is `package main` and nothing can import it anyway.
 - `embedded.go` — the root package that bridges root-level files into the binary.
   `//go:embed` cannot reach above its own directory, and `README.md` has to stay in
@@ -143,10 +161,48 @@ before a reviewer has to.
 
 **Embedded resources travel with their package.** The same `//go:embed` rule means
 `cmd/f4/styles/`, `cmd/f4/lang/`, `cmd/f4/help/` and `cmd/f4/assets/icon/` move
-together with the code that embeds them — into `internal/settings`,
-`internal/dialog` and `internal/gui`. Data that is embedded from the root package
-(`assets/colorer/…/radiola.hrd`) can live anywhere below the root, because the root
-package's embed scope is the whole tree.
+together with the code that embeds them — into `internal/config`,
+`internal/dialog` and `internal/gui`. The same rule removes the root package's second
+embed: `radiola.hrd` has exactly one consumer (`colorer_plugin.go`), so it travels
+into `internal/colorer` and is embedded there, leaving root `embedded.go` with
+`README.md` alone — the single case it exists for.
+
+## File Naming Inside a Package
+
+A package's files are named `<topic>.go` for the core and `<topic>_<aspect>.go`
+for everything that extends it. The prefix is the **topic inside the package**,
+never the package name — `panel/frame.go`, not `panel/panel_frame.go`, the same
+way `vfs/hostpath` holds `path.go` rather than `vfs_path.go`.
+
+```text
+internal/panel/
+├── frame.go                # type PanelsFrame and its core methods
+├── frame_dragdrop.go       # was cmd/f4/dragdrop.go
+├── frame_translator.go     # was cmd/f4/translator.go
+├── frame_semantic.go       # the PanelsFrame slice of cmd/f4/semantic.go
+├── list.go                 # type FileSystemPanel
+├── list_reconnect.go       # was cmd/f4/reconnect.go
+└── list_semantic.go        # the FileSystemPanel slice of cmd/f4/semantic.go
+```
+
+Why it matters here specifically: Go requires a type's methods to live in the
+type's package, so a package that owns a large type accumulates files. Sorted by
+topic they read as one subject; named after unrelated features
+(`dragdrop.go`, `translator.go`, `semantic.go`) they read as a pile, and a file
+holding methods of six different types cannot be placed at all.
+
+The convention is already half-present in the tree — `editor_view.go`,
+`editor_base64.go`, `editor_find_all.go`, `command_palette_*.go`, `image_*.go`.
+Extraction finishes it rather than introducing it. Platform suffixes compose on
+the end as usual: `frame_dragdrop_windows.go`.
+
+**Splitting a multi-type file.** When one file carries methods of several types
+(`semantic.go` holds six), it is split along type lines and each piece lands in
+its own package under its own topic name — `frame_semantic.go`,
+`editor_semantic.go`, `viewer_semantic.go`. A method whose type lives elsewhere
+but whose logic belongs to this package becomes a plain function taking the type
+(`func handleDrop(pf *panel.PanelsFrame)`) rather than forcing the whole file
+into the type's package.
 
 ## Dependency Rules
 
@@ -155,8 +211,8 @@ is the only place where everything is assembled. Layers, bottom up:
 
 **Layer 0 — kernel, no intra-module dependencies:** `vfs`, `sdk`,
 `internal/piecetable`, `internal/sheet`, `internal/wincon`, `internal/ttyx`,
-`internal/netproxy`, `internal/hideconsole`, `internal/settings`,
-`internal/sysinfo`.
+`internal/netproxy`, `internal/hideconsole`, `internal/config`, `internal/i18n`,
+`internal/theme`, `internal/keymap`, `internal/sysinfo`.
 
 **Layer 1 — subsystems over the kernel:** `internal/textlayout` →
 `internal/piecetable`; `internal/fusefs` → `vfs`; `internal/vtvibe` → `vfs`;
@@ -179,7 +235,10 @@ Rules:
   global application state that the interactive subsystems share.
 - ✅ `plugins/*` → `vfs`, `sdk`, `internal/*` helper packages. Nothing imports a
   plugin back: they are leaves, wired in through `internal/plughost`.
-- ✅ Any module → `internal/settings`, `internal/sysinfo`, `vfs`.
+- ✅ Any module → `internal/config`, `internal/i18n`, `internal/theme`,
+  `internal/keymap`, `internal/sysinfo`, `vfs`. These are leaves: they import no
+  other `internal/*` package, which is what lets `config.App` stay a package-level
+  global without creating a cycle.
 - ✅ Higher-layer modules talk to lower ones by calling exported constructors and
   methods; lower ones call back through interfaces they define themselves.
 - ❌ `vfs` / `sdk` → any `internal/*` package. They are the public contract: an
@@ -253,7 +312,7 @@ Rules:
 
 7. **The repository root is for entry points, not artefacts.** A newcomer should
    reach `README.md` without scrolling. Scripts go to `scripts/`, media and data to
-   `assets/`, prose to `docs/`. Per-issue write-ups belong in `docs/ISSUES/` — or,
+   `.github/assets/`, prose to `docs/`. Per-issue write-ups belong in `docs/ISSUES/` — or,
    when produced through this harness, in the research → plan → archive chain under
    `.ai-factory/`.
 
@@ -269,7 +328,7 @@ Rules:
   fix imports, run the matrix. No rewrites inside a move commit — a reviewer must
   be able to confirm the diff is a rename.
 - **Extraction order:** leaf-first. `internal/sysinfo`, `internal/update`,
-  `internal/media` and `internal/settings` have the fewest inbound edges and go
+  `internal/media` and `internal/i18n` have the fewest inbound edges and go
   first; `internal/app` and `internal/panel` come last, once everything they
   depend on has left `cmd/f4`.
 - **Interoperability:** while a subsystem is half-extracted, the extracted package
@@ -284,7 +343,7 @@ Rules:
 // cmd/f4/main.go
 func main() {
     flags := parseFlags()
-    cfg := settings.Load(flags.ConfigPath)
+    cfg := config.Load(flags.ConfigPath)
 
     fs := vfs.NewHost()                       // layer 0
     host := plughost.New(cfg, fs)             // layer 2: owns all four transports
@@ -311,12 +370,12 @@ type PluginColumns interface {
     ColumnsFor(ctx context.Context, path string) ([]Column, error)
 }
 
-func New(cfg *settings.Config, fs vfs.FileSystem, side Side) *Panel { … }
+func New(cfg *config.Config, fs vfs.FileSystem, side Side) *Panel { … }
 ```
 
 ```go
 // internal/app/app.go — the app is the only place that knows both sides exist.
-func New(cfg *settings.Config, fs vfs.FileSystem, host *plughost.Host,
+func New(cfg *config.Config, fs vfs.FileSystem, host *plughost.Host,
     t *term.Terminal, left, right *panel.Panel) *App { … }
 ```
 
