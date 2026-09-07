@@ -72,12 +72,12 @@ type EditorView struct {
 	ShowWhitespaces bool
 	selActive       bool
 	selAnchorOffset int // Абсолютное смещение начала выделения
-	// extraCursors holds the secondary carets of a multi-caret edit, as
-	// absolute offsets, sorted and without duplicates. The primary caret
-	// stays in CursorLine/CursorPos and is never listed here, so every
-	// existing single-caret path keeps working untouched. Selections are
-	// still the primary caret's alone.
-	extraCursors       []int
+	// extraCursors holds the secondary carets of a multi-caret edit, sorted
+	// by offset and without duplicates. The primary caret stays in
+	// CursorLine/CursorPos and is never listed here, so every existing
+	// single-caret path keeps working untouched. Selections are still the
+	// primary caret's alone.
+	extraCursors       []extraCaret
 	rectSelActive      bool
 	rectSelStartLine   int
 	rectSelStartCol    int
@@ -291,13 +291,22 @@ const (
 	opOther
 )
 
+// extraCaret is one secondary caret: where it sits, and the column it aims for
+// when it moves between lines. That column is what keeps a caret from losing
+// its place to a short line on the way past — the job DesiredVisualCol does
+// for the primary caret.
+type extraCaret struct {
+	off        int
+	desiredCol int
+}
+
 type editorState struct {
 	table piecetable.TableState
 	line  int
 	pos   int
 	// carets are the extra carets as they stood before the change, so that
 	// undoing a multi-caret edit gives back the set that made it.
-	carets []int
+	carets []extraCaret
 }
 
 func (ev *EditorView) ConfirmClose() bool {
@@ -569,7 +578,7 @@ func (ev *EditorView) saveUndo(op undoOpType) {
 		table:  ev.pt.GetState(),
 		line:   line,
 		pos:    pos,
-		carets: append([]int(nil), ev.extraCursors...),
+		carets: append([]extraCaret(nil), ev.extraCursors...),
 	}
 
 	// Simple grouping for typing: don't push new state if we are just typing characters consecutively
@@ -601,7 +610,7 @@ func (ev *EditorView) Undo() {
 		table:  ev.pt.GetState(),
 		line:   ev.CursorLine,
 		pos:    ev.CursorPos,
-		carets: append([]int(nil), ev.extraCursors...),
+		carets: append([]extraCaret(nil), ev.extraCursors...),
 	})
 
 	// Restore last state
@@ -639,7 +648,7 @@ func (ev *EditorView) Redo() {
 		table:  ev.pt.GetState(),
 		line:   ev.CursorLine,
 		pos:    ev.CursorPos,
-		carets: append([]int(nil), ev.extraCursors...),
+		carets: append([]extraCaret(nil), ev.extraCursors...),
 	})
 
 	last := len(ev.redoStack) - 1
@@ -1730,7 +1739,8 @@ DoneRendering:
 	if len(ev.extraCursors) > 0 {
 		caretAttr := vtui.Palette[vtui.ColDialogEditSelected]
 		size := ev.pt.Size()
-		for _, off := range ev.extraCursors {
+		for _, caret := range ev.extraCursors {
+			off := caret.off
 			if off < 0 || off > size {
 				continue
 			}
@@ -1866,7 +1876,9 @@ func (ev *EditorView) processKeyInner(e *vtinput.InputEvent) bool {
 			if ev.processMultiCursorKey(e) {
 				return true
 			}
-			ev.clearExtraCursors()
+			if !multiCursorKeepsSet(e) {
+				ev.clearExtraCursors()
+			}
 		case e.Type == vtinput.PasteEventType:
 			ev.clearExtraCursors()
 		}
@@ -4741,7 +4753,7 @@ func (ev *EditorView) toggleCursorAt(offset int) bool {
 		return false
 	}
 	for i, cur := range ev.extraCursors {
-		if cur == offset {
+		if cur.off == offset {
 			ev.extraCursors = append(ev.extraCursors[:i], ev.extraCursors[i+1:]...)
 			return true
 		}
@@ -4751,8 +4763,8 @@ func (ev *EditorView) toggleCursorAt(offset int) bool {
 	ev.selActive = false
 	ev.rectSelActive = false
 
-	ev.extraCursors = append(ev.extraCursors, offset)
-	sort.Ints(ev.extraCursors)
+	ev.extraCursors = append(ev.extraCursors, extraCaret{off: offset, desiredCol: ev.visualColAt(offset)})
+	ev.sortExtraCarets()
 	return true
 }
 
@@ -4777,8 +4789,8 @@ func (ev *EditorView) caretOffsets() []int {
 	offsets = append(offsets, ev.caretOffset())
 	size := ev.pt.Size()
 	for _, cur := range ev.extraCursors {
-		if cur >= 0 && cur <= size {
-			offsets = append(offsets, cur)
+		if cur.off >= 0 && cur.off <= size {
+			offsets = append(offsets, cur.off)
 		}
 	}
 	sort.Ints(offsets)

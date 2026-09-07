@@ -9,6 +9,25 @@ import (
 	"github.com/unxed/vtui"
 )
 
+// extraCaretOffsets is where the secondary carets are, which is what the tests
+// care about; the column each one aims for is checked where it matters.
+func extraCaretOffsets(ev *EditorView) []int {
+	offsets := make([]int, 0, len(ev.extraCursors))
+	for _, caret := range ev.extraCursors {
+		offsets = append(offsets, caret.off)
+	}
+	return offsets
+}
+
+// setExtraCaretsForTest plants a caret set directly, including offsets that
+// placing one would never produce.
+func setExtraCaretsForTest(ev *EditorView, offsets ...int) {
+	ev.extraCursors = ev.extraCursors[:0]
+	for _, off := range offsets {
+		ev.extraCursors = append(ev.extraCursors, extraCaret{off: off})
+	}
+}
+
 func multiCursorEditor(t *testing.T, text string) *EditorView {
 	t.Helper()
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
@@ -29,8 +48,8 @@ func TestEditor_MultiCursor_ToggleAndOrder(t *testing.T) {
 	if !ev.toggleCursorAt(8) || !ev.toggleCursorAt(4) {
 		t.Fatal("placing an extra caret reported no change")
 	}
-	if !reflect.DeepEqual(ev.extraCursors, []int{4, 8}) {
-		t.Errorf("extra carets = %v, want [4 8]", ev.extraCursors)
+	if !reflect.DeepEqual(extraCaretOffsets(ev), []int{4, 8}) {
+		t.Errorf("extra carets = %v, want [4 8]", extraCaretOffsets(ev))
 	}
 	if !ev.multiCursor() {
 		t.Error("multiCursor() = false with two extra carets placed")
@@ -41,16 +60,16 @@ func TestEditor_MultiCursor_ToggleAndOrder(t *testing.T) {
 	if !ev.toggleCursorAt(4) {
 		t.Fatal("removing an extra caret reported no change")
 	}
-	if !reflect.DeepEqual(ev.extraCursors, []int{8}) {
-		t.Errorf("extra carets = %v, want [8]", ev.extraCursors)
+	if !reflect.DeepEqual(extraCaretOffsets(ev), []int{8}) {
+		t.Errorf("extra carets = %v, want [8]", extraCaretOffsets(ev))
 	}
 
 	// The primary caret is not a member of the set and cannot be dropped.
 	if ev.toggleCursorAt(ev.caretOffset()) {
 		t.Error("the primary caret was toggled into the extra set")
 	}
-	if len(ev.extraCursors) != 1 {
-		t.Errorf("extra carets = %v after clicking the primary one", ev.extraCursors)
+	if len(extraCaretOffsets(ev)) != 1 {
+		t.Errorf("extra carets = %v after clicking the primary one", extraCaretOffsets(ev))
 	}
 
 	// Offsets outside the buffer are refused rather than stored.
@@ -71,13 +90,13 @@ func TestEditor_MultiCursor_CaretOffsetsIncludePrimary(t *testing.T) {
 	}
 
 	// A stale caret on the primary's own offset is reported once.
-	ev.extraCursors = []int{0, 5, 9}
+	setExtraCaretsForTest(ev, 0, 5, 9)
 	if got, want := ev.caretOffsets(), []int{0, 5, 9}; !reflect.DeepEqual(got, want) {
 		t.Errorf("caret offsets with a duplicate = %v, want %v", got, want)
 	}
 
 	// And one past the end of the buffer is dropped rather than reported.
-	ev.extraCursors = []int{0, ev.pt.Size() + 10}
+	setExtraCaretsForTest(ev, 0, ev.pt.Size()+10)
 	if got, want := ev.caretOffsets(), []int{0, 5}; !reflect.DeepEqual(got, want) {
 		t.Errorf("caret offsets with a stale entry = %v, want %v", got, want)
 	}
@@ -120,16 +139,16 @@ func TestEditor_MultiCursor_EscapeClearsBeforeClosing(t *testing.T) {
 	}
 }
 
-// Moving the caret is still a single-caret operation, so it collapses the set
-// instead of leaving carets that the keystroke ignored.
-func TestEditor_MultiCursor_NavigationCollapsesTheSet(t *testing.T) {
+// Keys that are still single-caret collapse the set instead of leaving carets
+// that the keystroke ignored.
+func TestEditor_MultiCursor_UnhandledKeysCollapseTheSet(t *testing.T) {
 	ev := multiCursorEditor(t, "one\ntwo")
 	ev.toggleCursorAt(4)
 
-	ev.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_DOWN})
+	ev.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_NEXT})
 
 	if ev.multiCursor() {
-		t.Error("moving the caret left extra carets behind")
+		t.Error("paging left extra carets behind")
 	}
 }
 
@@ -143,7 +162,7 @@ func TestEditor_MultiCursor_UndoRestoresTheSetOfTheChange(t *testing.T) {
 	ev.Undo()
 
 	if ev.multiCursor() {
-		t.Errorf("undo kept carets that were placed after the change: %v", ev.extraCursors)
+		t.Errorf("undo kept carets that were placed after the change: %v", extraCaretOffsets(ev))
 	}
 }
 
@@ -226,7 +245,7 @@ func TestEditor_MultiCursor_AltClickPlacesCaret(t *testing.T) {
 	if !ev.ProcessMouse(click) {
 		t.Fatal("Alt+click was not handled")
 	}
-	if got, want := ev.extraCursors, []int{5}; !reflect.DeepEqual(got, want) {
+	if got, want := extraCaretOffsets(ev), []int{5}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("extra carets = %v, want %v", got, want)
 	}
 	// The primary caret stays where it was: placing a caret is not a click.
@@ -239,6 +258,6 @@ func TestEditor_MultiCursor_AltClickPlacesCaret(t *testing.T) {
 		t.Fatal("the second Alt+click was not handled")
 	}
 	if ev.multiCursor() {
-		t.Errorf("extra carets = %v, want none", ev.extraCursors)
+		t.Errorf("extra carets = %v, want none", extraCaretOffsets(ev))
 	}
 }

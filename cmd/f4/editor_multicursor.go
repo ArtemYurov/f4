@@ -157,20 +157,15 @@ func (ev *EditorView) setCaretOffsets(offsets []int, primary int) {
 		if i == primary {
 			continue
 		}
-		off = clamp(off)
-		if off == primaryOff {
-			continue
-		}
-		extras = append(extras, off)
+		extras = append(extras, extraCaret{off: clamp(off)})
 	}
-	sort.Ints(extras)
-	deduped := extras[:0]
-	for i, off := range extras {
-		if i == 0 || off != extras[i-1] {
-			deduped = append(deduped, off)
-		}
+	ev.extraCursors = extras
+	ev.normalizeExtraCarets()
+	// An edit puts every caret where its own change left it, so each one
+	// takes the column it landed on.
+	for i := range ev.extraCursors {
+		ev.extraCursors[i].desiredCol = ev.visualColAt(ev.extraCursors[i].off)
 	}
-	ev.extraCursors = deduped
 
 	ev.updateDesiredVisualCol()
 	ev.ensureCursorVisible()
@@ -189,6 +184,35 @@ func (ev *EditorView) processMultiCursorKey(e *vtinput.InputEvent) bool {
 	ev.acMatches = nil
 
 	switch e.VirtualKeyCode {
+	case vtinput.VK_LEFT, vtinput.VK_RIGHT:
+		// Shift starts a selection and Ctrl jumps by words: both are still
+		// the primary caret's alone.
+		if ctrl || alt || shift {
+			return false
+		}
+		delta := 1
+		if e.VirtualKeyCode == vtinput.VK_LEFT {
+			delta = -1
+		}
+		return ev.multiMoveHorizontal(delta)
+	case vtinput.VK_UP, vtinput.VK_DOWN:
+		// Ctrl+Up and Ctrl+Down scroll the text under the carets and leave
+		// them where they are; multiCursorKeepsSet lets that through.
+		if ctrl || alt || shift {
+			return false
+		}
+		delta := 1
+		if e.VirtualKeyCode == vtinput.VK_UP {
+			delta = -1
+		}
+		return ev.multiMoveVertical(delta)
+	case vtinput.VK_HOME, vtinput.VK_END:
+		// Ctrl+Home and Ctrl+End go to one end of the file, which is one
+		// place and therefore one caret.
+		if ctrl || alt || shift {
+			return false
+		}
+		return ev.multiMoveLineEdge(e.VirtualKeyCode == vtinput.VK_END)
 	case vtinput.VK_BACK:
 		if ctrl || alt {
 			return false
@@ -341,4 +365,158 @@ func (ev *EditorView) lineIndentAt(off int) []byte {
 		indent = append(indent, []byte(string(r))...)
 	}
 	return indent
+}
+
+// multiCursorKeepsSet reports the keys that leave the caret set alone because
+// they move the viewport rather than the text or the carets. Everything else
+// the multi-caret handler declines collapses the set on its way through.
+func multiCursorKeepsSet(e *vtinput.InputEvent) bool {
+	ctrl := e.ControlKeyState&(vtinput.LeftCtrlPressed|vtinput.RightCtrlPressed) != 0
+	alt := e.ControlKeyState&(vtinput.LeftAltPressed|vtinput.RightAltPressed) != 0
+	shift := e.ControlKeyState&vtinput.ShiftPressed != 0
+	if !ctrl || alt || shift {
+		return false
+	}
+	return e.VirtualKeyCode == vtinput.VK_UP || e.VirtualKeyCode == vtinput.VK_DOWN
+}
+
+// moveCarets moves every caret through move, which is handed each caret's
+// offset and the column it aims for and returns where it goes.
+//
+// keepDesired says whether the carets keep aiming for the column they had:
+// moving between lines does, so a short line on the way past does not cost a
+// caret its place, while moving along a line takes the column it lands on.
+func (ev *EditorView) moveCarets(move func(off, desiredCol int) int, keepDesired bool) bool {
+	if len(ev.extraCursors) == 0 {
+		return false
+	}
+	ev.selActive = false
+	ev.rectSelActive = false
+	ev.CursorVirtualSpaces = 0
+
+	primary := move(ev.caretOffset(), ev.DesiredVisualCol)
+	extras := make([]extraCaret, 0, len(ev.extraCursors))
+	for _, caret := range ev.extraCursors {
+		off := move(caret.off, caret.desiredCol)
+		desired := caret.desiredCol
+		if !keepDesired {
+			desired = ev.visualColAt(off)
+		}
+		extras = append(extras, extraCaret{off: off, desiredCol: desired})
+	}
+
+	ev.CursorLine = ev.li.GetLineAtOffset(primary)
+	ev.CursorPos = primary - ev.li.GetLineOffset(ev.CursorLine)
+	if !keepDesired {
+		ev.updateDesiredVisualCol()
+	}
+	ev.extraCursors = extras
+	ev.normalizeExtraCarets()
+	ev.ensureCursorVisible()
+	return true
+}
+
+// multiMoveHorizontal moves every caret one grapheme along the text, stepping
+// between lines at the ends the way the single caret does.
+func (ev *EditorView) multiMoveHorizontal(delta int) bool {
+	return ev.moveCarets(func(off, _ int) int {
+		if delta < 0 {
+			return ev.offsetBeforeCaret(off)
+		}
+		return ev.offsetAfterCaret(off)
+	}, false)
+}
+
+// multiMoveVertical moves every caret one visual row up or down. A caret
+// already at the edge of the text stays where it is instead of dragging the
+// rest of the set out of shape.
+func (ev *EditorView) multiMoveVertical(delta int) bool {
+	total := ev.engine.GetTotalVisualRows()
+	return ev.moveCarets(func(off, desired int) int {
+		vRow, _ := ev.engine.LogicalToVisual(off)
+		target := vRow + delta
+		if target < 0 || target >= total {
+			return off
+		}
+		return ev.snapMouseOffsetToClusterBoundary(ev.engine.VisualToLogical(target, desired))
+	}, true)
+}
+
+// multiMoveLineEdge sends every caret to the start or the end of its own line.
+func (ev *EditorView) multiMoveLineEdge(toEnd bool) bool {
+	return ev.moveCarets(func(off, _ int) int {
+		line := ev.li.GetLineAtOffset(off)
+		if toEnd {
+			return ev.li.GetLineOffset(line) + ev.getLineLength(line)
+		}
+		return ev.li.GetLineOffset(line)
+	}, false)
+}
+
+// offsetAfterCaret is one grapheme forward, stepping over the line break at
+// the end of a line whether it is one byte or two.
+func (ev *EditorView) offsetAfterCaret(off int) int {
+	size := ev.pt.Size()
+	if off >= size {
+		return size
+	}
+	line := ev.li.GetLineAtOffset(off)
+	lineStart := ev.li.GetLineOffset(line)
+	lineLen := ev.getLineLength(line)
+	if pos := off - lineStart; pos < lineLen {
+		return lineStart + ev.nextGraphemeBoundaryInLine(lineStart, lineLen, pos)
+	}
+	if line+1 < ev.li.LineCount() {
+		return ev.li.GetLineOffset(line + 1)
+	}
+	return size
+}
+
+// offsetBeforeCaret is one grapheme back, landing at the end of the previous
+// line rather than inside its line break.
+func (ev *EditorView) offsetBeforeCaret(off int) int {
+	if off <= 0 {
+		return 0
+	}
+	line := ev.li.GetLineAtOffset(off)
+	lineStart := ev.li.GetLineOffset(line)
+	if off > lineStart {
+		return lineStart + ev.previousGraphemeBoundaryInLine(lineStart, off-lineStart)
+	}
+	if line <= 0 {
+		return 0
+	}
+	return ev.li.GetLineOffset(line-1) + ev.getLineLength(line-1)
+}
+
+// visualColAt is the column an offset is painted at.
+func (ev *EditorView) visualColAt(off int) int {
+	_, col := ev.engine.LogicalToVisual(off)
+	return col
+}
+
+// sortExtraCarets puts the set back in offset order.
+func (ev *EditorView) sortExtraCarets() {
+	sort.Slice(ev.extraCursors, func(i, j int) bool {
+		return ev.extraCursors[i].off < ev.extraCursors[j].off
+	})
+}
+
+// normalizeExtraCarets sorts the set and drops the carets that have met: two
+// that moved onto the same offset, or one that has arrived where the primary
+// caret already is, are one caret now.
+func (ev *EditorView) normalizeExtraCarets() {
+	ev.sortExtraCarets()
+	primary := ev.caretOffset()
+	kept := ev.extraCursors[:0]
+	for i, caret := range ev.extraCursors {
+		if caret.off == primary {
+			continue
+		}
+		if i > 0 && caret.off == ev.extraCursors[i-1].off {
+			continue
+		}
+		kept = append(kept, caret)
+	}
+	ev.extraCursors = kept
 }

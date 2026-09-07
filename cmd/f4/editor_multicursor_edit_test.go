@@ -32,7 +32,7 @@ func TestEditor_MultiCursor_TypingInsertsAtEveryCaret(t *testing.T) {
 	if ev.CursorLine != 0 || ev.CursorPos != 1 {
 		t.Errorf("primary caret = line %d pos %d, want line 0 pos 1", ev.CursorLine, ev.CursorPos)
 	}
-	if got, want := ev.extraCursors, []int{6, 11}; !reflect.DeepEqual(got, want) {
+	if got, want := extraCaretOffsets(ev), []int{6, 11}; !reflect.DeepEqual(got, want) {
 		t.Errorf("extra carets = %v, want %v", got, want)
 	}
 
@@ -60,7 +60,7 @@ func TestEditor_MultiCursor_TypingIsOneUndoStep(t *testing.T) {
 	}
 	// And the set that made the edit comes back with it, so it can be redone
 	// or retyped.
-	if got, want := ev.extraCursors, []int{4}; !reflect.DeepEqual(got, want) {
+	if got, want := extraCaretOffsets(ev), []int{4}; !reflect.DeepEqual(got, want) {
 		t.Errorf("extra carets after undo = %v, want %v", got, want)
 	}
 
@@ -84,7 +84,7 @@ func TestEditor_MultiCursor_Backspace(t *testing.T) {
 	if ev.CursorLine != 0 || ev.CursorPos != 1 {
 		t.Errorf("primary caret = line %d pos %d, want line 0 pos 1", ev.CursorLine, ev.CursorPos)
 	}
-	if got, want := ev.extraCursors, []int{4}; !reflect.DeepEqual(got, want) {
+	if got, want := extraCaretOffsets(ev), []int{4}; !reflect.DeepEqual(got, want) {
 		t.Errorf("extra carets = %v, want %v", got, want)
 	}
 }
@@ -105,7 +105,7 @@ func TestEditor_MultiCursor_BackspaceAtStartKeepsCaret(t *testing.T) {
 	if ev.CursorLine != 0 || ev.CursorPos != 0 {
 		t.Errorf("primary caret = line %d pos %d, want line 0 pos 0", ev.CursorLine, ev.CursorPos)
 	}
-	if got, want := ev.extraCursors, []int{3}; !reflect.DeepEqual(got, want) {
+	if got, want := extraCaretOffsets(ev), []int{3}; !reflect.DeepEqual(got, want) {
 		t.Errorf("extra carets = %v, want %v", got, want)
 	}
 }
@@ -124,7 +124,7 @@ func TestEditor_MultiCursor_Delete(t *testing.T) {
 	if ev.CursorLine != 0 || ev.CursorPos != 1 {
 		t.Errorf("primary caret = line %d pos %d, want line 0 pos 1", ev.CursorLine, ev.CursorPos)
 	}
-	if got, want := ev.extraCursors, []int{4}; !reflect.DeepEqual(got, want) {
+	if got, want := extraCaretOffsets(ev), []int{4}; !reflect.DeepEqual(got, want) {
 		t.Errorf("extra carets = %v, want %v", got, want)
 	}
 }
@@ -145,8 +145,8 @@ func TestEditor_MultiCursor_AdjacentDeletionsDoNotOverlap(t *testing.T) {
 	if ev.CursorPos != 1 {
 		t.Errorf("primary caret pos = %d, want 1", ev.CursorPos)
 	}
-	if len(ev.extraCursors) != 0 {
-		t.Errorf("extra carets = %v, want the two carets to have merged", ev.extraCursors)
+	if len(extraCaretOffsets(ev)) != 0 {
+		t.Errorf("extra carets = %v, want the two carets to have merged", extraCaretOffsets(ev))
 	}
 }
 
@@ -217,8 +217,15 @@ func TestEditor_MultiCursor_UnsupportedKeysStillCollapse(t *testing.T) {
 		name  string
 		event vtinput.InputEvent
 	}{
-		{"arrow", vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_DOWN}},
-		{"home", vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_HOME}},
+		{"page down", vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_NEXT}},
+		{"shift+down", vtinput.InputEvent{
+			Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_DOWN,
+			ControlKeyState: vtinput.ShiftPressed,
+		}},
+		{"ctrl+left", vtinput.InputEvent{
+			Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_LEFT,
+			ControlKeyState: vtinput.LeftCtrlPressed,
+		}},
 		{"ctrl+backspace", vtinput.InputEvent{
 			Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_BACK,
 			ControlKeyState: vtinput.LeftCtrlPressed,
@@ -239,7 +246,7 @@ func TestEditor_MultiCursor_UnsupportedKeysStillCollapse(t *testing.T) {
 			ev.ProcessKey(&event)
 
 			if ev.multiCursor() {
-				t.Errorf("extra carets survived %s: %v", tc.name, ev.extraCursors)
+				t.Errorf("extra carets survived %s: %v", tc.name, extraCaretOffsets(ev))
 			}
 		})
 	}
@@ -258,7 +265,7 @@ func TestEditor_MultiCursor_PlainClickCollapsesTheSet(t *testing.T) {
 	})
 
 	if ev.multiCursor() {
-		t.Errorf("a plain click left extra carets behind: %v", ev.extraCursors)
+		t.Errorf("a plain click left extra carets behind: %v", extraCaretOffsets(ev))
 	}
 }
 
@@ -278,7 +285,7 @@ func TestEditor_MultiCursor_SameLineCaretsStayApart(t *testing.T) {
 	if ev.CursorPos != 2 {
 		t.Errorf("primary caret pos = %d, want 2", ev.CursorPos)
 	}
-	if got, want := ev.extraCursors, []int{5}; !reflect.DeepEqual(got, want) {
+	if got, want := extraCaretOffsets(ev), []int{5}; !reflect.DeepEqual(got, want) {
 		t.Errorf("extra carets = %v, want %v", got, want)
 	}
 }
