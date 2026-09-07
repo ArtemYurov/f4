@@ -1613,6 +1613,24 @@ CommandPalette.Bookmark.Home=Go to home folder
 CommandPalette.Bookmark.Home.Desc=Open the home folder in the active panel
 
 Drive.Title= Drive
+Drive.Bookmarks=Bookmarks
+Drive.BottomHint= Ins Del F4
+
+DriveBookmark.CreateTitle= Create link
+DriveBookmark.EditTitle= Edit link
+DriveBookmark.Name=&Name:
+DriveBookmark.Path=&Path:
+DriveBookmark.Hotkey=Hot key:
+DriveBookmark.HotkeyHint=Press a key, or Backspace to clear
+DriveBookmark.Create=&Create
+DriveBookmark.Save=&Save
+DriveBookmark.Cancel=&Cancel
+DriveBookmark.DeleteTitle= Delete bookmark
+DriveBookmark.DeleteQuestion=Delete bookmark "%s"?
+DriveBookmark.ErrorTitle= Bookmark error
+DriveBookmark.NameRequired=Name is required.
+DriveBookmark.PathRequired=Path is required.
+DriveBookmark.SaveError=Failed to save bookmark:\n%v
 
 Mounts.Title= Mounts
 Mounts.UnmountAll=Unmount all (%d)

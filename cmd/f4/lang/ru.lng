@@ -1555,6 +1555,24 @@ CommandPalette.Bookmark.Home=Перейти в домашнюю папку
 CommandPalette.Bookmark.Home.Desc=Открыть домашнюю папку в активной панели
 
 Drive.Title= Диски
+Drive.Bookmarks=Bookmarks
+Drive.BottomHint= Ins Del F4
+
+DriveBookmark.CreateTitle= Создать ссылку
+DriveBookmark.EditTitle= Изменить ссылку
+DriveBookmark.Name=&Имя:
+DriveBookmark.Path=&Путь:
+DriveBookmark.Hotkey=Горячая клавиша:
+DriveBookmark.HotkeyHint=Нажмите клавишу или Backspace для очистки
+DriveBookmark.Create=&Создать
+DriveBookmark.Save=&Сохранить
+DriveBookmark.Cancel=&Отмена
+DriveBookmark.DeleteTitle= Удалить закладку
+DriveBookmark.DeleteQuestion=Удалить закладку "%s"?
+DriveBookmark.ErrorTitle= Ошибка закладки
+DriveBookmark.NameRequired=Необходимо указать имя.
+DriveBookmark.PathRequired=Необходимо указать путь.
+DriveBookmark.SaveError=Не удалось сохранить закладку:\n%v
 
 NetFox.ConnectionTitle= Настройка подключения
 NetFox.Command.EditConnection=Изменить подключение

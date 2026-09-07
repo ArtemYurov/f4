@@ -5001,6 +5001,34 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 		}
 	}
 
+	// 5. Named folder links. These are deliberately separate from
+	// bookmarks.ini: the latter is far2l's ten-slot RCtrl bookmark table,
+	// while this list is the DiskMenuEditor-style, unbounded drive-menu list.
+	driveBookmarkRows := map[int]int{} // menu row -> named bookmark index
+	driveBookmarks, err := LoadDriveBookmarks(DriveBookmarksFilePath())
+	if err != nil {
+		vtui.DebugLog("DRIVE BOOKMARKS: load %q failed: %v", DriveBookmarksFilePath(), err)
+		driveBookmarks = nil
+	}
+	menu.AddSeparator()
+	headerRow := menu.GetItemCount()
+	menu.AddItem(vtui.MenuItem{Text: Msg("Drive.Bookmarks"), Command: CmDriveBookmarksHeader})
+	for index, bookmark := range driveBookmarks {
+		bookmark := bookmark
+		driveBookmarkRows[menu.GetItemCount()] = index
+		menu.AddItem(vtui.MenuItem{
+			Text: driveBookmarkMenuText(bookmark),
+			UserData: func(fsp *FileSystemPanel) {
+				pf.navigateToBookmark(fsp, Bookmark{Path: bookmark.Path})
+			},
+		})
+	}
+	vtui.FrameManager.DisabledCommands.Disable(CmDriveBookmarksHeader)
+	oldSelectable := menu.IsSelectable
+	menu.IsSelectable = func(index int) bool {
+		return index != headerRow && oldSelectable(index)
+	}
+
 	// Обработка физических клавиш / и ~ (layout-independent)
 	menu.OnKeyDown = func(e *vtinput.InputEvent) bool {
 		// far2l binds three keys on the bookmark rows of this menu
@@ -5012,25 +5040,50 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 		if e.KeyDown && e.ControlKeyState&(vtinput.LeftCtrlPressed|vtinput.RightCtrlPressed|
 			vtinput.LeftAltPressed|vtinput.RightAltPressed|vtinput.ShiftPressed) == 0 {
 			pos := menu.SelectPos
+			driveBookmarkIndex, onDriveBookmark := driveBookmarkRows[pos]
 			slot, onBookmark := bookmarkRows[pos]
 			reopen := func() { pf.showDriveMenuAt(panelIdx, pos) }
 
 			switch e.VirtualKeyCode {
 			case vtinput.VK_INSERT:
-				// far2l opens the dialog from any row here, not just a
-				// bookmark one, and always at the first slot.
-				menu.Close()
-				vtui.FrameManager.PostTask(func() { ShowBookmarksDialogAt(pf, 0, reopen) })
+				// Ins adds a named drive-menu link from any row. The path
+				// defaults to the panel directory, while the user chooses
+				// the name and optional shortcut in the dialog.
+				pf.openDriveBookmarkEditor(panelIdx, menu, driveBookmarks, -1, reopen)
 				return true
 			case vtinput.VK_F4:
+				if onDriveBookmark {
+					pf.openDriveBookmarkEditor(panelIdx, menu, driveBookmarks, driveBookmarkIndex, reopen)
+					return true
+				}
 				if onBookmark {
 					menu.Close()
 					vtui.FrameManager.PostTask(func() { ShowBookmarksDialogAt(pf, slot, reopen) })
 					return true
 				}
 			case vtinput.VK_DELETE:
+				if onDriveBookmark {
+					pf.deleteDriveBookmark(menu, driveBookmarks, driveBookmarkIndex, reopen)
+					return true
+				}
 				if onBookmark {
 					pf.clearBookmarkSlot(slot, menu, reopen)
+					return true
+				}
+			}
+
+			// Chords and non-Latin keys cannot be represented by VMenu's
+			// ampersand accelerator. Match them against the same Far-style
+			// spelling captured by the editor.
+			key := EventToHotkeyString(e)
+			for row := 0; row < len(menu.Items); row++ {
+				index, ok := driveBookmarkRows[row]
+				if !ok {
+					continue
+				}
+				if index < len(driveBookmarks) && driveBookmarkKeyMatches(driveBookmarks[index], key) {
+					menu.SetSelectPos(row)
+					menu.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_RETURN})
 					return true
 				}
 			}
@@ -5106,7 +5159,7 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 			action(fsp)
 		}
 	}
-	vtui.FrameManager.Push(menu)
+	vtui.FrameManager.Push(&driveMenuFrame{VMenu: menu, bottomHint: Msg("Drive.BottomHint")})
 }
 
 // clearBookmarkSlot empties one slot straight from the drive menu, which
