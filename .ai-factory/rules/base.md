@@ -16,14 +16,24 @@
 
 ## Module Structure
 
-- `cmd/f4/` — the application, one flat `package main` of ~687 files. New
-  application code belongs here unless it is genuinely reusable.
+Current layout. The structure the project is moving to, and the rules that
+govern where new code goes, are in `.ai-factory/ARCHITECTURE.md` — read it before
+adding a package or a file.
+
+- `cmd/f4/` — the application, one flat `package main` of ~345 non-test files.
+  It is being split into `internal/*` packages: put new code in the package it
+  belongs to, and create that package when none fits. Adding to the flat package
+  is what the split exists to stop.
 - `vfs/` — the filesystem abstraction all panels and plugins go through
+- `sdk/` — the plugin API third parties compile against
 - `plugins/<name>/` — one package per plugin
-- `internal/` — platform helpers that must not be imported outside the module
-- `sdk/`, `plugring/`, `luaplug/` — plugin API, registry, Lua engine
-- `piecetable/`, `textlayout/`, `sheet/`, `colorer/`, `fusefs/`, `vtvibe/` —
-  self-contained subsystems consumed by `cmd/f4`
+- `internal/` — module-private code: platform helpers today, the application
+  core as extraction proceeds
+- `luaplug/` — Lua plugin engine (moves under `internal/`)
+- `piecetable/`, `textlayout/`, `sheet/`, `fusefs/`, `vtvibe/` — self-contained
+  subsystems consumed by `cmd/f4` (move under `internal/`)
+- `colorer/`, `plugring/` — data, not Go packages: colour schemes and the
+  plugin catalogue
 - `tools/` — developer tooling, not shipped in the binary
 - UI and input live outside this repository, in the `vtui` and `vtinput` libraries
 

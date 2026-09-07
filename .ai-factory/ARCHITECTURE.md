@@ -54,7 +54,9 @@ f4/
 ├── cmd/
 │   └── f4/
 │       ├── main.go                # Composition Root: flags, startup mode, wiring
-│       └── *_test.go              # only tests for the wiring itself
+│       ├── *_test.go              # tests for the wiring itself, plus the
+│       │                          # module-wide auditor (see below)
+│       └── rsrc_windows_*.syso    # linked only from the built package's dir
 │
 ├── sdk/                           # ── PUBLIC API (third-party plugin authors) ──
 │   ├── f4plugin/                  #   in-process Go plugin contract
@@ -77,7 +79,8 @@ f4/
 ├── internal/                      # ── THE APPLICATION CORE IS MODULE-PRIVATE ──
 │   │
 │   │  # application core, extracted from the flat package main
-│   ├── app/          (extract)    # bootstrap, event loop, global app state, actions
+│   ├── app/          (extract)    # event loop and bootstrap only — see the split
+│   │                              # below; the shared primitives leave first
 │   ├── panel/        (extract)    # file panels, sorting, navigation, quick view, info
 │   ├── editor/       (extract)    # F4 editor on top of internal/piecetable
 │   ├── viewer/       (extract)    # F3 viewer, hex, disasm
@@ -114,8 +117,11 @@ f4/
 │                                  # has to sit there to render on GitHub.
 │
 ├── scripts/          (new)        # *.sh moved out of the repository root
-├── docs/                          # subsystem documents; SPREADSHEET.md and
-│   └── ISSUES/                    #   ISSUE_*.md land here, not in the root
+├── docs/                          # subsystem documents; SPREADSHEET.md lands
+│   └── ISSUES/                    #   here. Per-issue reviews are named
+│                                  #   ISSUE_<number>_<SLUG>.md — the number
+│                                  #   addresses the issue, the slug says what it
+│                                  #   was about.
 ├── tools/                         # developer tooling incl. the ttytest harness
 ├── packaging/                     # distribution packaging
 ├── .github/
@@ -159,13 +165,51 @@ implementations live at the top; the application core lives under `internal/`.**
 Everything else is module-private, so the compiler answers "may I import this?"
 before a reviewer has to.
 
-**Embedded resources travel with their package.** The same `//go:embed` rule means
-`cmd/f4/styles/`, `cmd/f4/lang/`, `cmd/f4/help/` and `cmd/f4/assets/icon/` move
-together with the code that embeds them — into `internal/config`,
-`internal/dialog` and `internal/gui`. The same rule removes the root package's second
-embed: `radiola.hrd` has exactly one consumer (`colorer_plugin.go`), so it travels
-into `internal/colorer` and is embedded there, leaving root `embedded.go` with
-`README.md` alone — the single case it exists for.
+**`app` is two things, and only one of them is the root.** Today 37 call edges
+run *into* the would-be `app` from lower layers — `toast.go` is called from six
+different domains, `framework_actions.go` from four, the action registry from
+panels and hotkeys. The dependency rule below forbids exactly that, so the pile
+splits in two: shared primitives (the action registry and `actions.go`, `toast`,
+the panels-frame state, `path_identity`, `search_history`, `menu_history`, and
+`misc.go` minus its numeric helpers) are layer-0 utilities and leave `cmd/f4`
+**first**, before any package that calls them; the real composition root
+(`main.go`, `startup_*`, `runtime_mode`) leaves last and keeps the name `app`.
+Extracting them in the other order makes every intermediate commit uncompilable.
+
+**One test does not follow its subject.** `command_palette_coverage_test.go`
+walks the whole module and checks a global invariant: every `ProcessKey` and
+every `vtui.NewVMenu` is either reachable from the command palette or listed as
+a deliberate exception. That inventory cannot be split per package — a
+per-package copy sees only its own subtree, and a handler added in a third
+package passes unnoticed, which is the thing the test exists to catch. It stays
+in `cmd/f4`.
+
+Its 42 audit keys, however, are keyed by file path
+(`cmd/f4/file_panel.go:(*FileSystemPanel).ProcessKey`), so every move rewrites
+them. Re-key them once to the qualified symbol —
+`panel.(*FileSystemPanel).ProcessKey` — before the extraction starts: a package
+changes far less often than a path, files move freely inside their package, and
+the package name is what identifies the subject anyway. The keys have to be
+touched regardless; doing it as a re-keying instead of a path update ends the
+tax rather than paying it on every commit.
+
+**Embedded resources travel with their package.** The same `//go:embed` rule moves
+each resource directory into the package that embeds it:
+
+| resource | embedded by | lands in |
+|---|---|---|
+| `cmd/f4/styles/*.ini` | `style.go` | `internal/theme` |
+| `cmd/f4/lang/*.lng` | `lang.go` **and** `lang_packs.go` | `internal/i18n` |
+| `cmd/f4/help/en.hlf` | `help.go` | `internal/dialog` |
+| `cmd/f4/assets/icon/generated/f4.icns` | `window_icon_darwin.go` | `internal/gui` |
+| `colorer/…/radiola.hrd` | root `embedded.go` today | `internal/colorer` |
+
+`lang/` is embedded from two different files, so both must land in the same
+package or the directory ends up duplicated. Moving `radiola.hrd` to its single
+consumer leaves root `embedded.go` with `README.md` alone — the case it exists
+for. Windows `.syso` files are the exception that does not move: the toolchain
+links them only from the directory of the package being built, so
+`rsrc_windows_*.syso` stay in `cmd/f4` even though the icon code leaves.
 
 ## File Naming Inside a Package
 
@@ -217,14 +261,14 @@ is the only place where everything is assembled. Layers, bottom up:
 **Layer 1 — subsystems over the kernel:** `internal/textlayout` →
 `internal/piecetable`; `internal/fusefs` → `vfs`; `internal/vtvibe` → `vfs`;
 `internal/luaplug`; `internal/term`, `internal/gui`, `internal/media`,
-`internal/fileops`.
+`internal/fileops`, `internal/update` (self-update is a leaf with 3 outbound
+edges, not an interactive subsystem).
 
 **Layer 2 — plugins and hosts:** `plugins/*` → `vfs`, `sdk`, `internal/*`;
 `internal/plughost` → `sdk`, `internal/luaplug`, `vfs`.
 
 **Layer 3 — interactive subsystems:** `internal/panel`, `internal/editor`,
-`internal/viewer`, `internal/dialog`, `internal/cmdline`, `internal/macro`,
-`internal/update`.
+`internal/viewer`, `internal/dialog`, `internal/cmdline`, `internal/macro`.
 
 **Layer 4 — application:** `internal/app`, then `cmd/f4`.
 
@@ -288,9 +332,14 @@ Rules:
    exported identifiers. The compiler enforces the boundary — this is why breaking
    up `cmd/f4` matters more than any naming convention.
 
-2. **Composition Root in `main.go`.** All wiring in one place. No package-level
-   singletons initialised by `init()`, no post-construction mutation of a struct
-   another goroutine already reads.
+2. **Composition Root in `main.go`.** All wiring in one place; a `New(...)`
+   takes what it needs, so a half-built struct is never reachable. Two things are
+   banned outright: `init()` with side effects beyond assignment — today
+   `queue_manager.go:312` starts a goroutine on import — and mutating a struct
+   after construction that another goroutine already reads. A plain package-level
+   value in a layer-0 leaf is not covered by this: `config.App` stays a global
+   because 133 files read it and its package imports nothing, so it cannot create
+   a cycle.
 
 3. **Far heritage stays.** Structures ported from `far2l` / Far Manager keep the
    names of their C++ originals even where Go style would say otherwise. Moving a
@@ -304,17 +353,36 @@ Rules:
 5. **Tests move with the code.** This is an AI-only codebase where the test suite
    is the review mechanism. A file relocated to a new package takes its
    `_test.go` neighbour along in the same commit; a package extraction that drops
-   coverage is not done.
+   coverage is not done. Shared test scaffolding gets its own home before the
+   packages that use it move: `swapFrameManager` is used by 62 test files and
+   `setupMockPanelsFrame` by 28, so they belong in one `internal/testutil`
+   package. Left where they are, the test import graph disagrees with the
+   production one — a narrow package independent of `panel` whose tests are not.
 
 6. **Portability is a boundary condition.** `CGO_ENABLED=0`, build-tag files, the
    full CI matrix green. A restructuring commit that only builds on the developer's
    own platform is a broken commit.
 
 7. **The repository root is for entry points, not artefacts.** A newcomer should
-   reach `README.md` without scrolling. Scripts go to `scripts/`, media and data to
-   `.github/assets/`, prose to `docs/`. Per-issue write-ups belong in `docs/ISSUES/` — or,
-   when produced through this harness, in the research → plan → archive chain under
-   `.ai-factory/`.
+   reach `README.md` without scrolling. Scripts go to `scripts/`, media to
+   `.github/assets/`, prose to `docs/`. Per-issue write-ups belong in
+   `docs/ISSUES/` — or, when produced through this harness, in the
+   research → plan → archive chain under `.ai-factory/`.
+
+8. **Documentation is part of the change, not its aftermath.** The 48 subsystem
+   documents describe where things live, so a move that leaves them stale makes
+   them actively misleading — worse than absent. Every move commit closes its own
+   references (see the migration policy), and the restructuring as a whole revises
+   `docs/` rather than only patching paths in it.
+
+   Per-issue reviews are named `docs/ISSUES/ISSUE_<number>_<SLUG>.md`, keeping
+   the existing SCREAMING_SNAKE style — `ISSUE_165_SORT_GROUPS.md`,
+   `ISSUE_546_CONPTY_FOLLOWUP.md`. Today all 41 read `ISSUE_<n>_SOLUTION_REVIEW.md`:
+   41 identical names distinguished only by a number, so finding the review of a
+   subject requires already knowing its issue number. The slug replaces the
+   constant `SOLUTION_REVIEW` tail, which carried no information — every file in
+   the directory is a solution review. Renaming updates the links that point at
+   them, by the same rule as any other move.
 
 ## Legacy vs New Code Policy
 
@@ -327,10 +395,25 @@ Rules:
   files and their tests, add the package clause, export what `cmd/f4` still needs,
   fix imports, run the matrix. No rewrites inside a move commit — a reviewer must
   be able to confirm the diff is a rename.
-- **Extraction order:** leaf-first. `internal/sysinfo`, `internal/update`,
-  `internal/media` and `internal/i18n` have the fewest inbound edges and go
-  first; `internal/app` and `internal/panel` come last, once everything they
-  depend on has left `cmd/f4`.
+- **Registration order is behaviour, not detail.** `action_registry.go:254` holds
+  a 2553-line `init()` with 174 `RegisterAction` calls, and that order is what the
+  menus and the command palette display. Inside one package Go runs `init()` in
+  filename order; across packages it follows the import graph. Splitting the
+  registry therefore reorders the menu silently, and no test catches it. Make the
+  order explicit — sort at registration or register from one ordered list — before
+  the files separate.
+- **A move is not done until the prose agrees.** 24 documents reference paths that
+  change, `docs/VTVIBE.md` alone 34 times, `AGENTS.md` 12. Each move commit greps
+  `docs/`, `README.md` and `AGENTS.md` for the old path; a surviving reference is
+  an unfinished move, not a follow-up.
+- **Extraction order:** leaf-first, ranked by **outbound** edges — how much a
+  package still drags out of `cmd/f4`, not how many callers it has. A package
+  with many callers and few dependencies is an early candidate, not a late one.
+  Measured on the call graph: `sysinfo` (1 outbound), `update` (3), the config
+  group (`config`/`i18n`/`theme`/`keymap`), then `dialog`/`plughost`/`gui`/`macro`
+  (7 each), `viewer` (9), `term` (12) ahead of `media` (10) because six of media's
+  ten point at term, `fileops` (13), `editor` (23), `panel` (30), `cmdline` (41).
+  The composition root goes last.
 - **Interoperability:** while a subsystem is half-extracted, the extracted package
   must not import `cmd/f4` back — that is impossible for `package main` anyway,
   which is precisely what makes leaf-first ordering the only workable order.
@@ -363,7 +446,7 @@ func main() {
 ### Dependency direction — a lower layer defines the interface
 
 ```go
-// internal/panel/panel.go — the panel says what it needs from a plugin host;
+// internal/panel/frame.go — the panel says what it needs from a plugin host;
 // it does not import internal/plughost, so plughost can depend on panel types
 // later without producing a cycle.
 type PluginColumns interface {
