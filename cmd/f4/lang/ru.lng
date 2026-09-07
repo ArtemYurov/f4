@@ -6,6 +6,9 @@ Author=f4 Team
 [Strings]
 VisRen.Menu=&Визуальное переименование файлов
 VisRen.Command.Open.Desc=Визуально переименовать выбранные файлы и каталоги
+VisRen.ConfigMenu=Визуальное переименование файлов
+VisRen.ConfigDescription=Настройка редактора визуального переименования файлов
+VisRen.ConfigTitle=Настройки визуального переименования файлов
 VisRen.Title=Визуальное переименование файлов
 VisRen.HostUnsupported=Эта сборка F4 не предоставляет интерфейс VisRen.
 VisRen.LocalOnly=VisRen работает только на локальной файловой панели.
@@ -170,6 +173,8 @@ Action.Editor.SelectAll=Выделить &всё
 Action.Editor.SelectAll.Desc=Выделить весь текст
 Action.Editor.DeleteLine=&Удалить строку
 Action.Editor.DeleteLine.Desc=Удалить текущую строку
+Action.Editor.GoTo=Перейти &к
+Action.Editor.GoTo.Desc=Перейти к строке и позиции или смещению в байтах
 Action.Editor.ToggleOvertype=Вставка/&Замена
 Action.Editor.ToggleOvertype.Desc=Переключить режим вставки/замены
 Action.Editor.Search=&Поиск
@@ -401,6 +406,24 @@ Action.App.SQLite=&Клиент SQLite
 Action.App.SQLite.Desc=Открыть клиент SQLite для базы данных под курсором
 Action.Panel.TempPanel.Desc=Открыть временную панель или выбрать сохранённый список
 
+Editor.GotoTitle=Перейти к позиции
+Editor.GotoLine=Строка:
+Editor.GotoPosition=Позиция:
+Editor.GotoOffsetTitle=Перейти к смещению
+Editor.GotoOffsetPrompt=Смещение в байтах:
+Editor.GotoInvalid=Строка и позиция должны быть положительными числами.
+Editor.Indexing=Индексация
+
+Viewer.GotoOffsetTitle=Перейти к смещению
+Viewer.GotoOffsetPrompt=Смещение в байтах:
+Viewer.Title= Просмотр
+Viewer.ModeText=Текст
+Viewer.ModeHex=Hex
+Viewer.DisasmBits=Дизассемблер: %d-битный x86
+Viewer.SearchTitle= Поиск
+
+Goto.Hexadecimal=Шестнадцатеричный формат
+
 Link.Title= Ссылка
 Link.Prompt=Создать ссылку на %s в:
 Link.PromptMultiple=Создать ссылки на %d элемент(ов) в:
@@ -431,12 +454,6 @@ Op.DummyQueue=Очередь (По умолчанию)
 Op.DummyBackground=Фоновое клонирование панелей
 Op.DummyForeground=Монопольный режим
 Op.BtnStart=&Старт
-
-Viewer.Title= Просмотр
-Viewer.ModeText=Текст
-Viewer.ModeHex=Hex
-Viewer.DisasmBits=Дизассемблер: %d-битный x86
-Viewer.SearchTitle= Поиск
 
 Search.CaseSensitive=Чувствительность к &регистру
 Search.Reverse=&Обратный поиск
@@ -631,8 +648,6 @@ Jobs.Empty=Ничего не выполняется
 
 Sort.Title=Сортировка
 
-Editor.Indexing=Индексация
-
 Help.ViewerEditor=Клавиши Просмотра и Редактора
 Help.PanelNav=Клавиши панелей
 Help.NavigationKeys=Клавиши навигации
@@ -753,7 +768,8 @@ EditorSettings.Crosshair=Показывать к&рест в редакторе
 EditorSettings.ColorerBg=Фон &Colorer
 EditorSettings.SyntaxAnimation=Анимировать &подсветку синтаксиса
 EditorSettings.UseExternalEditor=В&нешний редактор
-EditorSettings.ExternalCommand=Ко&манда запуска:
+EditorSettings.ExternalCommandConsole=Команда запуска в &консоли:
+EditorSettings.ExternalCommandGUI=Команда запуска в &GUI:
 
 ViewerSettings.Title= Настройки вьювера
 ViewerSettings.AutodetectCodePage=Автоопределять кодовую &страницу

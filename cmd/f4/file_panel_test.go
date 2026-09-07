@@ -689,7 +689,7 @@ func TestFileSystemPanel_SelectedInfo(t *testing.T) {
 	fp.entries = []*fileEntry{
 		{VFSItem: vfs.VFSItem{Name: ".."}},
 		{VFSItem: vfs.VFSItem{Name: "file1.txt", Size: 1234567, IsDir: false}, Selected: true},
-		{VFSItem: vfs.VFSItem{Name: "folder1", IsDir: true}, Selected: true},
+		{VFSItem: vfs.VFSItem{Name: "folder1", Size: 200, IsDir: true}, SizeCalculated: true, Selected: true},
 		{VFSItem: vfs.VFSItem{Name: "file2.txt", Size: 50, IsDir: false}, Selected: false},
 	}
 	fp.Refresh()
@@ -718,7 +718,7 @@ func TestFileSystemPanel_SelectedInfo(t *testing.T) {
 	}
 
 	result := sb.String()
-	expectedBytes := "1234567"
+	expectedBytes := "1234767"
 	if !strings.Contains(result, "Bytes:") || !strings.Contains(result, expectedBytes) {
 		t.Errorf("Expected bottom bar to contain formatted bytes %q, got: %q", expectedBytes, result)
 	}
@@ -727,6 +727,28 @@ func TestFileSystemPanel_SelectedInfo(t *testing.T) {
 	}
 	if !strings.Contains(result, "folders:1") {
 		t.Errorf("Expected bottom bar to contain 'folders:1', got: %q", result)
+	}
+
+	var status strings.Builder
+	for x := 0; x < 80; x++ {
+		cell := scr.GetCell(x, 22)
+		if cell.Char != 0 && cell.Char != ' ' {
+			if _, err := status.WriteRune(vtui.CellBaseRune(cell.Char)); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	statusResult := status.String()
+	if !strings.Contains(statusResult, "(2/1)") {
+		t.Errorf("Expected status line to contain file/directory counts, got: %q", statusResult)
+	}
+	info, ok := fsInfo(fp.vfs.GetPath())
+	if !ok {
+		t.Fatal("fsInfo failed for the local test directory")
+	}
+	freeSpace := strings.ReplaceAll(formatBytes(info.Free), " ", "")
+	if !strings.Contains(statusResult, freeSpace) {
+		t.Errorf("Expected status line to contain free space %q, got: %q", freeSpace, statusResult)
 	}
 
 	// Hiding the separate file-information line must not hide the selection

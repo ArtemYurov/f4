@@ -225,6 +225,8 @@ type F4Config struct {
 	EditorCrosshair          bool
 	UseExternalEditor        bool
 	ExternalEditorCommand    string
+	ExternalEditorConsole    string
+	ExternalEditorGUI        string
 	EditorAutodetectCodePage bool
 	EditorHighlighter        string
 	EditorSyntaxAnimation    bool
@@ -387,6 +389,8 @@ var AppConfig = F4Config{
 	EditorCrosshair:          false,
 	UseExternalEditor:        false,
 	ExternalEditorCommand:    "",
+	ExternalEditorConsole:    "",
+	ExternalEditorGUI:        "",
 	EditorAutodetectCodePage: true,
 	EditorHighlighter:        "Chroma",
 	EditorSyntaxAnimation:    false,
@@ -734,6 +738,8 @@ func LoadConfig() {
 	SetImageDecoderPriorities(ParseImageDecoderPriorities(AppConfig.ImageDecoderPriority))
 	AppConfig.UseExternalEditor = ini.GetString("Editor", "UseExternalEditor", "0") == "1"
 	AppConfig.ExternalEditorCommand = ini.GetString("Editor", "ExternalEditorCommand", "")
+	AppConfig.ExternalEditorConsole = ini.GetString("Editor", "ExternalEditorCommandConsole", AppConfig.ExternalEditorCommand)
+	AppConfig.ExternalEditorGUI = ini.GetString("Editor", "ExternalEditorCommandGUI", AppConfig.ExternalEditorCommand)
 	plugStr := ini.GetString("Plugins", "List", "")
 	if plugStr != "" {
 		AppConfig.RegisteredPlugins = strings.Split(plugStr, "|")
@@ -920,7 +926,13 @@ func saveConfigWithWindowSize(windowSize bool) {
 	fmt.Fprintf(&sb, "Crosshair = %d\n", map[bool]int{true: 1, false: 0}[AppConfig.EditorCrosshair])
 	fmt.Fprintf(&sb, "TabSize = %d\n", AppConfig.EditorTabSize)
 	fmt.Fprintf(&sb, "UseExternalEditor = %d\n", map[bool]int{true: 1, false: 0}[AppConfig.UseExternalEditor])
-	fmt.Fprintf(&sb, "ExternalEditorCommand = %s\n", AppConfig.ExternalEditorCommand)
+	legacyExternalEditorCommand := AppConfig.ExternalEditorConsole
+	if legacyExternalEditorCommand == "" {
+		legacyExternalEditorCommand = AppConfig.ExternalEditorCommand
+	}
+	fmt.Fprintf(&sb, "ExternalEditorCommand = %s\n", legacyExternalEditorCommand)
+	fmt.Fprintf(&sb, "ExternalEditorCommandConsole = %s\n", AppConfig.ExternalEditorConsole)
+	fmt.Fprintf(&sb, "ExternalEditorCommandGUI = %s\n", AppConfig.ExternalEditorGUI)
 	fmt.Fprintf(&sb, "AutodetectCodePage = %d\n", map[bool]int{true: 1, false: 0}[AppConfig.EditorAutodetectCodePage])
 	fmt.Fprintf(&sb, "MemoryMap = %d\n", map[bool]int{true: 1, false: 0}[AppConfig.EditorMemoryMap])
 	fmt.Fprintf(&sb, "Highlighter = %s\n", AppConfig.EditorHighlighter)
@@ -1241,6 +1253,32 @@ func createDefaultHighlightIni(path string) {
 # Default groups (Hidden, Executables, Directories) are already defined
 # by the active Color Style, so you don't need to duplicate them unless
 # you specifically want to override the theme's colors.
+#
+# A [Highlight_N] section matches a file by its Name/Mask, attributes, size,
+# or date. The four color keys are selected independently:
+#   NormalColor          - an ordinary, unselected item
+#   SelectedColor        - a selected item
+#   CursorColor          - an ordinary item under the cursor
+#   SelectedCursorColor  - a selected item under the cursor
+# The cursor-specific keys may also be written as
+# NormalColorUnderCursor and SelectedColorUnderCursor. If a specialized
+# color is omitted, f4 falls back to the corresponding ordinary color.
+# Colors use foreground/background expressions, for example:
+#   foreground:#FF00FF | background:#008080
+# Other useful keys are IncludeAttributes/ExcludeAttributes (Directory,
+# Hidden, Executable, ReadOnly, System, Archive, Symlink), SizeAbove,
+# SizeBelow, DateType, DateAfter, DateBefore, Mark, and ContinueProcessing.
+#
+# Uncomment and adapt this complete example to add a custom rule. The section
+# is commented out deliberately, so the example does not change the panel.
+# [Highlight_100]
+# Name = Archives
+# Mask = *.zip, *.rar, *.7z
+# ExcludeAttributes = Directory
+# NormalColor = foreground:#FF00FF
+# SelectedColor = foreground:#FF00FF | background:#008080
+# CursorColor = foreground:#FFFFFF | background:#008080
+# SelectedCursorColor = foreground:#FFFFFF | background:#0000A0
 #
 # [SortGroup_N] sections below define sort groups. They accept the same
 # matching keys as a highlight rule (Mask, IncludeAttributes,
