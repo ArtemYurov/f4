@@ -3958,6 +3958,7 @@ func TestPanelsFrame_DriveMenu_OtherPanel(t *testing.T) {
 }
 
 func TestPanelsFrame_DriveMenu_TerminalBusy(t *testing.T) {
+	t.Cleanup(swapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	pf := NewPanelsFrame()
 	defer pf.Close()
