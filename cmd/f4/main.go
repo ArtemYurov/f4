@@ -974,6 +974,9 @@ func configureNestedInputMode() {
 	vtinput.InputMode = nestedInputMode(vtinput.InputMode, nested, runtime.GOOS == "windows")
 	if nested && runtime.GOOS == "windows" && vtinput.InputMode == "ansi" {
 		vtui.DebugLog("INPUT: nested f4 uses ANSI reader to preserve ConPTY mouse buttons")
+		// The reader parses bytes; the console host only sends them once it
+		// has been asked to. See prepareNestedConsoleInput.
+		prepareNestedConsoleInput()
 	}
 }
 
