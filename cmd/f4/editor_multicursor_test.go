@@ -120,29 +120,22 @@ func TestEditor_MultiCursor_EscapeClearsBeforeClosing(t *testing.T) {
 	}
 }
 
-// Only the primary caret is wired into editing so far, so any other key
-// collapses the set instead of leaving carets that the keystroke ignored.
-func TestEditor_MultiCursor_TypingCollapsesTheSet(t *testing.T) {
+// Moving the caret is still a single-caret operation, so it collapses the set
+// instead of leaving carets that the keystroke ignored.
+func TestEditor_MultiCursor_NavigationCollapsesTheSet(t *testing.T) {
 	ev := multiCursorEditor(t, "one\ntwo")
 	ev.toggleCursorAt(4)
 
-	ev.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: 'X'})
-
-	if ev.multiCursor() {
-		t.Error("typing left extra carets behind")
-	}
-	if got, want := ev.pt.String(), "Xone\ntwo"; got != want {
-		t.Errorf("buffer = %q, want %q", got, want)
-	}
-
-	ev.toggleCursorAt(0)
 	ev.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_DOWN})
+
 	if ev.multiCursor() {
 		t.Error("moving the caret left extra carets behind")
 	}
 }
 
-func TestEditor_MultiCursor_UndoDropsTheSet(t *testing.T) {
+// Undo restores the caret set the change was made with, so carets placed after
+// it go away rather than staying over text that has been replaced.
+func TestEditor_MultiCursor_UndoRestoresTheSetOfTheChange(t *testing.T) {
 	ev := multiCursorEditor(t, "one\ntwo")
 	ev.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: 'X'})
 	ev.toggleCursorAt(4)
@@ -150,7 +143,7 @@ func TestEditor_MultiCursor_UndoDropsTheSet(t *testing.T) {
 	ev.Undo()
 
 	if ev.multiCursor() {
-		t.Error("undo left carets pointing into text that was replaced")
+		t.Errorf("undo kept carets that were placed after the change: %v", ev.extraCursors)
 	}
 }
 

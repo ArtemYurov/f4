@@ -295,6 +295,9 @@ type editorState struct {
 	table piecetable.TableState
 	line  int
 	pos   int
+	// carets are the extra carets as they stood before the change, so that
+	// undoing a multi-caret edit gives back the set that made it.
+	carets []int
 }
 
 func (ev *EditorView) ConfirmClose() bool {
@@ -563,9 +566,10 @@ func (ev *EditorView) saveUndo(op undoOpType) {
 	}
 
 	state := editorState{
-		table: ev.pt.GetState(),
-		line:  line,
-		pos:   pos,
+		table:  ev.pt.GetState(),
+		line:   line,
+		pos:    pos,
+		carets: append([]int(nil), ev.extraCursors...),
 	}
 
 	// Simple grouping for typing: don't push new state if we are just typing characters consecutively
@@ -591,15 +595,13 @@ func (ev *EditorView) Undo() {
 	ev.codepageRaw = nil
 	ev.cancelIndexing()
 	ev.retireEditSession()
-	// The caret set is not part of a saved state, and the offsets it holds
-	// describe text that is about to be replaced.
-	ev.clearExtraCursors()
 
 	// Save current state to redo stack
 	ev.redoStack = append(ev.redoStack, editorState{
-		table: ev.pt.GetState(),
-		line:  ev.CursorLine,
-		pos:   ev.CursorPos,
+		table:  ev.pt.GetState(),
+		line:   ev.CursorLine,
+		pos:    ev.CursorPos,
+		carets: append([]int(nil), ev.extraCursors...),
 	})
 
 	// Restore last state
@@ -611,6 +613,7 @@ func (ev *EditorView) Undo() {
 	ev.noteIndexRebuilt(ev.li.Rebuild(ev.pt))
 	ev.CursorLine = state.line
 	ev.CursorPos = state.pos
+	ev.extraCursors = append(ev.extraCursors[:0], state.carets...)
 
 	ev.clearCaches()
 	// Intelligent modified flag: if structure matches clean state, it's not modified
@@ -630,13 +633,13 @@ func (ev *EditorView) Redo() {
 	ev.codepageRaw = nil
 	ev.cancelIndexing()
 	ev.retireEditSession()
-	ev.clearExtraCursors()
 
 	// Save current state to undo stack
 	ev.undoStack = append(ev.undoStack, editorState{
-		table: ev.pt.GetState(),
-		line:  ev.CursorLine,
-		pos:   ev.CursorPos,
+		table:  ev.pt.GetState(),
+		line:   ev.CursorLine,
+		pos:    ev.CursorPos,
+		carets: append([]int(nil), ev.extraCursors...),
 	})
 
 	last := len(ev.redoStack) - 1
@@ -647,6 +650,7 @@ func (ev *EditorView) Redo() {
 	ev.noteIndexRebuilt(ev.li.Rebuild(ev.pt))
 	ev.CursorLine = state.line
 	ev.CursorPos = state.pos
+	ev.extraCursors = append(ev.extraCursors[:0], state.carets...)
 
 	ev.clearCaches()
 	// Intelligent modified flag
@@ -1848,18 +1852,22 @@ func (ev *EditorView) processKeyInner(e *vtinput.InputEvent) bool {
 	}
 	alt := (e.ControlKeyState & (vtinput.LeftAltPressed | vtinput.RightAltPressed)) != 0
 
-	// Escape puts the extra carets down; anything else that acts on the text
-	// or moves the caret collapses the set on its way through, because only
-	// the primary caret is wired into those paths so far. Painted carets that
-	// the next keystroke would ignore are worse than no carets at all.
+	// Escape puts the extra carets down. Keys that know how to act on the
+	// whole set are handled by processMultiCursorKey; anything else collapses
+	// the set on its way through, because carets that a keystroke would
+	// silently ignore are worse than no carets at all.
 	if len(ev.extraCursors) > 0 {
 		switch {
 		case e.Type == vtinput.KeyEventType && e.KeyDown && e.VirtualKeyCode == vtinput.VK_ESCAPE:
 			ev.clearExtraCursors()
 			vtui.FrameManager.Redraw()
 			return true
-		case e.Type == vtinput.PasteEventType,
-			e.Type == vtinput.KeyEventType && e.KeyDown:
+		case e.Type == vtinput.KeyEventType && e.KeyDown:
+			if ev.processMultiCursorKey(e) {
+				return true
+			}
+			ev.clearExtraCursors()
+		case e.Type == vtinput.PasteEventType:
 			ev.clearExtraCursors()
 		}
 	}
@@ -3100,6 +3108,11 @@ func (ev *EditorView) ProcessMouse(e *vtinput.InputEvent) bool {
 	case vtinput.FromLeft1stButtonPressed:
 		mx, my := int(e.MouseX), int(e.MouseY)
 		if mx >= ev.X1 && mx <= ev.X2 && my >= ev.Y1+1 && my <= ev.Y2 {
+			// Clicking somewhere is asking for one caret there; only the
+			// Alt+click gesture below adds to the set.
+			if !editorAddCursorClick(e) {
+				ev.clearExtraCursors()
+			}
 			visualCol := mx - ev.X1 + ev.ScrollLeft
 			visualRow := my - (ev.Y1 + 1) + ev.ScrollTopRow
 			offset := ev.snapMouseOffsetToClusterBoundary(ev.engine.VisualToLogical(visualRow, visualCol))
@@ -3149,6 +3162,7 @@ func (ev *EditorView) ProcessMouse(e *vtinput.InputEvent) bool {
 	case vtinput.RightmostButtonPressed:
 		mx, my := int(e.MouseX), int(e.MouseY)
 		if mx >= ev.X1 && mx <= ev.X2 && my >= ev.Y1+1 && my <= ev.Y2 {
+			ev.clearExtraCursors()
 			visualCol := mx - ev.X1 + ev.ScrollLeft
 			visualRow := my - (ev.Y1 + 1) + ev.ScrollTopRow
 			offset := ev.snapMouseOffsetToClusterBoundary(ev.engine.VisualToLogical(visualRow, visualCol))
