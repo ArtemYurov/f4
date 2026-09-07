@@ -1,0 +1,461 @@
+# Phase 11: CI, Lint and Documentation
+
+Plan: [index.md](index.md)
+Tasks: 38-42
+Depends on: Phase 10
+
+## Objective
+
+The build pipeline is rebalanced for a tree that no longer has one giant package,
+the pull request opens with no surprise lint backlog, and the prose describes the
+repository that now exists rather than the one that used to.
+
+`ARCHITECTURE.md` gets its own task, not a line in the docs sweep, because it is
+the one document that changes *genre*: today it describes a target, and after this
+plan it describes a fact.
+
+## Current-Code Evidence
+
+| Path | Signal | Consequence |
+|---|---|---|
+| `build.yml:983` | `matrix: { include: [{ shard: 'cmd/f4', … }, { shard: rest, … }] }` | lint shards named by package path |
+| `build.yml:1042` | `"$module/cmd/f4"\|"$module/cmd/f4"/*)` | the shard router |
+| `build.yml:1056-1068` | `if [ "$SHARD" = "cmd/f4" ]` … `./cmd/f4/...` | shard-specific arguments |
+| `build.yml:1262-1268` | comment: "cmd/f4's suite alone takes as long under the detector as every other package combined" | the stated reason for the split |
+| `build.yml:1271-1273` | `cmd/f4 A` / `B-L` / `rest`, `run: '^TestA'` etc. | three race shards splitting one package by test-name letter |
+| `build.yml:1318`, `:1326` | `github.com/unxed/f4/cmd/f4` guard and `go test -race … ./cmd/f4` | the shards' bodies |
+| `build.yml:1332` | `go list ./... \| grep -Ev '^github.com/unxed/f4/cmd/f4$'` | the `packages` scope, which absorbed every migrated package automatically |
+| `.golangci.yml`, `.golangci-strict.yml` | contain no paths | need no edit |
+| incremental lint | `--new-from-rev=origin/main` | rename detection across a `package` clause change |
+| `AGENTS.md` | 13 path mentions; "687 files in one flat package main" | structural map, now wrong |
+| `.ai-factory/rules/base.md` | "Module Structure" describes the pre-move tree | conventions file |
+| `.ai-factory/ARCHITECTURE.md` | 549 lines; `(move)`/`(extract)` markers, migration policy, extraction order | changes genre |
+| `docs/` | 48 subsystem pages, 20 mentioning `cmd/f4` | per-commit sweeps kept paths current; subjects still need review |
+
+## Files to Change
+
+| Path | Action | Required change |
+|---|---|---|
+| `.github/workflows/build.yml` | modify | Shard definitions, `packages` scope |
+| `AGENTS.md` | modify | Project Structure, counts, docs table |
+| `README.md` | modify | Build and icon instructions |
+| `.ai-factory/rules/base.md` | modify | Module Structure section |
+| `.ai-factory/ARCHITECTURE.md` | modify | Target → fact |
+| `docs/*.md` | modify | Subjects, not only paths |
+| `.ai-factory/RESTRUCTURE_BASELINE.md` | delete | Or keep, with a stated reason |
+
+---
+
+## Task 38: Rebalance the CI shards
+
+### Intent
+
+The lint and race shards are named after `cmd/f4` because one package held 345
+files and 96 495 lines of tests. That package now holds `main.go`. The shards
+stayed *correct* throughout the migration — files migrated between them on their
+own, and `build.yml:1332` computed the `packages` scope by exclusion — but they
+are now badly imbalanced: three race runners split a package with almost no tests
+while one runner carries fifteen packages.
+
+This is done **once, here**, not fourteen times during the waves.
+
+### Implementation Steps
+
+1. Replace the lint matrix at `build.yml:983`. Instead of two shards named by
+   package path, compute the split from `go list ./...` at job time — for example
+   two shards taking alternate entries of the sorted package list, or a split on a
+   stable hash of the import path. The requirement is that **no shard definition
+   names a package path**, so the next restructuring does not have to touch it.
+2. Simplify the shard router at `build.yml:1035-1075`. The `cmd_affected` special
+   case and the `./cmd/f4/...` argument branch exist only to serve the named
+   shards; with a computed split, the router reduces to "map each affected package
+   to its shard".
+3. Replace the race matrix at `build.yml:1271-1273`. Drop the `cmd/f4 A` /
+   `B-L` / `rest` letter split and its `run:` filters, and drop the `packages`
+   scope's exclusion at `build.yml:1332` — with no giant package there is nothing
+   to exclude. Shard by package the same way as the lint job.
+4. Keep the two behaviours that are not about sharding:
+   - the global `-skip '^TestAllDialogs_LayoutValidation$'` at `build.yml:1187`
+     and its single-threaded re-run, now pointed at `./internal/dialog` by Task 25.
+     The reason is unchanged: layout validation mutates shared UI registries from
+     parallel subtests.
+   - the race-instrumented cache keys at `build.yml:1288-1296`. Update the
+     `cache-key` values to match the new shard names; the reason for a separate key
+     (the shared setup-go key is claimed by a non-race job) still holds.
+5. **Measure.** Record the wall-clock of the `lint` and `race` jobs before and
+   after on the same commit. A rebalancing that makes CI slower is not done.
+
+### Required Interfaces and Contracts
+
+- Every package in `go list ./...` is linted by exactly one shard and raced by
+  exactly one shard. No package is covered twice and none is dropped — this is the
+  property the named shards guaranteed by construction and a computed split must
+  prove.
+- The incremental-lint path (`--new-from-rev=origin/main`) is unchanged in
+  behaviour; only the shard assignment changes.
+- `fail-fast: false` stays: a shard failing must not cancel its siblings.
+
+### Error Handling and Logging
+
+An empty shard is a workflow error, not a silent skip — `build.yml:1336-1339`
+already errors when the package list comes out empty, and that guard must survive
+the rewrite. A shard computing to zero packages after a future rename is exactly
+the failure mode it protects against.
+
+### Tests
+
+The workflow is the test. Validate before merging:
+
+```
+# every package assigned exactly once
+go list ./... | sort > /tmp/all.txt
+# run the shard-assignment snippet for each shard, concatenate, sort, compare
+diff /tmp/all.txt /tmp/sharded.txt
+```
+
+Then push the branch and confirm both jobs go green with no package unaccounted
+for.
+
+### Acceptance Criteria
+
+- `grep -n "shard: 'cmd/f4'\|cmd/f4 A\|cmd/f4 B-L" .github/workflows/build.yml`
+  returns nothing.
+- The `diff` above is empty.
+- Lint and race wall-clock times are recorded in the commit message and are not
+  worse than before.
+
+### Verification
+
+- The `diff /tmp/all.txt /tmp/sharded.txt` check.
+- Expected result: no output.
+- A CI run on the branch.
+- Expected result: both jobs green, every shard non-empty.
+
+---
+
+## Task 39: Run the incremental lint against `origin/main` before opening the PR
+
+### Intent
+
+`.golangci.yml` and `.golangci-strict.yml` contain no paths and need no edit. The
+risk is elsewhere: the incremental lint runs `--new-from-rev=origin/main`, and a
+changed `package` clause can defeat golangci-lint's rename detection. If it does,
+the project's existing backlog surfaces as new findings on this pull request —
+roughly 2450 of them — and the maintainer's first impression of the PR is a red
+job with thousands of entries.
+
+Finding this locally costs one run. Finding it in review costs the PR.
+
+### Implementation Steps
+
+1. Fetch the base and run the same command CI runs, over the whole branch:
+   ```
+   git fetch origin main
+   golangci-lint run --new-from-rev=origin/main ./...
+   ```
+2. Record the finding count. Compare against a run on `origin/main` itself to
+   establish what the pre-existing backlog is:
+   ```
+   git stash && git checkout origin/main
+   golangci-lint run ./... 2>&1 | tail -1
+   git checkout - && git stash pop
+   ```
+3. If the branch run reports substantially more than the genuine new-code findings,
+   rename detection failed. Do not fix it by adding nolint directives. Instead
+   state the measured numbers in the PR body — "golangci-lint's `--new-from-rev`
+   does not track these renames; the incremental job reports N findings, of which
+   the pre-existing backlog on `main` is M" — so the maintainer sees a known
+   quantity rather than a mystery.
+4. Run the strict configuration over the new packages only, where it is meaningful:
+   ```
+   golangci-lint run -c .golangci-strict.yml ./internal/numeric/... ./internal/toast/... ./internal/history/... ./internal/action/...
+   ```
+   These four are new code written during this work, so they can be held to the
+   strict bar.
+
+### Required Interfaces and Contracts
+
+- No `nolint` directive is added to work around rename detection.
+- No lint configuration is changed. The two `.golangci*.yml` files are outside the
+  scope of this plan.
+- `gosec`'s `G115` findings must be zero in `internal/numeric` — Task 19 required
+  the `#nosec` annotations to travel verbatim, and this is where that is confirmed.
+
+### Error Handling and Logging
+
+Not applicable. This task produces numbers and a paragraph for the PR body.
+
+### Tests
+
+The lint runs above are the test.
+
+### Acceptance Criteria
+
+- Both counts are recorded.
+- `golangci-lint run -c .golangci-strict.yml ./internal/numeric/...` reports no
+  `G115`.
+- If rename detection failed, the PR body says so with the measured numbers.
+
+### Verification
+
+- `golangci-lint run --new-from-rev=origin/main ./... 2>&1 | tail -3`
+- Expected result: a finding count that the PR body accounts for.
+
+---
+
+## Task 40: `/aif-docs` checkpoint
+
+### Intent
+
+Each move commit closed its own path references — that is a ground rule and an
+unclosed reference is an unfinished move. But the restructuring changes what the
+48 subsystem documents *describe*, not only the paths inside them. A document that
+says "panels live in the flat package alongside the editor" is not fixed by
+updating a path.
+
+### Implementation Steps
+
+1. Run `/aif-docs` and treat its findings as part of this commit rather than as a
+   follow-up.
+2. `AGENTS.md` needs more than a path sweep. Rewrite:
+   - the Project Structure block, which still opens with
+     `cmd/f4/  # the application: 687 files in one flat package main`;
+   - the Documentation table row for `SPREADSHEET.md`, moved in Task 12;
+   - the Agent Rules section on CodeGraph, whose advice — "`cmd/f4` is one flat
+     `package main` of ~109k lines, so grep over it is slow and matches
+     identifiers it should not" — was true and is now false. The graph is still the
+     right tool for symbol questions; the *reason* changed.
+3. `.ai-factory/rules/base.md`'s Module Structure section lists the pre-move tree
+   and tells new code where to go. Update the list, and re-derive the counts it
+   quotes.
+4. Walk the 20 `docs/` pages that mention `cmd/f4` and check each for a claim about
+   *structure* rather than a path: which subsystem owns what, what is in one
+   package, what a contributor must not couple.
+5. `README.md:233`, `:237`, `:241` — the build and icon-generation instructions.
+   Confirm Tasks 11 and 27 left them correct.
+
+### Required Interfaces and Contracts
+
+- Documentation describes the current state. No document explains the migration,
+  compares "before" with "after", or references how the code used to be organised —
+  that history lives in git.
+- Counts quoted in prose are re-derived, not estimated: package count from
+  `go list ./... | wc -l`, file counts from `find`.
+
+### Error Handling and Logging
+
+Not applicable.
+
+### Tests
+
+No automated test covers prose. The check is the grep sweep:
+
+```
+grep -rn 'flat package\|one flat\|687 files\|345 files' docs/ README.md AGENTS.md .ai-factory/
+```
+
+### Acceptance Criteria
+
+- The grep above returns nothing outside `ARCHITECTURE.md` (Task 41 owns that
+  file) and the plan artifacts under `.ai-factory/plans/`.
+- `AGENTS.md`'s Project Structure block lists the packages that exist.
+- Every count quoted in `AGENTS.md` and `rules/base.md` is re-derived.
+
+### Verification
+
+- `grep -rn 'cmd/f4/' docs/ README.md AGENTS.md`
+- Expected result: only the build invocations (`go build ./cmd/f4`,
+  `go generate ./cmd/f4`) and the `.syso` note.
+
+---
+
+## Task 41: Rewrite `ARCHITECTURE.md` from target to fact
+
+### Intent
+
+Every other document needs updating. This one changes genre. It currently
+describes a destination — `(move)` and `(extract)` markers on a tree that does not
+exist yet, an extraction order, a migration policy, a table splitting files
+between layer-0 and view-bound halves. Once the plan is executed, none of that
+describes the repository; it describes the journey.
+
+The project rule is explicit and applies to documents as much as to code
+comments: text explains the **current** state, never the past. No "used to be X,
+now Y", no account of how the code evolved. History lives in git. So this is not
+"append a note saying it is done" — it is removing everything that describes a
+transition and leaving a description of the result.
+
+### Implementation Steps
+
+1. **Folder Structure** (`:47-170`): strip every `(move)` and `(extract)` marker.
+   Nothing moves any more; the tree is the tree. Keep the annotations that explain
+   *why* a directory sits where it does — `sdk/` and `vfs/` being importable from
+   outside the module, `embedded.go` being pinned by `//go:embed`,
+   `rsrc_windows_*.syso` being linked only from the built package's directory,
+   `internal/hideconsole` being a vendored fork.
+2. Add the packages this plan created that the document does not yet name:
+   `internal/action`, `internal/toast`, `internal/history`, `internal/numeric`,
+   `internal/testutil` and `internal/paneltest`. Give the last two a line saying
+   they are test scaffolding and no production file imports them.
+3. **Overview** (`:3-25`): "Two things are missing… `cmd/f4` holds 345 non-test
+   files and ~109k lines in one flat `package main`" is false after Phase 10.
+   Rewrite the paragraph to state what the layout *is* and what rule it expresses.
+4. **Delete the sections that are scaffolding**, not description:
+   - "**`app` is two things, and only one of them is the root**" (`:172-198`) with
+     its file-split table. It is an instruction for performing the extraction.
+   - "**`sysinfo` keeps its own copy of the one numeric helper it needs**"
+     (`:193-198`) — *keep the rule*, drop the justification framed as a migration
+     decision. It is a live constraint: sysinfo is a leaf and must stay one.
+   - "**Legacy vs New Code Policy**" (`:420-453`): the extraction order, the
+     one-subsystem-per-commit rule, "no rewrites inside a move commit", "a move is
+     not done until the prose agrees". Scaffolding, all of it. What survives is the
+     first bullet, reworded: new code goes into the module it belongs to, and if
+     none fits, create the package.
+5. **Keep unchanged** — these are permanent contracts, not migration aids:
+   - Decision Rationale (`:26-46`)
+   - File Naming Inside a Package (`:234-270`), including the multi-type-file rule
+   - Dependency Rules and the layer table (`:271-331`), updated only with the new
+     package names from step 2
+   - Layer / Module Communication (`:332-356`)
+   - Key Principles (`:357-419`), with principle 5's test-scaffolding paragraph
+     rewritten to describe `internal/testutil` and `internal/paneltest` as they
+     exist rather than as a plan
+   - Code Examples (`:454-527`)
+   - "Not every directory here is one module" (`:324-331`) — six `go.mod` files is
+     a standing fact
+6. **Anti-Patterns** (`:528-549`): "**Adding to the flat package**" must be
+   reworded. There is no flat package any more, but the rule it protects survives:
+   a new feature belongs in the module it serves, and if none fits, in a new
+   package — never appended to whichever package is nearest.
+7. **Re-derive every number.** `345 non-test files`, `~109k lines`,
+   `297 files of extensions`, `~700 Go files outside plugins`,
+   `560 _test.go files`, `48 subsystem documents`, `133 files read AppConfig`,
+   `37 call edges`, `42 audit keys`. Count them; do not adjust them by arithmetic.
+
+### Required Interfaces and Contracts
+
+- The document describes the repository as it is. A reader who has never seen the
+  old tree must not be able to tell that a restructuring happened.
+- No sentence contains "used to", "previously", "was moved", "after the
+  extraction", "no longer", or a date.
+- The dependency rules, layer table and naming convention keep their normative
+  force — they are what the next contributor is held to.
+- `cmd/f4/architecture_test.go` (Task 8) enforces four of the rules. Where the
+  document states a rule the test checks, say so, so a reader knows which rules
+  are mechanical.
+
+### Error Handling and Logging
+
+Not applicable.
+
+### Tests
+
+The auditor is the closest thing to a test of this document:
+
+```
+go test ./cmd/f4 -run '^TestArchitecture' -v
+```
+
+Every layer the document asserts must appear in the test's layer map, and vice
+versa. A package in the document but not in the map is undocumented drift.
+
+### Acceptance Criteria
+
+- `grep -n '(move)\|(extract)' .ai-factory/ARCHITECTURE.md` returns nothing.
+- `grep -niE 'used to|previously|no longer|after the extraction|migration' .ai-factory/ARCHITECTURE.md`
+  returns nothing.
+- Every package in `architecture_test.go`'s layer map appears in the document's
+  folder structure, and vice versa.
+- Every quoted count is re-derived.
+
+### Verification
+
+- `go test ./cmd/f4 -run '^TestArchitecture' -v` and a manual comparison of the
+  layer map against the document's layer section.
+- Expected result: the two agree package for package.
+- `grep -n '(move)\|(extract)' .ai-factory/ARCHITECTURE.md`
+- Expected result: no output.
+
+---
+
+## Task 42: Drop the migration baseline
+
+### Intent
+
+`.ai-factory/RESTRUCTURE_BASELINE.md` answered one question — "was this test red
+before we started?" — for fourteen wave commits. With the last wave green, nothing
+asks it any more.
+
+This is the only task permitted to modify or remove that file.
+
+### Implementation Steps
+
+1. Confirm the last wave compared clean against it.
+2. Decide, and state the decision in the commit message:
+   - **delete** — `git rm .ai-factory/RESTRUCTURE_BASELINE.md`; the information it
+     held is in the commit history of this branch; or
+   - **keep** — because it records three pre-existing failures
+     (`tools/icons`, `tools/wine_syscall_probe` on darwin/arm64, the inert
+     `plugring_policy_test.go`) that outlive this work and that nobody else has
+     written down. If keeping it, rename it to something that is not about a
+     finished migration and move it to `docs/`.
+   Prefer deleting: two of the three findings should by then be issues in the
+   tracker, which is where they belong.
+3. Whichever is chosen, make sure the three pre-existing findings do not vanish
+   silently. If the file goes, they go into the PR body or into issues.
+
+### Required Interfaces and Contracts
+
+None. This is a repository-hygiene task.
+
+### Error Handling and Logging
+
+Not applicable.
+
+### Tests
+
+None.
+
+### Acceptance Criteria
+
+- The commit message states which option was taken and why.
+- The three pre-existing findings are recorded somewhere that survives this
+  branch.
+
+### Verification
+
+- `go test -timeout 25m ./...` and the five other module runs.
+- Expected result: green everywhere except the three recorded pre-existing
+  failures, which are unchanged from Task 1.
+
+---
+
+## Phase Risks and Mitigations
+
+- **Risk:** the computed CI shards drop a package and a whole area stops being
+  linted or raced, silently.
+  **Mitigation:** Task 38's `diff /tmp/all.txt /tmp/sharded.txt` check proves every
+  package is assigned exactly once, and the empty-shard guard at
+  `build.yml:1336-1339` survives the rewrite.
+- **Risk:** the incremental lint's rename detection fails and the PR opens red
+  with thousands of pre-existing findings.
+  **Mitigation:** Task 39 measures it locally before the PR and puts the numbers in
+  the PR body.
+- **Risk:** `ARCHITECTURE.md` is updated by appending "this is now done", leaving a
+  document that narrates a migration.
+  **Mitigation:** Task 41's acceptance criteria grep for exactly that vocabulary,
+  and the project rule against past-tense explanation is stated in the intent.
+- **Risk:** the baseline is deleted along with the only written record of three
+  pre-existing failures.
+  **Mitigation:** Task 42 step 3 requires them to land somewhere else first.
+
+## Phase Completion Checklist
+
+- Every Task 38-42 satisfies its acceptance criteria.
+- No shard definition in `build.yml` names a package path.
+- The PR body accounts for the incremental-lint finding count, the plugring
+  catalogue URL change, and the branch-scoped README image URL.
+- No document describes the migration; `ARCHITECTURE.md` describes the tree.
+- `go test -timeout 25m ./...` plus the five other module runs match the Task 1
+  baseline's green set.
+- `index.md` task checkboxes 38-42 are ticked.

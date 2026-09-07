@@ -1,0 +1,458 @@
+# Phase 6: Hosts and Services
+
+Plan: [index.md](index.md)
+Tasks: 25-28
+Depends on: Phase 5
+
+## Objective
+
+Four packages with seven outbound edges each leave `cmd/f4`: `internal/dialog`,
+`internal/plughost`, `internal/gui`, `internal/macro`. After this phase the plugin
+transports are behind one host, modal UI has an owner, and the GUI backends are
+separated from the terminal code they are often confused with.
+
+## The Extraction Gate
+
+The gate is per **(file, destination)** pair, not per file. Count only references
+to types whose own package is extracted **later** than this file's destination:
+
+| Type | Lands in | Extracted at |
+|---|---|---|
+| `coreAPI` | `internal/plughost` | Task 26 |
+| `ViewerView` | `internal/viewer` | Task 29 |
+| `TerminalView` | `internal/term` | Task 30 |
+| `EditorView` | `internal/editor` | Task 33 |
+| `PanelsFrame`, `FileSystemPanel`, `pluginPanelInstance` | `internal/panel` | Task 34 |
+| `CommandLine` | `internal/cmdline` | Task 35 |
+
+Score a file with:
+```
+for t in PanelsFrame FileSystemPanel EditorView ViewerView TerminalView CommandLine coreAPI pluginPanelInstance; do
+  printf "%-22s %s\n" "$t" "$(grep -c "\b$t\b" cmd/f4/<file>.go)"
+done
+```
+A non-zero count for a *later* type means the file does not move whole: either the
+offending function stays behind with its view, or — when its logic belongs here —
+it becomes a plain function taking the type, per the project decision on
+cross-package methods. Across all 345 non-test files, **235 score zero on every
+type** and are a pure `git mv`; 58 score 1-3 and 52 score 4 or more.
+
+Then: move by `//go:build` line and never by filename (`pty_unix.go` is
+`//go:build linux`; `solaris_pty.go` is `//go:build !windows` and holds no PTY
+code); take every `_test.go` neighbour; rename to `<topic>.go` /
+`<topic>_<aspect>.go` where the topic is the subject inside the package; export
+only what has an external caller; add one line to `architecture_test.go`'s layer
+map and, for an audited symbol, one line to
+`command_palette_coverage_test.go`'s directory→package map; close every `docs/`,
+`README.md` and `AGENTS.md` reference in the same commit.
+
+## Current-Code Evidence
+
+| Path | Gate detail | Consequence |
+|---|---|---|
+| `cmd/f4/help.go:18` | `//go:embed help/en.hlf`, gate 0 | `help/` moves to `internal/dialog` |
+| `cmd/f4/help_search.go`, `themed_table.go`, `dialog_button_layout.go`, `file_dialog.go`, `goto_dialog.go` | gate 0 | move whole |
+| `cmd/f4/grabber.go` | 1 | one reference to resolve |
+| `cmd/f4/share_dialog.go`, `find_file.go` | 3 each | resolve per reference |
+| `cmd/f4/bookmarks_dialog.go` | 4 | resolve per reference |
+| `cmd/f4/api.go` | `coreAPI` ×12 | the `coreAPI` type's home — this *is* plughost |
+| `cmd/f4/extui_host.go`, `plughost_ffi.go`, `rpc_*.go`, `wasm_plugin.go`, `lua_plugin.go`, `plugin_permissions*.go`, `plugin_scaffold.go`, `sqlite_actions.go` | gate 0 | move whole |
+| `cmd/f4/plughost.go` | 2 | resolve |
+| `cmd/f4/plugin_hotkeys.go`, `plugins.go` | 1 each | resolve |
+| `cmd/f4/plugin_contributions.go` | 4 | resolve |
+| `cmd/f4/gui_*.go`, `window_icon_*.go`, `window_position.go`, `winepath_*.go` | gate 0, ten files | move whole |
+| `cmd/f4/window_icon_darwin.go:18` | `//go:embed assets/icon/generated/f4.icns` | `assets/icon/` moves to `internal/gui` |
+| `cmd/f4/dragdrop.go` | `PanelsFrame` ×13 | assigned to gui by the call graph, but the type says panel — **goes to `internal/panel` whole** |
+| `cmd/f4/macro_export.go` | gate 0 | move whole |
+| `cmd/f4/macro.go` | 6 | resolve |
+| `cmd/f4/macro_host.go`, `macro_lua_api.go` | 2 each | resolve |
+| `cmd/f4/macro_lua.go`, `macro_plugin_calls.go` | 1 each | resolve |
+| `.github/workflows/build.yml:178,406,580,812` | `cp -r cmd/f4/lang cmd/f4/help build/` | the **`help` half** belongs to Task 25 |
+| `.github/workflows/build.yml:1187` | `-skip '^TestAllDialogs_LayoutValidation$'` applied globally | see Task 25 step 5 |
+| `.github/workflows/build.yml:1193-1194` | isolated re-run keyed on `./...` or `cmd/f4` | see Task 25 step 5 |
+| `.github/workflows/build.yml:93,95-97,191,195,304,418,422` | icon generation and packaging | Task 27 |
+| `tools/icons/main.go:37,38` | `iconDir`, `outDir` | Task 27 |
+| `tools/icons/main.go:160` | `cmd.Dir = filepath.Join(root, "cmd", "f4")` | **stays** — `.syso` links only from the built package's dir |
+
+## Files to Change
+
+| Path | Action | Required change |
+|---|---|---|
+| `internal/dialog/` | create | Modal dialogs, palette, menus, help + `help/` |
+| `internal/plughost/` | create | All four transports, `coreAPI` |
+| `internal/gui/` | create | Backends, fonts, window, icon + `assets/icon/` |
+| `internal/macro/` | create | Macro engine and Lua macro API |
+| `.github/workflows/build.yml` | modify | `help` paths, dialog test isolation, icon paths |
+| `tools/icons/main.go` | modify | Lines 1-2, 37, 38 — **not** 160 |
+| `cmd/f4/architecture_test.go` | modify | Four layer-map entries |
+
+---
+
+## Task 25: Extract `internal/dialog`
+
+### Intent
+
+Modal dialogs, the command palette, generated menus and the help viewer. Seven
+outbound edges, 25 inbound — a package with many callers and few dependencies is
+an early candidate, which is what leaf-first ranked by *outbound* means.
+
+This wave also collects the eight dialog helpers stranded in `actions.go`
+(Phase 4's table): `confirmAndClearHistory`, `confirmAndClearRichHistory`,
+`confirmAndPruneMissingFolderHistory`, `showPluginFileDialog`, `elementWidth`,
+`checkboxColumnWidth`, `boolToCheckboxState`, `choiceText`.
+
+### Implementation Steps
+
+1. Apply the gate to every candidate. Zero-score files move whole: `help.go`,
+   `help_search.go`, `themed_table.go`, `dialog_button_layout.go`,
+   `file_dialog.go`, `goto_dialog.go`, `command_palette*.go` (eleven files —
+   score each; `command_palette_direct_panels.go` and
+   `command_palette_direct_frames.go` are the likely non-zeros).
+2. Resolve the non-zeros individually: `grabber.go` (1), `share_dialog.go` (3),
+   `find_file.go` (3), `bookmarks_dialog.go` (4). For each reference, decide
+   between "stays with its view" and "becomes a free function taking the type".
+3. Take the settings dialogs Phase 5 deferred here: `portable.go`,
+   `startup_settings.go`, `codepage_settings.go`, `hotkeys_ui.go`,
+   `proxy_settings_ui.go`, `colorer_settings.go`, `plugin_permissions_ui.go`.
+   Each scores 0 or 1 and each is `Msg`-heavy UI, not configuration storage.
+4. `git mv cmd/f4/help internal/dialog/help`. The `//go:embed help/en.hlf`
+   directive at `help.go:18` is relative to its own directory and needs no edit
+   once both move together.
+5. **The two CI edits that belong only to this commit:**
+   - `build.yml:178`, `:406`, `:580`, `:812` — the `help` half of
+     `cp -r cmd/f4/lang cmd/f4/help build/` becomes
+     `internal/dialog/help`. (Phase 5 edited the `lang` half of the same lines.)
+   - `build.yml:1193-1194`. `dialog_layouts_test.go` holds
+     `TestAllDialogs_LayoutValidation` and moves in this commit. Line 1187 skips
+     that test **globally** (`-skip '^TestAllDialogs_LayoutValidation$'`) and lines
+     1193-1194 re-run it single-threaded only when the target list contains
+     `./...` or `github.com/unxed/f4/cmd/f4`. After the move the test matches
+     neither: it is skipped everywhere and re-run nowhere. **The build stays green
+     and the test silently stops running.** Repoint the isolated re-run at
+     `./internal/dialog`, keep the global skip, and confirm the test actually ran.
+6. Rename to the topic convention: `help.go`, `help_search.go`, `palette.go`,
+   `palette_search.go`, `palette_ui.go`, `table.go`, `buttons.go`, `file.go`,
+   `goto.go`, `settings_portable.go`, `settings_codepage.go`,
+   `settings_hotkeys.go`, `settings_proxy.go`.
+7. Add `"internal/dialog": 3` to the auditor's layer map.
+
+### Required Interfaces and Contracts
+
+- `internal/dialog` may import `internal/config`, `internal/i18n`,
+  `internal/theme`, `internal/keymap`, `internal/history`, `internal/toast`,
+  `internal/action`, `vfs` and the vtui libraries. It must not import
+  `internal/panel`, `internal/editor`, `internal/viewer`, `internal/cmdline`,
+  `internal/term` or `internal/app`.
+- Dialog error strings are user-visible text; `ST1005` is disabled for that
+  reason. Do not reword any of them during the move.
+- The `help/en.hlf` format and the help topic keys are unchanged.
+- The command palette's audited entry points keep their symbol names; only the
+  package qualifier in `command_palette_coverage_test.go` changes
+  (`main.X` → `dialog.X`), through the one-line map from Task 2.
+
+### Error Handling and Logging
+
+Unchanged. Dialogs report to the user through the dialog itself; nothing here logs
+and nothing writes to stdout, which is the rendered UI.
+
+### Tests
+
+Every `_test.go` neighbour moves, including `dialog_layouts_test.go`,
+`command_palette_test.go`, `command_palette_dynamic_test.go`, `file_dialog_test.go`
+and `grabber_mouse_test.go`. `command_palette_coverage_test.go` **stays in
+`cmd/f4`** — it is the module-wide auditor.
+
+```
+go test ./internal/dialog/...
+GOMAXPROCS=1 go test -timeout 15m -run '^TestAllDialogs_LayoutValidation$' ./internal/dialog -v
+go test ./cmd/f4 -run '^TestCommandPalette'
+```
+
+### Acceptance Criteria
+
+- `TestAllDialogs_LayoutValidation` reports `--- PASS`, not `--- SKIP` and not
+  absent, from the CI command in step 5.
+- `find internal/dialog/help -name '*.hlf'` matches the pre-move count.
+- `grep -rn 'cmd/f4/help' . --exclude-dir=.git` returns nothing.
+- `command_palette_coverage_test.go` still has 42 keys and passes.
+
+### Verification
+
+- `GOMAXPROCS=1 go test -timeout 15m -run '^TestAllDialogs_LayoutValidation$' ./internal/dialog -v`
+- Expected result: `--- PASS`. A `no tests to run` here is the silent-drop failure
+  this task exists to prevent.
+- `go test -timeout 25m ./...`
+- Expected result: identical to the Task 1 baseline.
+
+---
+
+## Task 26: Extract `internal/plughost`
+
+### Intent
+
+All four plugin transports behind one host: in-process Go, RPC, Lua via
+`internal/luaplug`, and WASM via `wazero`. The rest of the application talks to
+plugins through the host, never to a transport directly; the contract a plugin
+compiles against is `sdk/`.
+
+Three files the call graph assigns here despite their names: `api.go` (the
+`coreAPI` type — 12 references, this is its home), `sqlite_actions.go` and
+`plugin_hotkeys.go`.
+
+### Implementation Steps
+
+1. Apply the gate. Zero-score, move whole: `api.go` (its 12 references are to
+   `coreAPI` itself, which lands here), `extui_host.go`, `plughost_ffi.go`,
+   `rpc_plugin.go`, `rpc_panel.go`, `rpc_vfs.go`, `rpc_commands.go`,
+   `wasm_plugin.go`, `lua_plugin.go`, `plugin_permissions.go`,
+   `plugin_scaffold.go`, `sqlite_actions.go`.
+2. Resolve the non-zeros: `plughost.go` (2), `plugins.go` (1),
+   `plugin_hotkeys.go` (1), `plugin_contributions.go` (4).
+3. `panel_plugins.go` scores `pluginPanelInstance` ×17, `PanelsFrame` ×5,
+   `FileSystemPanel` ×4, `coreAPI` ×1. It goes to `internal/panel` (Task 34), not
+   here — but **cut its single `coreAPI` method out now**, into this package, as a
+   free function taking the panel type it needs. Doing it here rather than in Task
+   34 means `internal/panel` never has to reach back into plughost.
+4. `extui_host.go` is the heaviest consumer of `internal/numeric` (five of the
+   seven `Bounded*` helpers). Confirm the import resolves.
+5. Rename to the topic convention: `host.go`, `api.go`, `transport_rpc.go`,
+   `transport_wasm.go`, `transport_lua.go`, `permissions.go`, `scaffold.go`,
+   `hotkeys.go`, `actions_sqlite.go`.
+6. Add `"internal/plughost": 2` to the auditor's layer map.
+
+### Required Interfaces and Contracts
+
+- `internal/plughost` imports `sdk/`, `vfs`, `internal/luaplug`,
+  `internal/numeric`, `internal/action`, `internal/config`, `internal/i18n` and
+  `github.com/tetratelabs/wazero`. It must not import `internal/panel`,
+  `internal/app`, or any interactive subsystem.
+- `coreAPI`'s method set is the plugin-facing surface. It is unexported today and
+  stays unexported; the host exposes it through the transports.
+- `sdk/` is unchanged by this task. Task 8's auditor rule 1 confirms `sdk/` still
+  imports no `internal/`.
+- A lower layer that needs something from the host defines its own interface —
+  `internal/panel` declares `PluginColumns`, it does not import plughost.
+
+### Error Handling and Logging
+
+Transport failures already wrap with context (`fmt.Errorf("…: %w", err)`) and
+compare with `errors.Is`/`errors.As`. Preserve the sentinel errors declared at
+package level. Plugin crashes surface to the user as dialog text; keep those
+strings verbatim.
+
+### Tests
+
+All plugin-host tests move, including `plugin_hotkeys_test.go`,
+`sqlite_actions_test.go` and the transport fixtures' tests. The dummy plugins
+under `plugins/dummy_internal`, `plugins/dummy_rpc` and `plugins/dummy_lua` are
+transport fixtures and stay where they are — check that their tests still find the
+host.
+
+```
+go test ./internal/plughost/... ./plugins/...
+go test -race ./internal/plughost/...
+```
+
+### Acceptance Criteria
+
+- `go list -f '{{join .Imports "\n"}}' ./internal/plughost | grep -E 'internal/(panel|editor|viewer|cmdline|app)'`
+  returns nothing.
+- `panel_plugins.go` no longer declares a `coreAPI` method.
+- All four transports' tests pass.
+
+### Verification
+
+- `go test ./internal/plughost/... ./plugins/... -count=1`
+- Expected result: `ok`, matching the Task 1 baseline.
+
+---
+
+## Task 27: Extract `internal/gui`
+
+### Intent
+
+GUI backends, font handling, window position and the application icon. Seven
+outbound edges. This package is often confused with `internal/term`: the
+distinction the graph draws is that anything deciding *what the terminal supports*
+is term, and anything drawing *a window* is gui.
+
+### Implementation Steps
+
+1. Apply the gate. Zero-score, move whole — ten files:
+   `gui_backend_capability.go`, `gui_backend_capability_ffi.go`,
+   `gui_backend_capability_stub.go`, `gui_font.go`, `gui_font_catalog.go`,
+   `gui_font_catalog_unix.go`, `gui_font_catalog_windows.go`, `gui_font_combo.go`,
+   `gui_font_notwindows.go`, `gui_font_windows.go`, `gui_unix.go`,
+   `gui_windows.go`, `window_icon_darwin.go`, `window_icon_unix.go`,
+   `window_icon_windows.go`, `window_position.go`, `winepath_other.go`,
+   `winepath_windows.go`. Verify each build tag from the file, not the name.
+2. `git mv cmd/f4/assets internal/gui/assets`. `window_icon_darwin.go:18`'s
+   `//go:embed assets/icon/generated/f4.icns` is directory-relative and needs no
+   edit.
+3. **`dragdrop.go` does not come here.** The call graph associates it with the GUI,
+   but it carries `PanelsFrame` ×13 — five `*PanelsFrame` methods and one
+   `*FileSystemPanel` method. Go requires a type's methods in the type's package,
+   so it travels **whole** to `internal/panel` as `frame_dragdrop.go` (Task 34). Do
+   not split it.
+4. **Infrastructure, in this commit:**
+   - `build.yml:93` — `go generate ./cmd/f4`. Confirm what the directive
+     generates: if the `go:generate` line lives in a file that moved, the target
+     moves with it.
+   - `build.yml:95-97` — the cached paths `cmd/f4/assets/icon/generated`,
+     `cmd/f4/rsrc_windows_amd64.syso`, `cmd/f4/rsrc_windows_arm64.syso`. The icon
+     directory moves; **the two `.syso` paths stay**, because the toolchain links
+     `.syso` only from the directory of the package being built.
+   - `build.yml:191`, `:195`, `:418`, `:422`, `:304` — packaging copies of the
+     generated PNGs, the SVG and `f4.icns`.
+   - `tools/icons/main.go` has three path constructions and **only two move**:
+     `iconDir` (`:37`) and `outDir` (`:38`) become
+     `filepath.Join(root, "internal", "gui", "assets", "icon"…)`;
+     `cmd.Dir = filepath.Join(root, "cmd", "f4")` at `:160` **stays** — its own
+     comment says why. Rewriting all three is the likely mistake in this commit.
+     The doc comment at `:1-2` moves with `iconDir`.
+   - `tools/icons/main_test.go:71` is red before this work (Task 1) and for an
+     unrelated reason: it reads `../../assets/icon/f4.svg` while the tool reads
+     `../../cmd/f4/assets/icon/`. Leave it red; say so in the commit message.
+5. Rename to the topic convention: `backend.go`, `backend_ffi.go`,
+   `backend_stub.go`, `font.go`, `font_catalog.go`, `font_catalog_unix.go`,
+   `font_catalog_windows.go`, `font_combo.go`, `window.go`, `icon_darwin.go`,
+   `icon_unix.go`, `icon_windows.go`, `winepath_other.go`, `winepath_windows.go`.
+6. Add `"internal/gui": 1` to the auditor's layer map.
+
+### Required Interfaces and Contracts
+
+- Build tags are load-bearing here: `gui_font_notwindows.go` is `!windows`,
+  `gui_font_windows.go` is `windows`, `window_icon_darwin.go` is `darwin`,
+  `gui_backend_capability_ffi.go` and `_stub.go` split on the `noffi` tag
+  expression (`//go:build !noffi && !android && (windows || …)` and its negation).
+  Copy each `//go:build` line verbatim.
+- `CGO_ENABLED=0` holds: FFI goes through `purego` / `ffibridge`. Do not introduce
+  cgo while moving the backend files.
+- The embedded `f4.icns` is byte-identical.
+
+### Error Handling and Logging
+
+GUI backend selection already falls back to the terminal path and reports to
+stderr with the `f4: ` prefix when a backend cannot start. Preserve the messages.
+
+### Tests
+
+`gui_font_catalog_test.go` and the window-position tests move.
+
+```
+go test ./internal/gui/...
+for t in linux/amd64 darwin/arm64 windows/amd64 windows/arm64 freebsd/amd64; do
+  GOOS=${t%/*} GOARCH=${t#*/} CGO_ENABLED=0 go build ./... || echo "FAIL $t"
+done
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -tags noffi ./...
+```
+
+The `noffi` build is the one most likely to break: it selects the stub backend.
+
+### Acceptance Criteria
+
+- `ls cmd/f4/assets` fails; `ls internal/gui/assets/icon/f4.svg` succeeds.
+- `ls cmd/f4/rsrc_windows_amd64.syso` still succeeds.
+- `grep -n 'cmd", "f4"' tools/icons/main.go` returns exactly one line — `:160`.
+- `go generate ./...` regenerates the icons into the new location and the `.syso`
+  files into `cmd/f4`.
+
+### Verification
+
+- `go -C tools/icons run . && git status --porcelain internal/gui/assets cmd/f4`
+- Expected result: regenerated files land in `internal/gui/assets/icon/generated`
+  and `cmd/f4/rsrc_windows_*.syso`, nowhere else.
+- The cross-compile loop and the `noffi` build print no `FAIL`.
+
+---
+
+## Task 28: Extract `internal/macro`
+
+### Intent
+
+The macro engine and the Lua macro API. Seven outbound edges. Macros drive the
+application by name, through the action registry that left in Phase 4 — which is
+why this wave is possible before the interactive subsystems exist.
+
+### Implementation Steps
+
+1. Apply the gate. `macro_export.go` scores 0 and moves whole. Resolve
+   `macro.go` (6), `macro_host.go` (2), `macro_lua_api.go` (2), `macro_lua.go`
+   (1), `macro_plugin_calls.go` (1) reference by reference.
+2. `macro.go`'s six references are the substantive ones: a macro that drives a
+   panel or an editor needs the type. The resolution is the project's stated rule —
+   a method whose type lives elsewhere but whose logic belongs here becomes a plain
+   function taking the type. Where the logic belongs to the *view*, leave it behind
+   and let the view call into `internal/macro`.
+3. `macro_lua_api.go` uses `numeric.BoundedRune`; confirm the import resolves.
+4. Rename to the topic convention: `engine.go`, `host.go`, `lua.go`,
+   `lua_api.go`, `plugin_calls.go`, `export.go`.
+5. Add `"internal/macro": 3` to the auditor's layer map.
+
+### Required Interfaces and Contracts
+
+- `internal/macro` may import `internal/action`, `internal/luaplug`,
+  `internal/config`, `internal/i18n`, `internal/numeric`, `internal/toast`, `vfs`.
+  It must not import `internal/panel`, `internal/editor`, `internal/viewer` or
+  `internal/app`.
+- Macro command names are the stable `Action.Name` IDs (`"Editor.Save"` shape).
+  They are user-facing in `.lua` macro files and must not change.
+- The Lua API surface is a compatibility contract with user macros: no function is
+  renamed, no argument order changes.
+
+### Error Handling and Logging
+
+Macro errors reach the user as dialog text through `internal/toast` or a modal.
+Keep the wrapping (`fmt.Errorf("running macro %q: %w", …)`) and the sentinel
+errors. `VTUI_DEBUG` remains the only diagnostic channel; add nothing.
+
+### Tests
+
+`macro_test.go` and the Lua API tests move with their files.
+
+```
+go test ./internal/macro/... ./internal/luaplug/...
+```
+
+### Acceptance Criteria
+
+- No user-visible macro command name changed: diff the output of the registry dump
+  before and after and require it to be empty.
+- `go list -f '{{join .Imports "\n"}}' ./internal/macro | grep -E 'internal/(panel|editor|viewer|app)'`
+  returns nothing.
+
+### Verification
+
+- `go test ./internal/macro/... ./cmd/f4/... -count=1`
+- Expected result: `ok`, matching the Task 1 baseline.
+- `go test ./cmd/f4 -run '^TestActionOrderIsStable'`
+- Expected result: `--- PASS` — macros register actions, so a reorder shows here.
+
+---
+
+## Phase Risks and Mitigations
+
+- **Risk:** `TestAllDialogs_LayoutValidation` stops running and CI stays green.
+  **Mitigation:** Task 25 step 5 and its Verification require an explicit
+  `--- PASS`, treating `no tests to run` as failure.
+- **Risk:** `dragdrop.go` is moved to `internal/gui` because the call graph
+  associates it with the GUI, producing 13 unresolved `PanelsFrame` references.
+  **Mitigation:** Task 27 step 3 forbids it explicitly and names the destination.
+- **Risk:** all three `cmd/f4` paths in `tools/icons/main.go` are rewritten and the
+  Windows `.syso` files are generated into the wrong directory, silently dropping
+  the application icon and version resource from the Windows build.
+  **Mitigation:** Task 27 step 4 names line 160 as the one that stays, and the
+  acceptance criteria require exactly one surviving `"cmd", "f4"` occurrence.
+- **Risk:** the `noffi` build breaks when the GUI capability files move, and it is
+  only exercised on the exotic targets in CI.
+  **Mitigation:** the `-tags noffi` build is in Task 27's Tests section.
+
+## Phase Completion Checklist
+
+- Every Task 25-28 satisfies its acceptance criteria.
+- `internal/dialog`, `internal/plughost`, `internal/gui` and `internal/macro`
+  exist and import no interactive subsystem and no `internal/app`.
+- `cmd/f4/help` and `cmd/f4/assets` are gone; `cmd/f4/rsrc_windows_*.syso` remain.
+- `go test -timeout 25m ./...` matches the Task 1 baseline.
+- `go test ./cmd/f4 -run '^TestArchitecture'` passes with four new layer entries.
+- `index.md` task checkboxes 25-28 are ticked.
