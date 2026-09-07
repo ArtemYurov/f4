@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -68,9 +69,15 @@ type EditorView struct {
 	CursorPos          int // Позиция в байтах (для плагинов)
 	DesiredVisualCol   int // Колонка, в которую мы хотим попасть при навигации Up/Down
 
-	ShowWhitespaces    bool
-	selActive          bool
-	selAnchorOffset    int // Абсолютное смещение начала выделения
+	ShowWhitespaces bool
+	selActive       bool
+	selAnchorOffset int // Абсолютное смещение начала выделения
+	// extraCursors holds the secondary carets of a multi-caret edit, as
+	// absolute offsets, sorted and without duplicates. The primary caret
+	// stays in CursorLine/CursorPos and is never listed here, so every
+	// existing single-caret path keeps working untouched. Selections are
+	// still the primary caret's alone.
+	extraCursors       []int
 	rectSelActive      bool
 	rectSelStartLine   int
 	rectSelStartCol    int
@@ -518,6 +525,7 @@ func (ev *EditorView) GetTopBar() *TopBar {
 // SetText replaces the entire content of the editor.
 func (ev *EditorView) SetText(text string) {
 	ev.cancelIndexing()
+	ev.clearExtraCursors()
 	ev.edited = true
 	ev.retireEditSession()
 	ev.codepageRaw = nil
@@ -583,6 +591,9 @@ func (ev *EditorView) Undo() {
 	ev.codepageRaw = nil
 	ev.cancelIndexing()
 	ev.retireEditSession()
+	// The caret set is not part of a saved state, and the offsets it holds
+	// describe text that is about to be replaced.
+	ev.clearExtraCursors()
 
 	// Save current state to redo stack
 	ev.redoStack = append(ev.redoStack, editorState{
@@ -619,6 +630,7 @@ func (ev *EditorView) Redo() {
 	ev.codepageRaw = nil
 	ev.cancelIndexing()
 	ev.retireEditSession()
+	ev.clearExtraCursors()
 
 	// Save current state to undo stack
 	ev.undoStack = append(ev.undoStack, editorState{
@@ -1707,6 +1719,32 @@ func (ev *EditorView) DisplayObject(scr *vtui.ScreenBuf) {
 	}
 
 DoneRendering:
+	// Extra carets are painted, not placed: a terminal has exactly one real
+	// cursor and it belongs to the primary caret. Marking the cell each
+	// extra caret sits on with the selection colour is what the rest of the
+	// editor already does to say "this is where the text will change".
+	if len(ev.extraCursors) > 0 {
+		caretAttr := vtui.Palette[vtui.ColDialogEditSelected]
+		size := ev.pt.Size()
+		for _, off := range ev.extraCursors {
+			if off < 0 || off > size {
+				continue
+			}
+			vRow, vCol := ev.engine.LogicalToVisual(off)
+			y := ev.Y1 + 1 + vRow - ev.ScrollTopRow
+			x := ev.X1 + vCol - ev.ScrollLeft
+			if y < ev.Y1+1 || y > ev.Y2 || x < ev.X1 || x > ev.X1+width-1 {
+				continue
+			}
+			cell := scr.GetCell(x, y)
+			if cell.Char == 0 {
+				cell.Char = ' '
+			}
+			cell.Attributes = caretAttr
+			scr.Write(x, y, []vtui.CharInfo{cell})
+		}
+	}
+
 	// 3. Draw Autocomplete Ghost Text
 	if ev.acEnabled && len(ev.acMatches) > 0 && ev.IsFocused() && !ev.pasting {
 		match := ev.acMatches[ev.acCurrentIdx]
@@ -1764,6 +1802,12 @@ func (ev *EditorView) VetoActionKey(e *vtinput.InputEvent) bool {
 	if e.VirtualKeyCode == vtinput.VK_ESCAPE && (ev.colorerIndexing || ev.indexing) {
 		return true
 	}
+	// Escape puts down the extra carets rather than closing the editor: the
+	// caret set is the state the user is most likely aiming at, and the
+	// editor is still one Escape away once it is gone.
+	if e.VirtualKeyCode == vtinput.VK_ESCAPE && len(ev.extraCursors) > 0 {
+		return true
+	}
 	if !ev.acEnabled || len(ev.acMatches) == 0 {
 		return false
 	}
@@ -1803,6 +1847,22 @@ func (ev *EditorView) processKeyInner(e *vtinput.InputEvent) bool {
 		return true
 	}
 	alt := (e.ControlKeyState & (vtinput.LeftAltPressed | vtinput.RightAltPressed)) != 0
+
+	// Escape puts the extra carets down; anything else that acts on the text
+	// or moves the caret collapses the set on its way through, because only
+	// the primary caret is wired into those paths so far. Painted carets that
+	// the next keystroke would ignore are worse than no carets at all.
+	if len(ev.extraCursors) > 0 {
+		switch {
+		case e.Type == vtinput.KeyEventType && e.KeyDown && e.VirtualKeyCode == vtinput.VK_ESCAPE:
+			ev.clearExtraCursors()
+			vtui.FrameManager.Redraw()
+			return true
+		case e.Type == vtinput.PasteEventType,
+			e.Type == vtinput.KeyEventType && e.KeyDown:
+			ev.clearExtraCursors()
+		}
+	}
 
 	// 1. Processing Bracketed Paste (events arrive outside KeyDown)
 	if e.Type == vtinput.PasteEventType {
@@ -3048,6 +3108,9 @@ func (ev *EditorView) ProcessMouse(e *vtinput.InputEvent) bool {
 				ev.CursorLine = ev.li.GetLineAtOffset(offset)
 				ev.CursorPos = offset - ev.li.GetLineOffset(ev.CursorLine)
 				ev.selectWordUnderCursor()
+			} else if editorAddCursorClick(e) {
+				ev.toggleCursorAt(offset)
+				ev.updateDesiredVisualCol()
 			} else if editorBlockMouseSelection(e) {
 				ev.selActive = false
 				ev.rectSelActive = false
@@ -3124,6 +3187,20 @@ func (ev *EditorView) ProcessMouse(e *vtinput.InputEvent) bool {
 	}
 
 	return false
+}
+
+// editorAddCursorClick reports the gesture that places or removes an extra
+// caret. Alt+click is what VS Code uses and what is left here: Ctrl+click
+// opens the URL under the pointer and Alt+Shift+click starts a block
+// selection, so both modifiers have to be absent.
+func editorAddCursorClick(e *vtinput.InputEvent) bool {
+	mods := e.ControlKeyState
+	return e.KeyDown &&
+		e.MouseEventFlags&vtinput.MouseMoved == 0 &&
+		e.MouseEventFlags&vtinput.DoubleClick == 0 &&
+		mods&(vtinput.LeftAltPressed|vtinput.RightAltPressed) != 0 &&
+		mods&vtinput.ShiftPressed == 0 &&
+		mods&(vtinput.LeftCtrlPressed|vtinput.RightCtrlPressed) == 0
 }
 
 func editorBlockMouseSelection(e *vtinput.InputEvent) bool {
@@ -4629,6 +4706,75 @@ func (ev *EditorView) showConvertCodepageDialog() {
 	}
 	menu.SetSelectPos(selIdx)
 	vtui.FrameManager.Push(menu)
+}
+
+// caretOffset is the absolute offset of the primary caret.
+func (ev *EditorView) caretOffset() int {
+	return ev.li.GetLineOffset(ev.CursorLine) + ev.CursorPos
+}
+
+// toggleCursorAt places an extra caret at offset, or removes the one already
+// there. It reports whether anything changed.
+//
+// The primary caret cannot be removed this way: something has to stay in
+// CursorLine/CursorPos, and clicking it again is a likelier slip than a
+// deliberate request to promote a different caret.
+func (ev *EditorView) toggleCursorAt(offset int) bool {
+	if offset < 0 || offset > ev.pt.Size() {
+		return false
+	}
+	if offset == ev.caretOffset() {
+		return false
+	}
+	for i, cur := range ev.extraCursors {
+		if cur == offset {
+			ev.extraCursors = append(ev.extraCursors[:i], ev.extraCursors[i+1:]...)
+			return true
+		}
+	}
+	// A selection describes one caret's range and has no meaning next to a
+	// set of them, so building a set puts it down.
+	ev.selActive = false
+	ev.rectSelActive = false
+
+	ev.extraCursors = append(ev.extraCursors, offset)
+	sort.Ints(ev.extraCursors)
+	return true
+}
+
+// clearExtraCursors drops back to a single caret and reports whether there was
+// anything to drop.
+func (ev *EditorView) clearExtraCursors() bool {
+	if len(ev.extraCursors) == 0 {
+		return false
+	}
+	ev.extraCursors = ev.extraCursors[:0]
+	return true
+}
+
+// multiCursor reports whether more than one caret is on the screen.
+func (ev *EditorView) multiCursor() bool { return len(ev.extraCursors) > 0 }
+
+// caretOffsets returns every caret, primary included, in ascending order and
+// without duplicates. Offsets past the end of the buffer are dropped: an edit
+// can shorten the text under a caret that is no longer being tracked.
+func (ev *EditorView) caretOffsets() []int {
+	offsets := make([]int, 0, len(ev.extraCursors)+1)
+	offsets = append(offsets, ev.caretOffset())
+	size := ev.pt.Size()
+	for _, cur := range ev.extraCursors {
+		if cur >= 0 && cur <= size {
+			offsets = append(offsets, cur)
+		}
+	}
+	sort.Ints(offsets)
+	out := offsets[:0]
+	for i, off := range offsets {
+		if i == 0 || off != offsets[i-1] {
+			out = append(out, off)
+		}
+	}
+	return out
 }
 
 // Highlighting every occurrence of the selected text is meant for a word or a
