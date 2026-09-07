@@ -1,7 +1,108 @@
-# Project instructions
+# AGENTS.md
 
-## Go build cache
+> Structural map of the repository for AI agents and new contributors. Keep it
+> factual — describe only what exists. Update it when the structure changes.
+
+## Project Overview
+
+`f4` is a cross-platform TUI file manager written entirely in Go that reproduces the
+features, UX and internal structures of `far2l` / Far Manager. It ships as a single
+static binary and runs either in a terminal or as a standalone graphical window.
+
+## Tech Stack
+
+- **Programming language:** Go 1.26.6, `CGO_ENABLED=0`
+- **Framework:** none — custom TUI; UI and input come from the external `vtui` and
+  `vtinput` libraries
+- **Database:** none for the application; `plugins/sqlite` browses user SQLite files
+- **Lint:** golangci-lint v2 (staticcheck, errcheck, ineffassign, unused, gosec)
+
+## Project Structure
+
+```
+cmd/f4/          # the application: 687 files in one flat package main
+                 # panels, dialogs, editor, viewer, actions, macros, terminal
+vfs/             # filesystem abstraction used by every panel and plugin
+  hostfs/        #   host filesystem access
+  hostmode/      #   host console mode
+  hostpath/      #   path translation
+plugins/         # one package per plugin: archive, cloudfox, netfox, mediainfo,
+                 # envman, ios, android, sqlite, visren, id3editor, chroma
+                 # dummy_internal / dummy_rpc / dummy_lua are transport fixtures
+sdk/             # plugin API: f4plugin, f4rpc, lua, extui
+plugring/        # plugin registry
+luaplug/         # Lua plugin engine
+piecetable/      # piece table backing the editor
+textlayout/      # text layout and wrapping
+sheet/           # spreadsheet mode
+colorer/         # colorer4go syntax highlighting integration
+fusefs/          # FUSE mounting
+vtvibe/          # vtvibe session/provider layer
+internal/        # module-private platform helpers
+  wincon/        #   Windows console
+  ttyx/          #   tty extensions
+  netproxy/      #   network proxy
+  hideconsole/   #   console hiding on Windows
+tools/           # developer tooling, incl. the ttytest terminal harness
+docs/            # 48 subsystem documents — read the relevant one before editing
+packaging/       # distribution packaging
+artifacts/       # build artifacts
+.ai-factory/     # AI Factory context: config, description, rules, plans
+```
+
+## Key Entry Points
+
+| File | Purpose |
+| --- | --- |
+| `cmd/f4/main.go` | Program entry point, CLI flags, startup mode selection |
+| `cmd/f4/api.go` | Internal API surface used across the application package |
+| `cmd/f4/actions.go`, `cmd/f4/action_registry.go` | Action definitions and dispatch |
+| `embedded.go` | Assets embedded into the binary |
+| `go.mod` | Module `github.com/unxed/f4`, Go 1.26.6, dependency set |
+| `f4.example.ini` | Reference configuration file |
+| `highlight.ini` | Syntax highlighting configuration |
+| `.golangci.yml`, `.golangci-strict.yml` | Lint configuration |
+| `.github/workflows/build.yml` | CI: cross-platform build matrix, tests, releases |
+
+## Documentation
+
+| Document | Path | Description |
+| --- | --- | --- |
+| README | `README.md` | Project overview, downloads, backends, philosophy |
+| Subsystem docs | `docs/*.md` | 48 documents: VFS, PLUGINS, MACROS, KEYMAP, TERMINAL, CONPTY, WINCON, UX_GUIDELINES and others |
+| Issue reviews | `docs/ISSUES/` | Per-issue solution reviews |
+| Spreadsheet | `SPREADSHEET.md` | Spreadsheet mode specification |
+
+## AI Context Files
+
+| File | Purpose |
+| --- | --- |
+| `AGENTS.md` | This structural map of the repository |
+| `.ai-factory/DESCRIPTION.md` | Project specification: stack, features, architecture notes |
+| `.ai-factory/ARCHITECTURE.md` | Architecture pattern, boundaries and dependency rules |
+| `.ai-factory/rules/base.md` | Detected code conventions: naming, errors, logging, tests |
+| `.ai-factory/config.yaml` | AI Factory configuration: paths, language, git workflow |
+
+## Agent Rules
+
+### Go build cache
 
 - Use the system Go build cache reported by `go env GOCACHE` for all Go builds and tests.
 - Do not redirect `GOCACHE` to `/tmp`, the repository, or another task-local directory unless the user explicitly asks for it.
 - If the system cache is unavailable or not writable, report that constraint instead of silently creating a substitute cache.
+
+### Shell commands
+
+- Run shell commands one step at a time instead of chaining them, so a failing step is visible.
+  - Wrong: `git checkout main && git pull`
+  - Right: first `git checkout main`, then `git pull origin main`
+
+### Portability
+
+- `CGO_ENABLED=0` must stay: the single static binary depends on it. FFI goes through `purego` / `ffibridge`.
+- Platform differences belong in build-tag files (`*_windows.go`, `*_unix.go`), not runtime branching.
+- Changes must keep the full CI matrix building, exotic targets included.
+
+### Tests
+
+- This is an AI-only codebase; the test suite is the review mechanism. New behaviour lands with a test, a bug fix lands with a regression test.
