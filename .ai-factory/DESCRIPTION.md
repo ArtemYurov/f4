@@ -73,6 +73,12 @@ The tree is organised by subsystem rather than by layer:
 Platform differences are handled with build-tag file suffixes, not runtime branching.
 Anything touching the console, the filesystem or process spawning has a per-OS file.
 
+## Architecture
+
+See `.ai-factory/ARCHITECTURE.md` for the detailed architecture guidelines:
+folder structure, dependency rules and module boundaries.
+Pattern: Modular Monolith (module = Go package).
+
 ## Non-Functional Requirements
 
 - **Portability:** every change must keep the full build matrix green, including the
