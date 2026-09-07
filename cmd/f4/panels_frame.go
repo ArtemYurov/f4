@@ -4573,7 +4573,7 @@ func executeCapturedCommand(pf *PanelsFrame, action string, cmdStr string) {
 					vtui.ShowMessage(" Error ", fmt.Sprintf("Execution failed:\n%v", err), []string{"&Ok"})
 					return
 				}
-				vtui.SetClipboard(string(out))
+				setF4Clipboard(string(out))
 				showToast("Command output copied to clipboard", 3*time.Second)
 				pf.RefreshAll()
 			})
@@ -5029,7 +5029,7 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 		}
 		menu.AddSeparator()
 		headerRow = menu.GetItemCount()
-		menu.AddItem(vtui.MenuItem{Text: Msg("Drive.Bookmarks"), Command: CmDriveBookmarksHeader})
+		menu.AddItem(vtui.MenuItem{Text: Msg("Drive.Links"), Command: CmDriveBookmarksHeader})
 		for index, bookmark := range driveBookmarks {
 			bookmark := bookmark
 			driveBookmarkRows[menu.GetItemCount()] = index

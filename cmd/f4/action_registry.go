@@ -1133,7 +1133,7 @@ func init() {
 		Handler: withPF(func(pf *PanelsFrame) {
 			if fsp := pf.getActivePanel(); fsp != nil {
 				if path := currentPanelEntryPath(fsp); path != "" {
-					vtui.SetClipboard(path)
+					setF4Clipboard(path)
 				}
 			}
 		}),
@@ -1166,7 +1166,7 @@ func init() {
 		MenuSubPath: "Paths",
 		Handler: withPF(func(pf *PanelsFrame) {
 			if !pf.cmdLine.IsEmpty() {
-				vtui.SetClipboard(pf.cmdLine.Edit.GetText())
+				setF4Clipboard(pf.cmdLine.Edit.GetText())
 				return
 			}
 			if fsp := pf.getActivePanel(); fsp != nil {
@@ -1182,7 +1182,7 @@ func init() {
 					// in FileList::CopyNames() (FullPathName=false).
 					name = fsp.vfs.Base(fsp.vfs.GetPath())
 				}
-				vtui.SetClipboard(name)
+				setF4Clipboard(name)
 			}
 		}),
 	})

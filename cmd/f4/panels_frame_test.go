@@ -664,7 +664,7 @@ func TestPanelsFrame_DriveMenuBookmarkKeys(t *testing.T) {
 			}
 		}
 	}
-	if row < 0 || row == 0 || menu.Items[row-1].Text != Msg("Drive.Bookmarks") {
+	if row < 0 || row == 0 || menu.Items[row-1].Text != Msg("Drive.Links") {
 		t.Fatalf("named bookmark section is malformed: row=%d items=%#v", row, menu.Items)
 	}
 	fsp := pf.panels[1].(*FileSystemPanel)
@@ -697,7 +697,7 @@ func TestPanelsFrame_DriveMenuBookmarkKeys(t *testing.T) {
 	press(menu, vtinput.VK_DELETE)
 	settleFrames(t)
 	confirmation, ok := vtui.FrameManager.GetTopFrame().(*vtui.Window)
-	if !ok || confirmation.GetTitle() != Msg("DriveBookmark.DeleteTitle") {
+	if !ok || confirmation.GetTitle() != Msg("DriveLink.DeleteTitle") {
 		t.Fatalf("Del did not open delete confirmation: %T", vtui.FrameManager.GetTopFrame())
 	}
 	confirmation.OnResult(1)

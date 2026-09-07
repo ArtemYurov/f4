@@ -580,7 +580,7 @@ func (h *ExtUiHost) handleMessage(msg map[string]any) {
 			"text": vtui.GetClipboard(),
 		})
 	case "clipboard_set":
-		vtui.SetClipboard(extUiString(msg, "text"))
+		setF4Clipboard(extUiString(msg, "text"))
 	case "ui_action":
 		action := msg
 		if nested, ok := msg["action"].(map[string]any); ok {

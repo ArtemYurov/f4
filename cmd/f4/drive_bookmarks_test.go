@@ -96,6 +96,14 @@ func TestDriveBookmarkKeyMatchesFarEventSpelling(t *testing.T) {
 func TestDriveBookmarkEditorCapturesAnyKeyAndCanClearIt(t *testing.T) {
 	dialog := newDriveBookmarkEditDialog(DriveBookmark{}, "/tmp/default", nil)
 	dialog.SetFocusedItem(dialog.hotkeyEdit)
+	fieldX1, _, fieldX2, _ := dialog.hotkeyEdit.GetPosition()
+	if fieldX2-fieldX1+1 != 1 {
+		t.Fatalf("hotkey field width = %d, want one character", fieldX2-fieldX1+1)
+	}
+	labelX1, _, labelX2, _ := dialog.GetChildren()[4].GetPosition()
+	if labelX1 >= fieldX1 || labelX2 >= fieldX1 {
+		t.Fatalf("hotkey label position = %d..%d, field starts at %d", labelX1, labelX2, fieldX1)
+	}
 
 	if !dialog.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: 'ф'}) {
 		t.Fatal("editor did not consume a Cyrillic hotkey")

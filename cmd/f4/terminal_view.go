@@ -146,20 +146,18 @@ func (tv *TerminalView) writeClipboard(text string) {
 		tv.clipboardWriter(text)
 		return
 	}
-	if !vtui.SetOSClipboard(text) {
-		vtui.SetClipboard(text)
-	}
+	setF4Clipboard(text)
 }
 
-// copySelectionToClipboard keeps terminal selection copies on the regular
-// vtui clipboard path while allowing tests to intercept the write without
-// touching the host clipboard.
+// copySelectionToClipboard keeps terminal selection copies on f4's clipboard
+// path while allowing tests to intercept the write without touching the host
+// clipboard.
 func (tv *TerminalView) copySelectionToClipboard(text string) {
 	if tv.clipboardWriter != nil {
 		tv.clipboardWriter(text)
 		return
 	}
-	vtui.SetClipboard(text)
+	setF4Clipboard(text)
 }
 
 func (tv *TerminalView) CloneStateFrom(other *TerminalView) {
@@ -1928,7 +1926,7 @@ func (tv *TerminalView) ProcessFar2lInteract(data []byte) {
 			if tv.clipboardWriter != nil {
 				tv.clipboardWriter("")
 			} else {
-				vtui.SetClipboard("")
+				setF4Clipboard("")
 			}
 			tv.mu.Lock()
 			tv.clipboardChunks = nil
