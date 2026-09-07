@@ -306,7 +306,7 @@ func main() {
 				updateChannelArg = os.Args[i+1]
 				i++
 			}
-		case "--gui":
+		case "-gui", "--gui":
 			guiMode = true
 			startupChoiceGiven = true
 			if flagVal != "" {
@@ -448,7 +448,7 @@ The following switches may be used in the command line:
  -e [filename]          Open filename directly in the editor on startup
                          (far2l-compatible; useful for scripted/headless
                          testing where interactive navigation is unreliable)
- --gui [Backend]        Force run in GUI-mode
+ -gui, --gui [Backend]  Force run in GUI-mode
                          [Backend] values: "win32" (or "winapi", "gdi"),
                          "gogpu", "ebiten", "x11", "wayland", "auto",
                          if Backend omited, the configured default is used

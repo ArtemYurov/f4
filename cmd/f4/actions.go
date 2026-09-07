@@ -820,6 +820,7 @@ func runExternalEditor(pf *PanelsFrame, cmdStr, path string) {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	configureExternalEditorProcess(cmd)
 	if fsp := pf.getActivePanel(); fsp != nil {
 		if _, isLocal := fsp.vfs.(*vfs.OSVFS); isLocal {
 			cmd.Dir = fsp.vfs.GetPath()
