@@ -249,11 +249,23 @@ func TestCommandPaletteResolvesEveryActionGeneratedMenuLeafByID(t *testing.T) {
 
 			for groupIndex, group := range expected {
 				var leaves []vtui.MenuItem
-				for _, item := range actual[groupIndex].SubItems {
-					if !item.Separator {
+				// A submenu heading is not a leaf of its own: it stands for
+				// the actions folded under it, which the palette must still
+				// resolve one by one.
+				var collect func(items []vtui.MenuItem)
+				collect = func(items []vtui.MenuItem) {
+					for _, item := range items {
+						if item.Separator {
+							continue
+						}
+						if len(item.SubItems) > 0 {
+							collect(item.SubItems)
+							continue
+						}
 						leaves = append(leaves, item)
 					}
 				}
+				collect(actual[groupIndex].SubItems)
 				if len(leaves) != len(group.actions) {
 					t.Fatalf("menu group %q has %d non-separator leaves, want %d action leaves", group.path, len(leaves), len(group.actions))
 				}

@@ -47,6 +47,14 @@ type Action struct {
 	// MenuPath is the top-level menu the action appears in ("File",
 	// "Edit", ...). Empty means the action is not listed in menus.
 	MenuPath string
+	// MenuSubPath nests the action one level deeper: every action sharing a
+	// MenuPath and a MenuSubPath is collected under a single item of the
+	// top-level menu, which opens them as a submenu. The submenu heading is
+	// titled from "Menu.<area>.<MenuPath>.<MenuSubPath>", falling back to
+	// the raw MenuSubPath. It is for the rarely reached commands: a menu
+	// long enough to scroll hides its own contents, and folding a
+	// recognizable group away buys room for the rest.
+	MenuSubPath string
 	// HideFromMenu keeps an action out of registry-generated menus while still
 	// retaining MenuPath as its localized command-palette category. This is for
 	// commands exposed by a custom menu, such as the fixed Left/Right panel
@@ -54,6 +62,9 @@ type Action struct {
 	// a second generated copy of the custom menu.
 	HideFromMenu bool
 	// MenuSeparatorBefore inserts a separator above this action's menu item.
+	// On the first action of a MenuSubPath it goes above the submenu
+	// heading, since that is where the item lands; on the later ones it
+	// divides the submenu itself.
 	MenuSeparatorBefore bool
 	// MenuLast pins this action's menu item to the very end of its MenuPath
 	// group, after every other item (including Common-area ones), regardless
@@ -918,6 +929,7 @@ func init() {
 		DescKey:             "Action.Panel.CommandHistory.Desc",
 		DefaultKeys:         []string{"AltF8"},
 		MenuPath:            "Commands",
+		MenuSubPath:         "History",
 		MenuSeparatorBefore: true,
 		Handler:             withPF(func(pf *PanelsFrame) { actionCommandHistory(pf) }),
 	})
@@ -930,6 +942,7 @@ func init() {
 		DescKey:     "Action.Panel.FoldersHistory.Desc",
 		DefaultKeys: []string{"AltF12"},
 		MenuPath:    "Commands",
+		MenuSubPath: "History",
 		Handler:     withPF(func(pf *PanelsFrame) { actionFoldersHistory(pf) }),
 	})
 	RegisterAction(Action{
@@ -941,6 +954,7 @@ func init() {
 		DescKey:     "Action.Panel.ViewerEditorHistory.Desc",
 		DefaultKeys: []string{"AltF11"},
 		MenuPath:    "Commands",
+		MenuSubPath: "History",
 		Handler:     withPF(func(pf *PanelsFrame) { actionViewerEditorHistory(pf) }),
 	})
 	RegisterAction(Action{
@@ -949,18 +963,19 @@ func init() {
 		Label:       "Import far2l History",
 		Description: "Import command history from far2l (.hst)",
 		MenuPath:    "Commands",
+		MenuSubPath: "History",
 		Handler:     withPF(func(pf *PanelsFrame) { actionImportFar2lHistory(pf) }),
 	})
 	RegisterAction(Action{
-		Name:                "Panel.GoParent",
-		Area:                "Shell",
-		Label:               "Parent Folder",
-		LabelKey:            "Action.Panel.GoParent",
-		Description:         "Go to parent directory",
-		DescKey:             "Action.Panel.GoParent.Desc",
-		DefaultKeys:         []string{"CtrlPgUp"},
-		MenuPath:            "Commands",
-		MenuSeparatorBefore: true,
+		Name:        "Panel.GoParent",
+		Area:        "Shell",
+		Label:       "Parent Folder",
+		LabelKey:    "Action.Panel.GoParent",
+		Description: "Go to parent directory",
+		DescKey:     "Action.Panel.GoParent.Desc",
+		DefaultKeys: []string{"CtrlPgUp"},
+		MenuPath:    "Commands",
+		MenuSubPath: "Navigation",
 		Handler: withPF(func(pf *PanelsFrame) {
 			fsp := pf.getActivePanel()
 			if fsp == nil {
@@ -994,6 +1009,7 @@ func init() {
 		DescKey:     "Action.Panel.GoRoot.Desc",
 		DefaultKeys: []string{"CtrlVK_DC"},
 		MenuPath:    "Commands",
+		MenuSubPath: "Navigation",
 		Handler: withPF(func(pf *PanelsFrame) {
 			if fsp := pf.getActivePanel(); fsp != nil {
 				rootPath := "/"
@@ -1016,6 +1032,7 @@ func init() {
 		DescKey:     "Action.Panel.HistoryBack.Desc",
 		DefaultKeys: []string{"AltLeft"},
 		MenuPath:    "Commands",
+		MenuSubPath: "Navigation",
 		Handler: withPF(func(pf *PanelsFrame) {
 			if fsp := pf.getActivePanel(); fsp != nil {
 				// far2l scrolls long names with Alt+Left/Right (#890). Keep
@@ -1038,6 +1055,7 @@ func init() {
 		DescKey:     "Action.Panel.HistoryForward.Desc",
 		DefaultKeys: []string{"AltRight"},
 		MenuPath:    "Commands",
+		MenuSubPath: "Navigation",
 		Handler: withPF(func(pf *PanelsFrame) {
 			if fsp := pf.getActivePanel(); fsp != nil {
 				if fsp.namesOverflow() {
@@ -1103,15 +1121,15 @@ func init() {
 		}),
 	})
 	RegisterAction(Action{
-		Name:                "Panel.CopyPath",
-		Area:                "Shell",
-		Label:               "Copy Path",
-		LabelKey:            "Action.Panel.CopyPath",
-		Description:         "Copy the full path of the current file to clipboard",
-		DescKey:             "Action.Panel.CopyPath.Desc",
-		DefaultKeys:         []string{"CtrlD"},
-		MenuPath:            "Commands",
-		MenuSeparatorBefore: true,
+		Name:        "Panel.CopyPath",
+		Area:        "Shell",
+		Label:       "Copy Path",
+		LabelKey:    "Action.Panel.CopyPath",
+		Description: "Copy the full path of the current file to clipboard",
+		DescKey:     "Action.Panel.CopyPath.Desc",
+		DefaultKeys: []string{"CtrlD"},
+		MenuPath:    "Commands",
+		MenuSubPath: "Paths",
 		Handler: withPF(func(pf *PanelsFrame) {
 			if fsp := pf.getActivePanel(); fsp != nil {
 				if path := currentPanelEntryPath(fsp); path != "" {
@@ -1129,6 +1147,7 @@ func init() {
 		DescKey:     "Action.Panel.InsertPath.Desc",
 		DefaultKeys: []string{"CtrlF"},
 		MenuPath:    "Commands",
+		MenuSubPath: "Paths",
 		Handler: withPF(func(pf *PanelsFrame) {
 			if fsp := pf.getActivePanel(); fsp != nil {
 				pf.insertPathToCmdLine(currentPanelEntryPath(fsp))
@@ -1144,6 +1163,7 @@ func init() {
 		DescKey:     "Action.Panel.CopyName.Desc",
 		DefaultKeys: []string{"CtrlIns"},
 		MenuPath:    "Commands",
+		MenuSubPath: "Paths",
 		Handler: withPF(func(pf *PanelsFrame) {
 			if !pf.cmdLine.IsEmpty() {
 				vtui.SetClipboard(pf.cmdLine.Edit.GetText())
@@ -1175,6 +1195,7 @@ func init() {
 		DescKey:     "Action.Panel.CopySelectedNames.Desc",
 		DefaultKeys: []string{"CtrlShiftIns"},
 		MenuPath:    "Commands",
+		MenuSubPath: "Paths",
 		Handler: withPF(func(pf *PanelsFrame) {
 			if fsp := pf.getActivePanel(); fsp != nil {
 				if names := fsp.GetSelectedNames(); len(names) > 0 {
@@ -1195,6 +1216,7 @@ func init() {
 		DescKey:     "Action.Panel.CopySelectedPaths.Desc",
 		DefaultKeys: []string{"AltShiftIns"},
 		MenuPath:    "Commands",
+		MenuSubPath: "Paths",
 		Handler: withPF(func(pf *PanelsFrame) {
 			if fsp := pf.getActivePanel(); fsp != nil {
 				base := fsp.vfs.GetPath()
@@ -1224,6 +1246,7 @@ func init() {
 		DescKey:     "Action.Panel.CopySelectedRealPaths.Desc",
 		DefaultKeys: []string{"CtrlAltIns"},
 		MenuPath:    "Commands",
+		MenuSubPath: "Paths",
 		Handler: withPF(func(pf *PanelsFrame) {
 			if fsp := pf.getActivePanel(); fsp != nil {
 				base := fsp.vfs.GetPath()

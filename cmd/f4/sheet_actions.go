@@ -112,9 +112,8 @@ func init() {
 		// left it with none. Alt+F9 is no good either: window managers claim
 		// it for resize, and the registry knows nothing about what the outside
 		// world has already taken.
-		DefaultKeys:         []string{"CtrlAltS"},
-		MenuPath:            "Commands",
-		MenuSeparatorBefore: true,
-		Handler:             actionSpreadsheet,
+		DefaultKeys: []string{"CtrlAltS"},
+		MenuPath:    "Commands",
+		Handler:     actionSpreadsheet,
 	})
 }

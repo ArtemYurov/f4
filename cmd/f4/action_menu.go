@@ -24,6 +24,10 @@ func BuildMenuBarItems(area string) []vtui.MenuBarItem {
 		// command.
 		pluginSeparator bool
 		pinned          []vtui.MenuItem
+		// subMenus maps a MenuSubPath to the index of its heading in items,
+		// so every action of a group lands under the one heading no matter
+		// how the registration order interleaves them.
+		subMenus map[string]int
 	}
 	var order []string
 	menus := make(map[string]*menu)
@@ -62,6 +66,34 @@ func BuildMenuBarItems(area string) []vtui.MenuBarItem {
 				m.pinned = append(m.pinned, vtui.MenuItem{Separator: true})
 			}
 			m.pinned = append(m.pinned, item)
+			return
+		}
+		if a.MenuSubPath != "" {
+			heading, ok := m.subMenus[a.MenuSubPath]
+			if !ok {
+				if a.MenuSeparatorBefore {
+					m.items = append(m.items, vtui.MenuItem{Separator: true})
+				}
+				subTitle := Msg("Menu." + area + "." + a.MenuPath + "." + a.MenuSubPath)
+				if strings.HasPrefix(subTitle, "{") {
+					subTitle = a.MenuSubPath
+				}
+				if !strings.Contains(subTitle, "&") {
+					subTitle = "&" + subTitle
+				}
+				m.items = append(m.items, vtui.MenuItem{
+					Text:     subTitle,
+					UserData: menuHistoryItemKey("submenu:" + a.MenuPath + "." + a.MenuSubPath),
+				})
+				heading = len(m.items) - 1
+				if m.subMenus == nil {
+					m.subMenus = make(map[string]int)
+				}
+				m.subMenus[a.MenuSubPath] = heading
+			} else if a.MenuSeparatorBefore {
+				m.items[heading].SubItems = append(m.items[heading].SubItems, vtui.MenuItem{Separator: true})
+			}
+			m.items[heading].SubItems = append(m.items[heading].SubItems, item)
 			return
 		}
 		if a.MenuSeparatorBefore {
@@ -155,6 +187,9 @@ func normalizeMenuSeparators(items []vtui.MenuItem) []vtui.MenuItem {
 	for _, item := range items {
 		if item.Separator && (len(result) == 0 || result[len(result)-1].Separator) {
 			continue
+		}
+		if len(item.SubItems) > 0 {
+			item.SubItems = normalizeMenuSeparators(item.SubItems)
 		}
 		result = append(result, item)
 	}

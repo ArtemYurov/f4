@@ -25,6 +25,7 @@ func init() {
 		Description: "List the live FUSE mounts, go to one or unmount it",
 		DefaultKeys: []string{"CtrlAltL"},
 		MenuPath:    "Commands",
+		MenuSubPath: "Mounts",
 		Visible:     fusefs.Supported,
 		Handler: func() bool {
 			pf := findPanelsFrameAnyScreen()

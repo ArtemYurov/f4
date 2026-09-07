@@ -146,14 +146,19 @@ func TestBuildMenuBarItems_Shell(t *testing.T) {
 		Msg("Action.Panel.CopyPath"):   "Ctrl+D",
 		Msg("Action.Panel.InsertPath"): "Ctrl+F",
 	}
-	for _, item := range items[1].SubItems {
-		if want, ok := wantCommandShortcuts[item.Text]; ok {
-			if item.Shortcut != want {
-				t.Errorf("%q shortcut = %q, want %q", item.Text, item.Shortcut, want)
+	var checkShortcuts func(list []vtui.MenuItem)
+	checkShortcuts = func(list []vtui.MenuItem) {
+		for _, item := range list {
+			if want, ok := wantCommandShortcuts[item.Text]; ok {
+				if item.Shortcut != want {
+					t.Errorf("%q shortcut = %q, want %q", item.Text, item.Shortcut, want)
+				}
+				delete(wantCommandShortcuts, item.Text)
 			}
-			delete(wantCommandShortcuts, item.Text)
+			checkShortcuts(item.SubItems)
 		}
 	}
+	checkShortcuts(items[1].SubItems)
 	for label := range wantCommandShortcuts {
 		t.Errorf("Commands menu is missing %q", label)
 	}
@@ -353,5 +358,55 @@ func TestBuildMenuBarItemsSeparatesPluginCommandsFromBuiltIns(t *testing.T) {
 	}
 	if secondIndex != firstIndex+1 {
 		t.Errorf("second plugin command at index %d, want %d: one separator opens the whole plugin group", secondIndex, firstIndex+1)
+	}
+}
+
+func TestBuildMenuBarItemsFoldsRareCommandsIntoSubMenus(t *testing.T) {
+	old := GlobalHotkeysMgr
+	GlobalHotkeysMgr = NewHotkeyManager("")
+	defer func() { GlobalHotkeysMgr = old }()
+
+	items := BuildMenuBarItems("Shell")
+	if len(items) < 2 || items[1].Label != "&Commands" {
+		t.Fatalf("Commands menu is missing: %+v", items)
+	}
+	commands := items[1].SubItems
+
+	find := func(list []vtui.MenuItem, label string) *vtui.MenuItem {
+		for index := range list {
+			if plainLabel(list[index].Text) == plainLabel(label) {
+				return &list[index]
+			}
+		}
+		return nil
+	}
+
+	for _, sub := range []struct {
+		title  string
+		member string
+	}{
+		{Msg("Menu.Shell.Commands.History"), "Panel.CommandHistory"},
+		{Msg("Menu.Shell.Commands.Navigation"), "Panel.GoParent"},
+		{Msg("Menu.Shell.Commands.Paths"), "Panel.CopyPath"},
+		{Msg("Menu.Shell.Commands.AI"), "AI.TogglePanel"},
+	} {
+		heading := find(commands, sub.title)
+		if heading == nil {
+			t.Errorf("Commands menu has no %q submenu", plainLabel(sub.title))
+			continue
+		}
+		if heading.OnClick != nil || heading.Shortcut != "" {
+			t.Errorf("%q is a submenu heading, it must not act as a command", plainLabel(sub.title))
+		}
+		action, ok := GetAction(sub.member)
+		if !ok {
+			t.Fatalf("%s is not registered", sub.member)
+		}
+		if find(heading.SubItems, action.DisplayLabel()) == nil {
+			t.Errorf("%q is missing from the %q submenu: %+v", action.DisplayLabel(), plainLabel(sub.title), heading.SubItems)
+		}
+		if find(commands, action.DisplayLabel()) != nil {
+			t.Errorf("%q is listed both at the top level and in the %q submenu", action.DisplayLabel(), plainLabel(sub.title))
+		}
 	}
 }
