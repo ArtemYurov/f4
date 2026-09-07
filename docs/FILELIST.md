@@ -353,6 +353,10 @@
     │       ├── history_hint_test.go
     │       ├── history_provider.go
     │       ├── history_provider_test.go
+    │       ├── host_input_modes.go
+    │       ├── host_input_modes_other.go
+    │       ├── host_input_modes_test.go
+    │       ├── host_input_modes_windows.go
     │       ├── hotkeys.go
     │       ├── hotkeys_test.go
     │       ├── hotkeys_ui.go

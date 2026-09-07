@@ -457,6 +457,14 @@ func (pf *PanelsFrame) leaveHostConsole() {
 	vtui.WritePassthrough([]byte(resetSeq.String()))
 
 	vtui.SetAltScreen(true)
+
+	// The reset above only undoes what f4 sent. Whatever ran in the host
+	// console spoke to the terminal directly, and the mouse tracking it (or,
+	// on Windows, the console host on its behalf) turned off stays off until
+	// somebody asks for it again -- so f4 asks here, before the redraw, and
+	// gets its clicks back.
+	restoreHostInputModes()
+
 	if vtui.FrameManager != nil && vtui.FrameManager.Screen() != nil {
 		vtui.FrameManager.Screen().HardReset()
 	}
