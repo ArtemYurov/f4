@@ -54,6 +54,7 @@ func TestEditorView_WordWrapToggleIsRemembered(t *testing.T) {
 	drainPendingTasks()
 
 	fs := newWrapMemoryStore(t)
+	t.Cleanup(func() { fs.Flush() })
 
 	ev := NewEditorView(piecetable.New([]byte("some text")), nil, "wrapped.txt")
 	defer ev.Close()

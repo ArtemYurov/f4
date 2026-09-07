@@ -603,29 +603,6 @@ func driveMenuFromFrame(frame vtui.Frame) (*vtui.VMenu, bool) {
 	}
 }
 
-func findBookmarksDialog(t *testing.T) *bookmarksFrame {
-	t.Helper()
-	frames := openFrames()
-	for i := len(frames) - 1; i >= 0; i-- {
-		if d, ok := frames[i].(*bookmarksFrame); ok {
-			return d
-		}
-	}
-	t.Fatalf("bookmarks dialog not on the frame stack: %#v", frames)
-	return nil
-}
-
-func bookmarkRow(t *testing.T, menu *vtui.VMenu) int {
-	t.Helper()
-	for i, it := range menu.Items {
-		if strings.HasPrefix(it.Text, "&6  ") {
-			return i
-		}
-	}
-	t.Fatalf("bookmark row missing: %#v", menu.Items)
-	return -1
-}
-
 // wantDriveMenuRow re-derives from the rendered menu the row the cursor is
 // supposed to open on for a panel sitting at cur: the drive entry that owns
 // cur when the menu lists one (Windows drive letters), otherwise the "Other
