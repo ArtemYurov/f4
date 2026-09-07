@@ -1014,6 +1014,15 @@ Plugins.ConfigTitle= Plugin Configuration
 Plugins.ConfigEmpty=No configurable plugins are registered.
 Plugins.AddTitle= Add Plugin
 Plugins.SelectFilePrompt=Select plugin file:
+Plugins.HotkeyTitle= Assign plugin hot key
+Plugins.HotkeyPrompt=Enter hot key (letter or digit)
+Plugins.HotkeyCurrent=Current: %s
+Plugins.HotkeyNone=(none)
+Plugins.HotkeyHelp=Del removes it, Esc cancels
+Plugins.HotkeyRemoveTitle= Remove plugin hot key
+Plugins.HotkeyRemoveQuestion=Remove hot key %s from "%s"?
+Plugins.HotkeyRemoveBtn=&Delete
+Plugins.HotkeyKeepBtn=&Cancel
 
 InfoPanel.Title= Information
 InfoPanel.Computer=Computer name

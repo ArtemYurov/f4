@@ -592,7 +592,9 @@ func (m *MacroManager) Filter(e *vtinput.InputEvent) bool {
 			// far2l: the F11 plugin menu renders them as ampersand hotkeys.
 			// They must not steal printable characters from the panel command
 			// line while remaining persisted for that menu and its display.
-			if isPluginActionName(actionName) {
+			// A chord assigned in the hotkey dialog (Ctrl+F9 and friends) is a
+			// real hotkey and keeps being dispatched here.
+			if isPluginActionName(actionName) && isPluginMenuHotkey(keyStr) {
 				return false
 			}
 			if strings.EqualFold(actionName, "none") {
@@ -651,11 +653,10 @@ func (m *MacroManager) LookupHotkey(e *vtinput.InputEvent) bool {
 	if actionName == "" {
 		return false
 	}
-	// Plugin menu shortcuts are activated by the F11 menu's ampersand
-	// accelerators. They are deliberately not global Shell hotkeys, so an
-	// injected key (for example from a key-bar click) must not bypass that
-	// rule either.
-	if isPluginActionName(actionName) {
+	// Plugin menu accelerators are activated by the F11 menu's ampersand
+	// hotkeys. They are deliberately not global Shell hotkeys, so an injected
+	// key (for example from a key-bar click) must not bypass that rule either.
+	if isPluginActionName(actionName) && isPluginMenuHotkey(keyStr) {
 		return false
 	}
 	if strings.EqualFold(actionName, "none") {

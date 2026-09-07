@@ -4755,89 +4755,71 @@ func (pf *PanelsFrame) showPluginMenu() {
 		vtui.ShowMessage(" Plugins ", "No plugins registered for F11 menu.", []string{"&Ok"})
 		return
 	}
-	type pluginMenuEntry struct {
-		label      string
-		actionName string
-		shortcut   string
-	}
-	entries := make([]pluginMenuEntry, 0, len(items)+len(commands))
-	for _, itm := range items {
-		actionName := itm.ActionName
-		if actionName == "" {
-			actionName = legacyPluginActionName(len(entries))
-		}
-		entries = append(entries, pluginMenuEntry{
-			label:      itm.Label,
-			actionName: actionName,
-			shortcut:   pluginActionShortcut(actionName),
-		})
-	}
-	for _, command := range commands {
-		entries = append(entries, pluginMenuEntry{
-			label:      pluginCommandDisplayLabel(command),
-			actionName: pluginCommandActionName(command.ID),
-			shortcut:   pluginCommandShortcut(command),
-		})
-	}
-	shortcutWidth := 0
-	for i := range entries {
-		entries[i].shortcut = pluginMenuItemShortcut(entries[i].label, entries[i].shortcut)
-		if width := runewidth.StringWidth(entries[i].shortcut); width > shortcutWidth {
-			shortcutWidth = width
-		}
-	}
+	entries := buildPluginMenuEntries(items, commands)
+	shortcutWidth := pluginMenuShortcutWidth(entries)
 	menuItems := make([]vtui.MenuItem, 0, len(entries))
 	for _, entry := range entries {
 		menuItems = append(menuItems, vtui.MenuItem{
-			Text: pluginMenuItemText(entry.label, entry.shortcut, shortcutWidth),
+			Text: pluginMenuItemText(entry.Label, entry.Shortcut(), shortcutWidth),
 		})
 	}
 
-	updateMenuItem := func(menu *vtui.VMenu, index int) {
-		if menu == nil || index < 0 || index >= len(entries) {
+	// Assigning or dropping a letter moves it between rows, so the whole menu
+	// is rebuilt rather than the single row F4 was pressed on. The hot key
+	// lives in the left-hand column only: MenuItem.Shortcut would print it a
+	// second time on the right.
+	refresh := func(menu *vtui.VMenu) {
+		if menu == nil {
 			return
 		}
-		entry := &entries[index]
-		if index < len(items) {
-			entry.shortcut = pluginActionShortcut(entry.actionName)
-		} else {
-			entry.shortcut = pluginCommandShortcut(commands[index-len(items)])
+		refreshPluginMenuEntries(entries)
+		for i := range entries {
+			if i >= len(menu.Items) {
+				break
+			}
+			menu.Items[i].Text = pluginMenuItemText(entries[i].Label, entries[i].Shortcut(), shortcutWidth)
+			menu.Items[i].Shortcut = ""
 		}
-		menu.Items[index].Text = pluginMenuItemText(entry.label, entry.shortcut, shortcutWidth)
-		menu.Items[index].Shortcut = ""
+		if vtui.FrameManager != nil {
+			vtui.FrameManager.Redraw()
+		}
 	}
 
 	pf.menuItemsWithKeyLabels(" Plugins ", menuItems, func(menu *vtui.VMenu, e *vtinput.InputEvent) bool {
-		if e.VirtualKeyCode != vtinput.VK_F4 || !e.KeyDown {
-			if e.VirtualKeyCode != vtinput.VK_DELETE || !e.KeyDown {
-				return false
+		if !e.KeyDown {
+			return false
+		}
+		idx := menu.SelectPos
+		switch e.VirtualKeyCode {
+		case vtinput.VK_F4:
+			if idx >= 0 && idx < len(entries) {
+				assignPluginHotkey(entries[idx].ActionName, entries[idx].Label, func() { refresh(menu) })
 			}
-			idx := menu.SelectPos
+			return true
+		case vtinput.VK_DELETE:
+			// Del always means "take this hot key back", which is why it can
+			// never be assigned as one.
 			if idx < 0 || idx >= len(entries) {
 				return true
 			}
-			area, key := configuredHotkeyBinding(GlobalHotkeysMgr, entries[idx].actionName)
+			area, key := configuredHotkeyBinding(GlobalHotkeysMgr, entries[idx].ActionName)
 			if area == "" || key == "" {
 				return true
 			}
-			question := pluginHotkeyDeleteQuestion(key)
-			vtui.ShowMessageOn(menu, " Remove plugin hotkey ", question, []string{"&Delete", "Cancel"}).OnResult = func(choice int) {
+			question := pluginHotkeyDeleteQuestion(key, entries[idx].Label)
+			buttons := []string{Msg("Plugins.HotkeyRemoveBtn"), Msg("Plugins.HotkeyKeepBtn")}
+			vtui.ShowMessageOn(menu, Msg("Plugins.HotkeyRemoveTitle"), question, buttons).OnResult = func(choice int) {
 				if choice != 0 || GlobalHotkeysMgr == nil {
 					return
 				}
 				if !deletePluginHotkey(GlobalHotkeysMgr, area, key) {
 					return
 				}
-				updateMenuItem(menu, idx)
-				vtui.FrameManager.Redraw()
+				refresh(menu)
 			}
 			return true
 		}
-		idx := menu.SelectPos
-		if idx >= 0 && idx < len(entries) {
-			assignPluginHotkey(menu, idx, entries[idx].actionName)
-		}
-		return true
+		return false
 	}, func(idx int) {
 		switch {
 		case idx >= 0 && idx < len(items):

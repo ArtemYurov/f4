@@ -996,6 +996,15 @@ Plugins.ConfigTitle= Настройка плагинов
 Plugins.ConfigEmpty=Нет плагинов с доступными настройками.
 Plugins.AddTitle= Добавить плагин
 Plugins.SelectFilePrompt=Выберите файл плагина:
+Plugins.HotkeyTitle= Назначить горячую клавишу плагина
+Plugins.HotkeyPrompt=Введите горячую клавишу (буква или цифра)
+Plugins.HotkeyCurrent=Текущая: %s
+Plugins.HotkeyNone=(нет)
+Plugins.HotkeyHelp=Del — удалить, Esc — отмена
+Plugins.HotkeyRemoveTitle= Удаление горячей клавиши
+Plugins.HotkeyRemoveQuestion=Удалить горячую клавишу %s у «%s»?
+Plugins.HotkeyRemoveBtn=&Удалить
+Plugins.HotkeyKeepBtn=&Отмена
 
 InfoPanel.Title= Информация
 InfoPanel.Computer=Имя компьютера

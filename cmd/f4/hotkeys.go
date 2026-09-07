@@ -514,6 +514,8 @@ func (hm *HotkeyManager) Load() {
 			}
 		}
 	}
+
+	hm.dropReservedPluginBindings()
 }
 
 // Save writes only overridden or new bindings to the INI file.
