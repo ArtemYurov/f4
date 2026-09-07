@@ -218,8 +218,8 @@ func TestEditor_MultiCursor_UnsupportedKeysStillCollapse(t *testing.T) {
 		event vtinput.InputEvent
 	}{
 		{"page down", vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_NEXT}},
-		{"shift+down", vtinput.InputEvent{
-			Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_DOWN,
+		{"shift+page down", vtinput.InputEvent{
+			Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_NEXT,
 			ControlKeyState: vtinput.ShiftPressed,
 		}},
 		{"ctrl+left", vtinput.InputEvent{

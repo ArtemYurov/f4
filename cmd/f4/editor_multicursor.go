@@ -32,23 +32,50 @@ type caretEdit struct {
 	primary bool
 }
 
-// buildCaretEdits calls build for every caret, in ascending order, and marks
-// the entry belonging to the primary caret.
-func (ev *EditorView) buildCaretEdits(build func(off int) caretEdit) []caretEdit {
-	primary := ev.caretOffset()
-	offsets := ev.caretOffsets()
-	edits := make([]caretEdit, 0, len(offsets))
-	primarySeen := false
-	for _, off := range offsets {
-		edit := build(off)
-		if off == primary && !primarySeen {
-			edit.primary = true
-			primarySeen = true
-		}
-		edits = append(edits, edit)
+// caretSpan is one caret and whatever it has selected, which for the primary
+// caret lives in selActive/selAnchorOffset and for the others in the caret
+// itself. Everything that edits works from these rather than from bare
+// offsets, so a selection is replaced by what is typed over it.
+type caretSpan struct {
+	off      int
+	selStart int
+	selEnd   int
+	primary  bool
+}
+
+func (c caretSpan) hasSel() bool { return c.selEnd > c.selStart }
+
+// caretSpans returns every caret with its selection, in ascending order and
+// without duplicates.
+func (ev *EditorView) caretSpans() []caretSpan {
+	primaryOff := ev.caretOffset()
+	spans := make([]caretSpan, 0, len(ev.extraCursors)+1)
+	primary := caretSpan{off: primaryOff, selStart: primaryOff, selEnd: primaryOff, primary: true}
+	if ev.selActive && !ev.rectSelActive {
+		primary.selStart, primary.selEnd = ev.getSelectionRange()
 	}
-	if !primarySeen && len(edits) > 0 {
-		edits[0].primary = true
+	spans = append(spans, primary)
+
+	size := ev.pt.Size()
+	for _, caret := range ev.extraCursors {
+		if caret.off < 0 || caret.off > size || caret.off == primaryOff {
+			continue
+		}
+		start, end := caret.selRange()
+		spans = append(spans, caretSpan{off: caret.off, selStart: start, selEnd: end})
+	}
+	sort.Slice(spans, func(i, j int) bool { return spans[i].off < spans[j].off })
+	return spans
+}
+
+// buildCaretEdits calls build for every caret, in ascending order.
+func (ev *EditorView) buildCaretEdits(build func(c caretSpan) caretEdit) []caretEdit {
+	spans := ev.caretSpans()
+	edits := make([]caretEdit, 0, len(spans))
+	for _, span := range spans {
+		edit := build(span)
+		edit.primary = span.primary
+		edits = append(edits, edit)
 	}
 	return edits
 }
@@ -147,6 +174,11 @@ func (ev *EditorView) setCaretOffsets(offsets []int, primary int) {
 		return off
 	}
 
+	// Every selection has just been replaced by what was typed or deleted,
+	// so the carets come out of an edit as bare carets.
+	ev.selActive = false
+	ev.rectSelActive = false
+
 	primaryOff := clamp(offsets[primary])
 	ev.CursorLine = ev.li.GetLineAtOffset(primaryOff)
 	ev.CursorPos = primaryOff - ev.li.GetLineOffset(ev.CursorLine)
@@ -185,34 +217,33 @@ func (ev *EditorView) processMultiCursorKey(e *vtinput.InputEvent) bool {
 
 	switch e.VirtualKeyCode {
 	case vtinput.VK_LEFT, vtinput.VK_RIGHT:
-		// Shift starts a selection and Ctrl jumps by words: both are still
-		// the primary caret's alone.
-		if ctrl || alt || shift {
+		// Ctrl jumps by words, which is still the primary caret's alone.
+		if ctrl || alt {
 			return false
 		}
 		delta := 1
 		if e.VirtualKeyCode == vtinput.VK_LEFT {
 			delta = -1
 		}
-		return ev.multiMoveHorizontal(delta)
+		return ev.multiMoveHorizontal(delta, shift)
 	case vtinput.VK_UP, vtinput.VK_DOWN:
 		// Ctrl+Up and Ctrl+Down scroll the text under the carets and leave
 		// them where they are; multiCursorKeepsSet lets that through.
-		if ctrl || alt || shift {
+		if ctrl || alt {
 			return false
 		}
 		delta := 1
 		if e.VirtualKeyCode == vtinput.VK_UP {
 			delta = -1
 		}
-		return ev.multiMoveVertical(delta)
+		return ev.multiMoveVertical(delta, shift)
 	case vtinput.VK_HOME, vtinput.VK_END:
 		// Ctrl+Home and Ctrl+End go to one end of the file, which is one
 		// place and therefore one caret.
-		if ctrl || alt || shift {
+		if ctrl || alt {
 			return false
 		}
-		return ev.multiMoveLineEdge(e.VirtualKeyCode == vtinput.VK_END)
+		return ev.multiMoveLineEdge(e.VirtualKeyCode == vtinput.VK_END, shift)
 	case vtinput.VK_BACK:
 		if ctrl || alt {
 			return false
@@ -246,10 +277,15 @@ func (ev *EditorView) processMultiCursorKey(e *vtinput.InputEvent) bool {
 
 // multiInsertText types the same bytes at every caret.
 func (ev *EditorView) multiInsertText(data []byte) bool {
-	return ev.applyCaretEdits(ev.buildCaretEdits(func(off int) caretEdit {
-		edit := caretEdit{off: off, ins: data, after: true}
-		if ev.overtype {
-			edit.del = ev.overtypeWidthAt(off)
+	return ev.applyCaretEdits(ev.buildCaretEdits(func(c caretSpan) caretEdit {
+		edit := caretEdit{off: c.off, ins: data, after: true}
+		switch {
+		case c.hasSel():
+			// Typing over a selection replaces it, at every caret that
+			// has one.
+			edit.off, edit.del = c.selStart, c.selEnd-c.selStart
+		case ev.overtype:
+			edit.del = ev.overtypeWidthAt(c.off)
 		}
 		return edit
 	}), opTyping)
@@ -258,12 +294,16 @@ func (ev *EditorView) multiInsertText(data []byte) bool {
 // multiInsertNewline splits the line at every caret, each one taking the
 // indentation of the line it was on when auto-indent is on.
 func (ev *EditorView) multiInsertNewline() bool {
-	return ev.applyCaretEdits(ev.buildCaretEdits(func(off int) caretEdit {
+	return ev.applyCaretEdits(ev.buildCaretEdits(func(c caretSpan) caretEdit {
 		data := []byte("\n")
 		if ev.AutoIndent {
-			data = append(data, ev.lineIndentAt(off)...)
+			data = append(data, ev.lineIndentAt(c.off)...)
 		}
-		return caretEdit{off: off, ins: data, after: true}
+		edit := caretEdit{off: c.off, ins: data, after: true}
+		if c.hasSel() {
+			edit.off, edit.del = c.selStart, c.selEnd-c.selStart
+		}
+		return edit
 	}), opOther)
 }
 
@@ -274,20 +314,33 @@ func (ev *EditorView) multiInsertTab() bool {
 	if tabSize <= 0 {
 		tabSize = 8
 	}
-	return ev.applyCaretEdits(ev.buildCaretEdits(func(off int) caretEdit {
+	return ev.applyCaretEdits(ev.buildCaretEdits(func(c caretSpan) caretEdit {
+		off := c.off
+		if c.hasSel() {
+			off = c.selStart
+		}
 		data := []byte("\t")
 		if ev.ExpandTabs > 0 {
 			_, vCol := ev.engine.LogicalToVisual(off)
 			data = []byte(strings.Repeat(" ", tabSize-(vCol%tabSize)))
 		}
-		return caretEdit{off: off, ins: data, after: true}
+		edit := caretEdit{off: off, ins: data, after: true}
+		if c.hasSel() {
+			edit.del = c.selEnd - c.selStart
+		}
+		return edit
 	}), opTyping)
 }
 
 // multiDeleteBackward is Backspace at every caret. A caret at the very start
 // of the buffer has nothing to delete and simply stays where it is.
 func (ev *EditorView) multiDeleteBackward() bool {
-	return ev.applyCaretEdits(ev.buildCaretEdits(func(off int) caretEdit {
+	return ev.applyCaretEdits(ev.buildCaretEdits(func(c caretSpan) caretEdit {
+		// With a selection, Backspace removes exactly that and no more.
+		if c.hasSel() {
+			return caretEdit{off: c.selStart, del: c.selEnd - c.selStart}
+		}
+		off := c.off
 		if off <= 0 {
 			return caretEdit{off: off}
 		}
@@ -318,7 +371,11 @@ func (ev *EditorView) multiDeleteBackward() bool {
 // single byte that starts the line break.
 func (ev *EditorView) multiDeleteForward() bool {
 	size := ev.pt.Size()
-	return ev.applyCaretEdits(ev.buildCaretEdits(func(off int) caretEdit {
+	return ev.applyCaretEdits(ev.buildCaretEdits(func(c caretSpan) caretEdit {
+		if c.hasSel() {
+			return caretEdit{off: c.selStart, del: c.selEnd - c.selStart}
+		}
+		off := c.off
 		if off >= size {
 			return caretEdit{off: off}
 		}
@@ -386,15 +443,27 @@ func multiCursorKeepsSet(e *vtinput.InputEvent) bool {
 // keepDesired says whether the carets keep aiming for the column they had:
 // moving between lines does, so a short line on the way past does not cost a
 // caret its place, while moving along a line takes the column it lands on.
-func (ev *EditorView) moveCarets(move func(off, desiredCol int) int, keepDesired bool) bool {
+func (ev *EditorView) moveCarets(move func(off, desiredCol int) int, keepDesired, selecting bool) bool {
 	if len(ev.extraCursors) == 0 {
 		return false
 	}
-	ev.selActive = false
 	ev.rectSelActive = false
 	ev.CursorVirtualSpaces = 0
 
-	primary := move(ev.caretOffset(), ev.DesiredVisualCol)
+	// Holding Shift means each caret leaves an anchor behind the first time
+	// it moves and drags its own selection from there; letting go of the
+	// text means letting go of the selections.
+	primaryOff := ev.caretOffset()
+	if selecting {
+		if !ev.selActive {
+			ev.selActive = true
+			ev.selAnchorOffset = primaryOff
+		}
+	} else {
+		ev.selActive = false
+	}
+
+	primary := move(primaryOff, ev.DesiredVisualCol)
 	extras := make([]extraCaret, 0, len(ev.extraCursors))
 	for _, caret := range ev.extraCursors {
 		off := move(caret.off, caret.desiredCol)
@@ -402,13 +471,25 @@ func (ev *EditorView) moveCarets(move func(off, desiredCol int) int, keepDesired
 		if !keepDesired {
 			desired = ev.visualColAt(off)
 		}
-		extras = append(extras, extraCaret{off: off, desiredCol: desired})
+		moved := extraCaret{off: off, desiredCol: desired}
+		if selecting {
+			moved.anchor = caret.anchor
+			moved.hasSel = caret.hasSel
+			if !moved.hasSel {
+				moved.anchor, moved.hasSel = caret.off, true
+			}
+			moved.hasSel = moved.anchor != off
+		}
+		extras = append(extras, moved)
 	}
 
 	ev.CursorLine = ev.li.GetLineAtOffset(primary)
 	ev.CursorPos = primary - ev.li.GetLineOffset(ev.CursorLine)
 	if !keepDesired {
 		ev.updateDesiredVisualCol()
+	}
+	if ev.selActive && ev.selAnchorOffset == primary {
+		ev.selActive = false
 	}
 	ev.extraCursors = extras
 	ev.normalizeExtraCarets()
@@ -418,19 +499,19 @@ func (ev *EditorView) moveCarets(move func(off, desiredCol int) int, keepDesired
 
 // multiMoveHorizontal moves every caret one grapheme along the text, stepping
 // between lines at the ends the way the single caret does.
-func (ev *EditorView) multiMoveHorizontal(delta int) bool {
+func (ev *EditorView) multiMoveHorizontal(delta int, selecting bool) bool {
 	return ev.moveCarets(func(off, _ int) int {
 		if delta < 0 {
 			return ev.offsetBeforeCaret(off)
 		}
 		return ev.offsetAfterCaret(off)
-	}, false)
+	}, false, selecting)
 }
 
 // multiMoveVertical moves every caret one visual row up or down. A caret
 // already at the edge of the text stays where it is instead of dragging the
 // rest of the set out of shape.
-func (ev *EditorView) multiMoveVertical(delta int) bool {
+func (ev *EditorView) multiMoveVertical(delta int, selecting bool) bool {
 	total := ev.engine.GetTotalVisualRows()
 	return ev.moveCarets(func(off, desired int) int {
 		vRow, _ := ev.engine.LogicalToVisual(off)
@@ -439,18 +520,18 @@ func (ev *EditorView) multiMoveVertical(delta int) bool {
 			return off
 		}
 		return ev.snapMouseOffsetToClusterBoundary(ev.engine.VisualToLogical(target, desired))
-	}, true)
+	}, true, selecting)
 }
 
 // multiMoveLineEdge sends every caret to the start or the end of its own line.
-func (ev *EditorView) multiMoveLineEdge(toEnd bool) bool {
+func (ev *EditorView) multiMoveLineEdge(toEnd, selecting bool) bool {
 	return ev.moveCarets(func(off, _ int) int {
 		line := ev.li.GetLineAtOffset(off)
 		if toEnd {
 			return ev.li.GetLineOffset(line) + ev.getLineLength(line)
 		}
 		return ev.li.GetLineOffset(line)
-	}, false)
+	}, false, selecting)
 }
 
 // offsetAfterCaret is one grapheme forward, stepping over the line break at
@@ -509,14 +590,42 @@ func (ev *EditorView) normalizeExtraCarets() {
 	ev.sortExtraCarets()
 	primary := ev.caretOffset()
 	kept := ev.extraCursors[:0]
-	for i, caret := range ev.extraCursors {
+	for _, caret := range ev.extraCursors {
 		if caret.off == primary {
+			// The primary caret keeps the ground; if the one that walked
+			// into it was selecting, the selection carries on from the
+			// anchor that is farther away.
+			if caret.hasSel {
+				if !ev.selActive || farther(primary, ev.selAnchorOffset, caret.anchor) {
+					ev.selAnchorOffset = caret.anchor
+				}
+				ev.selActive = true
+			}
 			continue
 		}
-		if i > 0 && caret.off == ev.extraCursors[i-1].off {
+		if n := len(kept); n > 0 && kept[n-1].off == caret.off {
+			if caret.hasSel && (!kept[n-1].hasSel || farther(caret.off, kept[n-1].anchor, caret.anchor)) {
+				kept[n-1].anchor, kept[n-1].hasSel = caret.anchor, true
+			}
 			continue
 		}
 		kept = append(kept, caret)
 	}
 	ev.extraCursors = kept
+	if ev.selActive && ev.selAnchorOffset == primary {
+		ev.selActive = false
+	}
+}
+
+// farther reports whether b is the anchor that keeps more text selected from
+// off, which is the one a merge has to keep.
+func farther(off, a, b int) bool {
+	da, db := off-a, off-b
+	if da < 0 {
+		da = -da
+	}
+	if db < 0 {
+		db = -db
+	}
+	return db > da
 }

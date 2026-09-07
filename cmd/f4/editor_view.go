@@ -133,6 +133,9 @@ type EditorView struct {
 	// allocate per painted line.
 	occSpans []matchSpan
 	occBytes []byte
+	// extraSelSpans is what the secondary carets have selected, collected
+	// once per paint: a handful of ranges checked against each cluster.
+	extraSelSpans []matchSpan
 
 	vfs         vfs.VFS
 	filePath    string
@@ -298,6 +301,24 @@ const (
 type extraCaret struct {
 	off        int
 	desiredCol int
+	// anchor is the other end of this caret's own selection, and hasSel
+	// says whether there is one. A caret with no selection is the zero
+	// value of both, so a caret built without thinking about selections
+	// simply has none.
+	anchor int
+	hasSel bool
+}
+
+// selRange is the caret's selection as an ordered pair, empty when it has no
+// selection of its own.
+func (c extraCaret) selRange() (int, int) {
+	if !c.hasSel || c.anchor == c.off {
+		return c.off, c.off
+	}
+	if c.anchor < c.off {
+		return c.anchor, c.off
+	}
+	return c.off, c.anchor
 }
 
 type editorState struct {
@@ -1551,6 +1572,12 @@ func (ev *EditorView) DisplayObject(scr *vtui.ScreenBuf) {
 	// 2. Отрисовка
 	occNeedle := ev.occurrenceNeedle()
 	ev.occSpans = ev.occSpans[:0]
+	ev.extraSelSpans = ev.extraSelSpans[:0]
+	for _, caret := range ev.extraCursors {
+		if start, end := caret.selRange(); end > start {
+			ev.extraSelSpans = append(ev.extraSelSpans, matchSpan{Off: start, Len: end - start})
+		}
+	}
 	startLogLine, startFragIdx := ev.engine.GetLogLineAtVisualRow(ev.ScrollTopRow)
 	rowsRendered := 0
 
@@ -2745,17 +2772,27 @@ func (ev *EditorView) fillCellsWithLinks(target []vtui.CharInfo, data []byte, de
 			}
 		}
 
+		absStart := offset + cluster.byteStart
+		absEnd := offset + cluster.byteEnd
+
 		// Other occurrences of the selected text are marked before the
 		// selection itself is applied: where the two meet, the selection
 		// wins, as it is the thing the user is actually holding.
 		if len(ev.occSpans) > 0 {
-			absStart := offset + cluster.byteStart
-			absEnd := offset + cluster.byteEnd
 			for _, span := range ev.occSpans {
 				if absStart < span.Off+span.Len && absEnd > span.Off {
 					attr = occAttr
 					break
 				}
+			}
+		}
+
+		// What the secondary carets have selected is the same selection,
+		// drawn the same way; only its offsets live elsewhere.
+		for _, span := range ev.extraSelSpans {
+			if absStart < span.Off+span.Len && absEnd > span.Off {
+				attr = selAttr
+				break
 			}
 		}
 
