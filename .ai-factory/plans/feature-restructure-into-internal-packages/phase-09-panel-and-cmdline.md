@@ -27,10 +27,11 @@ reference `CommandLine`.
 grep -c '\bCommandLine\b' cmd/f4/<file>.go     # must be 0 for a Task 34 file
 ```
 
-Move by `//go:build` line, never by filename. Take every `_test.go` neighbour.
+Move by `//go:build` line, never by filename. Take the `_test.go` files Task 43
+assigns to this wave — not the same-named neighbours.
 Rename to `<topic>.go` / `<topic>_<aspect>.go`. Export only what has an external
 caller. One line to `architecture_test.go`'s layer map, one to the palette
-auditor's directory→package map. Close every `docs/` reference in the same commit.
+auditor's file→target-package map. Close every `docs/` reference in the same commit.
 
 ## Current-Code Evidence
 
@@ -42,7 +43,7 @@ Per-type gate scores. Columns: `PanelsFrame` / `FileSystemPanel` /
 | `panels_frame.go` | 197 | — | — | 0 | the type's home; 5728 lines |
 | `file_panel.go` | — | 107 | — | 0 | the type's home |
 | `panel_plugins.go` | 5 | 4 | 17 | 0 | plus **one** `coreAPI` method, already cut out in Task 26 |
-| `dragdrop.go` | 13 | 1 | — | 0 | five `*PanelsFrame` methods + one `*FileSystemPanel` — moves **whole** |
+| `dragdrop.go` | 6 | 8 | — | 0 | five `*PanelsFrame` methods + one `*FileSystemPanel` — moves **whole** |
 | `translator.go` | 3 | 2 | — | 0 | one method each — moves **whole** |
 | `console_passthrough.go` | 16 | — | — | **3** | panel code that also touches the command line — resolve the three |
 | `temp_panel.go` | 5 | 4 | — | 0 | move whole |
@@ -58,11 +59,11 @@ Per-type gate scores. Columns: `PanelsFrame` / `FileSystemPanel` /
 | `cmd_session.go`, `simple_exec.go` | 2 each | — | — | — | resolve |
 | `commands.go` | 0 | — | — | 0 | move whole |
 | `apply_command.go` | 5 | — | — | — | resolve |
-| `semantic.go` | 5 | 4 | — | 2 | 808 lines, methods of six types + 14 free functions |
+| `semantic.go` | 5 | 4 | — | 2 | 808 lines, methods of six types + 15 free functions |
 
 `semantic.go`'s receiver census, measured: `*EditorView` ×5, `*PanelsFrame` ×4,
 `*ViewerView` ×3, `*TerminalView` ×1, `*FileSystemPanel` ×1, `*CommandLine` ×1,
-plus 14 free functions. Tasks 29, 30 and 33 already took the viewer, terminal and
+plus 15 free functions. Tasks 29, 30 and 33 already took the viewer, terminal and
 editor slices.
 
 ## Files to Change
@@ -83,7 +84,10 @@ editor slices.
 ### Intent
 
 Thirty outbound edges and the two largest types in the codebase: `PanelsFrame`
-(161 methods across 17 non-test files) and `FileSystemPanel` (107 across 7). Go
+(160 methods across 16 non-test files) and `FileSystemPanel` (105 across 6),
+counted receiver-anchored with `grep -hE '^func \([a-z]+ \*T\)'` — the looser
+`grep 'func (.*T)'` returns 161/17 and 109/7 by catching methods of one type that
+merely take the other as a parameter (`panels_frame.go:71,72,4038,5533`). Go
 requires a type's methods in the type's package, so the file count is a
 consequence of the types, not a choice — and it is exactly why the file-naming
 convention matters here more than anywhere else.
@@ -128,7 +132,7 @@ convention matters here more than anywhere else.
    for the next change.
 5. **Finish `semantic.go`.** Take the four `*PanelsFrame` methods as
    `frame_semantic.go` and the one `*FileSystemPanel` method as
-   `list_semantic.go`. Distribute the 14 free functions to the package of their
+   `list_semantic.go`. Distribute the 15 free functions to the package of their
    caller — `semanticInt` uses `numeric.BoundedUint64ToInt` and is called only from
    within `semantic.go`, so it follows whichever methods use it, duplicated only if
    two packages need it. After this task and Task 35, `cmd/f4/semantic.go` is
@@ -163,7 +167,7 @@ convention matters here more than anywhere else.
    assertions rewritten against the exported surface, and that is a rewrite, so it
    gets its own commit if it is more than mechanical.
 8. Add `"internal/panel": 3` to the auditor's layer map and `panel` to the palette
-   auditor's directory→package map — this is the wave that resolves the audit key
+   auditor's file→target-package map — this is the wave that resolves the audit key
    `panel.(*FileSystemPanel).ProcessKey` from Task 2.
 
 ### Required Interfaces and Contracts
@@ -346,7 +350,7 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build ./...
   **Mitigation:** both hold methods of both panel types, so they move whole; the
   evidence table records the counts and Task 34 step 2 says so explicitly.
 - **Risk:** `semantic.go` is deleted before all six slices have landed, losing the
-  14 free functions.
+  15 free functions.
   **Mitigation:** the `git rm` is in Task 35 step 7, after the last slice, and the
   acceptance criterion is the file's absence rather than its emptiness.
 - **Risk:** a `panel_*.go` filename survives inside `internal/panel`, reintroducing

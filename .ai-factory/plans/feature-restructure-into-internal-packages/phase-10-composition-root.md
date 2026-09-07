@@ -77,10 +77,18 @@ that all of them exist.
    `arkanoid.go`, `ai_chat_panel.go`, `vtvibe_host.go`, `vtvibe_ap.go`,
    `sheet_actions.go`, `sheet_dialogs.go`, `sheet_frame.go`, `sheet_palette.go`,
    `static_direct_actions.go`, `external_tools.go`, `highlight_files.go`,
-   `farmenu_file.go`, `far2l_auth.go`, `async_buffer.go`, `attributes.go` and
-   whatever else remains. Score each with the gate first — several will turn out
-   to belong to a package that already exists, and moving them there is a better
-   answer than parking them in `app`.
+   `farmenu_file.go`, `far2l_auth.go` and `async_buffer.go`. Score each with the
+   gate first — several will turn out to belong to a package that already exists,
+   and moving them there is a better answer than parking them in `app`.
+
+   **This list is closed.** There is no "and whatever else remains": Task 43
+   assigned every `cmd/f4` file to a wave, so anything still sitting here that is
+   not on this list is a Task 43 miss to be fixed there, not a file to park in
+   `app`. Re-run Task 43 step 1's two `comm` commands before starting; both must
+   come back empty.
+
+   Note there is no `attributes.go` in `cmd/f4` — only `attributes_dialog.go` and
+   its `_unix`/`_windows` pair, all three already taken by Task 32.
 5. `internal/app` owns the process-wide startup calls Phase 1 made explicit:
    `StartQueueWorker()` (Task 5) and `action.Localize = i18n.Msg` (Tasks 21, 24).
    Both move from `cmd/f4/main.go` into the app's `New` / `Run`.
@@ -92,8 +100,9 @@ that all of them exist.
    layer 4 imports `internal/app` — now has something to check, and it must pass
    with **no exemptions**. An exemption here means a wave left an upward edge
    behind, and that is the failure this whole ordering exists to prevent.
-8. Move `TestActionOrderIsStable` and its golden slice (Task 3) from `cmd/f4` to
-   `internal/app`, where the table now lives.
+8. Move `cmd/f4/action_table_order_test.go` — `TestActionOrderIsStable` and its
+   golden slice, split out under that name in Task 21 step 6 — to `internal/app`,
+   where the table now lives. The golden slice is unmodified since Task 3.
 
 ### Required Interfaces and Contracts
 
@@ -175,7 +184,7 @@ either would see only its own subtree.
      `--update`, plugin scaffolding), and the construction of `app.New(...)`.
    - `main_test.go` and any test of the wiring itself.
    - `command_palette_coverage_test.go` — the module-wide palette auditor. Its 42
-     keys are qualified symbols after Task 2 and its directory→package map now has
+     keys are qualified symbols after Task 2 and its file→target-package map now has
      an entry per extracted package. **This is the commit where the map's `cmd/f4
      → main` entry becomes vestigial**; remove it if nothing audited remains in
      `main`.
@@ -258,10 +267,11 @@ still wires a working binary.
 
 - **Risk:** `internal/app` becomes the new flat package — everything unclaimed by
   a wave is parked there.
-  **Mitigation:** Task 36 step 4 requires scoring each remaining file with the gate
-  first; a file that belongs to an existing package goes there instead. The
-  measure of success is that `internal/app` holds the loop and the table, not 80
-  files.
+  **Mitigation:** Task 43 assigns every `cmd/f4` file to a wave before the waves
+  start, so nothing arrives here unclaimed; Task 36 step 4's roster is closed and
+  requires scoring each remaining file with the gate. A file that belongs to an
+  existing package goes there instead. The measure of success is that
+  `internal/app` holds the loop and the table, not 80 files.
 - **Risk:** rule 3 fails and is silenced with an exemption list.
   **Mitigation:** Task 36 step 7 forbids exemptions and names what a failure means
   — an upward edge a wave left behind.

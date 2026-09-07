@@ -35,10 +35,11 @@ done
 
 Non-zero for a later type → the file does not move whole: the offending function
 stays with its view, or becomes a plain function taking the type. Move by
-`//go:build` line, never by filename. Take every `_test.go` neighbour. Rename to
+`//go:build` line, never by filename. Take the `_test.go` files Task 43 assigns to
+this wave — not the same-named neighbours. Rename to
 `<topic>.go` / `<topic>_<aspect>.go`. Export only what has an external caller. One
 line to `architecture_test.go`'s layer map, one to
-`command_palette_coverage_test.go`'s directory→package map when this wave owns an
+`command_palette_coverage_test.go`'s file→target-package map when this wave owns an
 audited symbol. Close every `docs/` reference in the same commit.
 
 ## Current-Code Evidence
@@ -114,7 +115,7 @@ with the editor, each side needs the other.
 7. Rename to the topic convention: `view.go`, `view_semantic.go`, `backend.go`,
    `text.go`, `disasm.go`, `topbar.go`, `title.go`, `links.go`, `wordnav.go`.
 8. Add `"internal/viewer": 3` to the auditor's layer map, and the
-   `viewer` entry to the palette auditor's directory→package map.
+   `viewer` entry to the palette auditor's file→target-package map.
 
 ### Required Interfaces and Contracts
 
@@ -135,10 +136,16 @@ status text. No logging is added.
 
 ### Tests
 
-`viewer_view_test.go`, `disasm_test.go`, `editor_binary_open_test.go` (if it tests
-the viewer path), `title_test.go` and `uri_navigation_test.go` move with their
-subjects. Each uses `testutil.SwapFrameManager` after Task 9 — verify the drains
-each one passes are still the right ones.
+`viewer_view_test.go`, `disasm_test.go`, `title_test.go` and
+`uri_navigation_test.go` move with their subjects.
+**`editor_binary_open_test.go` does not come here.** It was hedged as "if it tests
+the viewer path", and Task 33's Tests section claims it outright — a file claimed
+twice is claimed by nobody. Measured, it touches `FileSystemPanel` ×1 and
+`EditorView` ×1 and no viewer type at all, so it is one of the five multi-package
+tests Task 43 step 4 rules on. Follow that ruling; do not take it here.
+
+Each test that moves uses `testutil.SwapFrameManager` after Task 9 — verify the
+drains it passes are still the right ones.
 
 ```
 go test ./internal/viewer/...
@@ -165,9 +172,18 @@ go test -race ./internal/viewer/...
 
 ### Intent
 
-Seventy-two files: pty backends across nine platforms, the console host, the ANSI
+The largest wave: pty backends across nine platforms, the console host, the ANSI
 parser, kitty and sixel graphics, clipboard and background jobs. Twelve outbound
 edges, and it goes before media because six of media's ten edges point here.
+
+**Roster size.** Steps 1-3 below name 41 non-test files. Task 43 adds eleven more
+that no task named — `ttyx_probe.go`, `ttyx_probe_parse.go`, `ttyx_probe_unix.go`,
+`ttyx_probe_windows.go`, `ttyx_session.go`, `terminal_log_console_other.go`,
+`terminal_log_console_windows.go`, `terminal_log_vfs.go`, `console_host_windows.go`
+and the two `console_overlay_*.go` (score the overlays: they may belong to
+`internal/media`). That is 52 non-test files, plus whatever `_test.go` files Task
+43's table assigns. Count the roster before starting and again before committing;
+this is the wave where a dropped file is least likely to be noticed.
 
 This is the wave where filenames lie the most. Eleven files whose names suggest
 another package belong here because their *callers* are in `ansi_parser.go` and
@@ -242,7 +258,8 @@ another package belong here because their *callers* are in `ansi_parser.go` and
 
 ### Tests
 
-Seventy-two files' worth of tests move: `ansi_parser_test.go` (which contains one
+Take the `_test.go` files Task 43 assigns to this wave, among them
+`ansi_parser_test.go` (which contains one
 of the two test-file `init()`s and the `mockPty` fixture), `terminal_view_test.go`
 (the other), `issue863_terminal_test.go`, `clipboard_test.go`,
 `shell_session_test.go`, `shell_integration_test.go` and the pty diagnostics
@@ -288,7 +305,7 @@ done
 
 ### Intent
 
-Image, audio and video decode and preview — nineteen files. Ten outbound edges,
+Image, audio and video decode and preview — twenty-one files. Ten outbound edges,
 six of which point at `internal/term`, which is why this wave follows Task 30
 rather than preceding it on the raw count.
 

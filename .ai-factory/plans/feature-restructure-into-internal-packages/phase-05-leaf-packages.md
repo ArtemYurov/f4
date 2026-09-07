@@ -38,15 +38,27 @@ each wave phase file so a task can be implemented from one file.
    `pty_unix.go` is `//go:build linux`, and `solaris_pty.go` is
    `//go:build !windows` and contains no PTY code. There are 28 distinct tag
    expressions across 97 non-test files.
-3. **Take the tests.** `git mv` each `_test.go` neighbour in the same commit. A
-   package extraction that drops coverage is not done.
+3. **Take the tests — by subject, not by filename.** `git mv` each `_test.go`
+   file that Task 43's assignment table gives to this wave. A package extraction
+   that drops coverage is not done.
+   The neighbour rule alone is not enough: 154 of the 346 `_test.go` files have no
+   same-named source, because they are named for the scenario they exercise
+   (`bom_test.go`, `attributes_test.go`, `ansi_parser_sync_test.go`). 108 of those
+   reference no view type at all, so the gate cannot classify them either — that is
+   what Task 43 is for. Take its table as the roster and do not re-derive it here.
+   Two hazards it records, and this wave must honour both:
+   - a test that exercises symbols landing in **different** packages is split, or
+     hosted as an external test package, per Task 43 step 4 — never moved whole on
+     a guess;
+   - a test that covers **several** sources at once loses coverage of the ones that
+     went elsewhere. Task 43 step 5 names these; check its list before committing.
 4. **Rename to the package convention.** `<topic>.go` and `<topic>_<aspect>.go`,
    where the topic is the subject *inside* the package and never the package name
    — `panel/frame.go`, not `panel/panel_frame.go`. Platform suffixes compose on
    the end: `frame_dragdrop_windows.go`.
 5. **Export the minimum.** `cmd/f4` still calls in, so exported names are needed;
    everything else stays unexported. Update `command_palette_coverage_test.go`'s
-   directory→package map (one line, Task 2 step 3) if this wave owns an audited
+   file→target-package map (one line, Task 2 step 3) if this wave owns an audited
    symbol, and add the package to `architecture_test.go`'s layer map (one line).
 6. **Close the references and compare against the baseline.** Grep `docs/`,
    `README.md`, `AGENTS.md` and `.ai-factory/rules/base.md` for every path this
@@ -54,8 +66,10 @@ each wave phase file so a task can be implemented from one file.
    reference is an unfinished move.
    Then run the suites and **diff the result against the recorded baseline**. Any
    test red here and green there is a regression of this commit.
-   `.ai-factory/RESTRUCTURE_BASELINE.md` is an immutable snapshot of revision
-   `089fdc64` — never rewrite it from a fresh run. A regression written into the
+   `.ai-factory/RESTRUCTURE_BASELINE.md` is an immutable snapshot of the revision
+   recorded in its own header — the post-rebase HEAD from Task 0, which Task 1
+   wrote into it. Never rewrite it from a fresh run, and never assume a revision
+   for it: read the header. A regression written into the
    file on wave N becomes "known red" on wave N+1 and is lost for good, which is
    exactly the failure the baseline exists to prevent.
    Run all six modules, not only `go test ./...`: the four `tools/` modules are
@@ -205,7 +219,20 @@ table places it at layer 1 rather than 3.
    `update_helper_args.go`, `update_elevation_other.go` (`//go:build !windows`),
    `update_elevation_windows.go` (`windows`), `self_exec.go`,
    `self_exec_linux.go`, `self_exec_other.go`, `self_exec_termux.go`. Nine files —
-   run the step-1 gate on each; `self_exec*` is expected to score `0`.
+   run the step-1 gate on each. Eight score `0`. **`updater.go` does not**, and it
+   is the roster's largest file:
+   - `func CheckForUpdates(pf *PanelsFrame, manual bool)` (`:248`)
+   - `func performUpdate(pf *PanelsFrame, cand updateCandidate)` (`:375`)
+   - `api := &coreAPI{}` (`:94`)
+
+   `PanelsFrame` lands in `internal/panel` at Task 34 and `coreAPI` in
+   `internal/plughost` at Task 26 — eleven and three waves later, so **this file
+   does not move whole.** Resolve the three the way Task 32 step 2 resolves
+   `file_ops.go`'s five: `internal/update` exposes check / download / elevate /
+   restart as functions that take no view type, and the two panel-facing entry
+   points stay in `cmd/f4` and travel with the composition root in Task 36. The
+   `coreAPI` construction is a plugin-notification concern and stays behind with
+   them.
 2. `AppConfig` fields `UpdateChannel`, `UpdateInterval`, `LastUpdateCheck` and
    `LastUpdateVersion` are read here. `internal/config` does not exist yet
    (Task 24), so this wave must not read `AppConfig` directly. Pass the four values
@@ -257,8 +284,11 @@ part of this package.
 
 ### Acceptance Criteria
 
-- Nine files moved with their tests.
+- Eight files moved whole with their tests; `updater.go` moved minus the three
+  view-bound references from step 1, which stay in `cmd/f4`.
 - `grep -rn 'AppConfig' internal/update/` returns nothing.
+- `grep -rnE '\b(PanelsFrame|coreAPI)\b' internal/update/` returns nothing — this
+  is the check that step 1 was actually performed.
 - `go test ./cmd/f4 -run '^TestArchitecture'` passes with `internal/update` at
   layer 1.
 
@@ -299,7 +329,7 @@ design — the package imports no other `internal/*`, so it cannot create a cycl
    `command_palette_i18n.go` if its gate score is `0`, and the three language-list
    functions from `actions.go` (`listAvailableUILanguages`,
    `listAvailableHelpLanguages`, `getLanguageName` — all verified dependency-free).
-   Export `Msg`; it has 79 non-test callers.
+   Export `Msg`; it has 77 non-test caller files.
    Then set the hook Task 21 left: in `cmd/f4/main.go`, replace the temporary
    assignment with `action.Localize = i18n.Msg`.
 3. **`internal/theme`.** Move `colorspace.go` (gate 0), `farcolor_exp.go` (gate 0),

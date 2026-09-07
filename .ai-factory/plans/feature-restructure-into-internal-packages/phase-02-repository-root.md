@@ -48,7 +48,8 @@ so it lands alone, before any package moves. Closes issue #505.
 | `docs/ISSUES/*.md` | rename ×40 | Slug instead of the constant tail |
 | `internal/colorer/` | create | `radiola.hrd` + its own embed |
 | `embedded.go` | modify | Loses the second embed, keeps `README.md` |
-| `cmd/f4/colorer_plugin.go` | modify | Reads the new symbol |
+| `cmd/f4/colorer_plugin.go` | modify | Reads the new symbol (`:156`) |
+| `cmd/f4/colorer_plugin_test.go` | modify | Second consumer (`:56`) |
 | `plugins/plugring/` | create (move) | From `plugring/` |
 | `cmd/f4/plugring.go` | modify | Catalogue URL and dev fallback |
 | `cmd/f4/plugring_test.go` | modify | Relative path from `runtime.Caller` |
@@ -185,8 +186,11 @@ Three markdown files and one empty text file sit in the root. Prose belongs in
 ### Required Interfaces and Contracts
 
 - After this task the root contains, in addition to directories: `README.md`,
-  `LICENSE`, `go.mod`, `go.sum`, `embedded.go`, `f4.example.ini`, `highlight.ini`
-  and the dotfiles. Nothing else.
+  `LICENSE`, `go.mod`, `go.sum`, `embedded.go`, `f4.example.ini`, `highlight.ini`,
+  `AGENTS.md`, `skills-lock.json` and the dotfiles. Nothing else.
+  `AGENTS.md` and `skills-lock.json` are harness metadata that ships in this pull
+  request deliberately (see `index.md`'s Delivery note); they are not loose prose
+  and this task does not move them.
 
 ### Error Handling and Logging
 
@@ -204,8 +208,12 @@ No new tests. Step 3's grep is the check for `time.txt`.
 
 ### Verification
 
-- `ls -p | grep -v /`
-- Expected result: exactly `LICENSE README.md embedded.go f4.example.ini go.mod go.sum highlight.ini`.
+- `git ls-files -- ':(exclude)*/*' | grep -v '^\.'`
+- Expected result: exactly `AGENTS.md LICENSE README.md embedded.go f4.example.ini
+  go.mod go.sum highlight.ini skills-lock.json`.
+  Use `git ls-files`, not `ls`: `.gitignore:3` ignores `/f4`, so on any machine
+  that has run `go build ./cmd/f4` a plain `ls` also lists the built binary and the
+  check fails for a reason that has nothing to do with this task.
 - `grep -rn 'SPREADSHEET.md\|issue-703-solution\|ISSUE_95_FOLLOWUP' . --exclude-dir=.git --include='*.md' --include='*.go' --include='*.yml'`
 - Expected result: only hits pointing at the new `docs/ISSUES/` locations.
 
@@ -303,9 +311,13 @@ consumer, no callers.
 3. Delete the `//go:embed colorer/configs/base/hrd/rgb/radiola.hrd` directive and
    the `RadiolaHRD` variable from root `embedded.go:11-12`. The file keeps its
    package doc, its `import _ "embed"`, and `ReadmeMD`.
-4. Update the single consumer, `cmd/f4/colorer_plugin.go`: `embedded.RadiolaHRD` →
-   `colorer.RadiolaHRD`, adding the import. Confirm it is the only one:
-   `npx -y @colbymchenry/codegraph@1.6.0 callers RadiolaHRD`.
+4. Update **both** consumers — `cmd/f4/colorer_plugin.go:156` and
+   `cmd/f4/colorer_plugin_test.go:56` — from `embedded.RadiolaHRD` to
+   `colorer.RadiolaHRD`, adding the import to each. Confirm the list with
+   `grep -rn 'RadiolaHRD' --include='*.go' .`, which must return exactly three
+   lines: the declaration and those two.
+   Do **not** use `codegraph callers RadiolaHRD` for this — it reports "No callers
+   found" for a package-level variable and would hide the test file.
 5. Sweep `docs/` for `colorer/` path references (one file) and `AGENTS.md`.
 
 ### Required Interfaces and Contracts

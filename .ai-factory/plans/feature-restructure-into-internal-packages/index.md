@@ -4,9 +4,11 @@
 Mode: ultra
 Branch: feature/restructure-into-internal-packages
 Created: 2026-09-07
-Base revision: `089fdc64` — **replaced by Task 0 with the post-rebase HEAD.**
-Upstream was already one commit ahead when this bundle was written
-(`c31f9f50`, touching `cmd/f4/panels_frame_test.go`).
+Base revision: `83177611`, level with `upstream/main` at `c31f9f50` —
+**re-checked and replaced by Task 0 with the post-rebase HEAD.** One sync has
+already been performed at this revision, so Task 0's job is to re-measure the
+divergence, not to assume it is non-zero. Every count in this bundle was
+verified against `83177611`.
 
 ## Original Request
 
@@ -92,12 +94,12 @@ commit. Phase 4 carries the full table.
    the third in composition-root code that leaves last, which would make layer 0
    depend on layer 4. Task 4.
 2. `misc.go`'s split is inverted relative to the document: the numeric helpers
-   have the widest fan-out; `ScreenRow` has four callers and all are `_test.go`.
+   have the widest fan-out; `ScreenRow` has five callers and all are `_test.go`.
    Tasks 9 and 19.
 3. `internal/sysinfo` **cannot** import the extracted numeric helpers — the rule
    says it imports no other `internal/*`, so the extraction would create the
    forbidden edge rather than remove it. It keeps a private five-line copy for its
-   single call site at `cpu_info_darwin.go:33`. Task 19.
+   two call sites at `cpu_info_darwin.go:39` and `:47`. Task 19.
 4. The shared test harness cannot be one package. `setupMockPanelsFrame` calls
    `NewTerminalView`, `NewCommandLine`, `NewFileSystemPanel` and
    `PanelsFrame.initPTY`, so a package holding it imports three layer-3 packages —
@@ -128,6 +130,20 @@ own package is extracted *later*, and resolve each non-zero before moving.
 Measured over all 345 non-test files: **235 score zero on every type** and are a
 pure `git mv`; 58 score 1-3; 52 score 4 or more.
 
+**The eight-type grep is necessary, not sufficient.** It finds view types only. A
+file also may not reference any *other* symbol still in `cmd/f4`, and the gate is
+silent about those. `plugin_permissions_ui.go` scores `0` on all eight and still
+cannot move to `internal/dialog`, because its entry point takes a
+`*PermissionStore` that lives in `plugin_permissions.go` and leaves with
+`internal/plughost` one task later. The `codegraph callees` half of wave-procedure
+step 1 is the binding check; a zero score licenses nothing on its own.
+
+**Tests travel by subject, not by filename.** 154 of the 346 `_test.go` files have
+no same-named source — they are named for the scenario they exercise. "Take the
+`_test.go` neighbour" therefore strands 45% of the suite. Task 43 assigns every
+one of them, and every source file no wave names, to a package before the waves
+start.
+
 **Ground rules for every commit.**
 
 - Builds on the whole matrix — 26 targets, exotic ones included, `CGO_ENABLED=0`.
@@ -151,7 +167,7 @@ titles, not the ordering.
 
 ## Phase Index
 
-1. [Phase 1: Upstream Sync, Baseline and Barrier Removal](phase-01-baseline-and-barriers.md) — Tasks 0-9
+1. [Phase 1: Upstream Sync, Baseline and Barrier Removal](phase-01-baseline-and-barriers.md) — Tasks 0-9 and 43
 2. [Phase 2: Clear the Repository Root](phase-02-repository-root.md) — Tasks 10-15
 3. [Phase 3: Self-Contained Subsystems Under internal/](phase-03-subsystems.md) — Tasks 16-17
 4. [Phase 4: The Shared Primitives Leave cmd/f4](phase-04-shared-primitives.md) — Tasks 18-21
@@ -171,9 +187,12 @@ titles, not the ordering.
   reorders the menu unless the order is already explicit and golden-tested.
 - **Task 21 depends on Task 18** — the mechanism must be separated from the table
   before it can move.
-- **Task 22 depends on Tasks 6, 7 and 19** — the drive registry must be off the
-  panel type, the `Msg` call out of `gpu_info_linux.go`, and the private numeric
-  copy in place, or `internal/sysinfo` is not a leaf and cannot go first.
+- **Task 22 depends on Tasks 6, 7, 19, 20, 21 and 43** — the drive registry must be
+  off the panel type, the `Msg` call out of `gpu_info_linux.go`, and the private
+  numeric copy in place, or `internal/sysinfo` is not a leaf and cannot go first.
+  Task 20 is what makes `toast.Show` callable from a package: `showToast` has 16
+  call sites spanning eight future packages, so every wave from here on needs it.
+  Task 43 is what tells this wave which files it owns.
 - **Task 24 depends on Task 4** — `internal/config` cannot be a leaf while
   `StartupMode` lives in composition-root code.
 - **Tasks 22-35 depend on Tasks 19-21** — 37 call edges run into what would
@@ -181,11 +200,14 @@ titles, not the ordering.
   makes every intermediate commit uncompilable.
 - **Task 31 depends on Task 30** — six of media's ten outbound edges point at
   `internal/term`, which is why term precedes media despite the higher count.
-- **Task 32 depends on Task 30** — `clipboard.go`, `clipboard_async.go` and
+- **Task 32 depends on Tasks 5 and 30** — `clipboard.go`, `clipboard_async.go` and
   `background_jobs.go` are pulled into the term wave specifically to prevent a
-  `fileops ↔ term` cycle here.
-- **Task 33 depends on Task 29** — the `editor ↔ viewer` cycle is removed by the
-  viewer wave taking `top_bar.go`, `file_title.go` and `url_links.go`.
+  `fileops ↔ term` cycle here; and `queue_manager.go` only becomes movable once
+  Task 5 has taken the goroutine launch out of its `init()`.
+- **Task 33 depends on Tasks 14 and 29** — the `editor ↔ viewer` cycle is removed
+  by the viewer wave taking `top_bar.go`, `file_title.go` and `url_links.go`; and
+  `colorer_plugin.go` reads `colorer.RadiolaHRD`, which does not exist until
+  Task 14 creates `internal/colorer`.
 - **Task 34 depends on Tasks 26, 29, 30, 32 and 33** — `panel_plugins.go`'s
   `coreAPI` method is cut out in Task 26, and `internal/panel` imports viewer,
   term, fileops and editor.
@@ -208,6 +230,7 @@ titles, not the ordering.
 - [ ] Task 7: Remove sysinfo's last localization call (`gpu_info_linux.go:113`) ([details](phase-01-baseline-and-barriers.md#task-7-remove-sysinfos-last-localization-call))
 - [ ] Task 8: Add the module boundary auditor `cmd/f4/architecture_test.go` ([details](phase-01-baseline-and-barriers.md#task-8-add-the-module-boundary-auditor))
 - [ ] Task 9: Split the shared frame harness into `internal/testutil` + `internal/paneltest` ([details](phase-01-baseline-and-barriers.md#task-9-give-the-shared-frame-harness-a-home))
+- [ ] Task 43: Assign every `cmd/f4` file to a wave — 21 unnamed sources, 154 tests with no same-named source ([details](phase-01-baseline-and-barriers.md#task-43-assign-every-cmdf4-file-to-a-wave)) (depends on 8)
 
 ### Phase 2: Clear the Repository Root
 - [ ] Task 10: Move the three shell scripts to `scripts/` ([details](phase-02-repository-root.md#task-10-move-the-shell-scripts-to-scripts)) (depends on 1)
@@ -228,7 +251,7 @@ titles, not the ordering.
 - [ ] Task 21: Create `internal/action` with a localizer hook ([details](phase-04-shared-primitives.md#task-21-create-internalaction)) (depends on 18)
 
 ### Phase 5: Leaf Packages
-- [ ] Task 22: Extract `internal/sysinfo` (1 outbound) ([details](phase-05-leaf-packages.md#task-22-extract-internalsysinfo)) (depends on 6, 7, 19, 21)
+- [ ] Task 22: Extract `internal/sysinfo` (1 outbound) ([details](phase-05-leaf-packages.md#task-22-extract-internalsysinfo)) (depends on 6, 7, 19, 20, 21, 43)
 - [ ] Task 23: Extract `internal/update` (3 outbound) ([details](phase-05-leaf-packages.md#task-23-extract-internalupdate)) (depends on 22)
 - [ ] Task 24: Extract `internal/config`, `internal/i18n`, `internal/theme`, `internal/keymap` ([details](phase-05-leaf-packages.md#task-24-extract-internalconfig-internali18n-internaltheme-internalkeymap)) (depends on 4, 23)
 
@@ -244,8 +267,8 @@ titles, not the ordering.
 - [ ] Task 31: Extract `internal/media` ([details](phase-07-view-and-terminal.md#task-31-extract-internalmedia)) (depends on 30)
 
 ### Phase 8: File Operations and the Editor
-- [ ] Task 32: Extract `internal/fileops` ([details](phase-08-fileops-and-editor.md#task-32-extract-internalfileops)) (depends on 30, 31)
-- [ ] Task 33: Extract `internal/editor` ([details](phase-08-fileops-and-editor.md#task-33-extract-internaleditor)) (depends on 29, 32)
+- [ ] Task 32: Extract `internal/fileops` ([details](phase-08-fileops-and-editor.md#task-32-extract-internalfileops)) (depends on 5, 30, 31)
+- [ ] Task 33: Extract `internal/editor` ([details](phase-08-fileops-and-editor.md#task-33-extract-internaleditor)) (depends on 14, 29, 32)
 
 ### Phase 9: Panels and the Command Line
 - [ ] Task 34: Extract `internal/panel`, finish `semantic.go`, fill `internal/paneltest` ([details](phase-09-panel-and-cmdline.md#task-34-extract-internalpanel)) (depends on 26, 33)
@@ -264,8 +287,8 @@ titles, not the ordering.
 
 ## Commit Plan
 
-Thirty-nine commits. Task 0 is a rebase and Task 39 a measurement; neither
-produces one.
+Thirty-nine commits. Task 0 is a rebase, Task 39 a measurement, and Task 43 a
+classification recorded in this bundle rather than in the tree; none produces one.
 
 | # | Tasks | Message |
 |---|---|---|

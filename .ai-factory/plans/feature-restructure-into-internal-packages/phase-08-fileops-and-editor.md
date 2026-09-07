@@ -2,7 +2,7 @@
 
 Plan: [index.md](index.md)
 Tasks: 32-33
-Depends on: Phase 7
+Depends on: Phase 7, plus Task 5 (Task 32) and Task 14 (Task 33)
 
 ## Objective
 
@@ -24,9 +24,10 @@ done
 ```
 
 Non-zero for a later type → the file does not move whole. Move by `//go:build`
-line, never by filename. Take every `_test.go` neighbour. Rename to `<topic>.go` /
+line, never by filename. Take the `_test.go` files Task 43 assigns to this wave —
+not the same-named neighbours. Rename to `<topic>.go` /
 `<topic>_<aspect>.go`. Export only what has an external caller. One line to
-`architecture_test.go`'s layer map, one to the palette auditor's directory→package
+`architecture_test.go`'s layer map, one to the palette auditor's file→target-package
 map. Close every `docs/` reference in the same commit.
 
 ## Current-Code Evidence
@@ -45,8 +46,8 @@ map. Close every `docs/` reference in the same commit.
 | `text_editor_bridge.go` | `PanelsFrame` — `var _ vfs.TextEditorHost = (*PanelsFrame)(nil)` at `:16` | **not editor** — the assertion binds it to panel |
 | `visren_editor_bridge.go` | `PanelsFrame` | same |
 
-`EditorView` has 187 methods across 16 non-test files. Go requires a type's
-methods in the type's package, so all 16 land in `internal/editor` — that is the
+`EditorView` has 186 methods across 15 non-test files (counted receiver-anchored, `grep -hE '^func \([a-z]+ \*EditorView\)'`; the looser `grep 'func (.*EditorView)'` returns 187/16 by catching a function that merely takes the type). Go requires a type's
+methods in the type's package, so all 15 land in `internal/editor` — that is the
 package's size, not a choice.
 
 ## Files to Change
@@ -72,7 +73,8 @@ would otherwise hit was pre-empted in Task 30, which pulled `clipboard.go`,
 ### Implementation Steps
 
 1. Move the zero-score files whole: `file_op_dialog.go`, `file_op_tracker.go`,
-   `queue_manager.go`, `atomic_file.go`, `file_state.go`, `file_mask.go`,
+   `queue_manager.go` (movable only because Task 5 took the goroutine launch out of
+   its `init()`), `atomic_file.go`, `file_state.go`, `file_mask.go`,
    `compare_folders.go`, `archive_index.go`
    (`//go:build !dragonfly && !netbsd && !solaris && !illumos`),
    `archive_index_fallback.go` (`dragonfly || netbsd || solaris || illumos`),
@@ -151,7 +153,8 @@ platform decision in this package.
 ### Verification
 
 - `go test ./cmd/f4 -run '^TestActionOrderIsStable' -v`
-- Expected result: `--- PASS`, `git diff` on the golden file empty.
+- Expected result: `--- PASS`; the golden slice in
+  `cmd/f4/action_table_order_test.go` (Task 21 step 6) is unmodified.
 - `go test -timeout 25m ./...`
 - Expected result: identical to the Task 1 baseline.
 
@@ -163,7 +166,7 @@ platform decision in this package.
 
 The F4 editor on top of `internal/piecetable`. Twenty-three outbound edges — the
 largest of the interactive subsystems apart from panel and cmdline. `EditorView`
-carries 187 methods across 16 files, and Go requires every one of them in this
+carries 186 methods across 15 files, and Go requires every one of them in this
 package.
 
 ### Implementation Steps
@@ -174,8 +177,11 @@ package.
    graph and the file's own comment agree: it is the piece table's original
    buffer, not a filesystem utility. Read the two build tags from the files.
 3. Move `colorer_async.go` and `colorer_plugin.go` (3 `EditorView` references
-   each). `colorer_plugin.go` is the sole consumer of
-   `colorer.RadiolaHRD` after Task 14; confirm the import resolves.
+   each), plus `colorer_downloader.go`, which Task 43 assigns here. **This task
+   depends on Task 14**: `colorer_plugin.go:156` reads `colorer.RadiolaHRD`, which
+   does not exist until Task 14 creates `internal/colorer`. Its second consumer,
+   `colorer_plugin_test.go:56`, travels in the same commit; confirm both imports
+   resolve.
 4. Move `external_editor_process_unix.go` (`!windows`) and
    `external_editor_process_windows.go` (`windows`), plus
    `configuredExternalEditorCommand` from `actions.go` (Phase 4's table — it reads
@@ -194,7 +200,7 @@ package.
    `buffer_mapped_windows.go`, `colorer.go`, `colorer_async.go`,
    `external_unix.go`, `external_windows.go`.
 9. Add `"internal/editor": 3` to the auditor's layer map, and `editor` to the
-   palette auditor's directory→package map.
+   palette auditor's file→target-package map.
 
 ### Required Interfaces and Contracts
 
@@ -222,8 +228,10 @@ package.
 
 ### Tests
 
-`editor_view_test.go`, `editor_find_all_test.go`, `editor_target_line_test.go`,
-`editor_binary_open_test.go` and the colorer tests move. Several call
+`editor_view_test.go`, `editor_find_all_test.go`, `editor_target_line_test.go`
+and the colorer tests move. `editor_binary_open_test.go` touches
+`FileSystemPanel` ×1 as well as `EditorView` ×1 and is one of the five
+multi-package tests Task 43 step 4 rules on — take it only if that ruling says so. Several call
 `testutil.SwapFrameManager`; verify the drains they pass are still correct now
 that `waitForAsyncClipboard` lives in `internal/term`.
 
@@ -239,8 +247,8 @@ done
 
 - `go list -f '{{join .Imports "\n"}}' ./internal/editor | grep -E 'internal/(viewer|panel|cmdline|app)'`
   returns nothing.
-- All 16 `EditorView` method files are in `internal/editor`; `grep -rln 'func (.*EditorView)' cmd/f4/`
-  returns nothing.
+- All 15 `EditorView` method files are in `internal/editor`;
+  `grep -rlnE '^func \([a-z]+ \*EditorView\)' cmd/f4/` returns nothing.
 - `ls cmd/f4/text_editor_bridge.go cmd/f4/visren_editor_bridge.go` still succeed.
 - The palette auditor still has 42 keys and passes.
 

@@ -31,7 +31,7 @@ named *symbols* produces an uncompilable commit.
 | "the panels-frame state" | `DriveEntry`/`DriveRegistry`/`RegisterDrive`, `panels_frame.go:26-40`, needs only `sync` + `vfs` | already lifted in Task 6; goes to **`internal/sysinfo`** (Task 22) |
 | `path_identity.go` | 2 functions over `vfs`; callers are `file_ops.go` (fileops) and `panels_frame.go`/`file_panel.go` (panel) | **`internal/fileops`** (Task 32); panel → fileops is a legal layer-3 → layer-1 edge |
 | `search_history.go`, `menu_history.go` | zero `Msg`, zero `AppConfig`, zero `showToast`; only `vtui`/`vtinput` | **`internal/history`**, Task 20 |
-| `misc.go` minus numeric helpers | inverted: the numeric helpers have the widest fan-out (8 packages), `ScreenRow` has four callers and all are `_test.go`, `ReleaseHeavyMemory` has two | numeric → **`internal/numeric`** (Task 19); `ScreenRow` → `internal/testutil` (already, Task 9) |
+| `misc.go` minus numeric helpers | inverted: the numeric helpers have the widest fan-out (8 packages), `ScreenRow` has five callers and all are `_test.go`, `ReleaseHeavyMemory` has two | numeric → **`internal/numeric`** (Task 19); `ScreenRow` → `internal/testutil` (already, Task 9) |
 
 `actions.go`'s 20 view-free functions, by verified dependency:
 
@@ -51,8 +51,8 @@ So `actions.go` contributes exactly **four** functions to this phase. The other
 
 | Path | Symbols / lines | Why it matters |
 |---|---|---|
-| `cmd/f4/misc.go` | 11 functions, 108 lines | `bounded*` ×7, `nonNegativeUint64`, `runeCodepoint`, `ReleaseHeavyMemory`, `ScreenRow` |
-| `cmd/f4/toast.go` | 21 lines, `showToast` + `toastDurationOverride` | called from 16 files spanning 8 future packages |
+| `cmd/f4/misc.go` | 11 functions, 102 lines | `bounded*` ×7, `nonNegativeUint64`, `runeCodepoint`, `ReleaseHeavyMemory`, `ScreenRow` |
+| `cmd/f4/toast.go` | 20 lines, `showToast` + `toastDurationOverride` | called from 16 files spanning 8 future packages |
 | `cmd/f4/history_provider.go` | 349 lines, `HistoryRecord` (`:14`), `F4HistoryProvider` (`:63`) | the history storage model |
 | `cmd/f4/history_dialog.go` | 718 lines | builds its dialog directly on `vtui`; zero `Msg`, zero view types |
 | `cmd/f4/command_history_paths.go` | 65 lines | `vtui` only |
@@ -60,7 +60,7 @@ So `actions.go` contributes exactly **four** functions to this phase. The other
 | `cmd/f4/menu_history.go` | 204 lines | `vtui.VMenu`/`vtinput` glue, self-contained |
 | `cmd/f4/viewer_editor_history.go` | 317 lines, `PanelsFrame` ×3, `FileSystemPanel` ×1 | **not** part of `internal/history`; travels with `internal/panel` |
 | `cmd/f4/action_registry.go:24-135` | `Action`, `DisplayLabel`, `DisplayDescription`, `actionRegistry`, `actionOrder`, `RegisterAction` | the mechanism half |
-| `cmd/f4/cpu_info_darwin.go:33` | `boundedUint64ToInt` | sysinfo's one numeric call; gets a private copy |
+| `cmd/f4/cpu_info_darwin.go:39,:47` | `boundedUint64ToInt` | sysinfo's only two numeric calls; gets a private copy |
 
 Numeric-helper consumers after sysinfo takes its private copy — the count that
 justifies the package: `extui_host.go` (plughost), `session_unix.go` (term),
@@ -194,8 +194,8 @@ different packages, and no better home.
    `strconv`.
 3. **`internal/sysinfo` does not import this package.** Add a private
    `boundedUint64ToInt` to `cmd/f4/cpu_info_darwin.go` — five lines, the same body,
-   the same `#nosec` comment — because `cpu_info_darwin.go:33` is the only call
-   site in the sysinfo family and the dependency rules state that
+   the same `#nosec` comment — because `cpu_info_darwin.go:39` and `:47` are the only call
+   sites in the sysinfo family (line 33 is `func readStaticDarwinCPU()`, not a call) and the dependency rules state that
    `internal/sysinfo` imports no other `internal/*` package. Importing the shared
    helper would *create* the forbidden edge, not remove it.
 4. `misc.go:12` `ScreenRow` already moved to `internal/testutil` in Task 9. With
@@ -261,7 +261,7 @@ only indirectly.
 - `go list -f '{{join .Imports "\n"}}' ./internal/numeric` lists only `strconv`
   and `runtime/debug`.
 - `grep -n 'boundedUint64ToInt' cmd/f4/cpu_info_darwin.go` shows a local
-  definition.
+  definition plus its two call sites at `:39` and `:47`.
 - `grep -rn 'numeric\.' cmd/f4/cpu_info*.go cmd/f4/mem_info*.go cmd/f4/fs_info*.go cmd/f4/gpu_info*.go`
   returns nothing.
 
@@ -461,12 +461,20 @@ waves.
    the code.
 5. Update the seven registration files and `action_table.go` to call
    `action.RegisterAction` and to construct `action.Action`.
-6. Move `cmd/f4/action_registry_order_test.go` (Task 3) to
-   `internal/action/registry_order_test.go`. `TestActionOrderIsStable` asserts the
-   full ordered list, which still lives in `cmd/f4` at this point — so split it:
-   the ordering-mechanism cases (`TestActionOrderIndependentOfRegistrationSequence`,
-   `TestActionOrderCoversRegistry`) move to `internal/action`; the golden-list case
-   stays in `cmd/f4` where the table is, and moves with it in Task 36.
+6. **Split** `cmd/f4/action_registry_order_test.go` (Task 3) — do not move it
+   whole. `TestActionOrderIsStable` asserts the full ordered list, which is
+   produced by `action_table.go` and still lives in `cmd/f4` at this point.
+   - The ordering-mechanism cases
+     (`TestActionOrderIndependentOfRegistrationSequence`,
+     `TestActionOrderCoversRegistry`) go to
+     `internal/action/registry_order_test.go`.
+   - The golden-list case and its golden slice stay in `cmd/f4`, in a file named
+     **`cmd/f4/action_table_order_test.go`** — named for the table it guards, so it
+     travels with `action_table.go` to `internal/app` in Task 36 step 8.
+   - `cmd/f4/action_registry_order_test.go` no longer exists after this task. Every
+     later task that verifies the golden slice cites
+     `cmd/f4/action_table_order_test.go` (Task 32), and Task 36 step 8 moves that
+     file. Task 18 runs *before* this split and correctly cites the original name.
 
 ### Required Interfaces and Contracts
 
@@ -506,8 +514,10 @@ No logging. The registry is fully determined before the UI exists.
 ### Tests
 
 - `TestActionOrderIndependentOfRegistrationSequence` and
-  `TestActionOrderCoversRegistry` move to `internal/action`.
-- `TestActionOrderIsStable` (the golden list) stays in `cmd/f4`.
+  `TestActionOrderCoversRegistry` move to
+  `internal/action/registry_order_test.go`.
+- `TestActionOrderIsStable` (the golden list) stays in `cmd/f4`, in
+  `cmd/f4/action_table_order_test.go`.
 - Add `TestDisplayLabelUsesLocalizeFallback`: with the default `Localize`, a
   `LabelKey` resolves to the English `Label`, not to `{Key}` — this is the exact
   regression step 3's `{`-prefixed default prevents.
@@ -520,14 +530,17 @@ go test ./internal/action/... ./cmd/f4/...
 
 - `go list -f '{{join .Imports "\n"}}' ./internal/action | grep internal/` returns
   nothing.
-- `ls cmd/f4/action_registry.go` fails; `ls cmd/f4/action_table.go` succeeds.
+- `ls cmd/f4/action_registry.go` and `ls cmd/f4/action_registry_order_test.go`
+  both fail; `ls cmd/f4/action_table.go` and
+  `ls cmd/f4/action_table_order_test.go` both succeed.
 - `TestActionOrderIsStable` passes with its golden slice unmodified.
 - `TestDisplayLabelUsesLocalizeFallback` passes.
 
 ### Verification
 
 - `go test ./cmd/f4 -run '^TestActionOrderIsStable' -v`
-- Expected result: `--- PASS`; `git diff` on the test file is empty.
+- Expected result: `--- PASS`; the golden slice inside
+  `cmd/f4/action_table_order_test.go` is byte-identical to the one Task 3 captured.
 - `go test ./internal/action/... -v`
 - Expected result: three tests pass.
 - `go test -timeout 25m ./...`

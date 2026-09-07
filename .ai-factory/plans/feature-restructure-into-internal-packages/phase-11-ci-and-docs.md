@@ -27,10 +27,10 @@ plan it describes a fact.
 | `build.yml:1332` | `go list ./... \| grep -Ev '^github.com/unxed/f4/cmd/f4$'` | the `packages` scope, which absorbed every migrated package automatically |
 | `.golangci.yml`, `.golangci-strict.yml` | contain no paths | need no edit |
 | incremental lint | `--new-from-rev=origin/main` | rename detection across a `package` clause change |
-| `AGENTS.md` | 13 path mentions; "687 files in one flat package main" | structural map, now wrong |
+| `AGENTS.md` | 6 `cmd/f4` mentions; "687 files in one flat package main" (`:23`) | structural map, now wrong |
 | `.ai-factory/rules/base.md` | "Module Structure" describes the pre-move tree | conventions file |
-| `.ai-factory/ARCHITECTURE.md` | 549 lines; `(move)`/`(extract)` markers, migration policy, extraction order | changes genre |
-| `docs/` | 48 subsystem pages, 20 mentioning `cmd/f4` | per-commit sweeps kept paths current; subjects still need review |
+| `.ai-factory/ARCHITECTURE.md` | 559 lines; `(move)`/`(extract)` markers, migration policy, extraction order | changes genre |
+| `docs/` | 48 top-level pages, 13 mentioning `cmd/f4`; 20 across the whole `docs/` tree including `ISSUES/` | per-commit sweeps kept paths current; subjects still need review |
 
 ## Files to Change
 
@@ -76,9 +76,11 @@ This is done **once, here**, not fourteen times during the waves.
    to exclude. Shard by package the same way as the lint job.
 4. Keep the two behaviours that are not about sharding:
    - the global `-skip '^TestAllDialogs_LayoutValidation$'` at `build.yml:1187`
-     and its single-threaded re-run, now pointed at `./internal/dialog` by Task 25.
-     The reason is unchanged: layout validation mutates shared UI registries from
-     parallel subtests.
+     and its single-threaded re-run. Confirm which package it points at — Task 25
+     step 5 leaves it at `./internal/dialog`, `./cmd/f4` or `./internal/panel`
+     depending on how `dialog_layouts_test.go` was split — and require an explicit
+     `--- PASS` from that target here. The reason for the isolation is unchanged:
+     layout validation mutates shared UI registries from parallel subtests.
    - the race-instrumented cache keys at `build.yml:1288-1296`. Update the
      `cache-key` values to match the new shard names; the reason for a separate key
      (the shared setup-go key is claimed by a non-race job) still holds.
@@ -228,8 +230,10 @@ updating a path.
 3. `.ai-factory/rules/base.md`'s Module Structure section lists the pre-move tree
    and tells new code where to go. Update the list, and re-derive the counts it
    quotes.
-4. Walk the 20 `docs/` pages that mention `cmd/f4` and check each for a claim about
-   *structure* rather than a path: which subsystem owns what, what is in one
+4. Walk the 13 of 48 top-level `docs/*.md` pages that mention `cmd/f4` and check
+   each for a claim about *structure* rather than a path (`grep -rl 'cmd/f4' docs/`
+   returns 20 because it also walks `docs/ISSUES/`, which is a historical record
+   and is not rewritten here): which subsystem owns what, what is in one
    package, what a contributor must not couple.
 5. `README.md:233`, `:237`, `:241` — the build and icon-generation instructions.
    Confirm Tasks 11 and 27 left them correct.
@@ -287,7 +291,14 @@ transition and leaving a description of the result.
 
 ### Implementation Steps
 
-1. **Folder Structure** (`:47-170`): strip every `(move)` and `(extract)` marker.
+0. **Locate the sections by heading, never by line number.** Start with
+   `grep -n '^#\{1,3\} ' .ai-factory/ARCHITECTURE.md` and work from the offsets it
+   prints. Every section below is named by its heading text for that reason: line
+   numbers in a 559-line document drift with the first edit, and the sections in
+   step 4 are bold paragraphs inside **Folder Structure**, not headings of their
+   own — find them by their bold title.
+1. **Folder Structure** (heading to the next one): strip every `(move)` and
+   `(extract)` marker.
    Nothing moves any more; the tree is the tree. Keep the annotations that explain
    *why* a directory sits where it does — `sdk/` and `vfs/` being importable from
    outside the module, `embedded.go` being pinned by `//go:embed`,
@@ -297,33 +308,36 @@ transition and leaving a description of the result.
    `internal/action`, `internal/toast`, `internal/history`, `internal/numeric`,
    `internal/testutil` and `internal/paneltest`. Give the last two a line saying
    they are test scaffolding and no production file imports them.
-3. **Overview** (`:3-25`): "Two things are missing… `cmd/f4` holds 345 non-test
+3. **Overview** (first heading): "Two things are missing… `cmd/f4` holds 345 non-test
    files and ~109k lines in one flat `package main`" is false after Phase 10.
    Rewrite the paragraph to state what the layout *is* and what rule it expresses.
 4. **Delete the sections that are scaffolding**, not description:
-   - "**`app` is two things, and only one of them is the root**" (`:172-198`) with
-     its file-split table. It is an instruction for performing the extraction.
-   - "**`sysinfo` keeps its own copy of the one numeric helper it needs**"
-     (`:193-198`) — *keep the rule*, drop the justification framed as a migration
+   - the bold paragraph "**`app` is two things, and only one of them is the
+     root**" inside Folder Structure, with its file-split table. It is an
+     instruction for performing the extraction.
+   - the bold paragraph "**`sysinfo` keeps its own copy of the one numeric helper
+     it needs**" — *keep the rule*, drop the justification framed as a migration
      decision. It is a live constraint: sysinfo is a leaf and must stay one.
-   - "**Legacy vs New Code Policy**" (`:420-453`): the extraction order, the
+   - the whole **Legacy vs New Code Policy** section: the extraction order, the
      one-subsystem-per-commit rule, "no rewrites inside a move commit", "a move is
      not done until the prose agrees". Scaffolding, all of it. What survives is the
      first bullet, reworded: new code goes into the module it belongs to, and if
      none fits, create the package.
 5. **Keep unchanged** — these are permanent contracts, not migration aids:
-   - Decision Rationale (`:26-46`)
-   - File Naming Inside a Package (`:234-270`), including the multi-type-file rule
-   - Dependency Rules and the layer table (`:271-331`), updated only with the new
-     package names from step 2
-   - Layer / Module Communication (`:332-356`)
-   - Key Principles (`:357-419`), with principle 5's test-scaffolding paragraph
-     rewritten to describe `internal/testutil` and `internal/paneltest` as they
-     exist rather than as a plan
-   - Code Examples (`:454-527`)
-   - "Not every directory here is one module" (`:324-331`) — six `go.mod` files is
-     a standing fact
-6. **Anti-Patterns** (`:528-549`): "**Adding to the flat package**" must be
+   - **Decision Rationale**
+   - **File Naming Inside a Package**, including the multi-type-file rule
+   - **Dependency Rules** and the layer table, updated only with the new package
+     names from step 2. It already places `internal/wincon`, `internal/ttyx`,
+     `internal/netproxy` and `internal/hideconsole` at layer 0; Task 8 seeds the
+     auditor's map with the first three so the two agree.
+   - **Layer / Module Communication**
+   - **Key Principles**, with principle 5's test-scaffolding paragraph rewritten to
+     describe `internal/testutil` and `internal/paneltest` as they exist rather
+     than as a plan
+   - **Code Examples**
+   - "Not every directory here is one module", inside Dependency Rules — six
+     `go.mod` files is a standing fact
+6. **Anti-Patterns** (last section): "**Adding to the flat package**" must be
    reworded. There is no flat package any more, but the rule it protects survives:
    a new feature belongs in the module it serves, and if none fits, in a new
    package — never appended to whichever package is nearest.

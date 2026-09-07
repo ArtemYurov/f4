@@ -37,13 +37,22 @@ it becomes a plain function taking the type, per the project decision on
 cross-package methods. Across all 345 non-test files, **235 score zero on every
 type** and are a pure `git mv`; 58 score 1-3 and 52 score 4 or more.
 
+**A zero score licenses nothing on its own.** The grep finds view types only; a
+file may reference any *other* symbol still in `cmd/f4` and the gate stays silent.
+The worked example is in this phase: `plugin_permissions_ui.go` scores `0` on all
+eight types, and its entry point is
+`func actionPluginPermissions(store *PermissionStore)` — a type declared in
+`plugin_permissions.go:76`, which does not leave `cmd/f4` until Task 26. Run the
+`codegraph callees` half of wave-procedure step 1 on every file, including the
+zero-scoring ones; that is the check that actually binds.
+
 Then: move by `//go:build` line and never by filename (`pty_unix.go` is
 `//go:build linux`; `solaris_pty.go` is `//go:build !windows` and holds no PTY
-code); take every `_test.go` neighbour; rename to `<topic>.go` /
+code); take the `_test.go` files Task 43 assigns to this wave; rename to `<topic>.go` /
 `<topic>_<aspect>.go` where the topic is the subject inside the package; export
 only what has an external caller; add one line to `architecture_test.go`'s layer
 map and, for an audited symbol, one line to
-`command_palette_coverage_test.go`'s directory→package map; close every `docs/`,
+`command_palette_coverage_test.go`'s file→target-package map; close every `docs/`,
 `README.md` and `AGENTS.md` reference in the same commit.
 
 ## Current-Code Evidence
@@ -60,9 +69,9 @@ map and, for an audited symbol, one line to
 | `cmd/f4/plughost.go` | 2 | resolve |
 | `cmd/f4/plugin_hotkeys.go`, `plugins.go` | 1 each | resolve |
 | `cmd/f4/plugin_contributions.go` | 4 | resolve |
-| `cmd/f4/gui_*.go`, `window_icon_*.go`, `window_position.go`, `winepath_*.go` | gate 0, ten files | move whole |
+| `cmd/f4/gui_*.go`, `window_icon_*.go`, `window_position.go`, `winepath_*.go` | gate 0, eighteen files | move whole |
 | `cmd/f4/window_icon_darwin.go:18` | `//go:embed assets/icon/generated/f4.icns` | `assets/icon/` moves to `internal/gui` |
-| `cmd/f4/dragdrop.go` | `PanelsFrame` ×13 | assigned to gui by the call graph, but the type says panel — **goes to `internal/panel` whole** |
+| `cmd/f4/dragdrop.go` | `PanelsFrame` ×6, `FileSystemPanel` ×8 | assigned to gui by the call graph, but the types say panel — **goes to `internal/panel` whole** |
 | `cmd/f4/macro_export.go` | gate 0 | move whole |
 | `cmd/f4/macro.go` | 6 | resolve |
 | `cmd/f4/macro_host.go`, `macro_lua_api.go` | 2 each | resolve |
@@ -105,7 +114,7 @@ This wave also collects the eight dialog helpers stranded in `actions.go`
 
 1. Apply the gate to every candidate. Zero-score files move whole: `help.go`,
    `help_search.go`, `themed_table.go`, `dialog_button_layout.go`,
-   `file_dialog.go`, `goto_dialog.go`, `command_palette*.go` (eleven files —
+   `file_dialog.go`, `goto_dialog.go`, `command_palette*.go` (thirteen files —
    score each; `command_palette_direct_panels.go` and
    `command_palette_direct_frames.go` are the likely non-zeros).
 2. Resolve the non-zeros individually: `grabber.go` (1), `share_dialog.go` (3),
@@ -113,8 +122,17 @@ This wave also collects the eight dialog helpers stranded in `actions.go`
    between "stays with its view" and "becomes a free function taking the type".
 3. Take the settings dialogs Phase 5 deferred here: `portable.go`,
    `startup_settings.go`, `codepage_settings.go`, `hotkeys_ui.go`,
-   `proxy_settings_ui.go`, `colorer_settings.go`, `plugin_permissions_ui.go`.
-   Each scores 0 or 1 and each is `Msg`-heavy UI, not configuration storage.
+   `proxy_settings_ui.go`, `colorer_settings.go`. Each scores 0 or 1 and each is
+   `Msg`-heavy UI, not configuration storage.
+   Also take `compare_folders_ui.go` (gate 4, `Msg` ×28), which Task 43 assigns
+   here — it is the Advanced Compare dialog, not the comparison engine that Task 32
+   takes with `compare_folders.go`.
+   **`plugin_permissions_ui.go` does not come here.** It scores `0`, but
+   `actionPluginPermissions` takes a `*PermissionStore` declared in
+   `plugin_permissions.go:76`, which leaves in Task 26. Moving it now gives an
+   uncompilable commit; moving it here at all would force
+   `internal/dialog` → `internal/plughost`, which this task's own contract forbids.
+   It goes to Task 26 with the type it depends on.
 4. `git mv cmd/f4/help internal/dialog/help`. The `//go:embed help/en.hlf`
    directive at `help.go:18` is relative to its own directory and needs no edit
    once both move together.
@@ -130,6 +148,22 @@ This wave also collects the eight dialog helpers stranded in `actions.go`
      neither: it is skipped everywhere and re-run nowhere. **The build stays green
      and the test silently stops running.** Repoint the isolated re-run at
      `./internal/dialog`, keep the global skip, and confirm the test actually ran.
+
+     **But `dialog_layouts_test.go` cannot move whole in this commit.** It calls
+     `NewPanelsFrame()` (`:234`), `NewFileSystemPanel(…)` (`:235-236`) and casts
+     `panels.panels[0].(*FileSystemPanel)` (`:242-243`, `:268-269`) — types that do
+     not leave `cmd/f4` until Task 34, and which `internal/dialog` may never
+     import. Choose one and record it in the commit message:
+     - **split** — the layout assertions that need no panel move now; the
+       frame-driven cases stay in `cmd/f4` and travel to `internal/panel` at Task
+       34 as `package panel_test`; or
+     - **defer the whole file** to Task 34 and leave the CI re-run pointed at
+       `./cmd/f4` until then, repointing it at `./internal/panel` in that commit.
+
+     Either way the isolated re-run must name a target where the test actually
+     lives at that commit. Pointing it at `./internal/dialog` while the test is
+     still elsewhere reproduces exactly the silent-skip failure this step exists to
+     prevent.
 6. Rename to the topic convention: `help.go`, `help_search.go`, `palette.go`,
    `palette_search.go`, `palette_ui.go`, `table.go`, `buttons.go`, `file.go`,
    `goto.go`, `settings_portable.go`, `settings_codepage.go`,
@@ -157,10 +191,16 @@ and nothing writes to stdout, which is the rendered UI.
 
 ### Tests
 
-Every `_test.go` neighbour moves, including `dialog_layouts_test.go`,
-`command_palette_test.go`, `command_palette_dynamic_test.go`, `file_dialog_test.go`
-and `grabber_mouse_test.go`. `command_palette_coverage_test.go` **stays in
-`cmd/f4`** — it is the module-wide auditor.
+Take the `_test.go` files Task 43 assigns to this wave, including
+`command_palette_test.go`, `file_dialog_test.go` and `grabber_mouse_test.go`.
+Two exceptions:
+- `command_palette_coverage_test.go` **stays in `cmd/f4`** — it is the module-wide
+  auditor.
+- `command_palette_dynamic_test.go` touches `PanelsFrame` ×8, `FileSystemPanel` ×6
+  and `coreAPI` ×2, so it spans panel and plughost. It is one of the five
+  multi-package tests Task 43 step 4 rules on; follow that ruling rather than
+  moving it here.
+- `dialog_layouts_test.go` follows the step-5 decision above, not this list.
 
 ```
 go test ./internal/dialog/...
@@ -171,7 +211,8 @@ go test ./cmd/f4 -run '^TestCommandPalette'
 ### Acceptance Criteria
 
 - `TestAllDialogs_LayoutValidation` reports `--- PASS`, not `--- SKIP` and not
-  absent, from the CI command in step 5.
+  absent, from the CI command in step 5 — run against whichever package step 5's
+  decision put it in.
 - `find internal/dialog/help -name '*.hlf'` matches the pre-move count.
 - `grep -rn 'cmd/f4/help' . --exclude-dir=.git` returns nothing.
 - `command_palette_coverage_test.go` still has 42 keys and passes.
@@ -205,7 +246,13 @@ Three files the call graph assigns here despite their names: `api.go` (the
    `coreAPI` itself, which lands here), `extui_host.go`, `plughost_ffi.go`,
    `rpc_plugin.go`, `rpc_panel.go`, `rpc_vfs.go`, `rpc_commands.go`,
    `wasm_plugin.go`, `lua_plugin.go`, `plugin_permissions.go`,
+   `plugin_permissions_ui.go` (declined by Task 25: its
+   `actionPluginPermissions(store *PermissionStore)` binds it to
+   `plugin_permissions.go`, which moves in this same commit),
    `plugin_scaffold.go`, `sqlite_actions.go`.
+   Task 43 also assigns `plugring.go`, `plugring_meta.go` and `plugring_ui.go`
+   here — Task 15 edits `plugring.go`'s catalogue URL but never gives it a package.
+   Score all three before moving; `plugring_ui.go` is gate 3.
 2. Resolve the non-zeros: `plughost.go` (2), `plugins.go` (1),
    `plugin_hotkeys.go` (1), `plugin_contributions.go` (4).
 3. `panel_plugins.go` scores `pluginPanelInstance` ×17, `PanelsFrame` ×5,
@@ -278,7 +325,7 @@ is term, and anything drawing *a window* is gui.
 
 ### Implementation Steps
 
-1. Apply the gate. Zero-score, move whole — ten files:
+1. Apply the gate. Zero-score, move whole — eighteen files:
    `gui_backend_capability.go`, `gui_backend_capability_ffi.go`,
    `gui_backend_capability_stub.go`, `gui_font.go`, `gui_font_catalog.go`,
    `gui_font_catalog_unix.go`, `gui_font_catalog_windows.go`, `gui_font_combo.go`,
@@ -290,8 +337,7 @@ is term, and anything drawing *a window* is gui.
    `//go:embed assets/icon/generated/f4.icns` is directory-relative and needs no
    edit.
 3. **`dragdrop.go` does not come here.** The call graph associates it with the GUI,
-   but it carries `PanelsFrame` ×13 — five `*PanelsFrame` methods and one
-   `*FileSystemPanel` method. Go requires a type's methods in the type's package,
+   but it declares five `*PanelsFrame` methods and one `*FileSystemPanel` method. Go requires a type's methods in the type's package,
    so it travels **whole** to `internal/panel` as `frame_dragdrop.go` (Task 34). Do
    not split it.
 4. **Infrastructure, in this commit:**

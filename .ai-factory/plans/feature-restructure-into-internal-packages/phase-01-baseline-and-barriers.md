@@ -1,7 +1,7 @@
 # Phase 1: Upstream Sync, Baseline and Barrier Removal
 
 Plan: [index.md](index.md)
-Tasks: 0-9
+Tasks: 0-9 and 43
 Depends on: none
 
 ## Objective
@@ -26,13 +26,15 @@ commit: a move commit must read as a rename.
 | `cmd/f4/navigation_mode.go:7` | `type PanelNavigationMode` | config field type declared outside `config.go` |
 | `cmd/f4/compare_folders.go:61` | `type compareOptions` | same |
 | `cmd/f4/startup_backend.go:11` | `type StartupMode` | same, and in composition-root code that leaves last |
-| `cmd/f4/queue_manager.go:308-317` | `func init()` | constructs `GlobalQueueManager` and starts `workerLoop` on import |
+| `cmd/f4/queue_manager.go:312-318` | `func init()` | constructs `GlobalQueueManager` and starts `workerLoop` on import |
 | `cmd/f4/panels_frame.go:26-40` | `DriveEntry`, `DriveRegistry`, `RegisterDrive` | drive registry parked on the panel type; needs only `vfs` + `sync` |
 | `cmd/f4/gpu_info_linux.go:113` | `Msg("InfoPanel.GPUWSLVirt")` | the one localization call inside the sysinfo family |
 | `cmd/f4/command_palette_coverage_test.go` | 42 audit keys | keyed by `cmd/f4/<file>.go:(*Type).Method` |
 | `cmd/f4/frame_manager_test_helpers_test.go:129` | `swapFrameManager` | 63 test files; calls `waitForAsyncClipboard`, `waitForDirectoryLoads` |
 | `cmd/f4/panels_frame_test.go:794` | `setupMockPanelsFrame` | 28 test files; constructs `PanelsFrame`, `TerminalView`, `CommandLine`, `FileSystemPanel` |
-| `cmd/f4/misc.go:12` | `ScreenRow` | four callers, all `_test.go` |
+| `cmd/f4/misc.go:12` | `ScreenRow` | five callers, all `_test.go` |
+| `cmd/f4/frame_manager_test_helpers_test.go:52` | `appendFrameManagerScreenForTest` | 2 test files; moves with the harness |
+| `cmd/f4/frame_manager_test_helpers_test.go:66` | `taskPumpGoroutineProfile` | 2 test files; the harness's own test is built on it |
 
 ## Files to Change
 
@@ -72,16 +74,16 @@ automatically. Once two hundred of them have moved to `internal/*` with a change
 commit becomes a manual conflict resolution inside someone else's change — one the
 implementer did not write and does not understand.
 
-This is not hypothetical. Measured while this plan was being written:
+This is not hypothetical. `c31f9f50` ("test: isolate terminal busy drive menu
+frame") touches `cmd/f4/panels_frame_test.go` — the file that holds
+`setupMockPanelsFrame` at line 794, which Task 9 refactors and Task 34 moves.
+Upstream gained a commit in a first-wave file in the course of one day.
 
-```
-git rev-list --left-right --count upstream/main...HEAD   →   1   11
-c31f9f50  test: isolate terminal busy drive menu frame
-```
-
-The single upstream commit touches `cmd/f4/panels_frame_test.go` — the file that
-holds `setupMockPanelsFrame` at line 794, which Task 9 refactors and Task 34
-moves. Upstream gained a commit in a first-wave file in the course of one day.
+**One sync has already been performed**, onto `upstream/main` = `c31f9f50`; the
+branch is `83177611` and `git rev-list --left-right --count upstream/main...HEAD`
+currently reports `0 14`. That does not retire this task: time passes between
+planning and execution, and the window has to be re-measured rather than assumed.
+Run the steps below and expect them to be cheap, not to be no-ops.
 
 Task 0 and Task 1 run as one sitting: a baseline is only meaningful for the
 revision it was taken at, and rebasing after recording one invalidates it.
@@ -104,9 +106,12 @@ revision it was taken at, and rebasing after recording one invalidates it.
    ls cmd/f4/*.go | grep -v '_test\.go$' | wc -l            # expect 345
    ls cmd/f4/*_test.go | wc -l                              # expect 346
    grep -c '^func ' cmd/f4/actions.go                       # expect 81
-   grep -l '^func (.* \*\?PanelsFrame)' cmd/f4/*.go | grep -v _test | wc -l   # expect 17
-   grep -l '^func (.* \*\?EditorView)' cmd/f4/*.go | grep -v _test | wc -l    # expect 16
-   grep -l '^func (.* \*\?FileSystemPanel)' cmd/f4/*.go | grep -v _test | wc -l # expect 7
+   # Receiver-anchored. The looser '^func (.*\*T)' form counts methods of OTHER
+   # types that merely take a *T parameter and inflates every one of these.
+   grep -lE '^func \([a-z]+ \*PanelsFrame\)' $(ls cmd/f4/*.go|grep -v _test) | wc -l      # expect 16
+   grep -lE '^func \([a-z]+ \*EditorView\)' $(ls cmd/f4/*.go|grep -v _test) | wc -l       # expect 15
+   grep -lE '^func \([a-z]+ \*FileSystemPanel\)' $(ls cmd/f4/*.go|grep -v _test) | wc -l  # expect 6
+   grep -lE '^func \([a-z]+ \*TerminalView\)' $(ls cmd/f4/*.go|grep -v _test) | wc -l     # expect 5
    awk 'NR>=254 && /^}/ {print NR; exit}' cmd/f4/action_registry.go  # expect 2807
    ```
    Also check whether upstream touched any file named in Phases 1-4:
@@ -278,25 +283,50 @@ file moves.
    `<package name>.<qualified symbol>`:
    `cmd/f4/file_panel.go:(*FileSystemPanel).ProcessKey` becomes
    `panel.(*FileSystemPanel).ProcessKey`.
-2. Rewrite all 42 entries in the exception/audit list to the new shape. Today
-   every package name is `main`; write the *target* package name from the wave
-   assignment (`panel`, `editor`, `viewer`, `dialog`, `cmdline`, `term`) so the
-   list does not need touching again when the file actually moves.
-3. Because step 2 writes future package names while the code is still `package
-   main`, the walker must derive the package from the file's *target* location
-   during the migration. Do this with one explicit map from directory to package
-   name, seeded with `cmd/f4 → main`, and update that single map entry as each
-   wave lands. That is one line per wave instead of up to 42.
+2. Rewrite all 42 entries in the exception/audit list to the new shape, using the
+   **target** package name so the list is never touched again.
+   The 42 keys come from 35 distinct source files
+   (`grep -o 'cmd/f4/[a-z0-9_]*\.go' cmd/f4/command_palette_coverage_test.go | sort -u`),
+   and their destinations are **ten** packages, not six:
+   - `app` — `actions.go`, `ai_chat_panel.go`, `arkanoid.go`, `sheet_frame.go`
+   - `cmdline` — `apply_command_output.go`, `command_line.go`
+   - `dialog` — `bookmarks_dialog.go`, `codepage_settings.go`,
+     `command_palette_ui.go`, `find_file.go`, `grabber.go`, `hotkeys_ui.go`
+   - `editor` — `editor_base64.go`, `editor_find_all.go`, `editor_view.go`
+   - `fileops` — `fuse_mount_list.go`, `queue_manager.go`
+   - `macro` — `macro.go`
+   - `media` — `image_view.go`, `player_panel.go`, `video_view.go`
+   - `panel` — `drive_bookmarks_ui.go`, `file_associations_editor.go`,
+     `file_associations_ui.go`, `file_panel.go`, `info_panel.go`,
+     `panel_plugins.go`, `panels_frame.go`, `quick_view_panel.go`,
+     `temp_panel.go`, `user_menu_ui.go`, `viewer_editor_history.go`
+   - `plughost` — `plugin_hotkeys.go`, `rpc_panel.go`
+   - `viewer` — `viewer_view.go`
+
+   `term` owns none of the 42 and must not appear in the list.
+3. **The walker must emit the same target name from day one, while every file is
+   still in `cmd/f4`** — otherwise the audit list says `panel.X`, the walker says
+   `main.X`, and the test is red from this commit until Task 36. A
+   file→target-package map cannot do this: at this task there is only one directory.
+   Use a **file→target-package** map instead, seeded with all 35 entries above, and
+   have the walker fall back to the file's actual directory for anything not in it.
+   Each wave then deletes the entries it has satisfied — the map shrinks to nothing
+   by Task 37, and the emitted keys never change.
 4. Assert in the test that the audit list and the discovered set have the same
-   cardinality (42), so a silent drop is a failure rather than a smaller list.
+   cardinality (42), so a silent drop is a failure rather than a smaller list. Run
+   the test at the end of this task and require `--- PASS`, not merely compilation:
+   a mismatch here is the failure mode step 3 exists to prevent.
 
 ### Required Interfaces and Contracts
 
 - Key format: `<package>.<receiver-qualified symbol>`, e.g.
   `panel.(*FileSystemPanel).ProcessKey`, `editor.(*EditorView).ProcessKey`.
-- The directory→package map is the only place a path appears. Its contract:
-  exactly one entry per extracted package, plus `cmd/f4 → main`.
-- Cardinality invariant: 42 audit keys before and after this task.
+- The file→target-package map is the only place a path appears. Its contract: one
+  entry per audited file whose target package differs from its current directory,
+  and it is empty once the last wave lands.
+- Cardinality invariant: 42 audit keys before and after this task, and after every
+  wave. If a key's subject genuinely disappears, that is a finding to report, not a
+  number to adjust.
 
 ### Error Handling and Logging
 
@@ -322,10 +352,11 @@ go test ./cmd/f4 -run '^TestCommandPalette' -v
 ### Verification
 
 - `grep -c 'cmd/f4/' cmd/f4/command_palette_coverage_test.go`
-- Expected result: `0` inside the key list (imports and comments may still mention
-  the path).
-- `go test ./cmd/f4 -run '^TestCommandPalette'`
-- Expected result: `ok`.
+- Expected result: `0` inside the key list; the file→target-package map's 35
+  entries are keyed by bare basename, not by path.
+- `go test ./cmd/f4 -run '^TestCommandPalette' -v`
+- Expected result: `--- PASS`. A failure naming a `main.`-prefixed key means step 3
+  was implemented as a directory map.
 
 ---
 
@@ -538,7 +569,11 @@ user-facing failure.
 - Add `TestStartQueueWorkerIsIdempotent` — call it twice, assert exactly one
   worker goroutine, using the same `runtime/pprof` goroutine-profile technique
   `frame_manager_test_helpers_test.go` already uses for
-  `TestFrameManagerShutdownStopsTaskPumpAndUnblocksPostTask`.
+  `TestFrameManagerShutdownStopsTaskPumpAndUnblocksPostTask`. That helper is
+  `taskPumpGoroutineProfile` (`:66`); Task 9 moves it out as
+  `testutil.TaskPumpGoroutineProfile`, so a test written here against the local
+  name needs the import swapped when Task 9 lands. Task 32, which moves
+  `queue_manager.go` and its tests into `internal/fileops`, depends on this task.
 
 ### Acceptance Criteria
 
@@ -728,6 +763,18 @@ violation. Added after the migration it would only confirm what already happened
 6. Encode the layer table as one ordered `map[string]int` at the top of the file,
    e.g. `{"internal/config": 0, "internal/sysinfo": 0, … "internal/app": 4}`.
    Rules 3 and any future layer assertion read from it. Each wave updates one line.
+   **Seed it with the `internal/*` packages that already exist**, or the map is
+   incomplete from the first commit and Task 41's "every package in the layer map
+   appears in the document, and vice versa" can never pass — `ARCHITECTURE.md:285-286`
+   already places all of them at layer 0:
+   ```go
+   "internal/netproxy": 0,   // 22 importers today
+   "internal/ttyx":     0,   // 9;  internal/term imports it (Task 30)
+   "internal/wincon":   0,   // 3;  internal/term imports it (Task 30)
+   ```
+   `internal/hideconsole` is **not** in the map: it is a vendored fork with its own
+   `go.mod` (`replace` at `go.mod:187`), so `go list ./...` never returns it. Say so
+   in a comment beside the map, or the next reader adds it and the test goes red.
 7. Skip the whole test when the `go` binary is unavailable
    (`t.Skip("go toolchain not available")`) so a restricted sandbox does not turn
    this into a spurious failure.
@@ -793,12 +840,22 @@ of call shape.
    `cmd/f4/frame_manager_test_helpers_test.go` into it, exported:
    - `SwapFrameManager(t *testing.T, drains ...func(*testing.T)) func()` — was
      `swapFrameManager` (`:129`)
-   - `SetFrameManagerScreens` — was `setFrameManagerScreensForTest` (`:33`)
+   - `SetFrameManagerScreens` — was `setFrameManagerScreensForTest` (`:36`)
+   - `AppendFrameManagerScreen` — was `appendFrameManagerScreenForTest` (`:52`)
    - `CloseFrameManagerFrames`, `CloseFrameManagerScreens` — were
      `closeFrameManagerFrames` (`:27`), `closeFrameManagerScreens` (`:14`)
+   - `TaskPumpGoroutineProfile` — was `taskPumpGoroutineProfile` (`:66`). Not
+     optional: `TestFrameManagerShutdownStopsTaskPumpAndUnblocksPostTask` is built
+     on it and moves to `internal/testutil` in this same task, and Task 5's
+     idempotence test uses the same technique.
    - `PumpUntilToastActive`, `WaitForToastExpiry`
-   - `ScreenRow` — was `misc.go:12`; its four callers are all `_test.go`, so it is
-     test scaffolding that happens to live in production code today.
+   - `ScreenRow` — was `misc.go:12`; its five callers are all `_test.go`
+     (`image_gallery_test.go`, `file_panel_test.go`, `image_view_overlay_test.go`,
+     `editor_find_all_test.go`, `ai_chat_panel_test.go`), so it is test scaffolding
+     that happens to live in production code today.
+
+   After these ten helpers leave, `cmd/f4/frame_manager_test_helpers_test.go`
+   retains only `waitForDirectoryLoads` (`:83`), which stays until Task 34.
 2. Break the two production drains out of `SwapFrameManager` and make them
    parameters. Today it calls `waitForAsyncClipboard` (`clipboard_async.go:27`,
    production, lands in `internal/term`) and `waitForDirectoryLoads`
@@ -867,8 +924,10 @@ itself. It moves with the helpers, into `internal/testutil`.
 ### Acceptance Criteria
 
 - `internal/testutil` imports no `internal/*` package.
-- `grep -rn 'func swapFrameManager\|func setFrameManagerScreensForTest' cmd/f4/`
+- `grep -rn 'func swapFrameManager\|func setFrameManagerScreensForTest\|func appendFrameManagerScreenForTest\|func taskPumpGoroutineProfile' cmd/f4/`
   returns nothing.
+- `cmd/f4/frame_manager_test_helpers_test.go` declares exactly one function,
+  `waitForDirectoryLoads`.
 - `internal/paneltest` exists with `doc.go` and no other file.
 - The full suite matches the Task 1 baseline.
 
@@ -881,6 +940,115 @@ itself. It moves with the helpers, into `internal/testutil`.
 - `go test -race -shuffle=on -timeout 5m ./cmd/f4 -run '^TestFrameManager'`
 - Expected result: `ok` — the harness is the thing most likely to regress under
   the detector.
+
+---
+
+## Task 43: Assign every `cmd/f4` file to a wave
+
+### Intent
+
+The wave tasks name the files they own. Two sets of files are named by nobody, and
+both fall through to Task 36 step 4's "and whatever else remains", which is how
+`internal/app` becomes the flat package that Phase 10 lists as its own top risk.
+
+- **21 non-test sources** appear in no task and match no glob the bundle writes.
+- **154 of the 346 `_test.go` files** have no same-named source. Wave-procedure
+  step 3 says "take every `_test.go` neighbour", which is a filename rule, so it
+  strands 45% of the suite: those tests stay in `cmd/f4` while their subjects
+  leave, and either stop compiling or — worse — keep passing against nothing.
+
+This task produces the assignment. It writes no Go code and produces no commit of
+its own; its output is a table in this bundle that the waves then execute.
+
+### Implementation Steps
+
+1. Re-derive both sets on the current revision, so the task is self-checking:
+   ```
+   # sources named by no task
+   comm -23 <(ls cmd/f4/*.go | grep -v '_test\.go$' | sed 's|cmd/f4/||' | sort) \
+            <(grep -rhoE '[a-z0-9_]+\.go' .ai-factory/plans/feature-restructure-into-internal-packages/*.md | sort -u)
+   # tests with no same-named source
+   comm -23 <(ls cmd/f4/*_test.go | sed 's|cmd/f4/||;s|_test\.go$||' | sort) \
+            <(ls cmd/f4/*.go | grep -v '_test\.go$' | sed 's|cmd/f4/||;s|\.go$||' | sort)
+   ```
+   Expect 47 and 154. The first list minus the six families the bundle covers by
+   glob (`command_palette*`, `drive_bookmarks*`, `drive_menu_options*`,
+   `file_associations*`, `user_menu*`, `host_input_modes*`) is the 21.
+2. Assign each of the 21. The graph already answers most of them; these are the
+   readings, and each still needs its gate score confirmed before the wave moves it:
+
+   | Files | Wave |
+   |---|---|
+   | `ttyx_probe.go`, `ttyx_probe_parse.go`, `ttyx_probe_unix.go`, `ttyx_probe_windows.go`, `ttyx_session.go` | Task 30 — `internal/term`; they decide what the terminal supports |
+   | `terminal_log_console_other.go`, `terminal_log_console_windows.go`, `terminal_log_vfs.go` | Task 30 — `internal/term` |
+   | `console_host_windows.go`, `console_overlay_other.go`, `console_overlay_windows.go` | Task 30 — `internal/term`; score them, `console_overlay_*` may belong to `internal/media` |
+   | `process_environment.go` (gate 4), `process_environment_runtime_unix.go`, `process_environment_runtime_windows.go`, `process_environment_shell.go` | score first; the runtime pair is gate 0, `process_environment.go` is not |
+   | `plugring.go`, `plugring_meta.go`, `plugring_ui.go` | Task 26 — `internal/plughost`. Task 15 only edits `plugring.go`'s catalogue URL; it never assigns it a package |
+   | `compare_folders_ui.go` (gate 4, `Msg` ×28) | Task 25 — `internal/dialog`, beside the other settings dialogs |
+   | `colorer_downloader.go` | Task 33 — `internal/editor`, with `colorer_plugin.go` |
+   | `action_menu.go`, `external_ui.go`, `info_usage.go` | score each; `action_menu.go` and `external_ui.go` read as `internal/dialog`, `info_usage.go` as `internal/panel` |
+
+3. Classify the 154 tests **by the symbols they call, not by their filename**.
+   108 of them reference no view type at all, so the eight-name gate cannot answer
+   for them; use `codegraph callees` on the test's own functions and send the file
+   to the package that owns what it exercises.
+4. **Name the tests that exercise more than one future package.** They cannot
+   travel whole and must be split the way `semantic.go` is split, by an explicit
+   instruction rather than implementer judgement. Measured, there are five:
+
+   | Test | Packages it touches |
+   |---|---|
+   | `cloudfox_real_ui_test.go` | panel, editor, viewer |
+   | `codepage_issue875_test.go` | panel, editor, viewer |
+   | `command_palette_dynamic_test.go` | panel, plughost |
+   | `terminal_selection_test.go` | panel, term |
+   | `editor_binary_open_test.go` | panel, editor |
+
+   For each, decide split-or-host and record it here: a test that only *constructs*
+   another package's type can often stay whole as an external test package
+   (`package panel_test`) in the package that owns most of its assertions.
+5. Watch for the inverse hazard: a test with no same-named source often covers
+   *several* sources at once (`ttyx_probe_test.go` covers `ttyx_probe_parse.go`;
+   `process_environment_test.go` covers 39 of 47 functions in
+   `process_environment_shell.go`). When those sources land in different packages,
+   the test follows one and silently stops covering the others. Record every such
+   test and the coverage it will lose, or split it.
+6. Write the result into this bundle as a table under this task, and delete Task 36
+   step 4's closing phrase "and whatever else remains" — after this task there is
+   nothing that remains.
+
+### Required Interfaces and Contracts
+
+- Every one of the 345 non-test files and 346 test files is assigned to exactly one
+  wave, or explicitly marked "stays in `cmd/f4`" with the reason. There is no
+  residual category.
+- A test is assigned by its subject. Filename similarity is evidence, never the
+  rule.
+- The assignment is data for the waves; this task moves nothing.
+
+### Error Handling and Logging
+
+Not applicable — no product code changes.
+
+### Tests
+
+No new tests. Step 1's two `comm` invocations are the check, and they must both
+come back empty when re-run against the finished table.
+
+### Acceptance Criteria
+
+- Both `comm` commands in step 1, re-run with the completed table folded into the
+  bundle, return nothing.
+- Each of the five multi-package tests in step 4 has a written split-or-host
+  decision.
+- Task 36 step 4 no longer ends in a catch-all.
+
+### Verification
+
+- The two `comm` commands from step 1.
+- Expected result: no output from either.
+- `ls cmd/f4/*.go | wc -l` equals the number of rows in the assignment table plus
+  the files explicitly marked as staying.
 
 ---
 
@@ -913,10 +1081,11 @@ itself. It moves with the helpers, into `internal/testutil`.
 
 ## Phase Completion Checklist
 
-- Every Task 0-9 satisfies its acceptance criteria.
+- Every Task 0-9 and Task 43 satisfies its acceptance criteria.
 - The branch is level with `upstream/main` and a backup branch exists.
 - `CGO_ENABLED=0 go build ./...`, `go vet ./...` and `go test -timeout 25m ./...`
   match `.ai-factory/RESTRUCTURE_BASELINE.md` exactly.
 - `go test ./cmd/f4 -run '^TestArchitecture'` passes.
 - No file has moved between directories in this phase.
-- `index.md` task checkboxes 0-9 are ticked.
+- Every `cmd/f4` file has a wave, per Task 43; no residual category remains.
+- `index.md` task checkboxes 0-9 and 43 are ticked.
