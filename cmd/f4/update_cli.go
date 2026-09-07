@@ -42,6 +42,15 @@ func runUpdateCLI(channelArg string) int {
 		return 2
 	}
 
+	if explicit && AppConfig.UpdateChannel != channel {
+		// Названный каналом становится каналом автопроверок сразу, до
+		// опроса GitHub: выход по «уже актуально» или сетевой сбой иначе
+		// оставит проверки на прежнем канале, и ближайшая же позовёт
+		// обратно на него.
+		AppConfig.UpdateChannel = channel
+		SaveConfig()
+	}
+
 	// Ночной архив на медленном канале качается минутами, поэтому здесь
 	// таймаут щедрее десяти секунд, отведённых на опрос API.
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
@@ -80,12 +89,6 @@ func runUpdateCLI(channelArg string) int {
 
 	AppConfig.LastUpdateVersion = cand.updateKey
 	AppConfig.LastUpdateCheck = time.Now().Unix()
-	if explicit {
-		// Названный в командной строке канал становится каналом
-		// автопроверок, иначе ближайшая же проверка предложит уйти
-		// обратно на прежний.
-		AppConfig.UpdateChannel = channel
-	}
 	SaveConfig()
 
 	fmt.Printf("Installed %s. Restart f4 to use it.\n", cand.displayVersion)
