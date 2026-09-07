@@ -2410,9 +2410,8 @@ func actionCopyMove(pf *PanelsFrame, isMove bool) {
 		return
 	}
 
-	width, height := currentFileDialogWidth(), 11
-	dlg := vtui.NewCenteredDialog(width, height, title)
-	dlg.ShowClose = true
+	dlg := newFileDialog(title, copyDialogHeight)
+	width, height := dlg.size()
 
 	promptLbl := vtui.NewLabel(0, 0, fmt.Sprintf(prompt, len(names)), nil)
 	dlg.AddItem(promptLbl)
@@ -2469,7 +2468,14 @@ func actionCopyMove(pf *PanelsFrame, isMove bool) {
 	// popup below the field, so the popup cannot cover these buttons.
 	vbox.Add(hbox, vtui.Margins{Top: 1}, vtui.AlignFill)
 	vbox.Add(comboMode, vtui.Margins{Top: 1}, vtui.AlignCenter)
-	vbox.Apply()
+
+	// The same VBox re-applied to the new dialog rectangle is what stretches
+	// the destination field when the f4 window is resized; the button row
+	// re-centers itself from HBoxLayout.SetPosition.
+	dlg.setLayout(func() {
+		vbox.SetPosition(dlg.X1+2, dlg.Y1+2, dlg.X2-2, dlg.Y2-2)
+		vbox.Apply()
+	})
 	dlg.SetFocusedItem(editDest)
 
 	vtui.FrameManager.Push(dlg)
