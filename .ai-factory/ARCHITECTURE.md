@@ -173,12 +173,28 @@ before a reviewer has to.
 run *into* the would-be `app` from lower layers — `toast.go` is called from six
 different domains, `framework_actions.go` from four, the action registry from
 panels and hotkeys. The dependency rule below forbids exactly that, so the pile
-splits in two: shared primitives (the action registry and `actions.go`, `toast`,
-the panels-frame state, `path_identity`, `search_history`, `menu_history`, and
-`misc.go` minus its numeric helpers) are layer-0 utilities and leave `cmd/f4`
-**first**, before any package that calls them; the real composition root
-(`main.go`, `startup_*`, `runtime_mode`) leaves last and keeps the name `app`.
-Extracting them in the other order makes every intermediate commit uncompilable.
+splits in two. Layer-0 utilities leave `cmd/f4` **first**, before any package
+that calls them; the real composition root (`main.go`, `startup_*`,
+`runtime_mode`) leaves last and keeps the name `app`. Extracting them in the
+other order makes every intermediate commit uncompilable.
+
+The split runs through files, not between them — three of these files are
+themselves mixed, and moving one whole is what would break the build:
+
+| file | layer-0 part | stays with the views |
+|---|---|---|
+| `action_registry.go` | the `Action` type and `RegisterAction`; its fields are `func() bool` closures, so the mechanism depends on nothing above layer 0 | the 2553-line `init()` registration table, which names `PanelsFrame` 109 times and `EditorView` 48 |
+| `actions.go` | the 20 functions free of view types | the other 61 — 52 of them take `*PanelsFrame` in the signature |
+| `framework_actions.go` | the functions that touch no view | `forkNearestPanelsFrame` and its seven neighbours |
+| `misc.go` | the numeric helpers (`bounded*`, `nonNegativeUint64`, `runeCodepoint`) — called from eight future packages, the most widely shared code in the file | `ScreenRow` (used only by four test files) and `ReleaseHeavyMemory` (two files) |
+
+`toast`, `path_identity`, `search_history` and `menu_history` move whole.
+
+**`sysinfo` keeps its own copy of the one numeric helper it needs.** Its single
+outbound edge is one call to `boundedUint64ToInt` (`cpu_info_darwin.go:33`).
+Importing the shared numeric package would *create* the edge the rules forbid for
+a layer-0 leaf rather than remove it, so a five-line private copy is what makes
+its outbound count genuinely zero. Everyone else imports the shared package.
 
 **One test does not follow its subject.** `command_palette_coverage_test.go`
 walks the whole module and checks a global invariant: every `ProcessKey` and
@@ -367,9 +383,14 @@ means updating the `replace` directive that points at it (`go.mod:187`).
    `_test.go` neighbour along in the same commit; a package extraction that drops
    coverage is not done. Shared test scaffolding gets its own home before the
    packages that use it move: `swapFrameManager` is used by 62 test files and
-   `setupMockPanelsFrame` by 28, so they belong in one `internal/testutil`
-   package. Left where they are, the test import graph disagrees with the
-   production one — a narrow package independent of `panel` whose tests are not.
+   `setupMockPanelsFrame` by 28. They cannot share one neutral package:
+   `setupMockPanelsFrame` constructs a terminal view, a command line and a file
+   panel, so a package holding it imports `panel`, `cmdline` and `term` — and
+   those packages' own in-package tests then cannot import it back. The harness
+   splits by what it touches: neutral `vtui` glue in `internal/testutil`, the
+   frame mock in `internal/paneltest`, and the tests inside the three packages it
+   depends on move to `package X_test`. Left undivided, the test import graph
+   contradicts the production one.
 
 6. **Portability is a boundary condition.** `CGO_ENABLED=0`, build-tag files, the
    full CI matrix green. A restructuring commit that only builds on the developer's
