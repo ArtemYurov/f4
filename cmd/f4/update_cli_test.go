@@ -18,7 +18,7 @@ func TestParseUpdateChannelArg(t *testing.T) {
 		explicit bool
 		wantErr  bool
 	}{
-		{"", updateChannelNightly, false, false}, // пусто — канал из настроек
+		{"", updateChannelNightly, false, false}, // empty means the configured channel
 		{"stable", updateChannelStable, true, false},
 		{"latest", updateChannelStable, true, false},
 		{"Nightly", updateChannelNightly, true, false},
@@ -39,8 +39,8 @@ func TestParseUpdateChannelArg(t *testing.T) {
 	}
 }
 
-// Канал решает, какой конечной точки спрашивать и как называть сборку —
-// именно это отличает `--update nightly` от `--update stable`.
+// The channel decides which endpoint is asked and how the build is named,
+// which is the whole difference between --update nightly and --update stable.
 func TestFetchUpdateCandidateFollowsChannel(t *testing.T) {
 	oldCfg := AppConfig
 	origOS, origArch, origAPI := currentOS, currentArch, githubAPIURL
@@ -81,7 +81,7 @@ func TestFetchUpdateCandidateFollowsChannel(t *testing.T) {
 	if asked != "/repos/unxed/f4/releases/tags/nightly" {
 		t.Errorf("nightly asked %q", asked)
 	}
-	// Время сборки показывается в местной зоне, поэтому сверяется коммит.
+	// The build time renders in local time, so match on the commit instead.
 	if !strings.HasPrefix(cand.displayVersion, "Nightly (abc1234 [") {
 		t.Errorf("nightly display version %q", cand.displayVersion)
 	}
@@ -104,8 +104,8 @@ func TestFetchUpdateCandidateFollowsChannel(t *testing.T) {
 	}
 }
 
-// 403 от исчерпанного лимита должен объясняться словами, а не номером:
-// именно в него упирается всякий, кто проверяет обновления часто.
+// A 403 from the spent request limit has to explain itself rather than show a
+// number: it is what anyone who checks for updates often runs into.
 func TestFetchUpdateCandidateExplainsRateLimit(t *testing.T) {
 	origAPI := githubAPIURL
 	t.Cleanup(func() { githubAPIURL = origAPI })

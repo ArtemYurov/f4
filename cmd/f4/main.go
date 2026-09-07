@@ -492,10 +492,9 @@ see in vtinput project: https://github.com/unxed/vtinput
 		return
 	}
 
-	// Обновление — команда, а не способ запустить файловый менеджер: ни
-	// панелей, ни сессии здесь не поднимается. Выход через os.Exit минует
-	// отложенный SaveSession намеренно: сессии этот запуск не касался, и
-	// перезаписывать её сохранённым при загрузке состоянием нечем.
+	// Updating is a command, not a way to start the file manager: no panels
+	// and no session come up here. os.Exit skips the deferred SaveSession on
+	// purpose, this run never touched the session.
 	if updateRequested {
 		os.Exit(runUpdateCLI(updateChannelArg))
 	}

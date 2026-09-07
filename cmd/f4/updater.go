@@ -120,26 +120,26 @@ func shouldCheck() bool {
 	return false
 }
 
-// Каналы обновления перечислены в том же порядке, что комбобокс в настройках.
+// Update channels, in the order the settings combo box lists them.
 const (
 	updateChannelStable  = 0
 	updateChannelNightly = 1
 )
 
-// updateCandidate — сборка, которую канал предлагает поставить.
+// updateCandidate is the build a channel offers to install.
 type updateCandidate struct {
 	downloadURL    string
 	archiveKind    string
 	displayVersion string
-	// updateKey — отметка «эта сборка уже стоит»: тег на стабильном
-	// канале и время загрузки asset'а на ночном, где тег всегда
-	// "nightly" и потому ничего не различает.
+	// updateKey marks a build as already installed: the tag on stable, the
+	// asset upload time on nightly, where the tag is always "nightly" and
+	// tells builds apart not at all.
 	updateKey   string
 	needsUpdate bool
 }
 
-// fetchUpdateCandidate спрашивает GitHub, что предлагает канал, и решает,
-// новее ли это запущенной сборки. Общая часть для диалога и для --update.
+// fetchUpdateCandidate asks GitHub what a channel offers and whether that is
+// newer than the running build. Shared by the dialog and by --update.
 func fetchUpdateCandidate(ctx context.Context, channel int) (updateCandidate, error) {
 	url := githubAPIURL + "/latest"
 	if channel == updateChannelNightly {
@@ -204,12 +204,12 @@ func fetchUpdateCandidate(ctx context.Context, channel int) (updateCandidate, er
 	return cand, nil
 }
 
-// nightlyDisplayVersion называет ночную сборку так же, как её потом покажет
-// F1 > Help Index.
+// nightlyDisplayVersion names a nightly build the way F1 > Help Index names it
+// after installing.
 //
-// Asset'у известно только время окончания загрузки, которое отстаёт от
-// коммита на всё время многоплатформенной сборки; ночной workflow кладёт в
-// тело релиза сам коммит и время сборки, поэтому предпочитаем их. См. #343.
+// The asset only knows when its upload finished, which trails the commit by the
+// whole build matrix; the nightly workflow records the commit and the build
+// time in the release body, so prefer those. See #343.
 func nightlyDisplayVersion(release githubRelease, assetUpdated string) string {
 	if commit, builtOn := commitInfoFromReleaseBody(release.Body); commit != "" {
 		if builtOn != "" {
@@ -227,10 +227,10 @@ func nightlyDisplayVersion(release githubRelease, assetUpdated string) string {
 	return "Nightly (" + displayTime + ")"
 }
 
-// githubRateLimitMessage объясняет 403 от GitHub, если тот пришёл из-за
-// исчерпанного лимита запросов: без токена на один IP отводится 60 запросов
-// в час, поэтому упереться в лимит можно из общей сети, ничего не нажимая
-// самому. Пустая строка означает, что 403 пришёл по другой причине.
+// githubRateLimitMessage explains a 403 that came from the request limit:
+// GitHub allows 60 anonymous requests an hour per address, so a shared network
+// can spend them without the user touching anything. An empty string means the
+// 403 had another cause.
 func githubRateLimitMessage(resp *http.Response) string {
 	if resp.StatusCode != http.StatusForbidden && resp.StatusCode != http.StatusTooManyRequests {
 		return ""
@@ -416,8 +416,8 @@ func performUpdate(pf *PanelsFrame, cand updateCandidate) {
 	})
 }
 
-// downloadUpdateArchive забирает архив релиза целиком в память, сообщая ход
-// загрузки в процентах. Общая часть для диалога обновления и для --update.
+// downloadUpdateArchive reads a release archive into memory, reporting progress
+// in percent. Shared by the update dialog and by --update.
 func downloadUpdateArchive(ctx context.Context, url string, progress func(percent int)) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
@@ -471,9 +471,9 @@ func downloadUpdateArchive(ctx context.Context, url string, progress func(percen
 	return archiveData.Bytes(), nil
 }
 
-// updateTargetDir — каталог, поверх которого ляжет обновление. Вызывается
-// до загрузки тоже: узнать про нечитаемый путь дешевле, чем после
-// скачанных мегабайт.
+// updateTargetDir is the directory an update unpacks over. Callers ask before
+// downloading as well: an unreadable path is cheaper to learn about now than
+// after the megabytes.
 func updateTargetDir() (string, error) {
 	exePath, err := osExecutable()
 	if err != nil {
@@ -486,8 +486,8 @@ func updateTargetDir() (string, error) {
 	return filepath.Dir(exePath), nil
 }
 
-// installUpdateArchive распаковывает архив поверх каталога работающего
-// бинарника, при отказе в правах — через эскалацию.
+// installUpdateArchive unpacks the archive over the running binary's directory,
+// escalating when permissions deny it.
 func installUpdateArchive(data []byte, archiveKind string) error {
 	exeDir, err := updateTargetDir()
 	if err != nil {
