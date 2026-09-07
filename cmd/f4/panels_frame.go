@@ -1829,18 +1829,6 @@ func (pf *PanelsFrame) InterceptPluginKey(e *vtinput.InputEvent) bool {
 		return actionArkanoid()
 	}
 
-	// User-assigned plugin menu shortcuts are resolved here, before both the
-	// legacy raw plugin hotkeys and built-in actions. This gives F4-assigned
-	// commands the same priority as plugin callbacks registered through the
-	// original HostAPI.
-	if hm := GlobalHotkeysMgr; hm != nil {
-		if actionName := hm.GetAction("Shell", EventToHotkeyString(e)); isPluginActionName(actionName) {
-			if RunAction(actionName) {
-				return true
-			}
-		}
-	}
-
 	// Check global hotkeys (ignoring Lock and Enhanced keys)
 	for _, hk := range globalHotkeysSnapshot() {
 		hkCtrl := (hk.Mods & (vtinput.LeftCtrlPressed | vtinput.RightCtrlPressed)) != 0
@@ -4116,6 +4104,25 @@ func (pf *PanelsFrame) InputBox(title, prompt, defaultText string, callback func
 	})
 }
 
+type menuKeyLabelsFrame struct {
+	*vtui.VMenu
+	keyLabels *vtui.KeySet
+}
+
+func (f *menuKeyLabelsFrame) GetKeyLabels() *vtui.KeySet { return f.keyLabels }
+
+func (f *menuKeyLabelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
+	handled := f.VMenu.ProcessKey(e)
+	// VMenu compares FrameManager.GetTopFrame with its embedded menu when
+	// deciding whether Esc/F10 is consumed. The wrapper is the actual frame,
+	// so complete the same contract after forwarding the event.
+	if e != nil && e.KeyDown && f.IsDone() &&
+		(e.VirtualKeyCode == vtinput.VK_ESCAPE || e.VirtualKeyCode == vtinput.VK_F10) {
+		return true
+	}
+	return handled
+}
+
 func (pf *PanelsFrame) Menu(title string, items []string, callback func(int)) {
 	menuItems := make([]vtui.MenuItem, 0, len(items))
 	for _, item := range items {
@@ -4125,6 +4132,10 @@ func (pf *PanelsFrame) Menu(title string, items []string, callback func(int)) {
 }
 
 func (pf *PanelsFrame) menuItems(title string, items []vtui.MenuItem, onKeyDown func(*vtui.VMenu, *vtinput.InputEvent) bool, callback func(int)) {
+	pf.menuItemsWithKeyLabels(title, items, onKeyDown, callback, nil)
+}
+
+func (pf *PanelsFrame) menuItemsWithKeyLabels(title string, items []vtui.MenuItem, onKeyDown func(*vtui.VMenu, *vtinput.InputEvent) bool, callback func(int), keyLabels *vtui.KeySet) {
 	vtui.FrameManager.PostTask(func() {
 		menu := vtui.NewVMenu(title)
 
@@ -4174,7 +4185,11 @@ func (pf *PanelsFrame) menuItems(title string, items []vtui.MenuItem, onKeyDown 
 				callback(idx)
 			}
 		}
-		vtui.FrameManager.Push(menu)
+		if keyLabels != nil {
+			vtui.FrameManager.Push(&menuKeyLabelsFrame{VMenu: menu, keyLabels: keyLabels})
+		} else {
+			vtui.FrameManager.Push(menu)
+		}
 	})
 }
 
@@ -4727,33 +4742,87 @@ func (pf *PanelsFrame) showPluginMenu() {
 		vtui.ShowMessage(" Plugins ", "No plugins registered for F11 menu.", []string{"&Ok"})
 		return
 	}
-	menuItems := make([]vtui.MenuItem, 0, len(items)+len(commands))
-	actionNames := make([]string, 0, len(items)+len(commands))
+	type pluginMenuEntry struct {
+		label      string
+		actionName string
+		shortcut   string
+	}
+	entries := make([]pluginMenuEntry, 0, len(items)+len(commands))
 	for _, itm := range items {
 		actionName := itm.ActionName
 		if actionName == "" {
-			actionName = legacyPluginActionName(len(actionNames))
+			actionName = legacyPluginActionName(len(entries))
 		}
-		menuItems = append(menuItems, vtui.MenuItem{
-			Text:     itm.Label,
-			Shortcut: pluginActionShortcut(actionName),
+		entries = append(entries, pluginMenuEntry{
+			label:      itm.Label,
+			actionName: actionName,
+			shortcut:   pluginActionShortcut(actionName),
 		})
-		actionNames = append(actionNames, actionName)
 	}
 	for _, command := range commands {
-		menuItems = append(menuItems, vtui.MenuItem{
-			Text:     pluginCommandDisplayLabel(command),
-			Shortcut: pluginCommandShortcut(command),
+		entries = append(entries, pluginMenuEntry{
+			label:      pluginCommandDisplayLabel(command),
+			actionName: pluginCommandActionName(command.ID),
+			shortcut:   pluginCommandShortcut(command),
 		})
-		actionNames = append(actionNames, pluginCommandActionName(command.ID))
 	}
-	pf.menuItems(" Plugins ", menuItems, func(menu *vtui.VMenu, e *vtinput.InputEvent) bool {
+	shortcutWidth := 0
+	for i := range entries {
+		entries[i].shortcut = pluginMenuItemShortcut(entries[i].label, entries[i].shortcut)
+		if width := runewidth.StringWidth(entries[i].shortcut); width > shortcutWidth {
+			shortcutWidth = width
+		}
+	}
+	menuItems := make([]vtui.MenuItem, 0, len(entries))
+	for _, entry := range entries {
+		menuItems = append(menuItems, vtui.MenuItem{
+			Text: pluginMenuItemText(entry.label, entry.shortcut, shortcutWidth),
+		})
+	}
+
+	updateMenuItem := func(menu *vtui.VMenu, index int) {
+		if menu == nil || index < 0 || index >= len(entries) {
+			return
+		}
+		entry := &entries[index]
+		if index < len(items) {
+			entry.shortcut = pluginActionShortcut(entry.actionName)
+		} else {
+			entry.shortcut = pluginCommandShortcut(commands[index-len(items)])
+		}
+		menu.Items[index].Text = pluginMenuItemText(entry.label, entry.shortcut, shortcutWidth)
+		menu.Items[index].Shortcut = ""
+	}
+
+	pf.menuItemsWithKeyLabels(" Plugins ", menuItems, func(menu *vtui.VMenu, e *vtinput.InputEvent) bool {
 		if e.VirtualKeyCode != vtinput.VK_F4 || !e.KeyDown {
-			return false
+			if e.VirtualKeyCode != vtinput.VK_DELETE || !e.KeyDown {
+				return false
+			}
+			idx := menu.SelectPos
+			if idx < 0 || idx >= len(entries) {
+				return true
+			}
+			area, key := configuredHotkeyBinding(GlobalHotkeysMgr, entries[idx].actionName)
+			if area == "" || key == "" {
+				return true
+			}
+			question := pluginHotkeyDeleteQuestion(key)
+			vtui.ShowMessageOn(menu, " Remove plugin hotkey ", question, []string{"&Delete", "Cancel"}).OnResult = func(choice int) {
+				if choice != 0 || GlobalHotkeysMgr == nil {
+					return
+				}
+				if !deletePluginHotkey(GlobalHotkeysMgr, area, key) {
+					return
+				}
+				updateMenuItem(menu, idx)
+				vtui.FrameManager.Redraw()
+			}
+			return true
 		}
 		idx := menu.SelectPos
-		if idx >= 0 && idx < len(actionNames) {
-			assignPluginHotkey(menu, idx, actionNames[idx])
+		if idx >= 0 && idx < len(entries) {
+			assignPluginHotkey(menu, idx, entries[idx].actionName)
 		}
 		return true
 	}, func(idx int) {
@@ -4769,7 +4838,7 @@ func (pf *PanelsFrame) showPluginMenu() {
 				executeRegisteredPluginCommand(vfs.PluginCommandPanel, commandID, pf)
 			})
 		}
-	})
+	}, pluginMenuKeyLabels(pf))
 }
 
 func (pf *PanelsFrame) showDriveMenu(panelIdx int) {

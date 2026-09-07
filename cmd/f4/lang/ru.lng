@@ -1387,6 +1387,12 @@ Hotkeys.BtnNext=Далее >
 Hotkeys.LabelArea=Область:
 Hotkeys.LabelWhen=Когда:
 Hotkeys.AssignTitle= Назначить горячую клавишу
+Hotkeys.AssignAction=Действие: %s
+Hotkeys.AssignArea=Область: %s
+Hotkeys.AssignCurrent=Текущая: %s
+Hotkeys.AssignNone=(нет)
+Hotkeys.AssignPrompt=Нажмите желаемое сочетание клавиш...
+Hotkeys.AssignCancel=Нажмите Esc для отмены
 
 CommandPalette.Title= Палитра команд
 CommandPalette.QueryPrompt=>

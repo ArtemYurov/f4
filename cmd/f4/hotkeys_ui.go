@@ -561,17 +561,24 @@ func NewHotkeyAssignFrame(hm *HotkeyManager, actionName, area string, onComplete
 
 	lblAction := vtui.NewText(0, 0, fmt.Sprintf(Msg("Hotkeys.AssignAction"), actionName), vtui.Palette[vtui.ColDialogText])
 	lblArea := vtui.NewText(0, 0, fmt.Sprintf(Msg("Hotkeys.AssignArea"), area), vtui.Palette[vtui.ColDialogText])
+	currentText := fmt.Sprintf(Msg("Hotkeys.AssignCurrent"), Msg("Hotkeys.AssignNone"))
+	if _, currentKey := configuredHotkeyBinding(hm, strings.SplitN(actionName, ":", 2)[0]); currentKey != "" {
+		currentText = fmt.Sprintf(Msg("Hotkeys.AssignCurrent"), FormatKeyForUI(currentKey))
+	}
+	lblCurrent := vtui.NewText(0, 0, currentText, vtui.Palette[vtui.ColDialogText])
 	prompt := vtui.NewText(0, 0, Msg("Hotkeys.AssignPrompt"), vtui.Palette[vtui.ColDialogText])
 	cancelPrompt := vtui.NewText(0, 0, Msg("Hotkeys.AssignCancel"), vtui.Palette[vtui.ColDialogText])
 
 	f.AddItem(lblAction)
 	f.AddItem(lblArea)
+	f.AddItem(lblCurrent)
 	f.AddItem(prompt)
 	f.AddItem(cancelPrompt)
 
 	vbox := vtui.NewVBoxLayout(f.X1+2, f.Y1+2, width-4, height-4)
 	vbox.Add(lblAction, vtui.Margins{}, vtui.AlignCenter)
 	vbox.Add(lblArea, vtui.Margins{Top: 1}, vtui.AlignCenter)
+	vbox.Add(lblCurrent, vtui.Margins{Top: 1}, vtui.AlignCenter)
 	vbox.Add(prompt, vtui.Margins{Top: 1}, vtui.AlignCenter)
 	vbox.Add(cancelPrompt, vtui.Margins{Top: 1}, vtui.AlignCenter)
 	vbox.Apply()

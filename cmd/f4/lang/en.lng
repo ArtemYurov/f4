@@ -1447,6 +1447,8 @@ Hotkeys.LabelWhen=When:
 Hotkeys.AssignTitle= Assign Hotkey
 Hotkeys.AssignAction=Action: %s
 Hotkeys.AssignArea=Area: %s
+Hotkeys.AssignCurrent=Current: %s
+Hotkeys.AssignNone=(none)
 Hotkeys.AssignPrompt=Press the desired key combination...
 Hotkeys.AssignCancel=Press Esc to cancel
 
