@@ -671,6 +671,7 @@
     │       ├── ttyx_keys_test.go
     │       ├── ttyx_probe.go
     │       ├── ttyx_probe_parse.go
+    │       ├── ttyx_probe_test.go
     │       ├── ttyx_probe_unix.go
     │       ├── ttyx_probe_windows.go
     │       ├── ttyx_session.go
