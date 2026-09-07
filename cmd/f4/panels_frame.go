@@ -5029,7 +5029,7 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 		}
 		menu.AddSeparator()
 		headerRow = menu.GetItemCount()
-		menu.AddItem(vtui.MenuItem{Text: Msg("Drive.Bookmarks"), Command: CmDriveBookmarksHeader})
+		menu.AddItem(vtui.MenuItem{Text: Msg("Drive.Links"), Command: CmDriveBookmarksHeader})
 		for index, bookmark := range driveBookmarks {
 			bookmark := bookmark
 			driveBookmarkRows[menu.GetItemCount()] = index
