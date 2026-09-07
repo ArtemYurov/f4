@@ -107,6 +107,30 @@ artifacts/       # build artifacts
 - Grep stays the right tool for text that is not a symbol: comments, error
   strings, build tags, config keys.
 
+### Where new code goes
+
+- Put a new file in the package that owns its subject. If no package owns it,
+  create one — do not widen a neighbouring package because it is close enough,
+  and never park the file in `internal/app`.
+- `internal/app` is the composition root: it wires packages together and does not
+  implement features. Code that lands there for lack of a better place is code
+  whose owner was not decided.
+- Do not add to `cmd/f4`. It holds `main.go`, the wiring tests, the module-wide
+  auditors and the Windows `.syso` files, and nothing else.
+- Inside a package, name files `<topic>.go` and `<topic>_<aspect>.go`, where the
+  prefix is the topic inside the package, not the package name — `panel/frame.go`,
+  never `panel/panel_frame.go`. Platform suffixes go on the end:
+  `frame_dragdrop_windows.go`.
+- Need something from a higher layer? Declare an interface in your package and
+  let the caller supply the implementation. Never import upward, and never reach
+  across a boundary through a shared mutable global.
+- Logic belongs here but the type belongs elsewhere? Write a function taking the
+  type, not a method — a method would drag the whole file into the type's
+  package.
+- `cmd/f4/architecture_test.go` enforces the layer rules. If a change needs an
+  exemption there, the architecture document is what changes first, not the test.
+- The full rules, with the reasoning, are in `.ai-factory/ARCHITECTURE.md`.
+
 ### Go build cache
 
 - Use the system Go build cache reported by `go env GOCACHE` for all Go builds and tests.

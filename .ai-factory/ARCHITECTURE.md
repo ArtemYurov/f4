@@ -427,6 +427,37 @@ means updating the `replace` directive that points at it (`go.mod:187`).
    directory is a solution review. Renaming updates the links that point at
    them, by the same rule as any other move.
 
+## Package Ownership
+
+Every package answers for one subject, and every file belongs to exactly one
+package. This outlives the extraction: once the tree is split, the rules below
+are what keeps it split.
+
+- **A new file goes to the package that owns its subject.** If none owns it,
+  create the package — do not widen a neighbouring one because it is close
+  enough, and never park it in `internal/app`. A composition root that accretes
+  unrelated code is the flat package growing back one file at a time.
+- **`internal/app` holds wiring, not features.** It constructs and connects; it
+  does not implement. Code that lands there because nothing else fitted is code
+  whose owner was not decided.
+- **Cross-package work goes through the lower layer's own interface.** A package
+  that needs something from a higher layer declares what it needs and lets the
+  caller supply it. Reaching upward through an import, or through a shared
+  mutable global, is the same mistake wearing two hats.
+- **A method whose type lives elsewhere is a function.** When logic belongs here
+  but the type belongs there, write `func doX(t *other.Type)` rather than
+  dragging the file into the type's package.
+- **The compiler is the reviewer.** `cmd/f4/architecture_test.go` asserts the
+  layer rules — no `sdk`/`vfs` import of `internal/`, nothing importing the main
+  package, nothing below layer 4 importing `internal/app`, no cycles. A change
+  that needs an exemption there is a change to this document first, not a test
+  edit.
+
+Role separation is the same rule seen from the other side: `sdk/` and `vfs/`
+define contracts, `plugins/` implement them, `internal/*` runs the application,
+`cmd/f4` wires it together, `tools/` serves developers and ships in nothing. A
+file that would do two of these jobs is two files.
+
 ## Legacy vs New Code Policy
 
 - **New features:** new code goes into the module it belongs to. If no module fits,
