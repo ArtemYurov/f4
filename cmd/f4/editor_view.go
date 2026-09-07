@@ -120,6 +120,12 @@ type EditorView struct {
 
 	renderBytes []byte          // Reusable buffer for text data
 	renderCells []vtui.CharInfo // Reusable buffer for row rendering
+	// occSpans holds the occurrences of the selected text inside the
+	// fragment being painted, and occBytes the window they were searched
+	// in. Both are reused across fragments and rows: highlighting must not
+	// allocate per painted line.
+	occSpans []matchSpan
+	occBytes []byte
 
 	vfs         vfs.VFS
 	filePath    string
@@ -1518,6 +1524,8 @@ func (ev *EditorView) DisplayObject(scr *vtui.ScreenBuf) {
 	scr.PushClipRect(ev.X1, ev.Y1+1, ev.X1+width-1, ev.Y2)
 
 	// 2. Отрисовка
+	occNeedle := ev.occurrenceNeedle()
+	ev.occSpans = ev.occSpans[:0]
 	startLogLine, startFragIdx := ev.engine.GetLogLineAtVisualRow(ev.ScrollTopRow)
 	rowsRendered := 0
 
@@ -1639,6 +1647,8 @@ func (ev *EditorView) DisplayObject(scr *vtui.ScreenBuf) {
 			}
 
 			selMin, selMax := ev.getSelectionRange()
+			ev.occSpans = ev.appendOccurrenceSpans(ev.occSpans, occNeedle,
+				frag.ByteOffsetStart, frag.ByteOffsetEnd, lineStart, lineStart+lineLen)
 
 			// Вырезаем кусок атрибутов именно для этого фрагмента
 			var fragSyntax []uint64
@@ -2607,6 +2617,13 @@ func (ev *EditorView) fillCellsWithLinks(target []vtui.CharInfo, data []byte, de
 	if tabSize <= 0 {
 		tabSize = 8
 	}
+	// The slot is read only when there is something to mark: direct callers
+	// of fillCells (tests, tools) may run against a palette that was never
+	// grown to the f4 slots.
+	var occAttr uint64
+	if len(ev.occSpans) > 0 {
+		occAttr = vtui.Palette[ColEditorOccurrence]
+	}
 
 	for _, cluster := range clusters {
 		var w int
@@ -2645,6 +2662,20 @@ func (ev *EditorView) fillCellsWithLinks(target []vtui.CharInfo, data []byte, de
 				attr = vtui.SetRGBBack(attr, vtui.GetRGBBack(horzCrossAttr))
 			} else {
 				attr = vtui.SetIndexBack(attr, vtui.GetIndexBack(horzCrossAttr))
+			}
+		}
+
+		// Other occurrences of the selected text are marked before the
+		// selection itself is applied: where the two meet, the selection
+		// wins, as it is the thing the user is actually holding.
+		if len(ev.occSpans) > 0 {
+			absStart := offset + cluster.byteStart
+			absEnd := offset + cluster.byteEnd
+			for _, span := range ev.occSpans {
+				if absStart < span.Off+span.Len && absEnd > span.Off {
+					attr = occAttr
+					break
+				}
 			}
 		}
 
@@ -4598,6 +4629,98 @@ func (ev *EditorView) showConvertCodepageDialog() {
 	}
 	menu.SetSelectPos(selIdx)
 	vtui.FrameManager.Push(menu)
+}
+
+// Highlighting every occurrence of the selected text is meant for a word or a
+// short phrase. A one-character selection lights up half the screen and says
+// nothing, and a long one is a paragraph the user is about to cut, not a term
+// they are tracking, so both ends are cut off.
+const (
+	editorOccurrenceMinLen = 2
+	editorOccurrenceMaxLen = 256
+)
+
+// occurrenceNeedle returns the text whose other occurrences should be marked
+// while painting, or nil when nothing should be. The selection qualifies when
+// it is an ordinary one-line selection of a sensible length that is not all
+// whitespace — selecting an indent would otherwise light up the whole file.
+//
+// The returned bytes alias the piece table's own buffer for the duration of
+// one paint, which is why nothing here keeps them.
+func (ev *EditorView) occurrenceNeedle() []byte {
+	if !AppConfig.EditorMarkOccurrences {
+		return nil
+	}
+	if !ev.selActive || ev.rectSelActive || ev.HexMode || ev.DecodeMode {
+		return nil
+	}
+	selMin, selMax := ev.getSelectionRange()
+	length := selMax - selMin
+	if length < editorOccurrenceMinLen || length > editorOccurrenceMaxLen {
+		return nil
+	}
+	needle, err := ev.pt.GetRange(selMin, length)
+	if err != nil || len(needle) != length {
+		return nil
+	}
+	meaningful := false
+	for _, b := range needle {
+		switch b {
+		case '\n', '\r':
+			// A selection spanning lines is a block, not a term.
+			return nil
+		case ' ', '\t':
+		default:
+			meaningful = true
+		}
+	}
+	if !meaningful {
+		return nil
+	}
+	return needle
+}
+
+// appendOccurrenceSpans collects the occurrences of needle that overlap the
+// byte range [start, end) of one painted fragment, in absolute offsets.
+//
+// The search window is the fragment padded by len(needle)-1 on each side and
+// clipped to the logical line, so a match split across a wrapped row is found
+// from both of its halves. Searching per fragment rather than per line is what
+// keeps this bounded by the width of the screen: a logical line can be
+// megabytes long, and only a screenful of it is ever painted.
+func (ev *EditorView) appendOccurrenceSpans(dst []matchSpan, needle []byte, start, end, lineStart, lineEnd int) []matchSpan {
+	dst = dst[:0]
+	if len(needle) == 0 || end <= start {
+		return dst
+	}
+	pad := len(needle) - 1
+	from, to := start-pad, end+pad
+	if from < lineStart {
+		from = lineStart
+	}
+	if to > lineEnd {
+		to = lineEnd
+	}
+	if to-from < len(needle) {
+		return dst
+	}
+
+	var err error
+	ev.occBytes, err = ev.pt.AppendRange(ev.occBytes[:0], from, to-from)
+	if err != nil {
+		return dst
+	}
+
+	for pos := 0; ; {
+		idx := bytes.Index(ev.occBytes[pos:], needle)
+		if idx < 0 {
+			break
+		}
+		off := from + pos + idx
+		dst = append(dst, matchSpan{Off: off, Len: len(needle)})
+		pos += idx + 1
+	}
+	return dst
 }
 
 func (ev *EditorView) selectWordUnderCursor() {

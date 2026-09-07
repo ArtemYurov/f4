@@ -225,6 +225,7 @@ type F4Config struct {
 	EditorTabSize            int
 	EditorUseEditorConfig    bool
 	EditorCrosshair          bool
+	EditorMarkOccurrences    bool
 	UseExternalEditor        bool
 	ExternalEditorCommand    string
 	ExternalEditorConsole    string
@@ -391,6 +392,7 @@ var AppConfig = F4Config{
 	EditorTabSize:            4,
 	EditorUseEditorConfig:    true,
 	EditorCrosshair:          false,
+	EditorMarkOccurrences:    true,
 	UseExternalEditor:        false,
 	ExternalEditorCommand:    "",
 	ExternalEditorConsole:    "",
@@ -666,6 +668,7 @@ func LoadConfig() {
 	AppConfig.EditorCursorBeyondEOL = ini.GetString("Editor", "CursorBeyondEOL", "0") == "1"
 	AppConfig.EditorUseEditorConfig = ini.GetString("Editor", "UseEditorConfig", "1") == "1"
 	AppConfig.EditorCrosshair = ini.GetString("Editor", "Crosshair", "0") == "1"
+	AppConfig.EditorMarkOccurrences = ini.GetString("Editor", "MarkOccurrences", "1") == "1"
 	AppConfig.EditorAutodetectCodePage = ini.GetString("Editor", "AutodetectCodePage", "1") == "1"
 	AppConfig.EditorMemoryMap = ini.GetString("Editor", "MemoryMap", "1") == "1"
 	AppConfig.EditorHighlighter = normalizeHighlighter(ini.GetString("Editor", "Highlighter", "Chroma"))
@@ -932,6 +935,7 @@ func saveConfigWithWindowSize(windowSize bool) {
 	fmt.Fprintf(&sb, "CursorBeyondEOL = %d\n", map[bool]int{true: 1, false: 0}[AppConfig.EditorCursorBeyondEOL])
 	fmt.Fprintf(&sb, "UseEditorConfig = %d\n", map[bool]int{true: 1, false: 0}[AppConfig.EditorUseEditorConfig])
 	fmt.Fprintf(&sb, "Crosshair = %d\n", map[bool]int{true: 1, false: 0}[AppConfig.EditorCrosshair])
+	fmt.Fprintf(&sb, "MarkOccurrences = %d\n", map[bool]int{true: 1, false: 0}[AppConfig.EditorMarkOccurrences])
 	fmt.Fprintf(&sb, "TabSize = %d\n", AppConfig.EditorTabSize)
 	fmt.Fprintf(&sb, "UseExternalEditor = %d\n", map[bool]int{true: 1, false: 0}[AppConfig.UseExternalEditor])
 	legacyExternalEditorCommand := AppConfig.ExternalEditorConsole

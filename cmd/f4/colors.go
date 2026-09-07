@@ -47,6 +47,7 @@ const (
 	ColViewerScrollbar
 
 	ColEditorText
+	ColEditorOccurrence
 	ColEditorCrosshair
 	ColEditorStatus
 	ColEditorScrollbar
@@ -121,6 +122,9 @@ func SetDefaultF4Palette() {
 	vtui.Palette[ColViewerScrollbar] = vtui.SetIndexBoth(0, 8, 0)
 
 	vtui.Palette[ColEditorText] = vtui.SetIndexBoth(0, 7, 0)
+	// Other occurrences of the selected text: readable, but clearly a
+	// weaker mark than the selection itself (black on light grey).
+	vtui.Palette[ColEditorOccurrence] = vtui.SetRGBBoth(0, 0x2E3436, 0xC4A000)
 	vtui.Palette[ColEditorCrosshair] = vtui.SetRGBBoth(0, 0xD3D7CF, 0x222222)
 	vtui.Palette[ColEditorStatus] = vtui.Palette[ColViewerStatus]
 	vtui.Palette[ColEditorScrollbar] = vtui.Palette[ColPanelScrollbar]
@@ -255,6 +259,7 @@ var ColorSlots = []ColorSlot{
 
 	// Editor Group
 	{Canonical: "Editor.Text", Index: ColEditorText, Group: "Editor", ConstantName: "ColEditorText"},
+	{Canonical: "Editor.Occurrence", Index: ColEditorOccurrence, Group: "Editor", ConstantName: "ColEditorOccurrence", Aliases: []string{"Editor.Text.Occurrence"}},
 	{Canonical: "Editor.Scrollbar", Index: ColEditorScrollbar, Group: "Editor", ConstantName: "ColEditorScrollbar"},
 	{Canonical: "Editor.Status", Index: ColEditorStatus, Group: "Editor", ConstantName: "ColEditorStatus"},
 

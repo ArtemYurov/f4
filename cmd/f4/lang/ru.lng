@@ -780,6 +780,7 @@ EditorSettings.AutoIndent=Авто&отступ
 EditorSettings.CursorBeyondEOL=Курсор за &концом строки
 EditorSettings.UseEditorConfig=Использовать .&editorconfig
 EditorSettings.Crosshair=Показывать к&рест в редакторе
+EditorSettings.HighlightOccurrences=Подсветка всех в&хождений
 EditorSettings.ColorerBg=Фон &Colorer
 EditorSettings.SyntaxAnimation=Анимировать &подсветку синтаксиса
 EditorSettings.UseExternalEditor=В&нешний редактор

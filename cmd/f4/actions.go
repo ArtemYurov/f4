@@ -2696,6 +2696,7 @@ func actionEditorSettings(pf *PanelsFrame) {
 		Msg("EditorSettings.UseEditorConfig"),
 		Msg("EditorSettings.AutoComplete"),
 		Msg("EditorSettings.Crosshair"),
+		Msg("EditorSettings.HighlightOccurrences"),
 		Msg("EditorSettings.ColorerBg"),
 		Msg("EditorSettings.SyntaxAnimation"),
 	}
@@ -2834,6 +2835,11 @@ func actionEditorSettings(pf *PanelsFrame) {
 		chkColorerBg.State = 1
 	}
 
+	chkHighlightOccurrences := vtui.NewCheckbox(0, 0, Msg("EditorSettings.HighlightOccurrences"), false)
+	if AppConfig.EditorMarkOccurrences {
+		chkHighlightOccurrences.State = 1
+	}
+
 	chkSyntaxAnimation := vtui.NewCheckbox(0, 0, Msg("EditorSettings.SyntaxAnimation"), false)
 	if AppConfig.EditorSyntaxAnimation {
 		chkSyntaxAnimation.State = 1
@@ -2882,6 +2888,7 @@ func actionEditorSettings(pf *PanelsFrame) {
 	dlg.AddItem(chkEditorConfig)
 	dlg.AddItem(chkAuto)
 	dlg.AddItem(chkCrosshair)
+	dlg.AddItem(chkHighlightOccurrences)
 	dlg.AddItem(chkColorerBg)
 	dlg.AddItem(chkSyntaxAnimation)
 	dlg.AddItem(lblMask)
@@ -2926,7 +2933,8 @@ func actionEditorSettings(pf *PanelsFrame) {
 		checkColumn := vtui.NewVBoxLayout(0, 0, width-4, checkRows)
 		for _, check := range []*vtui.Checkbox{
 			chkAutoIndent, chkCursorEOL, chkEditorConfig,
-			chkAuto, chkCrosshair, chkColorerBg, chkSyntaxAnimation,
+			chkAuto, chkCrosshair, chkHighlightOccurrences,
+			chkColorerBg, chkSyntaxAnimation,
 		} {
 			checkColumn.Add(check, vtui.Margins{}, vtui.AlignLeft)
 		}
@@ -2936,6 +2944,7 @@ func actionEditorSettings(pf *PanelsFrame) {
 		col1.Add(chkAutoIndent, vtui.Margins{}, vtui.AlignLeft)
 		col1.Add(chkEditorConfig, vtui.Margins{}, vtui.AlignLeft)
 		col1.Add(chkColorerBg, vtui.Margins{}, vtui.AlignLeft)
+		col1.Add(chkHighlightOccurrences, vtui.Margins{}, vtui.AlignLeft)
 
 		col2 := vtui.NewVBoxLayout(0, 0, (width-4)/2, checkRows)
 		col2.Add(chkCursorEOL, vtui.Margins{}, vtui.AlignLeft)
@@ -3005,6 +3014,7 @@ func actionEditorSettings(pf *PanelsFrame) {
 		AppConfig.EditorUseEditorConfig = chkEditorConfig.State == 1
 		AppConfig.EditorAutoComplete = chkAuto.State == 1
 		AppConfig.EditorCrosshair = chkCrosshair.State == 1
+		AppConfig.EditorMarkOccurrences = chkHighlightOccurrences.State == 1
 		AppConfig.EditorColorerBackground = chkColorerBg.State == 1
 		AppConfig.EditorSyntaxAnimation = chkSyntaxAnimation.State == 1
 		AppConfig.EditorAutoCompleteMask = editMask.GetText()

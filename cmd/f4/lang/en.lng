@@ -793,6 +793,7 @@ EditorSettings.AutoIndent=Auto i&ndent
 EditorSettings.CursorBeyondEOL=Cursor beyond end of &line
 EditorSettings.UseEditorConfig=Use .&editorconfig settings files
 EditorSettings.Crosshair=Show cross&hair
+EditorSettings.HighlightOccurrences=Highlight all &occurrences
 EditorSettings.ColorerBg=Colorer &background
 EditorSettings.SyntaxAnimation=Animate syntax &highlighting
 EditorSettings.UseExternalEditor=Use e&xternal editor
