@@ -27,6 +27,19 @@
 - `tools/` — developer tooling, not shipped in the binary
 - UI and input live outside this repository, in the `vtui` and `vtinput` libraries
 
+## Code Navigation
+
+- The repository is indexed by CodeGraph (`.mcp.json`, index in `.codegraph/`).
+  For symbol questions use it, not `grep`: `callers`, `callees`, `impact`,
+  `explore`, `node`. `cmd/f4` is one flat `package main` of ~109k lines, so grep
+  over it is slow and matches identifiers it should not.
+- The index is git-ignored and the server never builds one on its own, so a fresh
+  clone needs `npx -y @colbymchenry/codegraph@1.6.0 init` once.
+- There is no `codegraph` binary on PATH — always run the full form:
+  `npx -y @colbymchenry/codegraph@1.6.0 <command>`.
+- Grep remains correct for non-symbol text: comments, error strings, build tags,
+  ini keys.
+
 ## Error Handling
 
 - Wrap with context: `fmt.Errorf("doing X: %w", err)` (~395 call sites)

@@ -82,8 +82,30 @@ artifacts/       # build artifacts
 | `.ai-factory/ARCHITECTURE.md` | Architecture pattern, boundaries and dependency rules |
 | `.ai-factory/rules/base.md` | Detected code conventions: naming, errors, logging, tests |
 | `.ai-factory/config.yaml` | AI Factory configuration: paths, language, git workflow |
+| `.mcp.json` | MCP servers for this project: CodeGraph code-graph index |
 
 ## Agent Rules
+
+### Code graph (CodeGraph MCP)
+
+- The MCP server is wired in `.mcp.json` and runs through `npx`, so no global
+  install is needed. The index lives in `.codegraph/` and is git-ignored.
+- **A fresh clone has no index.** The server does not build one on its own — if a
+  tool reports `No .codegraph/`, run `npx -y @colbymchenry/codegraph@1.6.0 init`
+  once in the repository root. A new index is picked up live, no restart.
+- There is no `codegraph` binary on PATH. Every invocation takes the form
+  `npx -y @colbymchenry/codegraph@1.6.0 <command>`; the commands below are the
+  `<command>` part.
+- Use it instead of `grep` for symbol questions — `cmd/f4` is one flat
+  `package main` of ~109k lines, where grep is both slow and imprecise:
+  - `callers <symbol>` — who calls it
+  - `callees <symbol>` — what it calls
+  - `impact <symbol>` — what a change touches
+  - `explore <query>` — relevant symbols with source and call paths
+  - `node <symbol|file>` — one symbol's source plus its caller trail
+- The index auto-syncs on file changes; after a large rebase run `sync`.
+- Grep stays the right tool for text that is not a symbol: comments, error
+  strings, build tags, config keys.
 
 ### Go build cache
 
