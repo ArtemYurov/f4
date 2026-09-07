@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -4914,22 +4915,29 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 		pf.switchToVFS(fsp, newTempPanelVFS(nil, globalTempPanelStore, 0))
 	}})
 
-	// 2. Fixed platform paths (Root, Home)
+	// 2. Fixed platform paths (Root, Home, physical disks). The metadata is
+	// rendered at menu-open time, just like Far's ChangeDiskMenu, so labels,
+	// filesystem types and free space reflect the current state.
+	driveMenuOptions := AppConfig.DriveMenuOptions
 	for _, drv := range getPlatformDrives() {
+		if !driveMenuPlatformItemVisible(drv, driveMenuOptions) {
+			continue
+		}
 		factory := drv.Factory
-		name := drv.Name
+		name := driveMenuPlatformItemText(drv, driveMenuOptions)
 		if runtime.GOOS != "windows" {
-			if strings.HasPrefix(name, "/") {
+			if strings.HasPrefix(driveMenuNameWithoutMarker(drv.Name), "/") {
 				name = "&" + name
 				usedHotkeys['/'] = true
-			} else if strings.HasPrefix(name, "~") {
+			} else if strings.HasPrefix(driveMenuNameWithoutMarker(drv.Name), "~") {
 				name = "&" + name
 				usedHotkeys['~'] = true
 			}
 		} else {
-			if len(name) >= 2 && name[1] == ':' {
+			cleanName := driveMenuNameWithoutMarker(drv.Name)
+			if len(cleanName) >= 2 && cleanName[1] == ':' {
 				name = "&" + name
-				usedHotkeys[unicode.ToLower(rune(name[0]))] = true
+				usedHotkeys[unicode.ToLower(rune(cleanName[0]))] = true
 			}
 		}
 
@@ -4943,31 +4951,42 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 	// digit as the hotkey, so Alt+F1 followed by 6 lands on slot 6.
 	// Unassigned slots are left out.
 	bookmarkRows := map[int]int{} // menu row -> slot, for the keys below
-	if set, err := LoadBookmarks(BookmarksFilePath()); err == nil {
-		firstBookmark := true
-		for i := range set {
-			if set[i].IsEmpty() {
-				continue
+	if driveMenuOptionEnabled(driveMenuOptions, driveMenuShowBookmarks) {
+		if set, err := LoadBookmarks(BookmarksFilePath()); err == nil {
+			firstBookmark := true
+			for i := range set {
+				if set[i].IsEmpty() {
+					continue
+				}
+				if firstBookmark {
+					menu.AddSeparator()
+					firstBookmark = false
+				}
+				bookmark := set[i]
+				path := bookmark.Path
+				usedHotkeys[rune('0'+i)] = true
+				bookmarkRows[menu.GetItemCount()] = i
+				menu.AddItem(vtui.MenuItem{
+					Text: fmt.Sprintf("&%d  %s", i, escapeAmpersand(truncPathLeft(path, 64))),
+					UserData: func(fsp *FileSystemPanel) {
+						pf.navigateToBookmark(fsp, bookmark)
+					},
+				})
 			}
-			if firstBookmark {
-				menu.AddSeparator()
-				firstBookmark = false
-			}
-			bookmark := set[i]
-			path := bookmark.Path
-			usedHotkeys[rune('0'+i)] = true
-			bookmarkRows[menu.GetItemCount()] = i
-			menu.AddItem(vtui.MenuItem{
-				Text: fmt.Sprintf("&%d  %s", i, escapeAmpersand(truncPathLeft(path, 64))),
-				UserData: func(fsp *FileSystemPanel) {
-					pf.navigateToBookmark(fsp, bookmark)
-				},
-			})
 		}
 	}
 
 	// 4. Plugins & custom drives
-	drives := driveRegistrySnapshot()
+	drives := []DriveEntry(nil)
+	if driveMenuOptionEnabled(driveMenuOptions, driveMenuShowPlugins) {
+		drives = driveRegistrySnapshot()
+		if driveMenuOptionEnabled(driveMenuOptions, driveMenuSortPluginsByHotkey) {
+			sort.SliceStable(drives, func(i, j int) bool {
+				return strings.ToLower(driveMenuNameWithoutMarker(drives[i].Name)) <
+					strings.ToLower(driveMenuNameWithoutMarker(drives[j].Name))
+			})
+		}
+	}
 	if len(drives) > 0 {
 		menu.AddSeparator()
 		for _, drv := range drives {
@@ -5005,25 +5024,30 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 	// bookmarks.ini: the latter is far2l's ten-slot RCtrl bookmark table,
 	// while this list is the DiskMenuEditor-style, unbounded drive-menu list.
 	driveBookmarkRows := map[int]int{} // menu row -> named bookmark index
-	driveBookmarks, err := LoadDriveBookmarks(DriveBookmarksFilePath())
-	if err != nil {
-		vtui.DebugLog("DRIVE BOOKMARKS: load %q failed: %v", DriveBookmarksFilePath(), err)
-		driveBookmarks = nil
+	driveBookmarks := []DriveBookmark(nil)
+	headerRow := -1
+	if driveMenuOptionEnabled(driveMenuOptions, driveMenuShowBookmarks) {
+		var err error
+		driveBookmarks, err = LoadDriveBookmarks(DriveBookmarksFilePath())
+		if err != nil {
+			vtui.DebugLog("DRIVE BOOKMARKS: load %q failed: %v", DriveBookmarksFilePath(), err)
+			driveBookmarks = nil
+		}
+		menu.AddSeparator()
+		headerRow = menu.GetItemCount()
+		menu.AddItem(vtui.MenuItem{Text: Msg("Drive.Bookmarks"), Command: CmDriveBookmarksHeader})
+		for index, bookmark := range driveBookmarks {
+			bookmark := bookmark
+			driveBookmarkRows[menu.GetItemCount()] = index
+			menu.AddItem(vtui.MenuItem{
+				Text: driveBookmarkMenuText(bookmark),
+				UserData: func(fsp *FileSystemPanel) {
+					pf.navigateToBookmark(fsp, Bookmark{Path: bookmark.Path})
+				},
+			})
+		}
+		vtui.FrameManager.DisabledCommands.Disable(CmDriveBookmarksHeader)
 	}
-	menu.AddSeparator()
-	headerRow := menu.GetItemCount()
-	menu.AddItem(vtui.MenuItem{Text: Msg("Drive.Bookmarks"), Command: CmDriveBookmarksHeader})
-	for index, bookmark := range driveBookmarks {
-		bookmark := bookmark
-		driveBookmarkRows[menu.GetItemCount()] = index
-		menu.AddItem(vtui.MenuItem{
-			Text: driveBookmarkMenuText(bookmark),
-			UserData: func(fsp *FileSystemPanel) {
-				pf.navigateToBookmark(fsp, Bookmark{Path: bookmark.Path})
-			},
-		})
-	}
-	vtui.FrameManager.DisabledCommands.Disable(CmDriveBookmarksHeader)
 	oldSelectable := menu.IsSelectable
 	menu.IsSelectable = func(index int) bool {
 		return index != headerRow && oldSelectable(index)
@@ -5045,6 +5069,11 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 			reopen := func() { pf.showDriveMenuAt(panelIdx, pos) }
 
 			switch e.VirtualKeyCode {
+			case vtinput.VK_F9:
+				// Far uses F9 for the drive-menu options dialog. Consume it
+				// here so the global F9 main-menu action never sees it.
+				pf.openDriveMenuOptions(panelIdx, menu)
+				return true
 			case vtinput.VK_INSERT:
 				// Ins adds a named drive-menu link from any row. The path
 				// defaults to the panel directory, while the user chooses
