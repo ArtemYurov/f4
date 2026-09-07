@@ -5707,7 +5707,7 @@ func (ev *EditorView) CopySelection() {
 		}
 
 		text := strings.Join(lines, "\n")
-		vtui.SetClipboard(text)
+		setF4Clipboard(text)
 		return
 	}
 
@@ -5717,7 +5717,7 @@ func (ev *EditorView) CopySelection() {
 		data, _ := ev.pt.GetRange(min, max-min)
 		if data != nil {
 			text := string(data)
-			vtui.SetClipboard(text)
+			setF4Clipboard(text)
 			vtui.DebugLog("EDITOR: Copied %d bytes to clipboard", max-min)
 		}
 	}

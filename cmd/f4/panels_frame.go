@@ -4573,7 +4573,7 @@ func executeCapturedCommand(pf *PanelsFrame, action string, cmdStr string) {
 					vtui.ShowMessage(" Error ", fmt.Sprintf("Execution failed:\n%v", err), []string{"&Ok"})
 					return
 				}
-				vtui.SetClipboard(string(out))
+				setF4Clipboard(string(out))
 				showToast("Command output copied to clipboard", 3*time.Second)
 				pf.RefreshAll()
 			})
