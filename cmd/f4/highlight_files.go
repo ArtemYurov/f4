@@ -221,24 +221,34 @@ func parseRuleSections(ini *IniFile, prefix string) []ruleSection {
 
 		rule.ContinueProcessing = ini.GetString(secName, "ContinueProcessing", "0") == "1"
 
-		rule.Mark = ini.GetString(secName, "Mark", "")
-		if rule.Mark == "" {
-			rule.Mark = ini.GetString(secName, "MarkChar", "")
-		}
+		rule.Mark = firstIniValue(ini, secName, "Mark", "MarkChar")
 
-		rule.NormalStr = ini.GetString(secName, "NormalColor", "")
-		rule.SelectedStr = ini.GetString(secName, "SelectedColor", "")
-		rule.CursorStr = ini.GetString(secName, "CursorColor", "")
-		rule.SelectedCursorStr = ini.GetString(secName, "SelectedCursorColor", "")
-		if rule.CursorStr == "" {
-			rule.CursorStr = ini.GetString(secName, "NormalColorUnderCursor", "")
-		}
-		if rule.SelectedCursorStr == "" {
-			rule.SelectedCursorStr = ini.GetString(secName, "SelectedColorUnderCursor", "")
-		}
+		// Each of the four colours answers to several spellings. Far Manager
+		// names them after what they paint ("File name under cursor") and a
+		// group copied out of its Files highlighting dialog should work here
+		// as written, so those names are accepted next to f4's own (#912).
+		rule.NormalStr = firstIniValue(ini, secName, "NormalColor", "NormalFileName")
+		rule.SelectedStr = firstIniValue(ini, secName, "SelectedColor", "SelectedFileName")
+		rule.CursorStr = firstIniValue(ini, secName,
+			"CursorColor", "NormalColorUnderCursor", "FileNameUnderCursor")
+		rule.SelectedCursorStr = firstIniValue(ini, secName,
+			"SelectedCursorColor", "SelectedColorUnderCursor", "FileNameSelectedUnderCursor")
 		rules = append(rules, ruleSection{Section: secName, Rule: rule})
 	}
 	return rules
+}
+
+// firstIniValue returns the value of the first of the given keys that the
+// section actually sets, so one setting can be written under any of its
+// accepted names. Keys are tried in order, the earlier name winning when a
+// section spells the same colour twice.
+func firstIniValue(ini *IniFile, section string, keys ...string) string {
+	for _, key := range keys {
+		if val := ini.GetString(section, key, ""); val != "" {
+			return val
+		}
+	}
+	return ""
 }
 
 func parseAttrFlags(s string) AttrFlags {

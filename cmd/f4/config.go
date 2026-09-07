@@ -1266,31 +1266,55 @@ func createDefaultHighlightIni(path string) {
 # by the active Color Style, so you don't need to duplicate them unless
 # you specifically want to override the theme's colors.
 #
-# A [Highlight_N] section matches a file by its Name/Mask, attributes, size,
-# or date. The four color keys are selected independently:
+# A [Highlight_N] section matches an item by its Mask, attributes, size or
+# date. Name is a label for you, not a matcher. The four color keys are
+# selected independently:
 #   NormalColor          - an ordinary, unselected item
 #   SelectedColor        - a selected item
 #   CursorColor          - an ordinary item under the cursor
 #   SelectedCursorColor  - a selected item under the cursor
-# The cursor-specific keys may also be written as
-# NormalColorUnderCursor and SelectedColorUnderCursor. If a specialized
-# color is omitted, f4 falls back to the corresponding ordinary color.
-# Colors use foreground/background expressions, for example:
+# The same four can be spelled the way Far Manager names them in its Files
+# highlighting dialog, which is what a group copied from Far will use:
+#   NormalFileName, SelectedFileName, FileNameUnderCursor,
+#   FileNameSelectedUnderCursor
+# The cursor-specific keys are also accepted as NormalColorUnderCursor and
+# SelectedColorUnderCursor. If a specialized color is omitted, f4 falls back
+# to the corresponding ordinary color. Every one of the four takes a
+# foreground, a background, or both:
 #   foreground:#FF00FF | background:#008080
 # Other useful keys are IncludeAttributes/ExcludeAttributes (Directory,
 # Hidden, Executable, ReadOnly, System, Archive, Symlink), SizeAbove,
 # SizeBelow, DateType, DateAfter, DateBefore, Mark, and ContinueProcessing.
 #
-# Uncomment and adapt this complete example to add a custom rule. The section
-# is commented out deliberately, so the example does not change the panel.
+# Sections are tried in the order of their numbers and the first match wins,
+# unless it sets ContinueProcessing = 1. A section without a Mask matches
+# every name, so a rule meant for folders needs IncludeAttributes = Directory
+# and a rule meant for files needs ExcludeAttributes = Directory -- a rule
+# with neither repaints the whole panel and hides every rule below it.
+#
+# A comment takes a whole line. There are no trailing comments: '#' also
+# opens a color literal, so anything after a value stays part of that value.
+#
+# Uncomment and adapt these complete examples to add custom rules. The
+# sections are commented out deliberately, so they do not change the panel.
 # [Highlight_100]
 # Name = Archives
 # Mask = *.zip, *.rar, *.7z
 # ExcludeAttributes = Directory
-# NormalColor = foreground:#FF00FF
-# SelectedColor = foreground:#FF00FF | background:#008080
+# NormalColor = foreground:#FF00FF | background:#000000
+# SelectedColor = foreground:#FFFF00 | background:#000000
 # CursorColor = foreground:#FFFFFF | background:#008080
-# SelectedCursorColor = foreground:#FFFFFF | background:#0000A0
+# SelectedCursorColor = foreground:#FFFF00 | background:#008080
+#
+# The same four colors for folders, written with the Far key names. Note the
+# attribute: without it the section would color the files as well.
+# [Highlight_101]
+# Name = Directories
+# IncludeAttributes = Directory
+# NormalFileName = foreground:#FFFFFF | background:#000000
+# SelectedFileName = foreground:#FFFF00 | background:#000000
+# FileNameUnderCursor = foreground:#FFFFFF | background:#008080
+# FileNameSelectedUnderCursor = foreground:#FFFF00 | background:#008080
 #
 # [SortGroup_N] sections below define sort groups. They accept the same
 # matching keys as a highlight rule (Mask, IncludeAttributes,
