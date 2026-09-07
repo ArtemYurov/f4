@@ -83,7 +83,7 @@ split on netbsd/openbsd, `session_unix.go` and `session_windows.go` split on
 | `internal/term/` | create | pty, console host, ANSI parser, kitty/sixel, clipboard |
 | `internal/media/` | create | Image, audio and video decode and preview |
 | `cmd/f4/architecture_test.go` | modify | Three layer-map entries |
-| `docs/TERMINAL.md`, `docs/CONPTY.md` and neighbours | modify | Path references |
+| `docs/TERMINAL.md`, `docs/TTYX.md`, `docs/CONPTY_GATE_REQUIREMENTS.md`, `docs/WINCON_805_HANDOVER.md`, `docs/CONPTY_FUTURE_IDEAS.md`, `docs/PLAYER.md` | modify | The six pages that name a file this phase moves; re-derive with `grep -lE 'cmd/f4/(pty_\|terminal_\|ansi_parser\|kitty_\|sixel_\|clipboard\|background_jobs\|command_runner\|shell_mode\|wine_probe\|graphics_\|far2l_image\|session_\|console_host\|ttyx_\|viewer_\|disasm\|word_nav\|top_bar\|file_title\|url_links\|image_\|audio_\|video_\|player_panel)' docs/*.md` |
 
 ---
 
@@ -136,13 +136,21 @@ status text. No logging is added.
 
 ### Tests
 
-`viewer_view_test.go`, `disasm_test.go`, `title_test.go` and
-`uri_navigation_test.go` move with their subjects.
-**`editor_binary_open_test.go` does not come here.** It was hedged as "if it tests
-the viewer path", and Task 33's Tests section claims it outright — a file claimed
-twice is claimed by nobody. Measured, it touches `FileSystemPanel` ×1 and
-`EditorView` ×1 and no viewer type at all, so it is one of the five multi-package
-tests Task 43 step 4 rules on. Follow that ruling; do not take it here.
+The nine files Task 43's roster lists for `internal/viewer` move:
+`codepage_issue875_sticky_test.go`, `disasm_test.go`, `top_bar_test.go`,
+`url_links_test.go`, `viewer_backend_test.go`, `viewer_tail_test.go`,
+`viewer_text_test.go`, `viewer_view_test.go`, `word_nav_test.go`.
+**Not** `uri_navigation_test.go`: an earlier draft claimed it here, but it
+references 23 panel symbols and no viewer symbol — it goes to `internal/panel`
+in Task 34. **Not** `title_test.go` either: its subject is `title.go`, the
+window-title code that leaves with the composition root in Task 36; the viewer
+file named `title.go` after this wave is the renamed `file_title.go`.
+**`editor_binary_open_test.go` does not come here.** It was once hedged as "if it
+tests the viewer path" while an earlier draft of Task 33 claimed it outright — a
+file claimed twice is claimed by nobody. Measured, it touches `FileSystemPanel`
+×1 and `EditorView` ×1 and no viewer type at all, and by the graph it drives
+`showEditor` and `findOpenedEditor`; Task 43 step 5 hosts it in `internal/app`
+(Task 36). Do not take it here.
 
 Each test that moves uses `testutil.SwapFrameManager` after Task 9 — verify the
 drains it passes are still the right ones.
@@ -176,14 +184,18 @@ The largest wave: pty backends across nine platforms, the console host, the ANSI
 parser, kitty and sixel graphics, clipboard and background jobs. Twelve outbound
 edges, and it goes before media because six of media's ten edges point here.
 
-**Roster size.** Steps 1-3 below name 41 non-test files. Task 43 adds eleven more
-that no task named — `ttyx_probe.go`, `ttyx_probe_parse.go`, `ttyx_probe_unix.go`,
+**Roster size.** Steps 1-3 below name 44 non-test files (`ansi_parser.go`
+included; `session_windows.go`, `terminal_redraw.go` and the four
+`process_environment*.go` are in steps 1-2, having earlier appeared only in the
+rename list, the evidence table or nowhere). Task 43 adds eleven more that no
+task named — `ttyx_probe.go`, `ttyx_probe_parse.go`, `ttyx_probe_unix.go`,
 `ttyx_probe_windows.go`, `ttyx_session.go`, `terminal_log_console_other.go`,
-`terminal_log_console_windows.go`, `terminal_log_vfs.go`, `console_host_windows.go`
-and the two `console_overlay_*.go` (score the overlays: they may belong to
-`internal/media`). That is 52 non-test files, plus whatever `_test.go` files Task
-43's table assigns. Count the roster before starting and again before committing;
-this is the wave where a dropped file is least likely to be noticed.
+`terminal_log_console_windows.go`, `terminal_log_vfs.go`,
+`console_host_windows.go` and the two `console_overlay_*.go` (they score only
+on `TerminalView`, this wave's own type). That is 55 non-test files, plus the
+37 `_test.go` files Task 43's roster lists for this wave. Count the roster before
+starting and again before committing; this is the wave where a dropped file is
+least likely to be noticed.
 
 This is the wave where filenames lie the most. Eleven files whose names suggest
 another package belong here because their *callers* are in `ansi_parser.go` and
@@ -206,6 +218,13 @@ another package belong here because their *callers* are in `ansi_parser.go` and
      *terminal* supports, not what the GUI draws.
    - `clipboard.go`, `clipboard_async.go`, `background_jobs.go` — pulled into this
      wave specifically to avoid a `fileops ↔ term` cycle in Task 32.
+   - `process_environment.go`, `process_environment_shell.go`,
+     `process_environment_runtime_unix.go`,
+     `process_environment_runtime_windows.go` — Task 43's assignment:
+     `pty_interface.go` calls into `process_environment_shell.go` five times, so
+     nothing above term can own them without inverting the layers.
+     `process_environment.go` scores 4 on `PanelsFrame`; those four references
+     stay with the panel per the gate rule.
 2. Move the pty family by build tag, reading each `//go:build` line from the file:
    `pty_interface.go` (none), `pty_unix.go` (**`linux`**, despite the name),
    `pty_darwin.go` (`darwin`), `pty_bsd.go` (`freebsd || dragonfly`),
@@ -213,7 +232,9 @@ another package belong here because their *callers* are in `ansi_parser.go` and
    `pty_ptm_netbsd.go`, `pty_ptm_openbsd.go`, `pty_solaris.go`,
    `pty_windows.go`, `pty_diag_unix.go`, `pty_diag_windows.go`,
    `solaris_pty.go` (**`!windows`**, and it contains no PTY code — read it before
-   deciding), `solaris_streams.go`.
+   deciding), `solaris_streams.go`, `session_windows.go` (`windows`) and
+   `terminal_redraw.go` (untagged, gate 0; its only caller is `panels_frame.go`,
+   a legal panel → term edge).
 3. Resolve the non-zeros: `terminal_view.go` has 79 `TerminalView` (fine) and
    **one** `PanelsFrame` — resolve that single reference. `terminal_workspace.go`
    (2), `session_unix.go` (6), `background_jobs_window.go` (1) likewise.
@@ -258,12 +279,18 @@ another package belong here because their *callers* are in `ansi_parser.go` and
 
 ### Tests
 
-Take the `_test.go` files Task 43 assigns to this wave, among them
-`ansi_parser_test.go` (which contains one
-of the two test-file `init()`s and the `mockPty` fixture), `terminal_view_test.go`
-(the other), `issue863_terminal_test.go`, `clipboard_test.go`,
-`shell_session_test.go`, `shell_integration_test.go` and the pty diagnostics
-tests.
+Take the 37 files Task 43's roster lists for `internal/term`, among them
+`ansi_parser_test.go` (which contains one of the two test-file `init()`s and the
+`mockPty` fixture), `terminal_view_test.go` (the other), `clipboard_test.go`,
+`process_environment_test.go`, `terminal_selection_test.go` (as
+`package term_test`: its panel references are exported types), the three
+`pty_*_test.go` diagnostics tests, `solaris_pty_alloc_test.go`,
+`solaris_pty_backend_test.go` and the three `solaris_streams_mock*_test.go`
+fixtures. **Not** `shell_session_test.go`, `shell_integration_test.go` or
+`issue863_terminal_test.go`: an earlier draft claimed them here, but each drives
+a mock `PanelsFrame` and references no `TerminalView` at all — they are panel
+tests and go in Task 34, with this wave exporting the one symbol they share,
+`cellsText`.
 
 `ansi_parser_test.go`'s `mockPty` is used by `setupMockPanelsFrame`
 (`panels_frame_test.go:794`). Since `internal/paneltest` will import
@@ -277,7 +304,8 @@ go test ./internal/term/...
 go test -race -shuffle=on -timeout 5m ./internal/term/...
 for t in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64 \
          freebsd/amd64 dragonfly/amd64 openbsd/amd64 netbsd/amd64 illumos/amd64 solaris/amd64; do
-  GOOS=${t%/*} GOARCH=${t#*/} CGO_ENABLED=0 go build ./... || echo "FAIL $t"
+  extra=(); case $t in freebsd/*|netbsd/*) extra=(-gcflags=github.com/go-webgpu/goffi/internal/fakecgo=-std);; esac
+  GOOS=${t%/*} GOARCH=${t#*/} CGO_ENABLED=0 go build "${extra[@]}" ./... || echo "FAIL $t"
 done
 ```
 
@@ -356,8 +384,11 @@ command, and that message is user-visible.
 
 ### Tests
 
-`image_gallery_test.go`, `image_view_overlay_test.go` and the audio/video tests
-move. Two of them call `testutil.ScreenRow` (moved in Task 9) — confirm the import.
+The 18 files Task 43's roster lists for `internal/media` move, among them
+`image_gallery_test.go`, `image_view_overlay_test.go`, `image_formats_test.go`,
+`image_view_orient_test.go`, `sixel_layers_test.go`, `audio_decode_test.go`,
+`video_player_test.go` and `player_panel_test.go`. Two of them call
+`testutil.ScreenRow` (moved in Task 9) — confirm the import.
 
 ```
 go test ./internal/media/...

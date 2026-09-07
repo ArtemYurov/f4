@@ -127,8 +127,15 @@ would otherwise hit was pre-empted in Task 30, which pulled `clipboard.go`,
 
 ### Tests
 
+The 19 files Task 43's roster lists for `internal/fileops` move, among them
 `file_ops_test.go`, `file_mask_far2l_test.go`, `queue_manager_test.go`,
-`attributes_test.go` and the compare tests move.
+`compare_folders_test.go`, `dialog_reporter_test.go`, `file_ops_safety_test.go`,
+`file_state_key_test.go`, `issue149_test.go` and `issue815_test.go`. **Not**
+`attributes_test.go`: it drives `actionFileAttributes` on a mock frame (41 panel
+references) and goes to `internal/app` in Task 36; this wave exports the four
+`showAttributes*` functions it needs (Task 43's multi-package table). **Not**
+`delete_trash_test.go` either, for the same reason: it drives `actionDelete`,
+and this wave exports `calculateDeleteStats` and `deletePathWithDisposition`.
 `queue_manager_test.go` gained an explicit `StartQueueWorker()` in Task 5; confirm
 it still compiles against the exported name.
 
@@ -136,7 +143,8 @@ it still compiles against the exported name.
 go test ./internal/fileops/...
 go test -race ./internal/fileops/...
 for t in linux/amd64 windows/amd64 dragonfly/amd64 netbsd/amd64 solaris/amd64 illumos/amd64; do
-  GOOS=${t%/*} GOARCH=${t#*/} CGO_ENABLED=0 go build ./... || echo "FAIL $t"
+  extra=(); case $t in freebsd/*|netbsd/*) extra=(-gcflags=github.com/go-webgpu/goffi/internal/fakecgo=-std);; esac
+  GOOS=${t%/*} GOARCH=${t#*/} CGO_ENABLED=0 go build "${extra[@]}" ./... || echo "FAIL $t"
 done
 ```
 
@@ -228,18 +236,28 @@ package.
 
 ### Tests
 
-`editor_view_test.go`, `editor_find_all_test.go`, `editor_target_line_test.go`
-and the colorer tests move. `editor_binary_open_test.go` touches
-`FileSystemPanel` ×1 as well as `EditorView` ×1 and is one of the five
-multi-package tests Task 43 step 4 rules on — take it only if that ruling says so. Several call
-`testutil.SwapFrameManager`; verify the drains they pass are still correct now
-that `waitForAsyncClipboard` lives in `internal/term`.
+The 35 files Task 43's roster lists for `internal/editor` move:
+`editor_view_test.go`, `editor_find_all_test.go`, `editor_target_line_test.go`,
+the aspect files' neighbours, the twenty-one scenario tests named
+`editor_*_test.go` without a same-named source, `colorer_plugin_test.go`,
+`mapped_file_test.go`, `external_editor_process_unix_test.go`,
+`external_editor_test.go` (its subject, `configuredExternalEditorCommand`, comes
+here in step 4) and `goto_test.go` (dialog exports `parseGotoOffset` and
+`showGotoOffsetDialog` for it). **Not** `editor_binary_open_test.go`: Task 43's
+ruling hosts it in `internal/app` — it drives `showEditor` and
+`findOpenedEditor` — and this wave exports `awaitOffsetAsync`, `cancelColorer`,
+`indexIsComplete` and `newEditorView` for it. `editor_save_inplace_test.go` comes
+here, but its one case that touches `async_buffer.go`'s `prewarm` splits out to
+`internal/app`. Several call `testutil.SwapFrameManager`; verify the drains they
+pass are still correct now that `waitForAsyncClipboard` lives in
+`internal/term`.
 
 ```
 go test ./internal/editor/...
 go test -race -shuffle=on ./internal/editor/...
 for t in linux/amd64 darwin/arm64 windows/amd64 freebsd/amd64 solaris/amd64; do
-  GOOS=${t%/*} GOARCH=${t#*/} CGO_ENABLED=0 go build ./internal/editor/... || echo "FAIL $t"
+  extra=(); case $t in freebsd/*|netbsd/*) extra=(-gcflags=github.com/go-webgpu/goffi/internal/fakecgo=-std);; esac
+  GOOS=${t%/*} GOARCH=${t#*/} CGO_ENABLED=0 go build "${extra[@]}" ./internal/editor/... || echo "FAIL $t"
 done
 ```
 

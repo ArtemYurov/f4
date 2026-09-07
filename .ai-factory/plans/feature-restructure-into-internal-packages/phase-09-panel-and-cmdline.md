@@ -149,6 +149,10 @@ convention matters here more than anywhere else.
    - `WaitForDirectoryLoads(t *testing.T)` — the drain that waits on the
      `directoryLoadWorkers` global, which now lives in `internal/panel`. Callers
      pass it to `testutil.SwapFrameManager`.
+   - `WaitForLoad(t *testing.T, fp *panel.FileSystemPanel)` — was `waitForLoad`
+     (`file_panel_test.go`), used by 19 test files in eight packages. It reads
+     `fp.isLoading`, so `FileSystemPanel` gains an exported `IsLoading()`
+     accessor in this wave.
 7. **Convert the in-package tests that use the mock frame.** Any test file inside
    `internal/panel`, `internal/cmdline` or `internal/term` that calls
    `paneltest.SetupMockPanelsFrame` must become an external test package —
@@ -202,8 +206,15 @@ convention matters here more than anywhere else.
 
 ### Tests
 
-Every `_test.go` neighbour moves. The conversions in step 7 are the substantive
-test work in this plan; budget for them.
+The 48 files Task 43's roster lists for `internal/panel` move — the same-named
+neighbours of every source above plus the scenario tests the roster names, among
+them `shell_session_test.go`, `shell_integration_test.go`,
+`issue863_terminal_test.go`, `uri_navigation_test.go`, `navigation_mode_test.go`,
+`panels_frame_pty_test.go`, `managed_execution_test.go`,
+`file_associations_dispatch_test.go`, `workspace_routing_test.go`,
+`workspace_session_test.go` and what remains of
+`frame_manager_test_helpers_test.go`. The conversions in step 7 are the
+substantive test work in this plan; budget for them.
 
 ```
 go test ./internal/panel/... ./internal/paneltest/...
@@ -220,8 +231,8 @@ The race run matters most here: the panel owns the directory-load workers that
   returns nothing.
 - No file in `internal/panel` is named `panel_*.go` — the topic is the subject
   inside the package.
-- `internal/paneltest` exports `SetupMockPanelsFrame`, `MockPty` and
-  `WaitForDirectoryLoads`.
+- `internal/paneltest` exports `SetupMockPanelsFrame`, `MockPty`,
+  `WaitForDirectoryLoads` and `WaitForLoad`.
 - The palette auditor's 42 keys pass with `panel.` qualifiers.
 
 ### Verification
@@ -267,7 +278,8 @@ package, so the wave is a move rather than an excavation.
    `apply_shortname_windows.go`, `apply_shutdown.go`.
 5. Move the session and history files: `cmd_session.go` → `session.go`,
    `simple_exec.go` / `simple_exec_other.go` / `simple_exec_windows.go` →
-   `exec*.go`, `history_hint`-related files.
+   `exec*.go`. There is no `history_hint*.go` source: `history_hint_test.go`
+   drives `actionCommandHistory` and is an `internal/app` test.
 6. **`command_runner*.go`, `shell_mode.go` and `wine_probe*.go` are explicitly
    NOT here.** They went to `internal/term` in Task 30 because their callers are
    `pty_*`. Leaving them in cmdline inverts the layers.
@@ -302,8 +314,16 @@ package, so the wave is a move rather than an excavation.
 
 ### Tests
 
-`apply_command_test.go`, `cmd_session_test.go`, `command_prefix_registry_test.go`,
-`shell_session_test.go`, `history_hint_test.go` and `simple_exec_test.go` move.
+The 11 files Task 43's roster lists for `internal/cmdline` move:
+`apply_command_batch_test.go`, `apply_command_resources_test.go`,
+`apply_command_subst_test.go`, `apply_command_test.go`, `cmd_session_test.go`,
+`command_line_test.go`, `command_prefix_registry_test.go`,
+`command_quotes_test.go`, `command_quoting_test.go`,
+`resolve_command_windows_test.go`, `simple_exec_test.go`. **Not**
+`shell_session_test.go` (a panel test, Task 34) and **not**
+`history_hint_test.go` (it references no command-line symbol; it drives
+`actionCommandHistory` and goes to `internal/app`) — an earlier draft claimed
+both here.
 Several were converted to external test packages in Task 34 step 7; verify they
 still compile against `internal/cmdline`'s exported surface.
 

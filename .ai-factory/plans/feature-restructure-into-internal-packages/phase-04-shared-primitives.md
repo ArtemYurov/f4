@@ -391,7 +391,12 @@ func ImportFar2lHistory(path string) ([]HistoryRecord, error)
 
 - `actions_test.go`'s `importFar2lHistory` cases move to
   `internal/history/far2l_test.go`.
-- Any existing history test moves with its file.
+- The five files Task 43's roster lists for `internal/history` move:
+  `command_history_paths_test.go`, `history_dialog_test.go`,
+  `history_provider_test.go`, `menu_history_test.go`, `search_history_test.go`.
+  `search_history_test.go` also drives `actionFindFile`, `actionMkDir`,
+  `showReplaceDialog` and `applyPathHintSettings`; those cases split out to the
+  packages that own them (Task 43's multi-package table).
 - Add nothing new: these are moves, and the existing coverage travels.
 
 ```
@@ -441,7 +446,11 @@ waves.
    map read from five packages is the "package-level mutable state as a shortcut
    across a boundary" the anti-patterns list bans. Provide:
    `Lookup(name string) (Action, bool)`, `All() []Action` (in registered order),
-   `Len() int`.
+   `Len() int`, and `Snapshot() (restore func())` — the test seam that replaces
+   `preserveActionRegistry` (`test_main_test.go`): five test files in four
+   packages copy the registry maps and restore them in `t.Cleanup`, and only
+   this package can reach the maps once they are unexported (Task 43's helper
+   table).
 3. `DisplayLabel` and `DisplayDescription` call `Msg`, which lands in
    `internal/i18n` (Task 24) — three tasks later. Rather than reordering the waves,
    give the package a localizer hook:
@@ -490,6 +499,7 @@ func RegisterAction(action Action)
 func Lookup(name string) (Action, bool)   // name matched case-insensitively
 func All() []Action                        // registration order, per Task 3
 func Len() int
+func Snapshot() (restore func())           // copies the registry; restore puts it back — a test seam
 
 var Localize = func(key string) string { return "{" + key + "}" }
 ```

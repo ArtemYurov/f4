@@ -8,8 +8,8 @@ Depends on: Phase 9
 
 `internal/app` owns the event loop, the bootstrap and the global application
 state the interactive subsystems share. `cmd/f4` is reduced to what the target
-layout says it holds: `main.go`, the tests for the wiring itself, the two
-module-wide auditors, and the Windows `.syso` files.
+layout says it holds: `main.go`, the four module-wide auditors, and the Windows
+`.syso` files.
 
 After this phase the compiler, not a convention, keeps every boundary in
 `ARCHITECTURE.md`.
@@ -28,7 +28,7 @@ After this phase the compiler, not a convention, keeps every boundary in
 | `cmd/f4/command_palette_coverage_test.go` | 42 audit keys, module-wide invariant | **stays in `cmd/f4`** |
 | `cmd/f4/architecture_test.go` | four rules plus the sysinfo leaf rule | **stays in `cmd/f4`** |
 | `cmd/f4/rsrc_windows_amd64.syso`, `rsrc_windows_arm64.syso` | linked only from the built package's directory | **stay in `cmd/f4`** |
-| `.github/actions/affected-packages/action.yml:48-54, 76-77` | `cmd/f4/*)` treated as one indivisible unit | the reason for the special case is gone |
+| `.github/actions/affected-packages/action.yml:50-54, 64-67, 76-77` | `cmd/f4/*)` treated as one indivisible unit, and the comment that justifies it | the reason for the special case is gone |
 
 ## Files to Change
 
@@ -80,6 +80,18 @@ that all of them exist.
    `farmenu_file.go`, `far2l_auth.go` and `async_buffer.go`. Score each with the
    gate first — several will turn out to belong to a package that already exists,
    and moving them there is a better answer than parking them in `app`.
+
+   `main.go` is not exempt. It holds startup and session logic that is not
+   wiring — `nestedInputMode`, `shouldTryGui`, `shouldPersistGUIWindowSize`,
+   `startupDirs`, `startupDirsFor`, `startupDirArgs`, `rememberStartupDirs`,
+   `sudoDispatcherPath`, `sudoStartupMode`, `LoadSession`, `SaveSession`,
+   `mergeWorkspaceSessionSave`, `getSessionIniPath`, `formatVersionSHA`,
+   `configureUnicodeInput` — and Task 37's single-digit file count is reachable
+   only if that logic moves here. Its tests follow (`nested_input_mode_test.go`,
+   `should_try_gui_test.go`, `session_test.go`, `startup_dir_test.go`,
+   `sudo_dispatcher_args_test.go`, `autosave_settings_test.go`,
+   `unicode_input_test.go`): nothing can import `package main`, so a test of
+   `main.go` code can live nowhere else.
 
    **This list is closed.** There is no "and whatever else remains": Task 43
    assigned every `cmd/f4` file to a wave, so anything still sitting here that is
@@ -136,11 +148,24 @@ func (a *App) Run(ctx context.Context) error
 
 ### Tests
 
-Every remaining `_test.go` in `cmd/f4` that tests behaviour rather than wiring
-moves with its subject: `framework_actions_test.go`, `actions_test.go`,
-`action_registry_test.go`, `arkanoid_test.go`, `ai_chat_panel_test.go`,
-`sheet_*_test.go`, `workspace_session_test.go`, `workspace_routing_test.go`,
-`vtvibe_*_test.go`, `macro_test.go` if it did not go with `internal/macro`.
+The 52 files Task 43's roster lists for `internal/app` move; after this commit
+nothing remains in `cmd/f4` except the four module-wide auditors and their
+`TestMain`. Among them: `framework_actions_test.go`, `actions_test.go`,
+`arkanoid_test.go`, `ai_chat_panel_test.go`, `sheet_actions_test.go`,
+`sheet_frame_test.go`, `vtvibe_host_test.go`, `startup_backend_test.go`, the
+seven `main.go` tests named in step 4, the four `cloudfox_real_*_test.go`
+end-to-end tests, the five registry-driven tests
+(`action_copy_window_title_test.go`, `action_shortcut_conflict_test.go`,
+`action_menu_visibility_test.go`, `command_palette_menu_test.go`,
+`folder_history_actions_test.go`) and the handler-driven scenario tests the
+multi-package table hosts here (`attributes_test.go`, `bom_test.go`,
+`delete_trash_test.go`, `editor_binary_open_test.go`,
+`command_palette_dynamic_test.go`, `history_hint_test.go`,
+`folder_history_navigation_test.go`, `issue821_test.go`,
+`updater_issue635_test.go`, `updater_repro_test.go`). **Not**
+`action_registry_test.go` (it went to `internal/action` in Task 21), **not**
+`macro_test.go` (Task 28), **not** `workspace_session_test.go` and
+`workspace_routing_test.go` (panel tests, Task 34).
 
 ```
 go test ./internal/app/...
@@ -174,28 +199,38 @@ go test -race -shuffle=on -timeout 10m ./internal/app/...
 ### Intent
 
 `cmd/f4` becomes what the target layout says it is: the Composition Root and
-nothing else. The two module-wide auditors stay because a per-package copy of
-either would see only its own subtree.
+nothing else. The four module-wide auditors stay because a per-package copy of
+any of them would see only its own subtree.
 
 ### Implementation Steps
 
 1. Confirm what remains and remove anything that does not belong:
    - `main.go` — flags, startup mode selection (terminal, GUI backend,
      `--update`, plugin scaffolding), and the construction of `app.New(...)`.
-   - `main_test.go` and any test of the wiring itself.
+   - No test of the wiring itself exists today (`main_test.go` does not exist);
+     one written later lives here. The `TestMain` that remains is the five-line
+     wrapper around `testutil.Main` the auditors need.
    - `command_palette_coverage_test.go` — the module-wide palette auditor. Its 42
      keys are qualified symbols after Task 2 and its file→target-package map now has
      an entry per extracted package. **This is the commit where the map's `cmd/f4
      → main` entry becomes vestigial**; remove it if nothing audited remains in
      `main`.
    - `architecture_test.go` — the module boundary auditor.
+   - `frame_manager_capture_test.go` — the third module-wide auditor: it parses
+     every production file, through the palette auditor's
+     `commandPaletteParseProductionGo`, for background work that captures
+     `vtui.FrameManager`. It stays with the parser it shares.
+   - `hardcoded_strings_test.go` — the fourth: `hardcode.Scan` over the module
+     root against `tools/hardcoded_baseline.txt`, the L10N CI gate. Its
+     `moduleRootDir` helper is `testutil.ModuleRootDir` after Task 9.
    - `rsrc_windows_amd64.syso`, `rsrc_windows_arm64.syso` — the toolchain links
      `.syso` only from the directory of the package being built, so they stay even
      though the icon code left in Task 27.
-2. `.github/actions/affected-packages/action.yml` lines 48-54 and 76-77 map every
-   path under `cmd/f4/` to the single unit `cmd/f4`, with the comment "cmd/f4's
-   other files always affect its tests at run time". That was true of a 345-file
-   flat package and is false of a package holding `main.go`. Remove the special
+2. `.github/actions/affected-packages/action.yml` lines 50-54 and 76-77 map every
+   path under `cmd/f4/` to the single unit `cmd/f4`; the comment at lines 64-67
+   ("cmd/f4's other files always do because that package embeds non-Go
+   resources") explains the second case. That was true of a 345-file flat package
+   and is false of a package holding `main.go`. Remove the special
    case so the action computes affected packages normally. Verify against a
    synthetic diff that touches one `internal/` package and confirm the action
    reports that package alone.
@@ -287,8 +322,8 @@ still wires a working binary.
 ## Phase Completion Checklist
 
 - Every Task 36-37 satisfies its acceptance criteria.
-- `cmd/f4` holds `main.go`, its wiring tests, the two auditors and two `.syso`
-  files.
+- `cmd/f4` holds `main.go`, the four module-wide auditors, their `TestMain` and
+  two `.syso` files.
 - `go test ./cmd/f4 -run '^TestArchitecture'` passes with rule 3 active and no
   exemptions.
 - `./f4 --version` runs from a fresh build.

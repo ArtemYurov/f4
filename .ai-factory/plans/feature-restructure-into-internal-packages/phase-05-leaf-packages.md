@@ -47,11 +47,17 @@ each wave phase file so a task can be implemented from one file.
    reference no view type at all, so the gate cannot classify them either — that is
    what Task 43 is for. Take its table as the roster and do not re-derive it here.
    Two hazards it records, and this wave must honour both:
-   - a test that exercises symbols landing in **different** packages is split, or
-     hosted as an external test package, per Task 43 step 4 — never moved whole on
-     a guess;
+   - a test whose unexported references land in **different** packages has a
+     host, a form and an export list in Task 43 step 5 — it moves in its host's
+     wave, never whole on a guess;
    - a test that covers **several** sources at once loses coverage of the ones that
-     went elsewhere. Task 43 step 5 names these; check its list before committing.
+     went elsewhere. Task 43 step 5's split-out column names these; check it
+     before committing;
+   - a test that reads `lang/`, `help/` or `styles/` from disk by a CWD-relative
+     path follows the directory it opens first; a second directory is reached
+     through `testutil.ModuleRootDir`, and both sets are guarded against coming
+     back empty — `filepath.Glob` reports no error for zero matches. Task 43
+     step 6 names the eight files.
 4. **Rename to the package convention.** `<topic>.go` and `<topic>_<aspect>.go`,
    where the topic is the subject *inside* the package and never the package name
    — `panel/frame.go`, not `panel/panel_frame.go`. Platform suffixes compose on
@@ -74,6 +80,12 @@ each wave phase file so a task can be implemented from one file.
    exactly the failure the baseline exists to prevent.
    Run all six modules, not only `go test ./...`: the four `tools/` modules are
    invisible to it and are touched by Task 13 (plugring) and Task 27 (icons).
+   A cross-compile loop that includes freebsd or netbsd passes
+   `-gcflags=github.com/go-webgpu/goffi/internal/fakecgo=-std` for those two
+   targets — the flag the matrix itself passes (`build.yml:880`). Without it the
+   build stops on `//go:cgo_export_dynamic … only allowed in cgo-generated code`,
+   which looks like a breakage this plan caused and is not one. Every loop in
+   Phases 3-8 carries the `case` that adds it.
    When a wave *legitimately* changes the test inventory — Task 9 converts three
    packages' tests to `package X_test`, Task 2 re-keys the palette auditor — record
    that in the commit message, not in the baseline file. The baseline answers "what
@@ -147,7 +159,8 @@ which is what lets any layer call it.
    `cpu_other.go`, `cpu_windows.go`, `mem*.go`, `fs*.go`, `gpu*.go`, `drives.go`,
    `drives_unix.go`, `drives_windows.go`. The `_info` suffix was disambiguating
    inside a flat package and is redundant inside `sysinfo`.
-3. Move the matching `_test.go` files.
+3. There is no `_test.go` file to move: Task 43's roster lists none for
+   `internal/sysinfo` — the info family has no test in `cmd/f4` today.
 4. Export the entry points `cmd/f4` still calls. Find them with
    `npx -y @colbymchenry/codegraph@1.6.0 callers` on each package-level function
    before exporting — export only what has an external caller.
@@ -179,13 +192,15 @@ returns data.
 
 ### Tests
 
-The existing info-family tests move with their files. Run the platform matrix, not
-just the host:
+No test file travels with this wave — the info family has none in `cmd/f4`
+today and Task 43's roster lists none — so the platform matrix is the check,
+not just the host:
 
 ```
 go test ./internal/sysinfo/...
 for t in linux/amd64 darwin/arm64 windows/amd64 freebsd/amd64 solaris/amd64 illumos/amd64; do
-  GOOS=${t%/*} GOARCH=${t#*/} CGO_ENABLED=0 go build ./internal/sysinfo/... || echo "FAIL $t"
+  extra=(); case $t in freebsd/*|netbsd/*) extra=(-gcflags=github.com/go-webgpu/goffi/internal/fakecgo=-std);; esac
+  GOOS=${t%/*} GOARCH=${t#*/} CGO_ENABLED=0 go build "${extra[@]}" ./internal/sysinfo/... || echo "FAIL $t"
 done
 ```
 
@@ -242,7 +257,15 @@ table places it at layer 1 rather than 3.
 3. Rename to the topic convention: `update.go`, `cli.go`, `helper_args.go`,
    `elevation_other.go`, `elevation_windows.go`, `selfexec.go`,
    `selfexec_linux.go`, `selfexec_other.go`, `selfexec_termux.go`.
-4. Move the matching `_test.go` files, including `updater_issue635_test.go`.
+4. Move the eight `_test.go` files Task 43's roster lists for `internal/update`:
+   `manual_uac_validation_windows_test.go`, `self_exec_linux_test.go`,
+   `self_exec_test.go`, `update_cli_test.go`, `updater_libc_test.go`,
+   `updater_repro_lock_other_test.go`, `updater_repro_lock_windows_test.go`,
+   `updater_test.go`. **Not** `updater_issue635_test.go` and not
+   `updater_repro_test.go`: both call `performUpdate(pf, …)` on a
+   `NewPanelsFrame()`, and `performUpdate` is one of the two entry points step 1
+   leaves in `cmd/f4`; they travel with it in Task 36. An earlier draft listed
+   `updater_issue635_test.go` here — a measurement error.
 5. Add `"internal/update": 1` to the auditor's layer map.
 
 ### Required Interfaces and Contracts
@@ -272,7 +295,9 @@ the TUI is not up yet. Do not add logging.
 
 ### Tests
 
-Existing update tests move with their files.
+The eight files named in step 4 move. `updater_test.go` builds a `coreAPI`
+(`api.go`), which leaves in Task 26 — that case splits out to
+`internal/plughost`'s tests then (Task 43's multi-package table).
 
 ```
 go test ./internal/update/...
@@ -397,7 +422,34 @@ func Msg(key string) string   // returns "{key}" for a missing key — the
 
 ### Tests
 
-- `config_test.go`, `lang` tests, style and hotkey tests move with their files.
+- The roster (Task 43 step 4), 33 files: `internal/config` —
+  `appearance_settings_test.go`, `config_overlay_test.go`, `config_test.go`,
+  `ini_test.go`, `portable_paths_test.go`, `proxy_settings_test.go`;
+  `internal/i18n` — `command_palette_i18n_test.go`, `lang_bidi_test.go`,
+  `lang_consistency_test.go`, `lang_contamination_test.go`,
+  `lang_fallback_priority_test.go`, `lang_homoglyphs_test.go`,
+  `lang_packs_test.go`, `lang_scripts_test.go`, `lang_test.go`,
+  `language_list_test.go`, `test_fallback_lang_test.go`; `internal/theme` —
+  `colors_test.go`, `colorspace_test.go`, `farcolor_test.go`,
+  `style_combo_colors_test.go`, `style_completeness_test.go`,
+  `style_custom_test.go`, `style_default_dark_test.go`, `style_overrides_test.go`,
+  `style_test.go`; `internal/keymap` — `hotkeys_test.go`,
+  `input_translation_test.go`, `keymap_test.go`, `mackeys_test.go`,
+  `terminal_mouse_offset_test.go`, `translate_kitty_test.go`, `ttyx_keys_test.go`.
+- Four of the i18n tests read **both** `lang/*.lng` and `help/*.hlf` from disk by
+  CWD-relative path — `lang_bidi_test.go`, `lang_contamination_test.go`,
+  `lang_homoglyphs_test.go`, `lang_scripts_test.go` — and `help/` leaves for
+  `internal/dialog` in Task 25. In this commit, rewrite their help globs to
+  `filepath.Join(testutil.ModuleRootDir(t), "cmd", "f4", "help", "*.hlf")` (Task
+  25 repoints that one path), and guard **both** sets:
+  `if len(paths) == 0 { t.Fatalf("no .lng files under %s", dir) }`, the same for
+  `.hlf`. `lang_scripts_test.go` and `lang_consistency_test.go` have no such
+  guard today, so after the move they would pass green over zero files.
+  `lang_consistency_test.go` also reads `lang/coverage_baseline.txt`, which
+  moves with the directory.
+- `skipIfNoRelevantChanges` patterns (`lang/*.lng`, `help/*.hlf`, the test's own
+  file name) are relative to the test's directory; rewrite the `help` pattern to
+  the module-root form as well.
 - `plugins/netfox/lang_test.go` must be run explicitly — it is in a different
   package and reads the moved file from disk:
   ```
@@ -420,6 +472,9 @@ go test ./internal/config/... ./internal/i18n/... ./internal/theme/... ./interna
 - `find internal/i18n/lang -name '*.lng' | wc -l` matches the pre-move count.
 - `find internal/theme/styles -name '*.ini' | wc -l` matches the pre-move count.
 - `plugins/netfox` tests pass.
+- `go test ./internal/i18n -run 'Bidi|Contamination|Homoglyph|Scripts|Consistency' -v`
+  reports every test as `--- PASS` over a non-zero file count, none as
+  `--- SKIP` and none over an empty set.
 - The four packages each import zero `internal/*` packages, except
   `internal/keymap` → `internal/numeric`.
 

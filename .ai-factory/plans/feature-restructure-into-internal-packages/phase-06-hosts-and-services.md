@@ -157,8 +157,11 @@ This wave also collects the eight dialog helpers stranded in `actions.go`
      - **split** — the layout assertions that need no panel move now; the
        frame-driven cases stay in `cmd/f4` and travel to `internal/panel` at Task
        34 as `package panel_test`; or
-     - **defer the whole file** to Task 34 and leave the CI re-run pointed at
-       `./cmd/f4` until then, repointing it at `./internal/panel` in that commit.
+     - **defer the whole file** — to Task 36, not Task 34: besides the panel
+       constructors it calls `showEditor` and `showViewer` (`actions.go`), which
+       leave with `internal/app`. It then lands as `package dialog_test` in
+       `internal/dialog` (Task 43's multi-package table), and the CI re-run stays
+       pointed at `./cmd/f4` until that commit repoints it at `./internal/dialog`.
 
      Either way the isolated re-run must name a target where the test actually
      lives at that commit. Pointing it at `./internal/dialog` while the test is
@@ -191,15 +194,20 @@ and nothing writes to stdout, which is the rendered UI.
 
 ### Tests
 
-Take the `_test.go` files Task 43 assigns to this wave, including
-`command_palette_test.go`, `file_dialog_test.go` and `grabber_mouse_test.go`.
-Two exceptions:
+Take the 27 files Task 43's roster lists for `internal/dialog`, among them
+`command_palette_test.go`, `file_dialog_test.go`, `grabber_mouse_test.go`, the
+five `help_keys*_test.go`, `help_lang_test.go` and `envman_help_test.go`.
+`help_lang_test.go` reads `lang/*.lng` as well as `help/*.hlf`: point its lang
+glob at `internal/i18n/lang` through `testutil.ModuleRootDir` and guard both sets
+against coming back empty — it has no guard today. Also repoint the help path of
+the four `internal/i18n` tests Task 24 left at `cmd/f4/help` to
+`internal/dialog/help`. Three exceptions:
 - `command_palette_coverage_test.go` **stays in `cmd/f4`** — it is the module-wide
   auditor.
-- `command_palette_dynamic_test.go` touches `PanelsFrame` ×8, `FileSystemPanel` ×6
-  and `coreAPI` ×2, so it spans panel and plughost. It is one of the five
-  multi-package tests Task 43 step 4 rules on; follow that ruling rather than
-  moving it here.
+- `command_palette_dynamic_test.go` drives the palette across nine packages
+  (dialog, panel, fileops, macro, cmdline, app, media, plughost, editor by the
+  graph). Task 43 hosts it in `internal/app` (Task 36); this wave exports the
+  twelve `commandPalette*` entry builders it needs, per the multi-package table.
 - `dialog_layouts_test.go` follows the step-5 decision above, not this list.
 
 ```
@@ -289,8 +297,10 @@ strings verbatim.
 
 ### Tests
 
-All plugin-host tests move, including `plugin_hotkeys_test.go`,
-`sqlite_actions_test.go` and the transport fixtures' tests. The dummy plugins
+The 21 files Task 43's roster lists for `internal/plughost` move, including
+`plugin_hotkeys_test.go`, `sqlite_actions_test.go`, `extui_test.go`,
+`plugin_identity_test.go`, `plugring_policy_test.go`, `plugring_rows_test.go` and
+the transport fixtures' tests. The dummy plugins
 under `plugins/dummy_internal`, `plugins/dummy_rpc` and `plugins/dummy_lua` are
 transport fixtures and stay where they are — check that their tests still find the
 host.
@@ -383,12 +393,16 @@ stderr with the `f4: ` prefix when a backend cannot start. Preserve the messages
 
 ### Tests
 
-`gui_font_catalog_test.go` and the window-position tests move.
+The six files Task 43's roster lists for `internal/gui` move:
+`gui_backend_capability_test.go`, `gui_font_catalog_test.go`, `gui_font_test.go`,
+`gui_font_windows_test.go`, `gui_unix_test.go`, `window_icon_windows_test.go`.
+There is no window-position test.
 
 ```
 go test ./internal/gui/...
 for t in linux/amd64 darwin/arm64 windows/amd64 windows/arm64 freebsd/amd64; do
-  GOOS=${t%/*} GOARCH=${t#*/} CGO_ENABLED=0 go build ./... || echo "FAIL $t"
+  extra=(); case $t in freebsd/*|netbsd/*) extra=(-gcflags=github.com/go-webgpu/goffi/internal/fakecgo=-std);; esac
+  GOOS=${t%/*} GOARCH=${t#*/} CGO_ENABLED=0 go build "${extra[@]}" ./... || echo "FAIL $t"
 done
 GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -tags noffi ./...
 ```
@@ -454,7 +468,10 @@ errors. `VTUI_DEBUG` remains the only diagnostic channel; add nothing.
 
 ### Tests
 
-`macro_test.go` and the Lua API tests move with their files.
+The seven files Task 43's roster lists for `internal/macro` move:
+`fkeys_hidden_panels_test.go`, `macro_ctrlletter_test.go`, `macro_export_test.go`,
+`macro_lua_test.go`, `macro_plugin_calls_test.go`, `macro_reload_test.go`,
+`macro_test.go`.
 
 ```
 go test ./internal/macro/... ./internal/luaplug/...

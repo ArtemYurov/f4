@@ -47,7 +47,7 @@ commit: a move commit must read as a rename.
 | `cmd/f4/action_registry.go` | modify | Explicit registration ordinal + deterministic sort |
 | `cmd/f4/action_registry_order_test.go` | create | Golden test over `actionOrder` |
 | `cmd/f4/config.go` | modify | Receives three type declarations |
-| `cmd/f4/navigation_mode.go` | modify | Loses `PanelNavigationMode` and its constants |
+| `cmd/f4/navigation_mode.go` | delete | `PanelNavigationMode`, its constants, `String` and `ParsePanelNavigationMode` all move into `config.go`; nothing remains |
 | `cmd/f4/compare_folders.go` | modify | Loses `compareOptions` |
 | `cmd/f4/startup_backend.go` | modify | Loses `StartupMode` and its constants |
 | `cmd/f4/queue_manager.go` | modify | `init()` no longer starts a goroutine |
@@ -57,7 +57,7 @@ commit: a move commit must read as a rename.
 | `cmd/f4/gpu_info_linux.go` | modify | Returns a message key, not a localized string |
 | `cmd/f4/info_panel.go` | modify | Localizes the GPU model at render time |
 | `cmd/f4/architecture_test.go` | create | Module boundary auditor |
-| `internal/testutil/*.go` | create | Frame-manager harness with caller-supplied drains |
+| `internal/testutil/*.go` | create | Frame-manager harness with caller-supplied drains, plus the shared scaffolding Task 43 sends here: `Main`, `PressKey`, `DrainPendingTasks`, `DrainUITasks`, `ModuleRootDir`, `SkipIfNoRelevantChanges`, `RaceEnabled`, the bounded-conversion helpers |
 | `internal/paneltest/doc.go` | create | Empty package with its contract documented; filled in Task 34 |
 | `cmd/f4/frame_manager_test_helpers_test.go` | modify | Harness moves out; local drains remain |
 | 63 + 28 `_test.go` call sites | modify | New harness call shape |
@@ -456,7 +456,12 @@ depend on layer 4.
    (`NavigationClassic`, `NavigationVim`, `NavigationSearchFirst`) plus the
    `String()` method from `cmd/f4/navigation_mode.go:7-27` into `cmd/f4/config.go`,
    next to `PanelScrollbarMode` (`config.go:125`) and
-   `WorkspaceTabNumberingMode` (`config.go:144`).
+   `WorkspaceTabNumberingMode` (`config.go:144`). Take `ParsePanelNavigationMode`
+   (`:26-35`) with them — `config.go` is its only production caller — and
+   `git rm cmd/f4/navigation_mode.go`: without the parser the file would keep ten
+   lines that no wave claims. `navigation_mode_test.go` is not the parser's test;
+   it drives search-first navigation on the frame, and Task 43 sends it to
+   `internal/panel`.
 2. Move `type compareOptions struct` from `cmd/f4/compare_folders.go:61` into
    `config.go`. Keep the field comments verbatim: they document the Advanced
    Compare dialog field by field.
@@ -499,7 +504,7 @@ packages exist.
 
 ### Acceptance Criteria
 
-- `grep -n '^type' cmd/f4/navigation_mode.go` returns nothing.
+- `ls cmd/f4/navigation_mode.go` fails; `grep -n 'func ParsePanelNavigationMode' cmd/f4/config.go` finds it.
 - `grep -n '^type StartupMode' cmd/f4/startup_backend.go` returns nothing.
 - `grep -n '^type compareOptions' cmd/f4/compare_folders.go` returns nothing.
 - All five `F4Config` field types are declared in `config.go`.
@@ -856,6 +861,21 @@ of call shape.
 
    After these ten helpers leave, `cmd/f4/frame_manager_test_helpers_test.go`
    retains only `waitForDirectoryLoads` (`:83`), which stays until Task 34.
+
+   Task 43's helper table sends five more files' worth of scaffolding here in this
+   same task, because their users scatter across seven packages: `pressKey` and
+   the process-wide `TestMain` from `test_main_test.go` (as `PressKey` and
+   `Main(m *testing.M, before, after func())` — the silent screen, the temporary
+   config directory and the task-pump leak check are Main's own; `before` sets
+   the calling package's seams, `after` runs its teardown, so `cmd/f4` keeps a
+   five-line `TestMain` of its own), the nine bounded-conversion helpers of
+   `numeric_conversions_test.go` (it holds no test), `skipIfNoRelevantChanges`
+   from `test_cache_helper_test.go`, `moduleRootDir` from `module_root_test.go`,
+   the `raceEnabled` pair `race_enabled_test.go` / `race_disabled_test.go` (build
+   tags verbatim), plus `drainPendingTasks` (`editor_target_line_test.go`) and
+   `drainUITasks` (`managed_execution_test.go`). `preserveActionRegistry` does
+   **not** come here: it copies the registry maps and becomes `action.Snapshot()`
+   in Task 21.
 2. Break the two production drains out of `SwapFrameManager` and make them
    parameters. Today it calls `waitForAsyncClipboard` (`clipboard_async.go:27`,
    production, lands in `internal/term`) and `waitForDirectoryLoads`
@@ -928,6 +948,10 @@ itself. It moves with the helpers, into `internal/testutil`.
   returns nothing.
 - `cmd/f4/frame_manager_test_helpers_test.go` declares exactly one function,
   `waitForDirectoryLoads`.
+- `ls cmd/f4/numeric_conversions_test.go cmd/f4/test_cache_helper_test.go cmd/f4/module_root_test.go cmd/f4/race_enabled_test.go cmd/f4/race_disabled_test.go`
+  all fail; `cmd/f4/test_main_test.go` declares `TestMain` (a wrapper around
+  `testutil.Main`) and `preserveActionRegistry`, which waits for Task 21, and
+  nothing else.
 - `internal/paneltest` exists with `doc.go` and no other file.
 - The full suite matches the Task 1 baseline.
 
@@ -947,83 +971,471 @@ itself. It moves with the helpers, into `internal/testutil`.
 
 ### Intent
 
-The wave tasks name the files they own. Two sets of files are named by nobody, and
-both fall through to Task 36 step 4's "and whatever else remains", which is how
-`internal/app` becomes the flat package that Phase 10 lists as its own top risk.
+The wave tasks name the files they own. Measured on the current tree with the
+CodeGraph index, three sets of files are named by nobody, and all three fall
+through to `internal/app` — which is how it becomes the flat package Phase 10
+lists as its own top risk.
 
-- **21 non-test sources** appear in no task and match no glob the bundle writes.
-- **154 of the 346 `_test.go` files** have no same-named source. Wave-procedure
-  step 3 says "take every `_test.go` neighbour", which is a filename rule, so it
-  strands 45% of the suite: those tests stay in `cmd/f4` while their subjects
-  leave, and either stop compiling or — worse — keep passing against nothing.
+- **23 non-test sources** no wave claims: 21 that appear in no task at all, plus
+  `process_environment_shell.go` and `plugring.go`, which are mentioned (a
+  `showToast` call site in Task 20, a URL edit in Task 15) but never given a
+  package. Two more are named only where nothing is assigned:
+  `navigation_mode.go` (Task 4 empties it) and `terminal_redraw.go` (an evidence
+  table).
+- **154 of the 346 `_test.go` files** have no same-named source — they are named
+  for the scenario they exercise. Wave-procedure step 3 says "take every
+  `_test.go` neighbour", which is a filename rule, so it strands 45% of the suite:
+  those tests stay in `cmd/f4` while their subjects leave, and either stop
+  compiling or — worse — keep passing against nothing.
+- **48 test helpers and `TestMain`** are called from test files that land in
+  other packages. Task 9 moves the `swapFrameManager` family and Task 34 the mock
+  frame; the other 46 had no plan, and `test_main_test.go`,
+  `numeric_conversions_test.go`, `test_cache_helper_test.go` and
+  `module_root_test.go` are helper-only files no wave named.
 
-This task produces the assignment. It writes no Go code and produces no commit of
-its own; its output is a table in this bundle that the waves then execute.
+This task records the assignment. It writes no Go code and produces no commit of
+its own; its output is the tables below, which the waves execute. Every number
+comes from the graph's edges out of each test file, not from filenames.
 
 ### Implementation Steps
 
-1. Re-derive both sets on the current revision, so the task is self-checking:
+1. Re-derive the inputs on the current revision, so the task stays self-checking:
    ```
-   # sources named by no task
+   # sources named by no task — must return nothing (the six glob families are
+   # listed by name in step 2)
    comm -23 <(ls cmd/f4/*.go | grep -v '_test\.go$' | sed 's|cmd/f4/||' | sort) \
             <(grep -rhoE '[a-z0-9_]+\.go' .ai-factory/plans/feature-restructure-into-internal-packages/*.md | sort -u)
-   # tests with no same-named source
+   # tests named nowhere in the bundle — must return nothing
+   comm -23 <(ls cmd/f4/*_test.go | sed 's|cmd/f4/||' | sort) \
+            <(grep -rhoE '[a-z0-9_]+_test\.go' .ai-factory/plans/feature-restructure-into-internal-packages/*.md | sort -u)
+   # the size of the table in step 3 — a property of the tree, not a check
    comm -23 <(ls cmd/f4/*_test.go | sed 's|cmd/f4/||;s|_test\.go$||' | sort) \
-            <(ls cmd/f4/*.go | grep -v '_test\.go$' | sed 's|cmd/f4/||;s|\.go$||' | sort)
+            <(ls cmd/f4/*.go | grep -v '_test\.go$' | sed 's|cmd/f4/||;s|\.go$||' | sort) | wc -l   # 154
    ```
-   Expect 47 and 154. The first list minus the six families the bundle covers by
-   glob (`command_palette*`, `drive_bookmarks*`, `drive_menu_options*`,
-   `file_associations*`, `user_menu*`, `host_input_modes*`) is the 21.
-2. Assign each of the 21. The graph already answers most of them; these are the
-   readings, and each still needs its gate score confirmed before the wave moves it:
+   The third command compares the tree with itself and never reads the bundle;
+   it reports 154 whatever the tables say. Only the first two are checks.
+
+2. Sources. Each row still needs its gate score confirmed by the wave that moves
+   it:
 
    | Files | Wave |
    |---|---|
    | `ttyx_probe.go`, `ttyx_probe_parse.go`, `ttyx_probe_unix.go`, `ttyx_probe_windows.go`, `ttyx_session.go` | Task 30 — `internal/term`; they decide what the terminal supports |
    | `terminal_log_console_other.go`, `terminal_log_console_windows.go`, `terminal_log_vfs.go` | Task 30 — `internal/term` |
-   | `console_host_windows.go`, `console_overlay_other.go`, `console_overlay_windows.go` | Task 30 — `internal/term`; score them, `console_overlay_*` may belong to `internal/media` |
-   | `process_environment.go` (gate 4), `process_environment_runtime_unix.go`, `process_environment_runtime_windows.go`, `process_environment_shell.go` | score first; the runtime pair is gate 0, `process_environment.go` is not |
+   | `console_host_windows.go`, `console_overlay_other.go`, `console_overlay_windows.go` | Task 30 — `internal/term`; the overlays score only on `TerminalView`, the wave's own type |
+   | `process_environment.go` (gate 4), `process_environment_shell.go`, `process_environment_runtime_unix.go`, `process_environment_runtime_windows.go` | Task 30 — `internal/term`. `pty_interface.go` calls into `process_environment_shell.go` five times and `panels_frame.go` twenty-five; term is the lowest package that can hold them without inverting a layer. The four `PanelsFrame` references in `process_environment.go` stay with the panel per the gate rule |
+   | `terminal_redraw.go` | Task 30 — `internal/term`; gate 0, called only from `panels_frame.go`, a legal panel → term edge |
    | `plugring.go`, `plugring_meta.go`, `plugring_ui.go` | Task 26 — `internal/plughost`. Task 15 only edits `plugring.go`'s catalogue URL; it never assigns it a package |
    | `compare_folders_ui.go` (gate 4, `Msg` ×28) | Task 25 — `internal/dialog`, beside the other settings dialogs |
    | `colorer_downloader.go` | Task 33 — `internal/editor`, with `colorer_plugin.go` |
-   | `action_menu.go`, `external_ui.go`, `info_usage.go` | score each; `action_menu.go` and `external_ui.go` read as `internal/dialog`, `info_usage.go` as `internal/panel` |
+   | `action_menu.go`, `external_ui.go` | Task 25 — `internal/dialog`: `BuildMenuBarItems` and the external-UI command runner are dialog code |
+   | `info_usage.go` | Task 34 — `internal/panel` |
+   | `navigation_mode.go` | deleted in Task 4: its type, constants and `ParsePanelNavigationMode` all move into `config.go` |
+   | `command_palette.go`, `command_palette_drives.go`, `command_palette_frames.go`, `command_palette_help.go`, `command_palette_macros.go`, `command_palette_modal.go`, `command_palette_panels.go`, `command_palette_prefixes.go`, `command_palette_search.go`, `command_palette_workspace.go` | Task 25 — `internal/dialog`; the ten `command_palette*.go` files named nowhere else (the other four are in Tasks 24 and 25) |
+   | `drive_bookmarks.go`, `drive_menu_options_unix.go`, `drive_menu_options_windows.go`, `file_associations.go`, `user_menu.go`, `user_menu_ini.go`, `user_menu_script.go`, `user_menu_subst.go` | Task 34 — `internal/panel`; the members of four glob families named nowhere else |
+   | `host_input_modes.go`, `host_input_modes_other.go`, `host_input_modes_windows.go` | Task 36 — `internal/app` |
 
-3. Classify the 154 tests **by the symbols they call, not by their filename**.
-   108 of them reference no view type at all, so the eight-name gate cannot answer
-   for them; use `codegraph callees` on the test's own functions and send the file
-   to the package that owns what it exercises.
-4. **Name the tests that exercise more than one future package.** They cannot
-   travel whole and must be split the way `semantic.go` is split, by an explicit
-   instruction rather than implementer judgement. Measured, there are five:
+3. Tests without a same-named source, classified by the symbols they reference
+   (graph edges into `cmd/f4` sources; methods whose name is not unique in
+   `cmd/f4` dropped, because the index resolves those by name). The evidence
+   column lists the packages referenced and how many distinct symbols each
+   contributes. A test that drives an `actions.go` handler on a mock frame is
+   hosted by `internal/app`: it owns the handler and is the only package allowed
+   to import everything such a test touches. A test that looks actions up by
+   name needs the registry the app table fills, so it is hosted there too.
 
-   | Test | Packages it touches |
-   |---|---|
-   | `cloudfox_real_ui_test.go` | panel, editor, viewer |
-   | `codepage_issue875_test.go` | panel, editor, viewer |
-   | `command_palette_dynamic_test.go` | panel, plughost |
-   | `terminal_selection_test.go` | panel, term |
-   | `editor_binary_open_test.go` | panel, editor |
+   | Test | Package | Wave | Evidence / note |
+   |---|---|---|---|
+   | `action_copy_window_title_test.go` | `app` | Task 36 | action 3; GetAction/RunAction on the registry the app table fills: needs app linked |
+   | `action_copyname_parent_test.go` | `panel` | Task 34 | panel 15, action 6, editor 2 |
+   | `action_marked_clipboard_test.go` | `panel` | Task 34 | panel 9, action 6, keymap 3 |
+   | `action_menu_visibility_test.go` | `app` | Task 36 | action 4, dialog 2; RegisterAction plus BuildMenuBarItems over the filled registry |
+   | `action_restore_selection_test.go` | `panel` | Task 34 | panel 27, keymap 3, action 2 |
+   | `action_shortcut_conflict_test.go` | `app` | Task 36 | action 1; GetOrderedActions over the registry the app table fills |
+   | `ansi_parser_sync_test.go` | `term` | Task 30 | term 11 |
+   | `appearance_settings_test.go` | `config` | Task 24 | config 4 |
+   | `attributes_test.go` | `app` | Task 36 | panel 41, fileops 20, app 3; drives actionFileAttributes on the frame; fileops exports showAttributes*, panel exports getActivePanel; split candidate: 41 panel references |
+   | `autosave_settings_test.go` | `app` | Task 36 | main 4, panel 4, config 3; mergeWorkspaceSessionSave and SaveSession live in main.go and move to app in Task 36 |
+   | `background_jobs_session_test.go` | `panel` | Task 34 | term 10, panel 5; term exports FinishWith/StartOn if still unexported at Task 30; reconnect.go helpers are panel's own |
+   | `bom_test.go` | `app` | Task 36 | panel 4, app 2, editor 2; drives showEditor/findOpenedEditor; editor exports cancelIndexing, panel exports loadDefaultQuickView |
+   | `child_env_universal_linux_test.go` | `app` | Task 36 | no cmd/f4 symbol references; //go:build linux && (amd64 || arm64); subject child_env.go |
+   | `cloudfox_real_archive_test.go` | `app` | Task 36 | app 2, theme 1, term 1; end-to-end over the whole application, drives actions.go handlers; skipped without credentials |
+   | `cloudfox_real_cross_cloud_test.go` | `app` | Task 36 | theme 1, term 1, app 1, panel 1; end-to-end, as above |
+   | `cloudfox_real_large_f5_test.go` | `app` | Task 36 | theme 1, term 1, app 1; end-to-end, as above |
+   | `cloudfox_real_ui_test.go` | `app` | Task 36 | app 8, panel 7, editor 3, theme 2, term 1, viewer 1; end-to-end; one of the five multi-package tests, hosted whole as package app_test |
+   | `codepage_issue875_sticky_test.go` | `viewer` | Task 29 | viewer 4 |
+   | `codepage_issue875_test.go` | `app` | Task 36 | viewer 3, app 2, panel 1, editor 1; one of the five; foreign symbols are exported types only, hosted whole as package app_test |
+   | `command_palette_coverage_test.go` | `cmd/f4` | stays | action 6, dialog 2; module-wide auditor, stays |
+   | `command_palette_direct_panels_test.go` | `dialog` | Task 25 | dialog 19, panel 8, cmdline 1, term 1, action 1, app 1, i18n 1 |
+   | `command_palette_dynamic_test.go` | `app` | Task 36 | dialog 44, panel 31, macro 12, cmdline 6, keymap 6, fileops 5, action 3, i18n 3,; one of the five; drives the palette end to end across nine packages; hosted in app, the last of them; see the multi-package table |
+   | `command_palette_menu_test.go` | `app` | Task 36 | action 2; RunAction over the registry the app table fills |
+   | `delete_trash_test.go` | `app` | Task 36 | fileops 14, app 3, panel 2, theme 1; drives actionDelete/actionDeletePermanent; fileops exports calculateDeleteStats, deletePathWithDisposition; split candidate: 14 fileops references |
+   | `dialog_layouts_test.go` | `dialog` | Task 25 | panel 3, action 2, app 2, term 2, keymap 1, macro 1, i18n 1, fileops 1, viewer 1; Task 25 step 5 decision (split or defer); also see the multi-package table |
+   | `dialog_reporter_test.go` | `fileops` | Task 32 | fileops 5 |
+   | `editor_binary_open_test.go` | `app` | Task 36 | editor 16, app 5, panel 4; one of the five; drives showEditor/findOpenedEditor; editor exports cancelIndexing, indexIsComplete, awaitOffsetAsync, newEditorView; split candidate: 16 editor references |
+   | `editor_codepage_test.go` | `editor` | Task 33 | editor 5, panel 2 |
+   | `editor_delta_test.go` | `editor` | Task 33 | editor 1 |
+   | `editor_duplicate_line_test.go` | `editor` | Task 33 | editor 10, action 1 |
+   | `editor_features_test.go` | `editor` | Task 33 | editor 9 |
+   | `editor_highlight_budget_test.go` | `editor` | Task 33 | editor 31 |
+   | `editor_mmap_test.go` | `editor` | Task 33 | editor 22 |
+   | `editor_move_line_test.go` | `editor` | Task 33 | editor 11, action 1 |
+   | `editor_multicursor_edit_test.go` | `editor` | Task 33 | editor 19 |
+   | `editor_multicursor_move_test.go` | `editor` | Task 33 | editor 14 |
+   | `editor_multicursor_occurrence_test.go` | `editor` | Task 33 | editor 22, action 2 |
+   | `editor_multicursor_select_test.go` | `editor` | Task 33 | editor 15 |
+   | `editor_occurrence_test.go` | `editor` | Task 33 | editor 15, theme 2 |
+   | `editor_restore_keys_test.go` | `editor` | Task 33 | editor 3 |
+   | `editor_save_inplace_test.go` | `editor` | Task 33 | editor 9, app 2; app's async_buffer.prewarm is the single foreign symbol; the case using it splits out to app (Task 36) |
+   | `editor_search_lazy_test.go` | `editor` | Task 33 | editor 8, app 4 |
+   | `editor_search_zerocopy_test.go` | `editor` | Task 33 | editor 9 |
+   | `editor_shiftdel_test.go` | `editor` | Task 33 | keymap 4, editor 2 |
+   | `editor_target_line_test.go` | `editor` | Task 33 | editor 4, app 2 |
+   | `editor_veto_test.go` | `editor` | Task 33 | editor 2 |
+   | `editor_view_ads_test.go` | `editor` | Task 33 | editor 2 |
+   | `editor_wrap_memory_test.go` | `editor` | Task 33 | editor 10, fileops 9 |
+   | `envman_help_test.go` | `dialog` | Task 25 | dialog 1; reads help/ from disk |
+   | `external_editor_test.go` | `editor` | Task 33 | app 5, config 3; configuredExternalEditorCommand moves to editor in Task 33 step 4 |
+   | `extui_test.go` | `plughost` | Task 26 | plughost 15 |
+   | `farcolor_test.go` | `theme` | Task 24 | theme 5 |
+   | `fast_find_overlay_test.go` | `panel` | Task 34 | panel 4, theme 1, action 1 |
+   | `file_associations_dispatch_test.go` | `panel` | Task 34 | panel 17, editor 3, theme 1, i18n 1 |
+   | `file_mask_far2l_test.go` | `fileops` | Task 32 | fileops 9 |
+   | `file_ops_coverage_test.go` | `fileops` | Task 32 | fileops 13 |
+   | `file_ops_safety_test.go` | `fileops` | Task 32 | fileops 39 |
+   | `file_ops_transfer_name_test.go` | `fileops` | Task 32 | fileops 13 |
+   | `file_panel_sorting_regression_test.go` | `panel` | Task 34 | panel 5 |
+   | `file_state_key_test.go` | `fileops` | Task 32 | fileops 15 |
+   | `fkeys_hidden_panels_test.go` | `macro` | Task 28 | keymap 7, theme 1, macro 1 |
+   | `folder_history_actions_test.go` | `app` | Task 36 | keymap 3, dialog 1; BuildMenuBarItems over the filled registry, NewHotkeyManager |
+   | `folder_history_navigation_test.go` | `app` | Task 36 | panel 22, app 1, history 1; drives actionFoldersHistory; panel exports the folder-history suppression helpers; split candidate: 22 panel references |
+   | `folder_history_panel_test.go` | `panel` | Task 34 | panel 4 |
+   | `frame_manager_capture_test.go` | `cmd/f4` | stays | no cmd/f4 symbol references; module-wide auditor: walks every production file via commandPaletteParseProductionGo; stays |
+   | `frame_manager_test_helpers_test.go` | `panel` | Task 34 | term 2; after Task 9 holds only waitForDirectoryLoads, which Task 34 moves into internal/paneltest |
+   | `goto_test.go` | `editor` | Task 33 | editor 4, dialog 3; dialog exports parseGotoOffset, showGotoOffsetDialog |
+   | `grabber_mouse_test.go` | `dialog` | Task 25 | dialog 5 |
+   | `hardcoded_strings_test.go` | `cmd/f4` | stays | no cmd/f4 symbol references; module-wide auditor: hardcode.Scan(root) over the whole module, L10N CI gate; stays |
+   | `help_keys_ar_test.go` | `dialog` | Task 25 | i18n 4, dialog 4, keymap 2 |
+   | `help_keys_he_test.go` | `dialog` | Task 25 | i18n 4, dialog 4, keymap 2 |
+   | `help_keys_ru_test.go` | `dialog` | Task 25 | i18n 6, dialog 5, keymap 3 |
+   | `help_keys_test.go` | `dialog` | Task 25 | keymap 5, dialog 4; keymap exports initDefaults, Bind is exported already |
+   | `help_keys_tr_test.go` | `dialog` | Task 25 | i18n 4, dialog 4, keymap 2 |
+   | `help_lang_test.go` | `dialog` | Task 25 | config 1, dialog 1; reads help/*.hlf AND lang/*.lng from disk; no empty-set guard |
+   | `history_hint_test.go` | `app` | Task 36 | panel 17, app 15, history 8, theme 5, i18n 3, dialog 1; Task 35 claimed it for cmdline: measurement error; zero cmdline symbols, drives actionCommandHistory/actionFoldersHistory |
+   | `image_formats_test.go` | `media` | Task 31 | media 11 |
+   | `image_view_orient_test.go` | `media` | Task 31 | media 32 |
+   | `image_view_overlay_test.go` | `media` | Task 31 | media 6, numeric 2 |
+   | `issue149_test.go` | `fileops` | Task 32 | fileops 15 |
+   | `issue54_test.go` | `panel` | Task 34 | panel 2, theme 1 |
+   | `issue561_test.go` | `app` | Task 36 | app 1, panel 1; drives actionPanelSettings on a NewPanelsFrame |
+   | `issue631_test.go` | `app` | Task 36 | app 2, theme 1, i18n 1, panel 1; drives actionConfirmationsSettings and actionPanelSettings |
+   | `issue815_test.go` | `fileops` | Task 32 | fileops 3 |
+   | `issue821_test.go` | `app` | Task 36 | theme 2, app 1, panel 1, history 1; drives actionCommandHistory; history exports newHistorySearch |
+   | `issue856_mouse_capture_test.go` | `panel` | Task 34 | panel 1 |
+   | `issue863_terminal_test.go` | `panel` | Task 34 | panel 14, term 4, editor 2; Task 30 claimed it for term: measurement error; panels_frame.go buildPrompt/consumeLocalOutput |
+   | `issue95_followup_test.go` | `panel` | Task 34 | panel 3, theme 1, editor 1 |
+   | `keybar_injected_test.go` | `panel` | Task 34 | keymap 5, action 2, macro 1, panel 1 |
+   | `kitty_metrics_test.go` | `term` | Task 30 | term 6 |
+   | `lang_bidi_test.go` | `i18n` | Task 24 | no cmd/f4 symbol references; reads lang/*.lng AND help/*.hlf from disk |
+   | `lang_consistency_test.go` | `i18n` | Task 24 | config 4, i18n 2; reads lang/*.lng and lang/coverage_baseline.txt from disk; no empty-set guard |
+   | `lang_contamination_test.go` | `i18n` | Task 24 | no cmd/f4 symbol references; reads lang/*.lng AND help/*.hlf from disk |
+   | `lang_fallback_priority_test.go` | `i18n` | Task 24 | i18n 3 |
+   | `lang_homoglyphs_test.go` | `i18n` | Task 24 | no cmd/f4 symbol references; reads lang/*.lng, lang/homoglyph_baseline.txt AND help/*.hlf from disk |
+   | `lang_scripts_test.go` | `i18n` | Task 24 | no cmd/f4 symbol references; reads lang/*.lng AND help/*.hlf from disk; no empty-set guard |
+   | `language_list_test.go` | `i18n` | Task 24 | app 1 |
+   | `macro_ctrlletter_test.go` | `macro` | Task 28 | macro 1 |
+   | `macro_reload_test.go` | `macro` | Task 28 | macro 3, keymap 2, action 1 |
+   | `managed_execution_test.go` | `panel` | Task 34 | panel 9 |
+   | `manual_uac_validation_windows_test.go` | `update` | Task 23 | update 1 |
+   | `module_root_test.go` | `testutil` | Task 9 | no cmd/f4 symbol references; helper only: moduleRootDir → testutil.ModuleRootDir |
+   | `nested_input_mode_test.go` | `app` | Task 36 | main 1; nestedInputMode lives in main.go and is startup logic; Task 36 moves it to app, the test follows |
+   | `numeric_conversions_test.go` | `testutil` | Task 9 | no cmd/f4 symbol references; helpers only (testRune, testInt16, …), zero tests; used by 16 files in 7 packages |
+   | `panel_menu_test.go` | `panel` | Task 34 | panel 6, i18n 4, keymap 2 |
+   | `panels_frame_drivecursor_windows_test.go` | `panel` | Task 34 | panel 2, theme 1 |
+   | `panels_frame_pty_test.go` | `panel` | Task 34 | panel 8 |
+   | `plugin_identity_test.go` | `plughost` | Task 26 | plughost 13 |
+   | `plugring_policy_test.go` | `plughost` | Task 26 | plughost 10 |
+   | `plugring_rows_test.go` | `plughost` | Task 26 | plughost 6 |
+   | `portable_paths_test.go` | `config` | Task 24 | config 4 |
+   | `proxy_settings_test.go` | `config` | Task 24 | config 3 |
+   | `pty_cloexec_test.go` | `term` | Task 30 | term 2 |
+   | `pty_pollable_test.go` | `term` | Task 30 | term 1 |
+   | `pty_test.go` | `term` | Task 30 | term 1 |
+   | `quick_view_provider_test.go` | `panel` | Task 34 | panel 5 |
+   | `race_disabled_test.go` | `testutil` | Task 9 | no cmd/f4 symbol references; //go:build !race pair; with race_enabled_test.go |
+   | `race_enabled_test.go` | `testutil` | Task 9 | no cmd/f4 symbol references; //go:build race pair; raceEnabled → testutil.RaceEnabled |
+   | `rpc_lua_test.go` | `plughost` | Task 26 | plughost 2 |
+   | `session_attach_payload_test.go` | `term` | Task 30 | term 3 |
+   | `session_daemon_test.go` | `term` | Task 30 | term 6 |
+   | `session_test.go` | `app` | Task 36 | main 2; shouldPersistGUIWindowSize, main.go startup logic; moves to app in Task 36 |
+   | `shell_integration_test.go` | `panel` | Task 34 | panel 7, editor 3, theme 1; Task 30 claimed it for term: measurement error; PanelsFrame ×10, TerminalView 0 |
+   | `shell_session_test.go` | `panel` | Task 34 | panel 9, editor 2, i18n 1, term 1; Task 30 and Task 35 both claimed it: measurement error; setupMockPanelsFrame ×3, panels_frame.go initPTY/isPtyBusy/beginPromptDrivenExecution |
+   | `should_try_gui_test.go` | `app` | Task 36 | main 3; shouldTryGui, main.go startup logic; moves to app in Task 36 |
+   | `sixel_layers_test.go` | `media` | Task 31 | media 2 |
+   | `solaris_pty_alloc_test.go` | `term` | Task 30 | term 3 |
+   | `solaris_pty_backend_test.go` | `term` | Task 30 | term 3 |
+   | `solaris_streams_mock_linux_test.go` | `term` | Task 30 | no cmd/f4 symbol references; with solaris_streams_mock_test.go, by build tag |
+   | `solaris_streams_mock_other_test.go` | `term` | Task 30 | no cmd/f4 symbol references; with solaris_streams_mock_test.go, by build tag |
+   | `solaris_streams_mock_test.go` | `term` | Task 30 | no cmd/f4 symbol references; NewMockSolarisStreams fixture for solaris_streams.go |
+   | `startup_dir_test.go` | `app` | Task 36 | main 6; startupDirs*, rememberStartupDirs, main.go startup logic; moves to app in Task 36 |
+   | `style_combo_colors_test.go` | `theme` | Task 24 | theme 6 |
+   | `style_completeness_test.go` | `theme` | Task 24 | theme 3, config 3 |
+   | `style_custom_test.go` | `theme` | Task 24 | theme 7; getUserStylesDir seam |
+   | `style_default_dark_test.go` | `theme` | Task 24 | theme 5 |
+   | `style_overrides_test.go` | `theme` | Task 24 | theme 6 |
+   | `sudo_dispatcher_args_test.go` | `app` | Task 36 | main 3; sudoDispatcherPath, sudoStartupMode, main.go startup logic; moves to app in Task 36 |
+   | `terminal_mouse_offset_test.go` | `keymap` | Task 24 | keymap 5 |
+   | `terminal_selection_test.go` | `term` | Task 30 | term 58, panel 3, theme 2; one of the five; panel references are exported types, hosted whole as package term_test |
+   | `test_cache_helper_test.go` | `testutil` | Task 9 | no cmd/f4 symbol references; skipIfNoRelevantChanges → testutil.SkipIfNoRelevantChanges; glob patterns are CWD-relative and are rewritten per package |
+   | `test_fallback_lang_test.go` | `i18n` | Task 24 | config 2 |
+   | `test_main_test.go` | `testutil` | Task 9 | macro 2, keymap 1, config 1; TestMain + pressKey + preserveActionRegistry; see the helper table |
+   | `unicode_input_test.go` | `app` | Task 36 | editor 5, main 4, cmdline 1; configureUnicodeInput lives in main.go and moves to app in Task 36; NewCommandLine and NewEditorView are exported constructors |
+   | `updater_issue635_test.go` | `app` | Task 36 | update 2, media 1, panel 1; calls performUpdate(pf, …) with NewPanelsFrame(); Task 23's claim was a measurement error, performUpdate stays until Task 36 |
+   | `updater_libc_test.go` | `update` | Task 23 | update 6 |
+   | `updater_repro_lock_other_test.go` | `update` | Task 23 | no cmd/f4 symbol references; by build tag |
+   | `updater_repro_lock_windows_test.go` | `update` | Task 23 | no cmd/f4 symbol references; by build tag |
+   | `updater_repro_test.go` | `app` | Task 36 | update 2, panel 2; calls performUpdate and NewPanelsFrame, which stay in cmd/f4 until Task 36 (Task 23 step 1) |
+   | `uri_navigation_test.go` | `panel` | Task 34 | panel 23, history 1; Task 29 claimed it for viewer: measurement error; 23 panel references, no viewer symbol |
+   | `viewer_tail_test.go` | `viewer` | Task 29 | viewer 4 |
+   | `win32_backend_test.go` | `app` | Task 36 | no cmd/f4 symbol references; DefaultConsoleBackend / IsWine, startup backend selection |
+   | `workspace_routing_test.go` | `panel` | Task 34 | panel 9, editor 5, app 1 |
+   | `zzz_pty_leak_check_test.go` | `term` | Task 30 | term 1 |
 
-   For each, decide split-or-host and record it here: a test that only *constructs*
-   another package's type can often stay whole as an external test package
-   (`package panel_test`) in the package that owns most of its assertions.
-5. Watch for the inverse hazard: a test with no same-named source often covers
-   *several* sources at once (`ttyx_probe_test.go` covers `ttyx_probe_parse.go`;
-   `process_environment_test.go` covers 39 of 47 functions in
-   `process_environment_shell.go`). When those sources land in different packages,
-   the test follows one and silently stops covering the others. Record every such
-   test and the coverage it will lose, or split it.
-6. Write the result into this bundle as a table under this task, and delete Task 36
-   step 4's closing phrase "and whatever else remains" — after this task there is
-   nothing that remains.
+4. Roster of all 346 test files by wave. A test with a same-named source follows
+   it; the rest come from step 3. This is the list every wave's Tests section
+   refers to — `sysinfo`, `numeric`, `toast` and `colorer` receive no test file.
+
+   - **`testutil`** (Task 9, 6 files): `module_root_test.go`, `numeric_conversions_test.go`, `race_disabled_test.go`, `race_enabled_test.go`, `test_cache_helper_test.go`, `test_main_test.go`
+   - **`history`** (Task 20, 5 files): `command_history_paths_test.go`, `history_dialog_test.go`, `history_provider_test.go`, `menu_history_test.go`, `search_history_test.go`
+   - **`action`** (Task 21, 1 files): `action_registry_test.go`
+   - **`update`** (Task 23, 8 files): `manual_uac_validation_windows_test.go`, `self_exec_linux_test.go`, `self_exec_test.go`, `update_cli_test.go`, `updater_libc_test.go`, `updater_repro_lock_other_test.go`, `updater_repro_lock_windows_test.go`, `updater_test.go`
+   - **`config`** (Task 24, 6 files): `appearance_settings_test.go`, `config_overlay_test.go`, `config_test.go`, `ini_test.go`, `portable_paths_test.go`, `proxy_settings_test.go`
+   - **`i18n`** (Task 24, 11 files): `command_palette_i18n_test.go`, `lang_bidi_test.go`, `lang_consistency_test.go`, `lang_contamination_test.go`, `lang_fallback_priority_test.go`, `lang_homoglyphs_test.go`, `lang_packs_test.go`, `lang_scripts_test.go`, `lang_test.go`, `language_list_test.go`, `test_fallback_lang_test.go`
+   - **`keymap`** (Task 24, 7 files): `hotkeys_test.go`, `input_translation_test.go`, `keymap_test.go`, `mackeys_test.go`, `terminal_mouse_offset_test.go`, `translate_kitty_test.go`, `ttyx_keys_test.go`
+   - **`theme`** (Task 24, 9 files): `colors_test.go`, `colorspace_test.go`, `farcolor_test.go`, `style_combo_colors_test.go`, `style_completeness_test.go`, `style_custom_test.go`, `style_default_dark_test.go`, `style_overrides_test.go`, `style_test.go`
+   - **`dialog`** (Task 25, 27 files): `action_menu_test.go`, `bookmarks_dialog_test.go`, `colorer_settings_test.go`, `command_palette_direct_frames_test.go`, `command_palette_direct_panels_test.go`, `command_palette_drives_test.go`, `command_palette_help_test.go`, `command_palette_search_test.go`, `command_palette_test.go`, `command_palette_ui_test.go`, `dialog_layouts_test.go`, `envman_help_test.go`, `file_dialog_test.go`, `find_file_test.go`, `grabber_mouse_test.go`, `grabber_test.go`, `help_keys_ar_test.go`, `help_keys_he_test.go`, `help_keys_ru_test.go`, `help_keys_test.go`, `help_keys_tr_test.go`, `help_lang_test.go`, `help_search_test.go`, `help_test.go`, `hotkeys_ui_test.go`, `portable_test.go`, `share_dialog_test.go`
+   - **`plughost`** (Task 26, 21 files): `api_test.go`, `extui_test.go`, `lua_plugin_test.go`, `plughost_ffi_test.go`, `plugin_contributions_test.go`, `plugin_hotkeys_test.go`, `plugin_identity_test.go`, `plugin_permissions_test.go`, `plugin_permissions_ui_test.go`, `plugin_scaffold_test.go`, `plugring_meta_test.go`, `plugring_policy_test.go`, `plugring_rows_test.go`, `plugring_test.go`, `plugring_ui_test.go`, `rpc_commands_test.go`, `rpc_lua_test.go`, `rpc_plugin_test.go`, `rpc_vfs_test.go`, `sqlite_actions_test.go`, `wasm_plugin_test.go`
+   - **`gui`** (Task 27, 6 files): `gui_backend_capability_test.go`, `gui_font_catalog_test.go`, `gui_font_test.go`, `gui_font_windows_test.go`, `gui_unix_test.go`, `window_icon_windows_test.go`
+   - **`macro`** (Task 28, 7 files): `fkeys_hidden_panels_test.go`, `macro_ctrlletter_test.go`, `macro_export_test.go`, `macro_lua_test.go`, `macro_plugin_calls_test.go`, `macro_reload_test.go`, `macro_test.go`
+   - **`viewer`** (Task 29, 9 files): `codepage_issue875_sticky_test.go`, `disasm_test.go`, `top_bar_test.go`, `url_links_test.go`, `viewer_backend_test.go`, `viewer_tail_test.go`, `viewer_text_test.go`, `viewer_view_test.go`, `word_nav_test.go`
+   - **`term`** (Task 30, 37 files): `ansi_parser_sync_test.go`, `ansi_parser_test.go`, `background_jobs_test.go`, `clipboard_test.go`, `command_runner_test.go`, `command_runner_unix_test.go`, `command_runner_windows_test.go`, `far2l_image_test.go`, `graphics_compat_test.go`, `graphics_probe_decision_test.go`, `kitty_graphics_test.go`, `kitty_metrics_test.go`, `kitty_placements_test.go`, `process_environment_test.go`, `pty_bsd_test.go`, `pty_cloexec_test.go`, `pty_pollable_test.go`, `pty_test.go`, `pty_windows_test.go`, `session_attach_payload_test.go`, `session_daemon_test.go`, `session_unix_test.go`, `shell_mode_test.go`, `sixel_decode_test.go`, `sixel_terminal_test.go`, `solaris_pty_alloc_test.go`, `solaris_pty_backend_test.go`, `solaris_streams_mock_linux_test.go`, `solaris_streams_mock_other_test.go`, `solaris_streams_mock_test.go`, `solaris_streams_test.go`, `terminal_log_vfs_test.go`, `terminal_selection_test.go`, `terminal_view_test.go`, `terminal_workspace_test.go`, `ttyx_probe_test.go`, `zzz_pty_leak_check_test.go`
+   - **`media`** (Task 31, 18 files): `audio_decode_test.go`, `image_console_stats_test.go`, `image_decode_test.go`, `image_external_test.go`, `image_formats_test.go`, `image_gallery_test.go`, `image_native_darwin_test.go`, `image_pipeline_test.go`, `image_preview_test.go`, `image_slideshow_test.go`, `image_transform_test.go`, `image_view_orient_test.go`, `image_view_overlay_test.go`, `image_view_test.go`, `image_x11_overlay_test.go`, `player_panel_test.go`, `sixel_layers_test.go`, `video_player_test.go`
+   - **`fileops`** (Task 32, 19 files): `archive_index_test.go`, `atomic_file_test.go`, `attributes_dialog_windows_test.go`, `compare_folders_test.go`, `dialog_reporter_test.go`, `file_mask_far2l_test.go`, `file_mask_test.go`, `file_op_dialog_test.go`, `file_op_tracker_test.go`, `file_ops_coverage_test.go`, `file_ops_safety_test.go`, `file_ops_test.go`, `file_ops_transfer_name_test.go`, `file_state_key_test.go`, `file_state_test.go`, `issue149_test.go`, `issue815_test.go`, `path_identity_test.go`, `queue_manager_test.go`
+   - **`editor`** (Task 33, 35 files): `colorer_plugin_test.go`, `editor_base64_test.go`, `editor_codepage_test.go`, `editor_delta_test.go`, `editor_duplicate_line_test.go`, `editor_fade_test.go`, `editor_features_test.go`, `editor_find_all_test.go`, `editor_highlight_budget_test.go`, `editor_index_status_test.go`, `editor_mmap_test.go`, `editor_move_line_test.go`, `editor_multicursor_edit_test.go`, `editor_multicursor_move_test.go`, `editor_multicursor_occurrence_test.go`, `editor_multicursor_select_test.go`, `editor_multicursor_test.go`, `editor_occurrence_test.go`, `editor_restore_keys_test.go`, `editor_save_as_test.go`, `editor_save_inplace_test.go`, `editor_search_lazy_test.go`, `editor_search_remote_test.go`, `editor_search_zerocopy_test.go`, `editor_shiftdel_test.go`, `editor_target_line_test.go`, `editor_veto_test.go`, `editor_view_ads_test.go`, `editor_view_test.go`, `editor_wrap_memory_test.go`, `editor_wrap_safety_test.go`, `external_editor_process_unix_test.go`, `external_editor_test.go`, `goto_test.go`, `mapped_file_test.go`
+   - **`panel`** (Task 34, 48 files): `action_copyname_parent_test.go`, `action_marked_clipboard_test.go`, `action_restore_selection_test.go`, `background_jobs_session_test.go`, `bookmarks_test.go`, `console_passthrough_test.go`, `dragdrop_test.go`, `drive_bookmarks_test.go`, `drive_menu_options_test.go`, `fast_find_overlay_test.go`, `file_associations_dispatch_test.go`, `file_associations_test.go`, `file_panel_sorting_regression_test.go`, `file_panel_test.go`, `folder_history_panel_test.go`, `frame_manager_test_helpers_test.go`, `info_panel_test.go`, `issue54_test.go`, `issue856_mouse_capture_test.go`, `issue863_terminal_test.go`, `issue95_followup_test.go`, `keybar_injected_test.go`, `managed_execution_test.go`, `navigation_mode_test.go`, `panel_actions_test.go`, `panel_menu_test.go`, `panel_plugins_test.go`, `panels_frame_drivecursor_windows_test.go`, `panels_frame_pty_test.go`, `panels_frame_test.go`, `path_hints_test.go`, `quick_view_panel_test.go`, `quick_view_provider_test.go`, `reconnect_test.go`, `semantic_test.go`, `shell_integration_test.go`, `shell_session_test.go`, `sort_groups_test.go`, `temp_panel_test.go`, `text_editor_bridge_test.go`, `translator_test.go`, `uri_navigation_test.go`, `user_menu_ini_test.go`, `user_menu_subst_test.go`, `user_menu_ui_test.go`, `viewer_editor_history_test.go`, `workspace_routing_test.go`, `workspace_session_test.go`
+   - **`cmdline`** (Task 35, 11 files): `apply_command_batch_test.go`, `apply_command_resources_test.go`, `apply_command_subst_test.go`, `apply_command_test.go`, `cmd_session_test.go`, `command_line_test.go`, `command_prefix_registry_test.go`, `command_quotes_test.go`, `command_quoting_test.go`, `resolve_command_windows_test.go`, `simple_exec_test.go`
+   - **`app`** (Task 36, 52 files): `action_copy_window_title_test.go`, `action_menu_visibility_test.go`, `action_shortcut_conflict_test.go`, `actions_test.go`, `ai_chat_panel_test.go`, `arkanoid_test.go`, `async_buffer_test.go`, `attributes_test.go`, `autosave_settings_test.go`, `bom_test.go`, `child_env_test.go`, `child_env_universal_linux_test.go`, `cloudfox_real_archive_test.go`, `cloudfox_real_cross_cloud_test.go`, `cloudfox_real_large_f5_test.go`, `cloudfox_real_ui_test.go`, `codepage_issue875_test.go`, `command_palette_dynamic_test.go`, `command_palette_menu_test.go`, `debug_log_test.go`, `delete_trash_test.go`, `editor_binary_open_test.go`, `external_tools_test.go`, `farmenu_file_test.go`, `folder_history_actions_test.go`, `folder_history_navigation_test.go`, `framework_actions_test.go`, `highlight_files_test.go`, `history_hint_test.go`, `host_input_modes_test.go`, `issue561_test.go`, `issue631_test.go`, `issue821_test.go`, `libc_default_test.go`, `libc_musl_test.go`, `nested_input_mode_test.go`, `nested_input_windows_test.go`, `pe_subsystem_test.go`, `session_test.go`, `sheet_actions_test.go`, `sheet_frame_test.go`, `should_try_gui_test.go`, `startup_backend_test.go`, `startup_dir_test.go`, `static_direct_actions_test.go`, `sudo_dispatcher_args_test.go`, `title_test.go`, `unicode_input_test.go`, `updater_issue635_test.go`, `updater_repro_test.go`, `vtvibe_host_test.go`, `win32_backend_test.go`
+   - **`cmd/f4`** (stays in cmd/f4, 3 files): `command_palette_coverage_test.go`, `frame_manager_capture_test.go`, `hardcoded_strings_test.go`
+
+5. Tests whose **unexported** references span more than one future package.
+   Such a test cannot live in any single package as it stands: an in-package test
+   reaches its own package's unexported symbols but cannot import a package that
+   imports it, and an external test package (`package X_test`) can import
+   anything but sees only exported names. The rule applied: the host is the
+   package whose wave comes last among the referenced ones; every unexported
+   symbol it needs from a lower wave is exported by that wave when it moves; a
+   symbol from a *later* wave means the cases using it split out to that
+   package's tests. "Unexported" is Go's rule, a lower-case initial. 61 tests —
+   16 from step 3 and 45 with a same-named source:
+
+   | Test | Host (wave) | Exported first by a lower wave | Cases that split out to a later wave | Form in the host |
+   |---|---|---|---|---|
+   | `action_marked_clipboard_test.go` | `panel` (Task 34) | keymap (Task 24): initDefaults |  | in-package |
+   | `action_restore_selection_test.go` | `panel` (Task 34) | keymap (Task 24): initDefaults |  | in-package |
+   | `attributes_test.go` | `app` (Task 36) | fileops (Task 32): showAttributesUnix, showAttributesWindows, showAttributesWindowsForTargets, showAttributesWindowsWithProperties; panel (Task 34): getActivePanel |  | in-package |
+   | `autosave_settings_test.go` | `app` (Task 36) | panel (Task 34): panelSessionState; main.go → app (Task 36): mergeWorkspaceSessionSave |  | `package app_test` |
+   | `bom_test.go` | `app` (Task 36) | editor (Task 33): cancelIndexing; panel (Task 34): loadDefaultQuickView |  | in-package |
+   | `command_palette_dynamic_test.go` | `app` (Task 36) | sysinfo (Task 22): getPlatformDrives; dialog (Task 25): commandPaletteAIChatFocusedEntries, commandPaletteBookmarkEntries, commandPaletteDriveEntries, commandPaletteEntry, commandPaletteImageEntries, commandPaletteLuaMacroEntries, commandPaletteMacroEntries, commandPalettePanelsContextEntries, commandPalettePrefixEntries, commandPaletteQueueEntries, executeCommandPaletteEntry, rankCommandPaletteEntries; plughost (Task 26): coreAPI; macro (Task 28): waitIdle; media (Task 31): imageGallery |  | in-package |
+   | `delete_trash_test.go` | `app` (Task 36) | fileops (Task 32): calculateDeleteStats, deletePathWithDisposition |  | in-package |
+   | `dialog_layouts_test.go` | `dialog` (Task 25) | term (Task 30, later, the file moves then): waitForAsyncClipboard; fileops (Task 32, later, the file moves then): reportMount; app (Task 36, later, the file moves then): showEditor, showViewer |  | `package dialog_test` |
+   | `editor_binary_open_test.go` | `app` (Task 36) | editor (Task 33): awaitOffsetAsync, cancelColorer, indexIsComplete, newEditorView; panel (Task 34): stopLoadingAnimation |  | in-package |
+   | `editor_save_inplace_test.go` | `editor` (Task 33) |  | app (Task 36): prewarm | in-package |
+   | `folder_history_navigation_test.go` | `app` (Task 36) | panel (Task 34): consumeFolderHistorySuppression, folderHistoryStep, folderHistorySuppression, moveFolderHistory, sameFolderHistoryPath, suppressNextFolderHistory |  | in-package |
+   | `goto_test.go` | `editor` (Task 33) | dialog (Task 25): parseGotoOffset, showGotoOffsetDialog |  | in-package |
+   | `history_hint_test.go` | `app` (Task 36) | history (Task 20): loadFolderHistoryRecords, rememberCommandHistoryPath, selectedSecondary; panel (Task 34): getActivePanel |  | in-package |
+   | `issue821_test.go` | `app` (Task 36) | history (Task 20): newHistorySearch |  | in-package |
+   | `issue863_terminal_test.go` | `panel` (Task 34) | term (Task 30): cellsText |  | in-package |
+   | `shell_session_test.go` | `panel` (Task 34) | term (Task 30): cellsText |  | in-package |
+   | `action_menu_test.go` | `dialog` (Task 25) | action (Task 21): plainLabel; plughost (Task 26, later, the file moves then): coreAPI |  | `package dialog_test` |
+   | `actions_test.go` | `app` (Task 36) | panel (Task 34): cacheKey, dirCacheEntry; main.go → app (Task 36): getSessionIniPath |  | in-package |
+   | `apply_command_test.go` | `cmdline` (Task 35) | plughost (Task 26): findPanelsFrame; panel (Task 34): captureSelectionToken, clearSelectionIfUnchanged, getActivePanel |  | in-package |
+   | `colors_test.go` | `theme` (Task 24) |  | dialog (Task 25): memoryHelpVFS | in-package |
+   | `command_palette_direct_frames_test.go` | `dialog` (Task 25) |  | media (Task 31): imageGallery | in-package |
+   | `command_palette_help_test.go` | `dialog` (Task 25) |  | app (Task 36): actionContextHelp | in-package |
+   | `command_palette_i18n_test.go` | `i18n` (Task 24) | action (Task 21): plainLabel | dialog (Task 25): commandPaletteActionEntries, commandPaletteEntry, normalizeCommandPaletteText, rankCommandPaletteEntries | in-package |
+   | `command_palette_test.go` | `dialog` (Task 25) |  | plughost (Task 26): coreAPI | in-package |
+   | `command_prefix_registry_test.go` | `cmdline` (Task 35) | plughost (Task 26): coreAPI |  | in-package |
+   | `compare_folders_test.go` | `fileops` (Task 32) | dialog (Task 25): loadCompareOptions |  | in-package |
+   | `config_test.go` | `config` (Task 24) |  | media (Task 31): imageDecoderPriorityOf | in-package |
+   | `console_passthrough_test.go` | `panel` (Task 34) |  | app (Task 36): terminalChildEnv | in-package |
+   | `disasm_test.go` | `viewer` (Task 29) |  | editor (Task 33): editorStatusText | in-package |
+   | `drive_bookmarks_test.go` | `panel` (Task 34) | fileops (Task 32): writeFileAtomically |  | in-package |
+   | `editor_view_test.go` | `editor` (Task 33) |  | app (Task 36): actionWorkspaceClose, actionWorkspaceCloseNumber | in-package |
+   | `file_dialog_test.go` | `dialog` (Task 25) |  | app (Task 36): actionCopyMove | in-package |
+   | `file_panel_test.go` | `panel` (Task 34) | sysinfo (Task 22): fsInfo; dialog (Task 25): rowText |  | in-package |
+   | `framework_actions_test.go` | `app` (Task 36) | dialog (Task 25): commandPaletteWorkspaceEntries, executeCommandPaletteEntry, generateKeysHelpTopic, rankCommandPaletteEntries |  | in-package |
+   | `gui_font_catalog_test.go` | `gui` (Task 27) |  | app (Task 36): actionAppearanceSettings | in-package |
+   | `highlight_files_test.go` | `app` (Task 36) | theme (Task 24): deltaE2000, loadStylesFromFS, rgbToLAB, toRGBF; panel (Task 34): fileEntry |  | in-package |
+   | `host_input_modes_test.go` | `app` (Task 36) | panel (Task 34): enterHostConsole, leaveHostConsole |  | in-package |
+   | `image_x11_overlay_test.go` | `media` (Task 31) | term (Task 30): answerComplete, hostGridRect, hostPixelsFromIoctl, hostScale, hostTextSize, parseXTWinOps |  | in-package |
+   | `info_panel_test.go` | `panel` (Task 34) | sysinfo (Task 22): fsInfo, memInfo |  | in-package |
+   | `lang_packs_test.go` | `i18n` (Task 24) | action (Task 21): plainLabel | dialog (Task 25): dialogButtonRows; panel (Task 34): assocEditorState, editAt; app (Task 36): checkboxColumnWidth, elementWidth | in-package |
+   | `lang_test.go` | `i18n` (Task 24) | main.go → app (Task 36): formatVersionSHA |  | in-package |
+   | `macro_plugin_calls_test.go` | `macro` (Task 28) | plughost (Task 26): coreAPI |  | in-package |
+   | `macro_test.go` | `macro` (Task 28) | keymap (Task 24): initDefaults |  | in-package |
+   | `panel_plugins_test.go` | `panel` (Task 34) | plughost (Task 26): coreAPI, pluginSessionRegistrations, registerRPCPluginPanels |  | in-package |
+   | `panels_frame_test.go` | `panel` (Task 34) | dialog (Task 25): actionViewerSettings, associatedFileCommand, systemFileManagerCommand; term (Task 30): newTerminalRedrawScheduler; fileops (Task 32): globalAwareReporter | app (Task 36): actionAppearanceSettings, actionCopyMove, actionDelete, actionEditorSettings, actionFindFile, actionMkDir, actionPanelSettings | in-package |
+   | `path_identity_test.go` | `fileops` (Task 32) |  | panel (Task 34): sameFolderHistoryPath | in-package |
+   | `plugin_hotkeys_test.go` | `plughost` (Task 26) | dialog (Task 25): buildHotkeyRows |  | in-package |
+   | `plugring_test.go` | `plughost` (Task 26) | config (Task 24): resetConfigDirForTest |  | in-package |
+   | `portable_test.go` | `dialog` (Task 25) | config (Task 24): resetConfigDirForTest, resolveProfileDir |  | in-package |
+   | `pty_windows_test.go` | `term` (Task 30) |  | panel (Task 34): getActivePTY, isPtyBusy; app (Task 36): actionExecute | in-package |
+   | `queue_manager_test.go` | `fileops` (Task 32) | dialog (Task 25): themedForeground | cmdline (Task 35): cancelOperationsForShutdown | in-package |
+   | `search_history_test.go` | `history` (Task 20) |  | editor (Task 33): showReplaceDialog; panel (Task 34): applyPathHintSettings; app (Task 36): actionFindFile, actionMkDir, actionViewerSearchDirection | in-package |
+   | `semantic_test.go` | `panel` (Task 34) | editor (Task 33): getLineLength |  | in-package |
+   | `sheet_actions_test.go` | `app` (Task 36) | action (Task 21): plainLabel |  | in-package |
+   | `sqlite_actions_test.go` | `plughost` (Task 26) | action (Task 21): plainLabel |  | in-package |
+   | `static_direct_actions_test.go` | `app` (Task 36) | action (Task 21): plainLabel; dialog (Task 25): commandPaletteActionEntries; panel (Task 34): buildMenuItems, leftMenu, rightMenu, updateMenuCheckmarks |  | `package app_test` |
+   | `text_editor_bridge_test.go` | `panel` (Task 34) | editor (Task 33): saveUndo |  | in-package |
+   | `title_test.go` | `app` (Task 36) | update (Task 23): getCurrentVersion |  | in-package |
+   | `updater_test.go` | `update` (Task 23) |  | plughost (Task 26): coreAPI | in-package |
+   | `url_links_test.go` | `viewer` (Task 29) |  | editor (Task 33): fillCellsWithLinks | in-package |
+   | `viewer_editor_history_test.go` | `panel` (Task 34) | history (Task 20): displayText, processKey, selectedSecondary |  | in-package |
+
+   The exports this implies, per wave. The wave that moves a symbol exports it
+   in that commit, so every test still compiles in `cmd/f4` until its own wave:
+
+   - `history` (Task 20): `displayText`, `loadFolderHistoryRecords`, `newHistorySearch`, `processKey`, `rememberCommandHistoryPath`, `selectedSecondary`
+   - `action` (Task 21): `plainLabel`
+   - `sysinfo` (Task 22): `fsInfo`, `getPlatformDrives`, `memInfo`
+   - `update` (Task 23): `getCurrentVersion`
+   - `keymap` (Task 24): `initDefaults`
+   - `theme` (Task 24): `deltaE2000`, `loadStylesFromFS`, `rgbToLAB`, `toRGBF`
+   - `config` (Task 24): `resetConfigDirForTest`, `resolveProfileDir`
+   - `dialog` (Task 25): `actionViewerSettings`, `associatedFileCommand`, `buildHotkeyRows`, `commandPaletteAIChatFocusedEntries`, `commandPaletteActionEntries`, `commandPaletteBookmarkEntries`, `commandPaletteDriveEntries`, `commandPaletteEntry`, `commandPaletteImageEntries`, `commandPaletteLuaMacroEntries`, `commandPaletteMacroEntries`, `commandPalettePanelsContextEntries`, `commandPalettePrefixEntries`, `commandPaletteQueueEntries`, `commandPaletteWorkspaceEntries`, `executeCommandPaletteEntry`, `generateKeysHelpTopic`, `loadCompareOptions`, `parseGotoOffset`, `rankCommandPaletteEntries`, `rowText`, `showGotoOffsetDialog`, `systemFileManagerCommand`, `themedForeground`
+   - `plughost` (Task 26): `coreAPI`, `findPanelsFrame`, `pluginSessionRegistrations`, `registerRPCPluginPanels`
+   - `macro` (Task 28): `waitIdle`
+   - `term` (Task 30): `answerComplete`, `cellsText`, `hostGridRect`, `hostPixelsFromIoctl`, `hostScale`, `hostTextSize`, `newTerminalRedrawScheduler`, `parseXTWinOps`, `waitForAsyncClipboard`
+   - `media` (Task 31): `imageGallery`
+   - `fileops` (Task 32): `calculateDeleteStats`, `deletePathWithDisposition`, `globalAwareReporter`, `reportMount`, `showAttributesUnix`, `showAttributesWindows`, `showAttributesWindowsForTargets`, `showAttributesWindowsWithProperties`, `writeFileAtomically`
+   - `editor` (Task 33): `awaitOffsetAsync`, `cancelColorer`, `cancelIndexing`, `getLineLength`, `indexIsComplete`, `newEditorView`, `saveUndo`
+   - `panel` (Task 34): `buildMenuItems`, `cacheKey`, `captureSelectionToken`, `clearSelectionIfUnchanged`, `consumeFolderHistorySuppression`, `dirCacheEntry`, `enterHostConsole`, `fileEntry`, `folderHistoryStep`, `folderHistorySuppression`, `getActivePanel`, `leaveHostConsole`, `leftMenu`, `loadDefaultQuickView`, `moveFolderHistory`, `panelSessionState`, `rightMenu`, `sameFolderHistoryPath`, `stopLoadingAnimation`, `suppressNextFolderHistory`, `updateMenuCheckmarks`
+   - `app` (Task 36): `formatVersionSHA`, `getSessionIniPath`, `mergeWorkspaceSessionSave`, `showEditor`, `showViewer`
+
+   `coreAPI` appears in nine rows and stays unexported per Task 26's contract;
+   those tests obtain one through the constructor the host exposes for `cmd/f4`
+   rather than instantiating the struct. Where the host is `internal/app` and
+   step 3 says "split candidate", a split is the better engineering answer and
+   the implementer may take it; the table guarantees only that the whole-file
+   route compiles.
+
+   Of the five tests the previous draft named, three —
+   `cloudfox_real_ui_test.go`, `codepage_issue875_test.go`,
+   `terminal_selection_test.go` — reference only exported types across packages
+   and travel whole as external test packages; `command_palette_dynamic_test.go`
+   and `editor_binary_open_test.go` are in the table. The graph found what the
+   eight-type gate could not: an `app` share (`showEditor`, `findOpenedEditor`,
+   `actionCopyMove`) in four of the five.
+
+   The inverse hazard — one test covering several sources that land in
+   different packages — is resolved by the rosters: both examples the previous
+   draft gave, `ttyx_probe_test.go` over `ttyx_probe_parse.go` and
+   `process_environment_test.go` over `process_environment_shell.go`, land in
+   `internal/term` together with every source they cover. The remaining cases are
+   the split-out column above.
+
+6. Tests that read a resource directory from disk by a CWD-relative path. No
+   symbol graph sees these, and `filepath.Glob` returns an empty set without an
+   error, so after the move such a test passes green over zero files — in a
+   codebase where the suite is the review mechanism, the worst defect this plan
+   can introduce:
+
+   | Test | Reads | Host | Required change |
+   |---|---|---|---|
+   | `lang_bidi_test.go` | `lang/*.lng`, `help/*.hlf` | `i18n` (Task 24) | help path through `testutil.ModuleRootDir` — `cmd/f4/help` in Task 24, `internal/dialog/help` from Task 25 on; guard both sets |
+   | `lang_contamination_test.go` | `lang/*.lng`, `help/*.hlf` | `i18n` (Task 24) | same |
+   | `lang_homoglyphs_test.go` | `lang/*.lng`, `lang/homoglyph_baseline.txt`, `help/*.hlf` | `i18n` (Task 24) | same |
+   | `lang_scripts_test.go` | `lang/*.lng`, `help/*.hlf` | `i18n` (Task 24) | same; **has no empty-set guard today** |
+   | `lang_consistency_test.go` | `lang/*.lng`, `lang/coverage_baseline.txt` | `i18n` (Task 24) | guard the set; **no guard today** |
+   | `help_lang_test.go` | `help/*.hlf`, `lang/*.lng` | `dialog` (Task 25) | lang path through `testutil.ModuleRootDir` to `internal/i18n/lang`; guard both sets; **no guard today** |
+   | `envman_help_test.go` | `help/` | `dialog` (Task 25) | moves with the directory |
+   | `help_test.go` | `help/*.hlf` | `dialog` (Task 25) | moves with `help.go` and the directory |
+
+   The guard is one line per set:
+   `if len(paths) == 0 { t.Fatalf("no .lng files under %s", dir) }`.
+   `skipIfNoRelevantChanges` takes the same CWD-relative patterns
+   (`dialog_layouts_test.go`, `lang_contamination_test.go` and four more); every
+   caller rewrites its patterns for its new directory.
+
+7. Test scaffolding. Helpers declared in `_test.go` files and called from test
+   files that land elsewhere — 48 by the graph. The rule: a helper that needs
+   only `vtui` and the standard library goes to `internal/testutil` (Task 9); one
+   that needs a panel type goes to `internal/paneltest` (Task 34); one that needs
+   unexported symbols of its own package stays there, and the foreign user is
+   rewritten against the exported surface or — under twenty lines — takes a
+   copy. The ones with four or more users:
+
+   | Helper | Declared in | Users (packages) | Home |
+   |---|---|---|---|
+   | `swapFrameManager` and family | `frame_manager_test_helpers_test.go` | 62 (17) | `testutil`, Task 9 (already) |
+   | `setupMockPanelsFrame` | `panels_frame_test.go` | 27 (6) | `paneltest`, Task 34 (already) |
+   | `pressKey` | `test_main_test.go` | 21 (7) | `testutil.PressKey`, Task 9 |
+   | `waitForLoad` | `file_panel_test.go` | 19 (8) | `paneltest.WaitForLoad`, Task 34; it reads `fp.isLoading`, so `FileSystemPanel` gains an exported `IsLoading()` accessor in that wave |
+   | `testRune`, `testInt16`, `testUint32` and six more | `numeric_conversions_test.go` | 16 (7) | `testutil`, Task 9, capitalised; the file holds no test |
+   | `drainPendingTasks` | `editor_target_line_test.go` | 13 (3) | `testutil.DrainPendingTasks`, Task 9 |
+   | `mockPty` | `ansi_parser_test.go` | 11 (2) | `paneltest.MockPty`, Task 34, local copy in term (already) |
+   | `setFrameManagerScreensForTest` | `frame_manager_test_helpers_test.go` | 8 (6) | `testutil`, Task 9 (already) |
+   | `skipIfNoRelevantChanges` | `test_cache_helper_test.go` | 6 (3) | `testutil.SkipIfNoRelevantChanges`, Task 9 |
+   | `waitForToastExpiry` | `frame_manager_test_helpers_test.go` | 6 (4) | `testutil`, Task 9 (already) |
+   | `preserveActionRegistry` | `test_main_test.go` | 5 (4) | `action.Snapshot() (restore func())`, Task 21 — it copies the registry maps, so it lives with them |
+   | `stubHistoryProvider` | `history_hint_test.go` | 5 (2) | seven lines: duplicated in the two panel users |
+   | `drainUITasks` | `managed_execution_test.go` | 4 (3) | `testutil.DrainUITasks`, Task 9 |
+   | `setupPortableIni` | `portable_paths_test.go` | 4 (3) | stays with its file in `config` (Task 24); it stubs the `osExecutable` seam, so the three foreign users take a twenty-line copy |
+   | `newFakeMacroHost` | `macro_lua_test.go` | 4 (2) | stays in `macro`; the one dialog user takes a copy |
+   | `closeFrameManagerFrames` | `frame_manager_test_helpers_test.go` | 4 (4) | `testutil`, Task 9 (already) |
+   | `moduleRootDir` | `module_root_test.go` | 3 (3) | `testutil.ModuleRootDir`, Task 9; the file holds no test |
+   | `raceEnabled` | `race_enabled_test.go`, `race_disabled_test.go` | 1 | `testutil.RaceEnabled`, Task 9, build tags verbatim |
+
+   `TestMain` (`test_main_test.go`) is process-wide setup for `package main`: a
+   silent `vtui` screen, a temporary config directory (`XDG_CONFIG_HOME`,
+   `APPDATA`, `userConfigDir`, `resetConfigDirForTest`), `vfs.InitSudoClient`,
+   seven muted seams, `fusefs.UnmountAll` and a task-pump leak check. It becomes
+   `testutil.Main(m *testing.M, before, after func())` in Task 9: the screen, the
+   config directory and the leak check are Main's own; `before` sets the calling
+   package's seams and `after` runs its teardown (`fusefs.UnmountAll` stays in
+   the callers that mount, so `testutil` keeps importing no `internal/*`). Every
+   package that receives tests declares a five-line `TestMain` calling it,
+   `cmd/f4` included. The seams it mutes become exported package variables by
+   the wave that moves them: `dialog.DefaultExternalUICommandRunner`
+   (`external_ui.go`, Task 25), `fileops.DefaultNativePropertiesOpener` and
+   `fileops.QueueShowToast` (`attributes_dialog.go`, `queue_manager.go`,
+   Task 32), `panel.SpawnLocalShellPTY` (`panels_frame.go`, Task 34),
+   `config.UserConfigDir` and `config.ResetConfigDirForTest` (Task 24);
+   `toast.DurationOverride` already is (Task 20).
+
+8. Module-wide auditors. Besides `command_palette_coverage_test.go` and Task 8's
+   `architecture_test.go`, two more tests walk the whole module and can live only
+   in `cmd/f4`: `frame_manager_capture_test.go` (parses every production file,
+   through the palette auditor's `commandPaletteParseProductionGo`, for
+   background work that captures `vtui.FrameManager`) and
+   `hardcoded_strings_test.go` (`hardcode.Scan` over the module root against
+   `tools/hardcoded_baseline.txt`, the L10N CI gate). Four auditors stay; the
+   Definition of Done and Task 37 say so.
+
+9. No wave's Tests section says "every remaining", "every neighbour" or names an
+   unlisted "the … tests": each names its roster or points at step 4. Task 36
+   step 4 does not end in "and whatever else remains".
 
 ### Required Interfaces and Contracts
 
-- Every one of the 345 non-test files and 346 test files is assigned to exactly one
-  wave, or explicitly marked "stays in `cmd/f4`" with the reason. There is no
-  residual category.
-- A test is assigned by its subject. Filename similarity is evidence, never the
-  rule.
+- Every one of the 345 non-test files and 346 test files is assigned to exactly
+  one wave, or explicitly marked "stays in `cmd/f4`" with the reason. There is
+  no residual category.
+- A test with a same-named source follows it. A test without one is assigned by
+  the symbols it references, never by its filename.
+- A test in step 5 moves in its host's wave; the symbols it needs are exported
+  by the waves that move them, in those commits, so it compiles in `cmd/f4` in
+  between.
 - The assignment is data for the waves; this task moves nothing.
 
 ### Error Handling and Logging
@@ -1032,23 +1444,23 @@ Not applicable — no product code changes.
 
 ### Tests
 
-No new tests. Step 1's two `comm` invocations are the check, and they must both
-come back empty when re-run against the finished table.
+No new tests. Step 1's first two `comm` invocations are the check, and both must
+come back empty against this bundle.
 
 ### Acceptance Criteria
 
-- Both `comm` commands in step 1, re-run with the completed table folded into the
-  bundle, return nothing.
-- Each of the five multi-package tests in step 4 has a written split-or-host
-  decision.
-- Task 36 step 4 no longer ends in a catch-all.
+- The first two `comm` commands in step 1 return nothing.
+- Each of the 61 tests in step 5 has a host, a form and an export list.
+- Each of the eight tests in step 6 has a host and a guard requirement.
+- No Tests section in Phases 5-10 contains "every remaining", "every neighbour"
+  or an unnamed "the … tests"; Task 36 step 4 does not end in a catch-all.
 
 ### Verification
 
-- The two `comm` commands from step 1.
+- The first two `comm` commands from step 1.
 - Expected result: no output from either.
-- `ls cmd/f4/*.go | wc -l` equals the number of rows in the assignment table plus
-  the files explicitly marked as staying.
+- `ls cmd/f4/*_test.go | wc -l`
+- Expected result: `346`, the number of files in step 4's roster.
 
 ---
 

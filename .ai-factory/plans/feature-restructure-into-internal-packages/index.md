@@ -140,18 +140,46 @@ step 1 is the binding check; a zero score licenses nothing on its own.
 
 **Tests travel by subject, not by filename.** 154 of the 346 `_test.go` files have
 no same-named source — they are named for the scenario they exercise. "Take the
-`_test.go` neighbour" therefore strands 45% of the suite. Task 43 assigns every
-one of them, and every source file no wave names, to a package before the waves
-start.
+`_test.go` neighbour" therefore strands 45% of the suite. Task 43 holds the
+assignment, measured on the CodeGraph index: a table of all 154, a roster of all
+346 per wave, the 61 tests whose unexported references span more than one
+package (each with a host and an export list), the eight tests that read
+`lang/`, `help/` or `styles/` from disk, and the scaffolding — 48 shared helpers
+and `TestMain` — the waves would otherwise strand.
 
 **Ground rules for every commit.**
 
-- Builds on the whole matrix — 26 targets, exotic ones included, `CGO_ENABLED=0`.
+- **Builds on the whole matrix — 26 targets, exotic ones included, `CGO_ENABLED=0`.**
+  Verified at two levels, because the two cost differently:
+  - *After every commit, locally.* `CGO_ENABLED=0 GOOS=… GOARCH=… go build ./...`
+    across the tag-sensitive targets — windows, linux, darwin, solaris, illumos,
+    freebsd, plus one exotic arch such as linux/mips. Seconds per target, and it
+    catches exactly the mistake this plan is most likely to make: a file selected
+    by its name instead of its `//go:build` line.
+    **freebsd and netbsd need `-gcflags=github.com/go-webgpu/goffi/internal/fakecgo=-std`**
+    (the flag the matrix itself passes, `build.yml:880`). Without it the build
+    fails on `//go:cgo_export_dynamic … only allowed in cgo-generated code`, which
+    looks exactly like a breakage we caused and is not one. Verified on the
+    current tree: all six sampled targets build clean, freebsd only with the flag.
+  - *After every phase, in CI.* `gh workflow run build.yml --ref <branch>`.
+    It must be `workflow_dispatch`, **not** a pull request: `build-batch`, which
+    holds every exotic target, is gated on
+    `github.event_name != 'pull_request'` (`build.yml:324`), and so is the
+    cross-libc smoke test (`build.yml:231`). A PR therefore builds only the six
+    desktop cells and would report green while the targets most at risk went
+    unbuilt. Note also that a commit touching only `.md` and `docs/` skips CI
+    entirely on a PR (`paths-ignore`), which is why the documentation phases
+    cannot be checked this way at all.
+  - *Not after every commit in CI.* One run is ~30 jobs against 20 free-tier
+    runners, and `concurrency` cancels the in-flight run on the same ref
+    (`build.yml:28-30`), so consecutive pushes would queue up and kill each
+    other. Eleven phase runs give the same coverage as twenty-seven commit runs.
 - **Move by `//go:build` line, never by filename.** `pty_unix.go` is
   `//go:build linux`; `solaris_pty.go` is `//go:build !windows` and holds no PTY
   code. 97 non-test files carry a tag across 28 distinct expressions.
 - No rewrites inside a move commit. A reviewer must read the diff as a rename.
-- Tests move with their subject in the same commit.
+- Tests move with their subject in the same commit; a test without a subject
+  moves with the wave Task 43's roster names.
 - Compare against `.ai-factory/RESTRUCTURE_BASELINE.md`; **never rewrite it.** It
   is an immutable snapshot of the Task 0 revision, and only Task 42 touches it.
   Run all six modules — `go test ./...` sees only the main module's 38 packages.
@@ -230,7 +258,7 @@ titles, not the ordering.
 - [ ] Task 7: Remove sysinfo's last localization call (`gpu_info_linux.go:113`) ([details](phase-01-baseline-and-barriers.md#task-7-remove-sysinfos-last-localization-call))
 - [ ] Task 8: Add the module boundary auditor `cmd/f4/architecture_test.go` ([details](phase-01-baseline-and-barriers.md#task-8-add-the-module-boundary-auditor))
 - [ ] Task 9: Split the shared frame harness into `internal/testutil` + `internal/paneltest` ([details](phase-01-baseline-and-barriers.md#task-9-give-the-shared-frame-harness-a-home))
-- [ ] Task 43: Assign every `cmd/f4` file to a wave — 21 unnamed sources, 154 tests with no same-named source ([details](phase-01-baseline-and-barriers.md#task-43-assign-every-cmdf4-file-to-a-wave)) (depends on 8)
+- [ ] Task 43: Assign every `cmd/f4` file to a wave — 23 stray sources, 154 subject-less tests, 61 multi-package tests, 48 shared helpers ([details](phase-01-baseline-and-barriers.md#task-43-assign-every-cmdf4-file-to-a-wave)) (depends on 8)
 
 ### Phase 2: Clear the Repository Root
 - [ ] Task 10: Move the three shell scripts to `scripts/` ([details](phase-02-repository-root.md#task-10-move-the-shell-scripts-to-scripts)) (depends on 1)
@@ -321,9 +349,11 @@ classification recorded in this bundle rather than in the tree; none produces on
 
 ## Definition of Done
 
-- `cmd/f4` holds `main.go`, its wiring tests, the two module-wide auditors
-  (`command_palette_coverage_test.go`, `architecture_test.go`) and
-  `rsrc_windows_{amd64,arm64}.syso`. Nothing else.
+- `cmd/f4` holds `main.go`, the four module-wide auditors
+  (`command_palette_coverage_test.go`, `architecture_test.go`,
+  `frame_manager_capture_test.go`, `hardcoded_strings_test.go`), the five-line
+  `TestMain` they need, and `rsrc_windows_{amd64,arm64}.syso`. Nothing else: no
+  test of the wiring exists today, and one written later lives here too.
 - Every package in `ARCHITECTURE.md`'s target tree exists, and every package that
   exists is in the document.
 - `go test ./cmd/f4 -run '^TestArchitecture'` passes with all five rules active
