@@ -427,11 +427,6 @@ func main() {
 		fmt.Println(getFormattedVersionInfo())
 		return
 	}
-	// Обновление — команда, а не способ запустить файловый менеджер: ни
-	// панелей, ни сессии здесь не поднимается.
-	if updateRequested {
-		os.Exit(runUpdateCLI(updateChannelArg))
-	}
 	if print_help {
 		fmt.Printf(`f4 version: %s
 f4 is efficient and cozy two-panel file manager in go
@@ -466,15 +461,15 @@ The following switches may be used in the command line:
  --new-plugin [pluginName]
  --server [serverPath]
  -test-plugins          Plugin test mode
+ --tty [Backend]        Force run in TTY-mode
+                         [Backend] values: "ansi", "winapi" (or "win32"),
+                         "auto"; if Backend omited, the configured default
+                         is used ([Startup] TTYBackend)
  --update [Channel]     Download and install the newest build, then exit;
                          [Channel] values: "stable" (or "latest"), "nightly";
                          if Channel omited, the configured update channel is
                          used ([Update] Channel, Options > Auto update), and
                          a named channel becomes the configured one
- --tty [Backend]        Force run in TTY-mode
-                         [Backend] values: "ansi", "winapi" (or "win32"),
-                         "auto"; if Backend omited, the configured default
-                         is used ([Startup] TTYBackend)
  --wine-probe           Print console/terminal environment facts and exit
                          (renderer backend, console geometry, shell mode)
 
@@ -495,6 +490,14 @@ see in vtinput project: https://github.com/unxed/vtinput
 `,
 			getFormattedVersionInfo())
 		return
+	}
+
+	// Обновление — команда, а не способ запустить файловый менеджер: ни
+	// панелей, ни сессии здесь не поднимается. Выход через os.Exit минует
+	// отложенный SaveSession намеренно: сессии этот запуск не касался, и
+	// перезаписывать её сохранённым при загрузке состоянием нечем.
+	if updateRequested {
+		os.Exit(runUpdateCLI(updateChannelArg))
 	}
 
 	for _, arg := range os.Args {
