@@ -604,6 +604,13 @@ func shouldTryGui() bool {
 		// We do not auto-detect GUI mode; it must be requested via filename or --gui flag.
 		return false
 	}
+	// A terminal launch must stay in console mode even when the shell has a
+	// display environment (for example, an SSH session into a desktop or a
+	// terminal opened under X11). The desktop launcher has no host TTY and can
+	// still select the GUI from the display variables below.
+	if probeHostTTY() {
+		return false
+	}
 	if runtime.GOOS == "darwin" {
 		return true
 	}
