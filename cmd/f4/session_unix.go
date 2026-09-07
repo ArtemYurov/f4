@@ -538,18 +538,7 @@ func runServer(sockPath string) {
 		oldStdin, oldStdout := os.Stdin, os.Stdout
 		os.Stdin, os.Stdout = newStdin, newStdout
 
-		var restore func()
-		if term.IsTerminal(int(os.Stdin.Fd())) {
-			r, err := vtui.PrepareTerminal()
-			if err != nil {
-				vtui.DebugLog("SERVER: WARNING: Failed to prepare terminal: %v", err)
-			} else {
-				restore = r
-				vtui.DebugLog("SERVER: Raw mode and environment enabled successfully.")
-			}
-		} else {
-			vtui.DebugLog("SERVER: FD %d is NOT a terminal, raw mode skipped.", os.Stdin.Fd())
-		}
+		restore := adoptClientTerminal(os.Stdin)
 
 		// Sync terminal size
 		if w, h, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 0 && h > 0 {
@@ -716,6 +705,37 @@ func runServer(sockPath string) {
 
 		os.Stdin, os.Stdout = oldStdin, oldStdout
 	}
+}
+
+// resetFar2lNegotiation is a variable so the attach path can be exercised
+// without a terminal to negotiate with.
+var resetFar2lNegotiation = vtui.ResetFar2lNegotiation
+
+// adoptClientTerminal puts the terminal of a client that has just attached to
+// the daemon into the state f4 draws in, and returns the call that gives it
+// back -- nil when there is nothing to give back.
+//
+// The far2l acknowledgement is forgotten first. It belongs to the terminal
+// that sent it, and this is a different terminal. PrepareTerminal announces
+// the protocols again right below, so a client that speaks far2l has the
+// extensions back a moment later; a client that does not -- a plain SSH
+// session where the last client was a far2l-capable emulator -- must not be
+// addressed in far2l at all, or every clipboard call sits out its timeout
+// waiting for a reply that is never coming (#922).
+func adoptClientTerminal(in *os.File) func() {
+	resetFar2lNegotiation()
+
+	if !term.IsTerminal(int(in.Fd())) {
+		vtui.DebugLog("SERVER: FD %d is NOT a terminal, raw mode skipped.", in.Fd())
+		return nil
+	}
+	restore, err := vtui.PrepareTerminal()
+	if err != nil {
+		vtui.DebugLog("SERVER: WARNING: Failed to prepare terminal: %v", err)
+		return nil
+	}
+	vtui.DebugLog("SERVER: Raw mode and environment enabled successfully.")
+	return restore
 }
 
 const sessionPickerDialogPreferredWidth = 100
