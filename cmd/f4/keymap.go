@@ -42,6 +42,11 @@ type keyRemapPrefixRule struct {
 // either one on its own: it binds actions, while frameworks, dialogs, menus
 // and the frames themselves also read keys directly.
 //
+// It is not the only answer to a lost chord: the command palette (CtrlShiftP)
+// runs any command by name and needs no configuration. A rule is for the key
+// itself — one modifier for everything, an F-row that does not exist, or a key
+// a dialog reads on its own.
+//
 // Sections are area names, as in hotkeys.ini; Common applies everywhere. A
 // rule maps the spelling shown in the Hotkey Configurator to the spelling f4
 // should see instead:
@@ -50,6 +55,10 @@ type keyRemapPrefixRule struct {
 //	CtrlAltO=CtrlO    ; Ctrl+Alt+O now toggles the panels
 //	Alt1=F1           ; a keyboard without an F-row
 //	CtrlAlt*=Ctrl*    ; every Ctrl chord also answers to Ctrl+Alt
+//
+// Both sides pass through canonicalKeySpelling, so the modifier order, the
+// casing and the several names a terminal may give a shifted key all collapse
+// onto one form before anything is stored or looked up.
 //
 // Substitution happens once per keystroke: the result is never fed back
 // through the table, so rules cannot chain or loop.
@@ -107,18 +116,36 @@ func (kr *KeyRemap) IsEmpty() bool {
 	return kr == nil || (len(kr.Exact) == 0 && len(kr.Prefix) == 0)
 }
 
+// stripIniComment removes a trailing ";" or "#" note from one side of a rule.
+// f4's INI reader has no notion of comments, so "Alt1=F1 ; no F-row here"
+// reaches us with the note still attached, and ParseFarKey would then read
+// "F1 ; no F-row here" as the letter F rather than as a function key. A marker
+// only starts a comment at the beginning of the field or after whitespace, so
+// a rule can still name ";" or "#" as the key itself.
+func stripIniComment(s string) string {
+	s = strings.TrimSpace(s)
+	if s == ";" || s == "#" {
+		return s
+	}
+	for i := 0; i < len(s); i++ {
+		if s[i] != ';' && s[i] != '#' {
+			continue
+		}
+		if i == 0 || s[i-1] == ' ' || s[i-1] == '\t' {
+			return strings.TrimSpace(s[:i])
+		}
+	}
+	return s
+}
+
 func (kr *KeyRemap) addRule(area, source, target string) {
 	area = strings.TrimSpace(area)
-	source = strings.TrimSpace(source)
-	target = strings.TrimSpace(target)
+	// A commented-out sample line arrives here with its marker attached, and
+	// a live one may carry an explanatory note; both are handled by the same
+	// rule, so the shipped keymap.ini can stay self-documenting.
+	source = stripIniComment(source)
+	target = stripIniComment(target)
 	if area == "" || source == "" {
-		return
-	}
-	// f4's INI reader has no notion of comments, so a commented-out sample
-	// line still arrives here with its marker attached. Dropping it keeps the
-	// shipped keymap.ini self-documenting instead of registering rules no
-	// keystroke can match.
-	if strings.HasPrefix(source, ";") || strings.HasPrefix(source, "#") {
 		return
 	}
 
@@ -131,7 +158,7 @@ func (kr *KeyRemap) addRule(area, source, target string) {
 	}
 
 	if sourceWild {
-		from := strings.ToLower(strings.TrimSuffix(source, keyRemapWildcard))
+		from := strings.ToLower(canonicalKeySpelling(strings.TrimSuffix(source, keyRemapWildcard)))
 		to := canonicalKeySpelling(strings.TrimSuffix(target, keyRemapWildcard))
 		if from == "" || strings.EqualFold(from, to) {
 			// An empty source prefix would match every key, and a prefix that
@@ -142,40 +169,88 @@ func (kr *KeyRemap) addRule(area, source, target string) {
 		return
 	}
 
-	if target == "" || strings.EqualFold(source, target) {
+	if target == "" {
+		return
+	}
+	source = canonicalKeySpelling(source)
+	target = canonicalKeySpelling(target)
+	if strings.EqualFold(source, target) {
 		return
 	}
 	if kr.Exact[area] == nil {
 		kr.Exact[area] = make(map[string]string)
 	}
-	kr.Exact[area][strings.ToLower(source)] = canonicalKeySpelling(target)
+	kr.Exact[area][strings.ToLower(source)] = target
 }
 
-// keyRemapModifiers lists the modifier prefixes a key spelling may carry, in
-// the order EventToFarString writes them.
-var keyRemapModifiers = []string{"RCtrl", "Ctrl", "Alt", "Shift"}
+// keyRemapShiftedChars maps every character the US layout produces with Shift
+// held back to the key that was actually pressed.
+//
+// A terminal that speaks neither the kitty keyboard protocol nor win32 input
+// mode has no way to report Shift separately for a printable key: Shift+1
+// arrives as a bare "!" and Alt+Shift+1 as ESC "!", so EventToFarString names
+// them "!" and "Alt!". Under kitty the same keys come back as "Shift!" and
+// "AltShift!", because the shifted rune is what the protocol reports. None of
+// those spellings is what a user writes, and multiplexers routinely strip the
+// protocol negotiation, so the spelling changes underneath a working
+// keymap.ini. Folding the shifted character back onto its key gives one
+// spelling — "Shift1" — that names the chord everywhere, which matters most
+// for the Shift F-row substitutes this file exists for.
+var keyRemapShiftedChars = map[rune]string{
+	'~': "`", '!': "1", '@': "2", '#': "3", '$': "4", '%': "5",
+	'^': "6", '&': "7", '*': "8", '(': "9", ')': "0",
+	'_': "-", '+': "=", '{': "[", '}': "]", '|': "\\",
+	':': ";", '"': "'", '<': ",", '>': ".", '?': "/",
+}
 
-// canonicalKeySpelling rewrites a hand-written rule into the casing
-// ParseFarKey and EventToFarString use, so that "ctrlaltf5" and "CtrlAltF5"
-// mean the same thing in keymap.ini.
+// canonicalKeySpelling rewrites a hand-written rule, or the spelling of a live
+// event, into one normal form: the casing ParseFarKey and EventToFarString
+// use, the modifier order EventToFarString writes, and the unshifted name of a
+// shifted character. "ctrlaltf5", "AltCtrlF5" and "CtrlAltF5" therefore mean
+// the same thing, and so do "AltShift1", "Alt!" and "AltShift!".
 func canonicalKeySpelling(key string) string {
 	rest := strings.TrimSpace(key)
-	var sb strings.Builder
+	var rctrl, ctrl, alt, shift bool
 	for rest != "" {
-		matched := false
-		for _, modifier := range keyRemapModifiers {
-			if len(rest) > len(modifier) && strings.EqualFold(rest[:len(modifier)], modifier) {
-				sb.WriteString(modifier)
-				rest = rest[len(modifier):]
-				matched = true
-				break
-			}
+		matched := true
+		switch {
+		case len(rest) >= 5 && strings.EqualFold(rest[:5], "RCtrl"):
+			rctrl, rest = true, rest[5:]
+		case len(rest) >= 4 && strings.EqualFold(rest[:4], "Ctrl"):
+			ctrl, rest = true, rest[4:]
+		case len(rest) >= 3 && strings.EqualFold(rest[:3], "Alt"):
+			alt, rest = true, rest[3:]
+		case len(rest) >= 5 && strings.EqualFold(rest[:5], "Shift"):
+			shift, rest = true, rest[5:]
+		default:
+			matched = false
 		}
 		if !matched {
 			break
 		}
 	}
-	sb.WriteString(canonicalKeyToken(rest))
+
+	token := canonicalKeyToken(rest)
+	if runes := []rune(token); len(runes) == 1 {
+		if base, ok := keyRemapShiftedChars[runes[0]]; ok {
+			token = base
+			shift = true
+		}
+	}
+
+	var sb strings.Builder
+	if rctrl {
+		sb.WriteString("RCtrl")
+	} else if ctrl {
+		sb.WriteString("Ctrl")
+	}
+	if alt {
+		sb.WriteString("Alt")
+	}
+	if shift {
+		sb.WriteString("Shift")
+	}
+	sb.WriteString(token)
 	return sb.String()
 }
 
@@ -206,6 +281,11 @@ func (kr *KeyRemap) Resolve(area, key string) string {
 	if kr.IsEmpty() || key == "" {
 		return ""
 	}
+
+	// The event may name the key any of the several ways a terminal makes
+	// possible; the rules were stored in one normal form, so bring the key
+	// into it too before looking anything up.
+	key = canonicalKeySpelling(key)
 
 	// Far treats both Ctrl keys as one, and so does the hotkey dispatcher
 	// unless something is bound on the RCtrl spelling specifically. A rule
@@ -271,7 +351,7 @@ func (kr *KeyRemap) Apply(area string, e *vtinput.InputEvent) bool {
 		return false
 	}
 
-	source := EventToHotkeyString(e)
+	source := canonicalKeySpelling(EventToHotkeyString(e))
 	target := kr.Resolve(area, source)
 	if target == "" || strings.EqualFold(target, source) {
 		return false
@@ -299,20 +379,31 @@ const defaultKeymapIni = `; Key remapping for f4.
 ;
 ; A rule substitutes one key for another before f4 looks at the event:
 ;
-;     <key f4 should see instead>
-;     ^
+;                 <key f4 should see instead>
+;                 v
 ;     PressedKey=TargetKey
 ;
-; Spell both sides the way the Hotkey Configurator (Options -> Key
-; bindings) shows them: Ctrl, Alt, Shift and RCtrl prefixes in that
-; order, then the key itself (A, 5, F7, Enter, Ins, PgDn, VK_DC ...).
-; Case does not matter. Section names are the areas of hotkeys.ini;
-; Common applies to all of them.
+; Spell both sides the way the Hotkey Configurator (Options -> Hotkey
+; Configuration) shows them: Ctrl, Alt, Shift and RCtrl prefixes, then
+; the key itself (A, 5, F7, Enter, Ins, PgDn, VK_DC ...). Case and the
+; order of the prefixes do not matter, and a shifted character may be
+; written either way: Shift1 and ! name the same chord.
 ;
-; Substitution happens once per keystroke, so rules never chain.
-; It is also skipped while a full-screen or busy program (vim, htop,
-; mc) owns the terminal, because those keys belong to that program.
+; Everything after a ";" or a "#" is a note, not part of the rule.
+; Section names are the areas of hotkeys.ini (Shell, Terminal, Editor,
+; Viewer, Dialog, Menu, Disks); Common applies to all of them.
 ;
+; Substitution happens once per keystroke, so rules never chain. It is
+; also skipped while a full-screen or busy program (vim, htop, mc) owns
+; the terminal, because those keys belong to that program: a key that
+; stands in for F10 will not quit f4 from inside such a program.
+;
+; Not every command needs a key. Ctrl+Shift+P opens the command
+; palette, which finds any command by name and shows the key it is on,
+; so it is the quickest way out of a chord the terminal ate.
+
+[Common]
+
 ; --- Terminal multiplexers -------------------------------------------
 ;
 ; tmux, zellij, screen and dvtm claim their own chords before f4 ever
@@ -320,21 +411,19 @@ const defaultKeymapIni = `; Key remapping for f4.
 ; Ctrl+N, Ctrl+O, Ctrl+G, Ctrl+Q (zellij). Give the affected f4
 ; commands a second key here.
 ;
-;[Common]
-;CtrlAltO=CtrlO      ; console view, when zellij eats Ctrl+O
-;CtrlAltB=CtrlB      ; toggle the key bar, when tmux eats Ctrl+B
-;CtrlAltP=CtrlP      ; command palette, when zellij eats Ctrl+P
+;CtrlAltO=CtrlO           ; toggle the panels, when zellij eats Ctrl+O
+;CtrlAltB=CtrlB           ; toggle the key bar, when tmux eats Ctrl+B
+;CtrlAltP=CtrlP           ; toggle the passive panel, when zellij eats Ctrl+P
+;CtrlAltShiftP=CtrlShiftP ; command palette, when something eats Ctrl+Shift+P
 ;
 ; A trailing * on both sides rewrites the modifiers of every key at
 ; once, which is the one-line way to move f4 off a prefix the
 ; multiplexer wants. Longer prefixes are matched first.
 ;
-;[Common]
-;CtrlAlt*=Ctrl*      ; every Ctrl chord also answers to Ctrl+Alt
-;
+;CtrlAlt*=Ctrl*           ; every Ctrl chord also answers to Ctrl+Alt
+
 ; --- Keyboards without an F-row --------------------------------------
 ;
-;[Common]
 ;Alt1=F1
 ;Alt2=F2
 ;Alt3=F3
@@ -345,7 +434,27 @@ const defaultKeymapIni = `; Key remapping for f4.
 ;Alt8=F8
 ;Alt9=F9
 ;Alt0=F10
-;AltShift1=ShiftF1   ; the Shift/Alt/Ctrl F-key rows work the same way
+;Alt-=F11                 ; the key right of 0
+;AltShift-=F12            ; and the same key with Shift
+;
+; ("=" cannot be named on the left: the first "=" of a line separates
+; the two sides of the rule, so pick another key for that one.)
+;
+; The Shift, Ctrl and Alt F-key rows work the same way. Write the
+; shifted digits as Shift1 ... Shift0 rather than as ! ... ) — both are
+; understood, but the first form says which key you meant.
+;
+;AltShift1=ShiftF1
+;AltShift2=ShiftF2
+
+; --- What a terminal cannot send -------------------------------------
+;
+; Ctrl does nothing to a digit in a plain terminal: Ctrl+1, Alt+1 and
+; Ctrl+Alt+1 all arrive as the same bytes, so a CtrlAlt<digit> rule is
+; shadowed by the Alt<digit> one and cannot be given a key of its own.
+; The kitty keyboard protocol and win32 input mode do distinguish them,
+; but a multiplexer in between usually strips that negotiation. Pick a
+; letter or a punctuation key for such a rule instead.
 `
 
 // createDefaultKeymapIni writes the commented sample file on first start.

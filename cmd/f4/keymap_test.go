@@ -105,6 +105,107 @@ CtrlY=
 	}
 }
 
+func TestKeyRemap_StripsInlineComments(t *testing.T) {
+	// f4's INI reader keeps everything after the "=", so a note on a live
+	// rule used to travel into ParseFarKey: "F1 ; no F-row here" parsed as
+	// the letter F, and "Ctrl* ; note" stopped looking like a wildcard at
+	// all, silently disabling the rule.
+	kr := newTestKeyRemap(t, `[Common]
+Alt1=F1 ; this keyboard has no F-row
+AltShift1=ShiftF1   ; the Shift row works the same way
+CtrlAlt*=Ctrl*      ; every Ctrl chord also answers to Ctrl+Alt
+`)
+
+	if got := kr.Resolve("Shell", "Alt1"); got != "F1" {
+		t.Errorf("commented rule: got %q, want F1", got)
+	}
+	if got := kr.Resolve("Shell", "AltShift1"); got != "ShiftF1" {
+		t.Errorf("commented Shift rule: got %q, want ShiftF1", got)
+	}
+	if got := kr.Resolve("Shell", "CtrlAltF5"); got != "CtrlF5" {
+		t.Errorf("commented wildcard rule: got %q, want CtrlF5", got)
+	}
+}
+
+func TestKeyRemap_PunctuationKeysSurviveCommentStripping(t *testing.T) {
+	// A marker only starts a comment at the start of a field or after
+	// whitespace, so ";" and "#" remain usable as keys.
+	kr := newTestKeyRemap(t, `[Common]
+Alt;=F1
+Alt#=F2
+`)
+	if got := kr.Resolve("Shell", "Alt;"); got != "F1" {
+		t.Errorf("Alt+; rule: got %q, want F1", got)
+	}
+	// Alt+# is Alt+Shift+3 on a US layout and is stored under that name.
+	if got := kr.Resolve("Shell", "AltShift3"); got != "F2" {
+		t.Errorf("Alt+# rule: got %q, want F2", got)
+	}
+}
+
+func TestKeyRemap_ModifierOrderDoesNotMatter(t *testing.T) {
+	kr := newTestKeyRemap(t, `[Common]
+ShiftAlt1=ShiftF1
+altctrlO=F9
+`)
+	if got := kr.Resolve("Shell", "AltShift1"); got != "ShiftF1" {
+		t.Errorf("reordered rule: got %q, want ShiftF1", got)
+	}
+	if got := kr.Resolve("Shell", "CtrlAltO"); got != "F9" {
+		t.Errorf("reordered lower-case rule: got %q, want F9", got)
+	}
+}
+
+func TestKeyRemap_ShiftedCharacterNamesItsKey(t *testing.T) {
+	// The same chord reaches f4 under three names depending on what the
+	// terminal negotiated: "Alt!" from a plain terminal, "AltShift!" under
+	// the kitty protocol, "AltShift1" from a backend that reports the
+	// virtual key. One rule has to answer all three.
+	kr := newTestKeyRemap(t, `[Common]
+AltShift1=ShiftF1
+Shift0=F11
+`)
+	for _, spelling := range []string{"AltShift1", "Alt!", "AltShift!"} {
+		if got := kr.Resolve("Shell", spelling); got != "ShiftF1" {
+			t.Errorf("%s: got %q, want ShiftF1", spelling, got)
+		}
+	}
+	for _, spelling := range []string{"Shift0", ")", "Shift)"} {
+		if got := kr.Resolve("Shell", spelling); got != "F11" {
+			t.Errorf("%s: got %q, want F11", spelling, got)
+		}
+	}
+}
+
+func TestKeyRemap_ApplyRewritesShiftedDigitFromPlainTerminal(t *testing.T) {
+	// What a terminal without the kitty protocol sends for Alt+Shift+1:
+	// ESC followed by "!", with no virtual key and no Shift flag.
+	kr := newTestKeyRemap(t, `[Common]
+AltShift1=ShiftF1
+`)
+	e := &vtinput.InputEvent{
+		Type:            vtinput.KeyEventType,
+		KeyDown:         true,
+		Char:            '!',
+		ControlKeyState: vtinput.LeftAltPressed,
+	}
+	if !kr.Apply("Shell", e) {
+		t.Fatalf("Alt+Shift+1 was not remapped")
+	}
+	if e.VirtualKeyCode != vtinput.VK_F1 {
+		t.Errorf("virtual key: got %d, want %d", e.VirtualKeyCode, vtinput.VK_F1)
+	}
+	if e.ControlKeyState&vtinput.ShiftPressed == 0 {
+		t.Errorf("the target names Shift+F1, so Shift must be set")
+	}
+	if e.ControlKeyState&(vtinput.LeftAltPressed|vtinput.RightAltPressed) != 0 {
+		t.Errorf("the Alt modifier survived the substitution: %v", e.ControlKeyState)
+	}
+	if got := EventToHotkeyString(e); got != "ShiftF1" {
+		t.Errorf("rewritten event spells as %q, want ShiftF1", got)
+	}
+}
+
 func TestKeyRemap_ApplyRewritesEventInPlace(t *testing.T) {
 	kr := newTestKeyRemap(t, `[Common]
 Alt1=F1

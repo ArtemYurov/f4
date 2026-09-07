@@ -85,3 +85,54 @@ one-sided `*` rules, in-place event rewriting including preserved lock state,
 the absence of chaining, and bare-modifier and non-key events passing through.
 Validation under zellij, tmux and screen, as the report asks, remains a manual
 check.
+
+## Follow-up after the first round of testing
+
+Testing under zellij on `a11f504d` found the layer working for plain `Ctrl`
+chords and failing for everything the report's own sample file demonstrated.
+Four separate causes, all in the same handful of lines.
+
+**A note on a rule was parsed as part of the rule.** f4's INI reader keeps
+everything after the `=`, so `AltShift1=ShiftF1   ; the Shift row works the
+same way` reached `ParseFarKey` with the note attached. `ShiftF1   ; ...` does
+not parse as a function key — `strconv.Atoi` rejects the tail — and the
+fall-through named the letter `F` instead, which is why enabling that line
+appeared to redraw something and change nothing. The wildcard sample was worse:
+`Ctrl*      ; every Ctrl chord...` no longer ends in `*`, so the rule was
+rejected outright as one-sided. Both sides of a rule now stop at a `;` or `#`
+that begins a field or follows whitespace, which still leaves `Alt;=F1` naming
+the semicolon key.
+
+**A shifted key had no single name.** Terminals cannot report Shift separately
+for a printable key: `Alt+Shift+1` arrives as ESC `!` and spells as `Alt!`.
+Under the kitty protocol the same chord spells `AltShift!`, and a backend with
+virtual keys spells it `AltShift1`. No rule could match all three, and a
+multiplexer stripping the protocol negotiation changes which one is in force.
+`canonicalKeySpelling` now folds a US-layout shifted character back onto its
+key, so the three names collapse to `AltShift1` on both sides of the table.
+
+**Modifier order was significant.** Sources were stored lower-cased but not
+reordered, so `ShiftAlt1` never matched an event that spelled itself
+`AltShift1`. Canonicalisation now applies to sources and wildcard prefixes, not
+only to targets.
+
+**The sample pointed at things that do not exist.** `Options -> Key bindings`
+is `Options > Hotkey Configuration`; `Ctrl+P` toggles the passive panel while
+the command palette is `Ctrl+Shift+P`, so the sample was telling users to
+recover a key onto the wrong command. The file also had every `[Common]` header
+commented out, so uncommenting a rule under one left it in no section at all —
+`ParseIni` drops such lines — and it now ships with one live header.
+
+Two limits are documented rather than fixed, because they are not f4's to fix.
+`Ctrl` does nothing to a digit in a plain terminal, so `Ctrl+1`, `Alt+1` and
+`Ctrl+Alt+1` are the same bytes and `CtrlAlt0=F11` cannot be separated from
+`Alt0=F10`; that collision is what made a remapped exit key intermittent. And
+`=` cannot appear on the left of a rule, since the first `=` of the line
+separates the two sides.
+
+The report's remaining points were documentation, not behaviour: the README
+said nothing about remapping, and the Hotkey Configurator's *Assign* button —
+which does reassign keys, by waiting for the chord — was not mentioned
+anywhere. Both are covered now, together with the command palette, which
+answers "the multiplexer ate my shortcut" without any configuration at all and
+should be the first thing a user reaches for.
