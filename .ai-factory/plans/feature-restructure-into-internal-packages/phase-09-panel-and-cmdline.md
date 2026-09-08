@@ -84,7 +84,7 @@ editor slices.
 ### Intent
 
 Thirty outbound edges and the two largest types in the codebase: `PanelsFrame`
-(160 methods across 16 non-test files) and `FileSystemPanel` (105 across 6),
+(160 methods across 16 non-test files) and `FileSystemPanel` (106 across 6),
 counted receiver-anchored with `grep -hE '^func \([a-z]+ \*T\)'` — the looser
 `grep 'func (.*T)'` returns 161/17 and 109/7 by catching methods of one type that
 merely take the other as a parameter (`panels_frame.go:71,72,4038,5533`). Go

@@ -76,9 +76,11 @@ was split on review: the name rests on no established abbreviation the way
   `internal/dialog` (8), `internal/i18n` (3), `internal/viewer` (3),
   `internal/editor` (1) and the external-editor path (1).
 - `action_registry.go` splits: the `Action` type is clean — `Checked`, `Visible`
-  and `Handler` are `func() bool` — but its 2553-line `init()`
-  (`:254-2807`, 174 `RegisterAction` calls) mentions `PanelsFrame` 109 times and
-  `EditorView` 48 times. Mechanism is layer 0; the table is layer 4.
+  and `Handler` are `func() bool` — but its 2554-line `init()`
+  (`:264-2817`, 173 `RegisterAction` calls) mentions `PanelsFrame` 114 times and
+  `EditorView` 47 times. Locate it as `grep -n '^func init()'`, never by the line
+  number: it has already moved once, ten lines down, when Task 3 documented the
+  ordering above it. Mechanism is layer 0; the table is layer 4.
 - `framework_actions.go` is **not** a primitive at all. Of its 25 functions, 18
   have no external callers — they are `Handler:` values reached from the table,
   plus `main.go:actionScreenDump`. It travels whole with `internal/app`.
@@ -203,7 +205,40 @@ and `TestMain` — the waves would otherwise strand.
   `.ai-factory/rules/base.md`, and fixes the CI lines it breaks.
 - `git mv` for anything git already tracks; the executable bit and build tags must
   survive.
-- **Sync with upstream once, before anything moves, then not again until the PR.**
+- **Track upstream continuously; merge it on a trigger, not on a schedule.**
+  Upstream is active — 29 commits landed on this branch's base in a day — so a
+  single sync at the start is not a plan, it is a deferral.
+
+  *Check after every commit.* It costs a second and changes nothing:
+  ```
+  git fetch upstream --quiet
+  git rev-list --count HEAD..upstream/main
+  git diff --name-only HEAD...upstream/main | grep '^cmd/f4/'
+  ```
+
+  *Rebase on either of two triggers:* a **phase boundary**, with every task in
+  the phase closed and the tree consistent; or **upstream touching a file the
+  next two or three tasks own**, which overrides the schedule. Merging a change
+  into `cmd/f4/actions.go` while it is still one file is an ordinary three-way
+  merge. Merging the same change once the file has been cut into six pieces
+  across four packages is a hand reconstruction of somebody else's intent.
+
+  *Never mid-task*, and always behind a backup branch named with the date and
+  time — that is the user's standing rule for any rebase. Keep the two most
+  recent and delete the rest; twenty identically named branches are worth
+  nothing.
+
+  *After each rebase:* compare against the baseline, run the cross-compilation
+  sweep, and **re-measure every number the next tasks stand on**. This is not
+  ceremony: the first mid-work rebase moved `action_registry.go`'s `init()` by
+  ten lines, took `PanelsFrame` mentions inside it from 109 to 114, and added a
+  106th method to `FileSystemPanel` — all of them quoted in task text.
+
+  *The cost of waiting grows.* Early phases merge cheaply because the files are
+  where upstream expects them. From the extraction waves onward every deferred
+  merge is one more foreign change landing on a file that has moved, been
+  renamed and changed its `package` clause. Later phases need this more often,
+  not less, which is the opposite of how it feels.
 
 **Open questions:** none blocking. The four package names above are the only
 planning decision the user may wish to overrule, and doing so changes four task
@@ -388,6 +423,13 @@ classification recorded in this bundle rather than in the tree; none produces on
   `AGENTS.md` and `.ai-factory/rules/base.md` describe the packages that exist,
   with counts re-derived rather than estimated.
 - The pull-request body states, in the author's own words rather than buried in a
-  diff: the PlugRing catalogue URL change and why it is accepted; the README image
-  URL being branch-scoped and 404 until merge; the incremental-lint finding count
-  measured against `origin/main`; and the three pre-existing failures.
+  diff: the README image URL being branch-scoped and 404 until merge; the
+  incremental-lint finding count measured against `origin/main`; and the three
+  pre-existing failures.
+- It also states the PlugRing move **as a question, not as a decision**: that the
+  catalogue moved to `plugins/plugring/`, that this changes a published URL and
+  older builds will stop finding it after the merge, and that the move is offered
+  rather than argued — if the maintainer would rather keep the catalogue where it
+  is, say so and it goes back. Everything else in this branch is internal; this is
+  the one change users outside the repository can notice, so it does not get
+  decided in a diff.

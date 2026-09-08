@@ -25,7 +25,7 @@ named *symbols* produces an uncompilable commit.
 | Named in the architecture | What the graph shows | Where it goes |
 |---|---|---|
 | `action_registry.go` — registry | `Action` (`:24`) has only `func() bool` fields; `RegisterAction` (`:121`) is clean; `RegisterAction` is called from 7 files that land in 5 different packages | **`internal/action`**, Task 21 |
-| `action_registry.go` — `init()` | `:254-2807`, 2553 lines, 174 calls, `PanelsFrame` ×109, `EditorView` ×48 inside the closures | **stays**, travels with `internal/app` (Task 36) |
+| `action_registry.go` — `init()` | 2554 lines, 173 calls, `PanelsFrame` ×114, `EditorView` ×47 inside the closures; find it with `grep -n '^func init()'` | **stays**, travels with `internal/app` (Task 36) |
 | `actions.go` | 81 functions: 80 free + one `*PanelsFrame` method (`:2194`). 61 reference a view type. Of the 20 that do not, only 4 are layer-0 | **splits six ways** — see the table below |
 | `framework_actions.go` | 25 functions; 7 touch `PanelsFrame`/`QueueFrame`. The other 18 have **no external callers at all** — they are reached only as `Handler:` values from the registration table and from `main.go:actionScreenDump` | **stays whole**, travels with `internal/app` (Task 36) |
 | "the panels-frame state" | `DriveEntry`/`DriveRegistry`/`RegisterDrive`, `panels_frame.go:26-40`, needs only `sync` + `vfs` | already lifted in Task 6; goes to **`internal/sysinfo`** (Task 22) |
@@ -74,7 +74,7 @@ distinct packages.**
 | Path | Action | Required change |
 |---|---|---|
 | `cmd/f4/action_registry.go` | modify | Keeps the mechanism |
-| `cmd/f4/action_table.go` | create | Receives the 2553-line `init()` |
+| `cmd/f4/action_table.go` | create | Receives the 2554-line `init()` |
 | `internal/numeric/*.go` | create | Numeric helpers, zero imports |
 | `cmd/f4/misc.go` | delete | Fully distributed |
 | `cmd/f4/cpu_info_darwin.go` | modify | Gains a private `boundedUint64ToInt` |
@@ -92,7 +92,7 @@ distinct packages.**
 ### Intent
 
 `action_registry.go` is two unrelated things in one file: a 130-line registry with
-no dependency above layer 0, and a 2553-line `init()` whose closures reach
+no dependency above layer 0, and a 2554-line `init()` whose closures reach
 `PanelsFrame` and `EditorView`. Task 21 can only move the first. Splitting it in
 place, in its own commit, keeps the move commit readable as a rename.
 
@@ -101,7 +101,7 @@ Nothing moves between directories in this task.
 ### Implementation Steps
 
 1. Create `cmd/f4/action_table.go` with `package main` and move
-   `action_registry.go:254-2807` — the whole `func init()` — into it, verbatim.
+   the whole `func init()` of `action_registry.go` — into it, verbatim.
    Move only the imports that block actually uses; `gofmt` and the compiler will
    flag the rest.
 2. `action_registry.go` keeps: the `Action` struct and its doc comment

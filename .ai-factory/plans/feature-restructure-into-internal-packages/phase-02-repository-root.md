@@ -22,11 +22,10 @@ so it lands alone, before any package moves. Closes issue #505.
 | `README.md:3` | `https://raw.githubusercontent.com/unxed/f4/refs/heads/main/screenshot.png` | Absolute remote URL, not a relative path |
 | `AGENTS.md:74` | `` | `SPREADSHEET.md` `` | The docs table entry |
 | `time.txt` | 3 lines, 6 bytes | Referenced by nothing |
-| `docs/ISSUES/` | 41 files | 38 plain `_SOLUTION_REVIEW`, 2 `_FOLLOWUP_SOLUTION_REVIEW`, 1 already slugged |
+| `docs/ISSUES/` | 43 files | 3 `_FOLLOWUP_SOLUTION_REVIEW`, 1 already slugged, the rest plain `_SOLUTION_REVIEW`; upstream added two while this branch was in Phase 1 |
 | `docs/ISSUES/ISSUE_91_FREEBSD_CONSOLE_DIAGNOSIS.md` | — | The existing precedent for the target naming |
-| `ISSUE_95_FOLLOWUP_SOLUTION_REVIEW.md` (root) | — | Collides in subject with `docs/ISSUES/ISSUE_95_SOLUTION_REVIEW.md` |
-| `issue-703-solution.md` (root) | — | Collides in subject with `docs/ISSUES/ISSUE_703_SOLUTION_REVIEW.md` |
-| `DISPATCH.md`, `LUNOBOT-2-266.md`, `LUNOBOT-2-881.md` (root) | 3 + 22 + 22 lines | Upstream's live scratch notes for open tickets, with unticked boxes; not documentation and not ours to move |
+| `docs/ISSUES/ISSUE_95_FOLLOWUP_SOLUTION_REVIEW.md`, `docs/ISSUES/issue-703-solution.md` | — | Upstream moved both out of the root itself; they now collide in subject with their neighbours there |
+| `DISPATCH.md` (root) | 3 lines | Upstream's live dispatch note; the LUNOBOT notes beside it went to `docs/LUNOBOT/` and this one did not |
 | `colorer/configs/base/hrd/rgb/radiola.hrd` | 1 file | The entire `colorer/` tree |
 | `embedded.go:12` | `//go:embed colorer/…/radiola.hrd` | Root package's second embed |
 | `cmd/f4/plugring.go:20` | `PlugRingCatalogURL` | Published catalogue URL containing the path |
@@ -167,8 +166,11 @@ Three markdown files and one empty text file sit in the root. Prose belongs in
 
 1. `git mv SPREADSHEET.md docs/`. Update `AGENTS.md:74` (the Documentation table
    row) and sweep `grep -rn 'SPREADSHEET.md' . --exclude-dir=.git`.
-2. `ISSUE_95_FOLLOWUP_SOLUTION_REVIEW.md` and `issue-703-solution.md` are **not** a
-   plain move. Each has a counterpart already in `docs/ISSUES/`
+2. `ISSUE_95_FOLLOWUP_SOLUTION_REVIEW.md` and `issue-703-solution.md` no longer
+   sit in the root: upstream moved both into `docs/ISSUES/` while this branch was
+   in Phase 1. What remains of this step is the collision they were moved into,
+   which is Task 13's subject and not this one's. Each has a counterpart already
+   in `docs/ISSUES/`
    (`ISSUE_95_SOLUTION_REVIEW.md`, `ISSUE_703_SOLUTION_REVIEW.md`). Read both pairs
    and decide per pair, then record the decision in the commit message:
    - if the root file is a genuine follow-up, move it as
@@ -183,22 +185,19 @@ Three markdown files and one empty text file sit in the root. Prose belongs in
    (`grep -rn 'time\.txt' . --exclude-dir=.git` confirms before deleting).
 4. `f4.example.ini` and `highlight.ini` **stay**: they are reference configs the
    README points at, and the target layout keeps them beside it.
-5. `DISPATCH.md`, `LUNOBOT-2-266.md` and `LUNOBOT-2-881.md` **stay** too, untouched.
-   They arrived from upstream after this plan was written and are the maintainer's
-   working notes on tickets that are still open — each carries unticked boxes such
-   as `- [ ] PR объединён в main`. They are not documentation, `docs/` is not where
-   an unfinished note belongs, and relocating another author's live state
-   manufactures a conflict in the pull request for no gain. Upstream deletes them
-   when those tickets close; if that happens before the PR opens, the root list in
-   the contract below is met without any action here.
+5. `DISPATCH.md` **stays**, untouched. It arrived from upstream after this plan
+   was written and is the maintainer's live dispatch note — three lines saying who
+   is holding which ticket. Upstream has already moved its LUNOBOT siblings into
+   `docs/LUNOBOT/` and left this one where it is, which is a decision, not an
+   oversight. Relocating another author's live state manufactures a conflict in
+   the pull request for no gain.
 
 ### Required Interfaces and Contracts
 
 - After this task the root contains, in addition to directories: `README.md`,
   `LICENSE`, `go.mod`, `go.sum`, `embedded.go`, `f4.example.ini`, `highlight.ini`,
-  `AGENTS.md`, `skills-lock.json` and the dotfiles — plus whichever of upstream's
-  ticket notes (`DISPATCH.md`, `LUNOBOT-2-*.md`) are still open at that moment, per
-  step 5. Nothing else.
+  `AGENTS.md`, `skills-lock.json`, upstream's `DISPATCH.md` and the dotfiles.
+  Nothing else.
   `AGENTS.md` and `skills-lock.json` are harness metadata that ships in this pull
   request deliberately (see `index.md`'s Delivery note); they are not loose prose
   and this task does not move them.
@@ -221,8 +220,7 @@ No new tests. Step 3's grep is the check for `time.txt`.
 
 - `git ls-files -- ':(exclude)*/*' | grep -v '^\.'`
 - Expected result: exactly `AGENTS.md LICENSE README.md embedded.go f4.example.ini
-  go.mod go.sum highlight.ini skills-lock.json`, plus any of upstream's still-open
-  ticket notes.
+  go.mod go.sum highlight.ini skills-lock.json`, plus upstream's `DISPATCH.md`.
   Use `git ls-files`, not `ls`: `.gitignore:3` ignores `/f4`, so on any machine
   that has run `go build ./cmd/f4` a plain `ls` also lists the built binary and the
   check fails for a reason that has nothing to do with this task.

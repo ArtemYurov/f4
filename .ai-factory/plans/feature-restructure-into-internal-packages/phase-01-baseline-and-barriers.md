@@ -20,8 +20,8 @@ commit: a move commit must read as a rename.
 | Path | Symbols / lines | Why it matters |
 |---|---|---|
 | `cmd/f4/action_registry.go:24` | `type Action` | `Checked`/`Visible`/`Handler` are `func() bool` — the type is layer-0 clean |
-| `cmd/f4/action_registry.go:121` | `RegisterAction` | 174 calls from `init()` here, more from six other files |
-| `cmd/f4/action_registry.go:254-2807` | `func init()` | 2553 lines; mentions `PanelsFrame` 109×, `EditorView` 48× |
+| `cmd/f4/action_registry.go:121` | `RegisterAction` | 173 calls from `init()` here, more from six other files |
+| `cmd/f4/action_registry.go:264-2817` | `func init()` | 2554 lines; mentions `PanelsFrame` 114×, `EditorView` 47× |
 | `cmd/f4/config.go:352` | `var AppConfig = F4Config{…}` | 132 fields, read from 133 files (55 non-test) |
 | `cmd/f4/navigation_mode.go:7` | `type PanelNavigationMode` | config field type declared outside `config.go` |
 | `cmd/f4/compare_folders.go:61` | `type compareOptions` | same |
@@ -112,7 +112,10 @@ revision it was taken at, and rebasing after recording one invalidates it.
    grep -lE '^func \([a-z]+ \*EditorView\)' $(ls cmd/f4/*.go|grep -v _test) | wc -l       # expect 15
    grep -lE '^func \([a-z]+ \*FileSystemPanel\)' $(ls cmd/f4/*.go|grep -v _test) | wc -l  # expect 6
    grep -lE '^func \([a-z]+ \*TerminalView\)' $(ls cmd/f4/*.go|grep -v _test) | wc -l     # expect 5
-   awk 'NR>=254 && /^}/ {print NR; exit}' cmd/f4/action_registry.go  # expect 2807
+   # Anchored on the declaration, not on a line number: the block has already
+   # moved once and will move again.
+   S=$(grep -n '^func init()' cmd/f4/action_registry.go | cut -d: -f1)
+   awk -v s="$S" 'NR>s && /^}/ {print NR-s+1; exit}' cmd/f4/action_registry.go  # expect 2554 lines
    ```
    Also check whether upstream touched any file named in Phases 1-4:
    ```
@@ -365,8 +368,8 @@ go test ./cmd/f4 -run '^TestCommandPalette' -v
 ### Intent
 
 Inside one package Go runs `init()` in filename order; across packages it follows
-the import graph. Today 174 `RegisterAction` calls sit in
-`action_registry.go:254-2807` and the rest in six more files
+the import graph. Today 173 `RegisterAction` calls sit in
+`action_registry.go`'s `init()` and the rest in six more files
 (`fuse_mount_action.go` — which has two `init()`s — `fuse_mount_list.go`,
 `sheet_actions.go`, `sqlite_actions.go`, `static_direct_actions.go`,
 `vtvibe_host.go`). That order is what the menus and the command palette *display*.
@@ -379,7 +382,7 @@ and no test catches it.
    (`action_registry.go:121`) currently appends to `actionOrder` on first sight;
    change it to record a monotonically increasing sequence number per action, or
    accept an explicit `Order int` on `Action`. Prefer the sequence number — it
-   requires no edit to the 174 call sites.
+   requires no edit to the 173 call sites.
 2. Make every consumer of `actionOrder` sort by that ordinal explicitly rather
    than relying on append order. Find them with
    `npx -y @colbymchenry/codegraph@1.6.0 callers actionOrder`.
@@ -395,7 +398,7 @@ and no test catches it.
 ### Required Interfaces and Contracts
 
 - `RegisterAction(action Action)` keeps its signature. Adding a parameter would
-  touch 174 call sites for no gain.
+  touch 173 call sites for no gain.
 - Ordering is deterministic and independent of file names, package names and
   import order. This is the contract the later waves depend on.
 - Duplicate registration keeps today's behaviour: `RegisterAction` already

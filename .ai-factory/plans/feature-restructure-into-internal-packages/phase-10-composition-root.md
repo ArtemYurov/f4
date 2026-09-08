@@ -18,7 +18,7 @@ After this phase the compiler, not a convention, keeps every boundary in
 
 | Path | Signal | Consequence |
 |---|---|---|
-| `cmd/f4/action_table.go` | 2553 lines, 174 `RegisterAction`, `PanelsFrame` ×109, `EditorView` ×48 | created in Task 18; this is where it lands |
+| `cmd/f4/action_table.go` | 2554 lines, 173 `RegisterAction`, `PanelsFrame` ×114, `EditorView` ×47 | created in Task 18; this is where it lands |
 | `cmd/f4/framework_actions.go` | 25 functions; 18 have **no external callers** — reached only as `Handler:` values and from `main.go:actionScreenDump` | composition-root code, moves whole |
 | `cmd/f4/actions.go` | after the earlier waves took 20 functions, the 61 view-bound handlers remain | distributed or moved here with the table |
 | `cmd/f4/main.go` | flags, startup mode, wiring | stays in `cmd/f4` |
@@ -47,7 +47,7 @@ After this phase the compiler, not a convention, keeps every boundary in
 
 What is left after Phase 9 is the application itself: the event loop that
 dispatches input to the focused subsystem, the bootstrap, workspace management,
-and the 2553-line action registration table whose closures reach into every
+and the 2554-line action registration table whose closures reach into every
 interactive package. This is the only place in the tree that is allowed to know
 that all of them exist.
 
