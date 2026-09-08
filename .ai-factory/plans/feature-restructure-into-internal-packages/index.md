@@ -676,7 +676,27 @@ imports nothing back.
 Same layer, one direction, no cycle. `architecture_test.go` — which checks the
 edge rather than the sentence — passes. The contract line is the stale half.
 
-### Two packages the plan did not name
+### Five packages the plan did not name
+
+`internal/ini` and `internal/unpack` (phase 5), `internal/textsearch` (phase 7),
+`internal/appcmd` (Task 33) and `internal/semantic` (before Task 34). Not one of
+them was chosen. Each is forced by a dependency rule that only becomes visible
+once the boundaries exist: **a symbol three or more packages of one layer need
+has a home in none of them.**
+
+The plan named packages by subsystem — by what the code does. These five are
+decided the other way, by who calls the code. Planning from the call graph finds
+such places; planning from subject areas does not, and that is a limit of the
+method rather than an oversight.
+
+The mechanical form of the rule, which is also how each of the five was found:
+**a function that has been copied three times has no home.** `internal/semantic`
+came from exactly that count — the four readers that unpack a semantic action
+and the two that turn screen cells into run models had been copied into the
+viewer, the editor, the terminal and the command line, each with a `ponytail:`
+marker promising a home later.
+
+#### The first two, as they were recorded at the time
 
 Both were forced by the dependency rules rather than chosen, and both import
 nothing of ours, which is what makes them shareable by the layer-0 leaves.

@@ -476,6 +476,9 @@ func TestRemoteApplyCommandMaterializationHonorsCancellation(t *testing.T) {
 	// cleanup that returns before the work is unblocked has lost it. This
 	// one only says "eventually", and its budget covers a goroutine drain
 	// plus a temporary-directory removal on whatever disk CI gives us.
+	//
+	// Which is the rule for both: a wait that says "eventually" may be
+	// widened, a wait that says "not before this" may not.
 	if !cleanupAllApplyCommandResourcesWithin(10 * time.Second) {
 		t.Fatal("remote materialization remained registered after it drained")
 	}
@@ -520,6 +523,9 @@ func TestRemoteApplyCommandMaterializationShieldsSameInstanceClone(t *testing.T)
 	// cleanup that returns before the work is unblocked has lost it. This
 	// one only says "eventually", and its budget covers a goroutine drain
 	// plus a temporary-directory removal on whatever disk CI gives us.
+	//
+	// Which is the rule for both: a wait that says "eventually" may be
+	// widened, a wait that says "not before this" may not.
 	if !cleanupAllApplyCommandResourcesWithin(10 * time.Second) {
 		t.Fatal("same-instance remote work did not drain")
 	}

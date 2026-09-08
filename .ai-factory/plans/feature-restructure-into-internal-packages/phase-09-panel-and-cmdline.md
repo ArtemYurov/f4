@@ -38,20 +38,30 @@ auditor's file→target-package map. Close every `docs/` reference in the same c
 Per-type gate scores. Columns: `PanelsFrame` / `FileSystemPanel` /
 `pluginPanelInstance` / `CommandLine`.
 
+Five of the fourteen rows below were wrong from the start — the numbers match
+the base revision as well as the tree, so this is not drift. `panels_frame.go`'s
+197 is no reading of any revision (115 and 117 there, 117 and 119 here) and
+looks like transposed digits. The other four put a `FileSystemPanel` count in
+the `PanelsFrame` column and left a dash where a number belongs, which made
+`reconnect.go` read as frame code when it names the frame nowhere. The
+destinations do not change — both types go to `internal/panel` — but measure
+each file rather than trusting the columns.
+
+
 | File | PF | FSP | PPI | CL | Reading |
 |---|---|---|---|---|---|
-| `panels_frame.go` | 197 | — | — | 0 | the type's home; 5728 lines |
+| `panels_frame.go` | 117 | 81 | — | 0 | the type's home; 5771 lines |
 | `file_panel.go` | — | 107 | — | 0 | the type's home |
 | `panel_plugins.go` | 5 | 4 | 17 | 0 | plus **one** `coreAPI` method, already cut out in Task 26 |
 | `dragdrop.go` | 6 | 8 | — | 0 | five `*PanelsFrame` methods + one `*FileSystemPanel` — moves **whole** |
 | `translator.go` | 3 | 2 | — | 0 | one method each — moves **whole** |
-| `console_passthrough.go` | 16 | — | — | **3** | panel code that also touches the command line — resolve the three |
+| `console_passthrough.go` | 16 | 0 | — | 0 | panel code; its three "CommandLine" hits are two comments and a field access |
 | `temp_panel.go` | 5 | 4 | — | 0 | move whole |
 | `info_panel.go` | 2 | 5 | — | 0 | move whole; localizes the GPU `ModelKey` from Task 7 |
 | `quick_view_panel.go` | 2 | 3 | — | 0 | move whole; uses `numeric.NonNegativeUint64` |
-| `path_hints.go` | 3 | — | — | 0 | move whole |
-| `reconnect.go` | 2 | — | — | 0 | move whole → `list_reconnect.go` |
-| `panel_actions.go` | 2 | — | — | 0 | move whole |
+| `path_hints.go` | 2 | 1 | — | 0 | move whole |
+| `reconnect.go` | 0 | 2 | — | 0 | move whole → `list_reconnect.go`; it is about the file panel, not the frame |
+| `panel_actions.go` | 1 | 1 | — | 0 | move whole |
 | `viewer_editor_history.go` | 3 | 1 | — | 0 | **not** `internal/history` — comes here |
 | `text_editor_bridge.go`, `visren_editor_bridge.go` | ≥1 | — | — | 0 | the `vfs.TextEditorHost` assertion binds them to `PanelsFrame` |
 | `command_line.go` | 0 | — | — | 16 | the type's home |
