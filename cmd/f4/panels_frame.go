@@ -2451,6 +2451,21 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 				return true
 			}
 
+			// A plain edit:<path> opens the named file. Keep this after
+			// edit:<< so captured command output keeps its existing meaning.
+			if editPath, ok := parsePlainEditCommand(trimmedCmd); ok {
+				pf.cmdLine.Clear()
+				if pf.searchFirstMode() && !AppConfig.SearchCommandStayFocused {
+					pf.setCommandLineFocus(false)
+				}
+				editPath = expandPathEnv(editPath)
+				if fsp := pf.getActivePanel(); fsp != nil && isLocalOSVFS(fsp.vfs) && !filepath.IsAbs(editPath) {
+					editPath = fsp.vfs.Join(fsp.vfs.GetPath(), editPath)
+				}
+				openEditFileIn(pf, editPath)
+				return true
+			}
+
 			// Apply to panel first
 			if isDirChange {
 				if fsp, ok := pf.panels[pf.activeIdx].(*FileSystemPanel); ok {
@@ -5654,6 +5669,22 @@ func parseDirChangeCommand(trimmedCmd string) (targetPath string, ok bool) {
 		return string(os.PathSeparator), true
 	}
 	return "", false
+}
+
+// parsePlainEditCommand recognizes the file-opening form of the edit:
+// command. The edit:<< capture form is handled before this helper, but it is
+// excluded here as well so the two forms cannot drift into one another.
+func parsePlainEditCommand(trimmedCmd string) (path string, ok bool) {
+	const prefix = "edit:"
+	if len(trimmedCmd) <= len(prefix) || !strings.EqualFold(trimmedCmd[:len(prefix)], prefix) {
+		return "", false
+	}
+
+	path = strings.TrimSpace(trimmedCmd[len(prefix):])
+	if path == "" || strings.HasPrefix(path, "<<") {
+		return "", false
+	}
+	return path, true
 }
 
 func expandPathEnv(s string) string {
