@@ -19,6 +19,7 @@ import (
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -244,20 +245,6 @@ type FileOpState struct {
 	Buffer       []byte
 	IsMove       bool
 	S2SDir       int // 0: unknown, 1: push, 2: pull, 3: disabled
-}
-
-// formatSize formats a byte count into a human-readable string.
-func formatSize(b int64) string {
-	const unit = 1024
-	if b < unit {
-		return fmt.Sprintf("%d B", b)
-	}
-	div, exp := int64(unit), 0
-	for n := b / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "KMGTPE"[exp])
 }
 
 // formatIntWithSpaces converts an int64 to string with spaces as thousands separators.
@@ -538,7 +525,7 @@ func ExecuteFileOpAt(pf *PanelsFrame, srcVfs, dstVfs vfs.VFS, srcBasePath string
 
 			var totalText string
 			if total.Bytes > 0 && total.UnknownSizeFiles == 0 {
-				totalText = fmt.Sprintf("Total: %s / %s", formatSize(processed.Bytes), formatSize(total.Bytes))
+				totalText = fmt.Sprintf("Total: %s / %s", numeric.FormatSize(processed.Bytes), numeric.FormatSize(total.Bytes))
 			} else {
 				totalText = fmt.Sprintf("Total: %d / %d items", processed.Files+processed.Dirs, total.Files+total.Dirs)
 			}
@@ -577,7 +564,7 @@ func ExecuteFileOpAt(pf *PanelsFrame, srcVfs, dstVfs vfs.VFS, srcBasePath string
 
 			speedStr := ""
 			if currentSpeed > 0 {
-				speedStr = formatSize(int64(currentSpeed)) + "/s"
+				speedStr = numeric.FormatSize(int64(currentSpeed)) + "/s"
 			}
 
 			timeSpeedText := fmt.Sprintf("%-16s %-21s %15s", elapsedStr, etaStr, speedStr)

@@ -9,6 +9,7 @@ import (
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/f4/internal/macro"
+	"github.com/unxed/f4/internal/media"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
@@ -334,7 +335,7 @@ func TestCommandPaletteOpensInOtherFullScreenAreas(t *testing.T) {
 }
 
 func TestCommandPaletteIndexesImageAndQueueFrameCommands(t *testing.T) {
-	imageEntries := commandPaletteImageEntries(&ImageView{})
+	imageEntries := commandPaletteImageEntries(&media.ImageView{})
 	wantImage := map[string]bool{
 		"Image.Reload": true, "Image.FullScreen": true, "Image.SlideShow": true,
 		"Image.ZoomIn": true, "Image.RotateClockwise": true, "Image.Gallery": true,
@@ -373,24 +374,13 @@ func TestCommandPaletteImageGalleryCommandsUseGalleryCursor(t *testing.T) {
 	GlobalHotkeysMgr = nil
 	t.Cleanup(func() { GlobalHotkeysMgr = previousHotkeys })
 
-	image := &ImageView{
-		siblings: []string{"first.png", "second.png", "third.png"},
-		path:     "first.png",
-		index:    0,
-		selected: make(map[string]bool),
-		gal: &imageGallery{
-			cursor: 1,
-			cols:   1,
-			rows:   1,
-			thumbs: make(map[string]*vtui.ImageSurface),
-			asked:  make(map[string]bool),
-		},
-	}
+	image := media.NewGalleryView("first.png", []string{"first.png", "second.png", "third.png"}, 0, 1)
 	var selectedPath string
 	var selectedState bool
 	image.OnSelect = func(path string, selected bool) {
 		selectedPath, selectedState = path, selected
 	}
+
 	vtui.FrameManager.Push(image)
 
 	entries := make(map[string]commandPaletteEntry)
@@ -400,46 +390,46 @@ func TestCommandPaletteImageGalleryCommandsUseGalleryCursor(t *testing.T) {
 	if !executeCommandPaletteEntry(entries["Image.Next"]) {
 		t.Fatal("gallery Next command was not executed")
 	}
-	if image.gal.cursor != 2 || image.path != "first.png" || image.index != 0 {
-		t.Fatalf("gallery Next cursor=%d path=%q index=%d, want cursor-only move to 2", image.gal.cursor, image.path, image.index)
+	if image.Gal.Cursor != 2 || image.Path != "first.png" || image.Index != 0 {
+		t.Fatalf("gallery Next cursor=%d path=%q index=%d, want cursor-only move to 2", image.Gal.Cursor, image.Path, image.Index)
 	}
 	if !executeCommandPaletteEntry(entries["Image.Previous"]) {
 		t.Fatal("gallery Previous command was not executed")
 	}
-	if image.gal.cursor != 1 || image.path != "first.png" || image.index != 0 {
-		t.Fatalf("gallery Previous cursor=%d path=%q index=%d, want cursor-only move to 1", image.gal.cursor, image.path, image.index)
+	if image.Gal.Cursor != 1 || image.Path != "first.png" || image.Index != 0 {
+		t.Fatalf("gallery Previous cursor=%d path=%q index=%d, want cursor-only move to 1", image.Gal.Cursor, image.Path, image.Index)
 	}
 	if !executeCommandPaletteEntry(entries["Image.First"]) {
 		t.Fatal("gallery First command was not executed")
 	}
-	if image.gal.cursor != 0 || image.path != "first.png" || image.index != 0 {
-		t.Fatalf("gallery First cursor=%d path=%q index=%d, want cursor-only move to 0", image.gal.cursor, image.path, image.index)
+	if image.Gal.Cursor != 0 || image.Path != "first.png" || image.Index != 0 {
+		t.Fatalf("gallery First cursor=%d path=%q index=%d, want cursor-only move to 0", image.Gal.Cursor, image.Path, image.Index)
 	}
 	if !executeCommandPaletteEntry(entries["Image.Last"]) {
 		t.Fatal("gallery Last command was not executed")
 	}
-	if image.gal.cursor != 2 || image.path != "first.png" || image.index != 0 {
-		t.Fatalf("gallery Last cursor=%d path=%q index=%d, want cursor-only move to 2", image.gal.cursor, image.path, image.index)
+	if image.Gal.Cursor != 2 || image.Path != "first.png" || image.Index != 0 {
+		t.Fatalf("gallery Last cursor=%d path=%q index=%d, want cursor-only move to 2", image.Gal.Cursor, image.Path, image.Index)
 	}
 
-	image.gal.cursor = 1
+	image.Gal.Cursor = 1
 	if !executeCommandPaletteEntry(entries["Image.Select"]) {
 		t.Fatal("gallery Select command was not executed")
 	}
-	if !image.selected["second.png"] || image.selected["first.png"] || image.gal.cursor != 2 {
-		t.Fatalf("gallery Select selected=%v cursor=%d, want second.png and cursor 2", image.selected, image.gal.cursor)
+	if !image.Selected["second.png"] || image.Selected["first.png"] || image.Gal.Cursor != 2 {
+		t.Fatalf("gallery Select selected=%v cursor=%d, want second.png and cursor 2", image.Selected, image.Gal.Cursor)
 	}
 	if selectedPath != "second.png" || !selectedState {
 		t.Fatalf("gallery Select callback = (%q, %v), want (second.png, true)", selectedPath, selectedState)
 	}
 
-	image.gal.cursor = 1
+	image.Gal.Cursor = 1
 	selectedPath, selectedState = "", true
 	if !executeCommandPaletteEntry(entries["Image.ClearSelection"]) {
 		t.Fatal("gallery Clear Selection command was not executed")
 	}
-	if image.selected["second.png"] || image.gal.cursor != 2 {
-		t.Fatalf("gallery Clear selected=%v cursor=%d, want cleared second.png and cursor 2", image.selected, image.gal.cursor)
+	if image.Selected["second.png"] || image.Gal.Cursor != 2 {
+		t.Fatalf("gallery Clear selected=%v cursor=%d, want cleared second.png and cursor 2", image.Selected, image.Gal.Cursor)
 	}
 	if selectedPath != "second.png" || selectedState {
 		t.Fatalf("gallery Clear callback = (%q, %v), want (second.png, false)", selectedPath, selectedState)

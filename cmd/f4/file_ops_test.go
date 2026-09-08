@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -1899,8 +1900,8 @@ func TestFileOps_FormatSize(t *testing.T) {
 		{10 * 1024 * 1024 * 1024, "10.0 GB"},
 	}
 	for _, tt := range tests {
-		if got := formatSize(tt.bytes); got != tt.want {
-			t.Errorf("formatSize(%d) = %q, want %q", tt.bytes, got, tt.want)
+		if got := numeric.FormatSize(tt.bytes); got != tt.want {
+			t.Errorf("numeric.FormatSize(%d) = %q, want %q", tt.bytes, got, tt.want)
 		}
 	}
 }
@@ -2329,7 +2330,7 @@ func TestFileOps_ETA_DuringLocating(t *testing.T) {
 
 		var totalText string
 		if total.Bytes > 0 {
-			totalText = fmt.Sprintf("Total: %s / %s", formatSize(processed.Bytes), formatSize(total.Bytes))
+			totalText = fmt.Sprintf("Total: %s / %s", numeric.FormatSize(processed.Bytes), numeric.FormatSize(total.Bytes))
 		}
 
 		elapsed := now.Sub(startTime)

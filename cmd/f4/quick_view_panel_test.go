@@ -716,7 +716,7 @@ func TestQuickView_ImageFilePreview(t *testing.T) {
 
 	q := NewQuickViewPanel(fsp)
 	q.SetPosition(0, 0, 39, 24)
-	q.Show(scr) // Triggers refreshCache and ImagePipe.Load
+	q.Show(scr) // Triggers refreshCache and media.ImagePipe.Load
 
 	if !q.cacheImage {
 		t.Error("Expected qoi file to be flagged as image")

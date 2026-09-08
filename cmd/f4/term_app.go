@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/media"
 	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/vtui"
 )
@@ -54,7 +55,7 @@ func (termApplication) ClientDetached() {
 }
 
 func (termApplication) DecodeImage(data []byte) (*vtui.ImageSurface, error) {
-	return decodeImageWithStdlib(data)
+	return media.DecodeImageWithStdlib(data)
 }
 
 func (termApplication) VersionInfo() string { return getFormattedVersionInfo() }

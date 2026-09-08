@@ -122,6 +122,10 @@ var architectureLayers = map[string]int{
 	// under the mouse. Nothing below layer 3 imports it.
 	"internal/term": 3,
 
+	// media reads the terminal's graphics protocols and the viewer's title bar,
+	// so it is layer 3 beside them, not the 1 the plan assigned.
+	"internal/media": 3,
+
 	"internal/textsearch": 0,
 
 	"internal/dialog": 3,

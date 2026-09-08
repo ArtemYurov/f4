@@ -6,6 +6,7 @@ import (
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/media"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -113,13 +114,13 @@ func commandPaletteArkanoidEntries(arkanoid *ArkanoidFrame) []commandPaletteEntr
 	}
 }
 
-func commandPaletteImageGalleryOpenEntry(image *ImageView) []commandPaletteEntry {
-	if image == nil || image.gal == nil {
+func commandPaletteImageGalleryOpenEntry(image *media.ImageView) []commandPaletteEntry {
+	if image == nil || image.Gal == nil {
 		return nil
 	}
-	gallery := image.gal
-	cursor := gallery.cursor
-	path := image.galleryPath()
+	gallery := image.Gal
+	cursor := gallery.Cursor
+	path := image.GalleryPath()
 	if path == "" {
 		return nil
 	}
@@ -130,7 +131,7 @@ func commandPaletteImageGalleryOpenEntry(image *ImageView) []commandPaletteEntry
 		"CommandPalette.CategoryImageViewer", "Image Viewer", "Enter",
 		func() bool {
 			if vtui.FrameManager == nil || vtui.FrameManager.GetTopFrame() != image ||
-				image.gal != gallery || gallery.cursor != cursor || image.galleryPath() != path {
+				image.Gal != gallery || gallery.Cursor != cursor || image.GalleryPath() != path {
 				return false
 			}
 			return image.ProcessKey(keymap.ParseFarKey("Enter"))

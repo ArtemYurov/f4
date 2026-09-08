@@ -377,7 +377,7 @@ titles, not the ordering.
 ### Phase 7: Viewer, Terminal and Media
 - [x] Task 29: Extract `internal/viewer`, removing the `editor ↔ viewer` cycle ([details](phase-07-view-and-terminal.md#task-29-extract-internalviewer)) (depends on 28)
 - [x] Task 30: Extract `internal/term`, including eleven misfiled files ([details](phase-07-view-and-terminal.md#task-30-extract-internalterm)) (depends on 29)
-- [ ] Task 31: Extract `internal/media` ([details](phase-07-view-and-terminal.md#task-31-extract-internalmedia)) (depends on 30)
+- [x] Task 31: Extract `internal/media` ([details](phase-07-view-and-terminal.md#task-31-extract-internalmedia)) (depends on 30)
 
 ### Phase 8: File Operations and the Editor
 - [ ] Task 32: Extract `internal/fileops` ([details](phase-08-fileops-and-editor.md#task-32-extract-internalfileops)) (depends on 5, 30, 31)

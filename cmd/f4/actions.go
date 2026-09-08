@@ -20,6 +20,7 @@ import (
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
+	"github.com/unxed/f4/internal/media"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/f4/internal/term"
@@ -1467,7 +1468,7 @@ func actionSwitchViewerToEditor(vv *viewer.ViewerView) {
 // viewer because a file is one or the other, and before the text viewer
 // because a hex dump of an mp4 is not what anybody asked for.
 func tryOpenVideoPlayer(pf *PanelsFrame, v vfs.VFS, path string) bool {
-	if pf == nil || !IsVideoFile(path) {
+	if pf == nil || !media.IsVideoFile(path) {
 		return false
 	}
 	// Video is a local business: the frames of it never fit down a
@@ -1476,12 +1477,12 @@ func tryOpenVideoPlayer(pf *PanelsFrame, v vfs.VFS, path string) bool {
 	if term.SharedTTYXSession() == nil {
 		return false
 	}
-	if !toolMPV.Available() {
-		vtui.ShowMessage(" Video ", toolMPV.MissingMessage(), []string{"&Ok"})
+	if !media.ToolMPV.Available() {
+		vtui.ShowMessage(" Video ", media.ToolMPV.MissingMessage(), []string{"&Ok"})
 		return true
 	}
 
-	vv, err := NewVideoView(v, path)
+	vv, err := media.NewVideoView(v, path)
 	if err != nil {
 		vtui.DebugLog("VIDEO: %v", err)
 		return false
@@ -1492,7 +1493,7 @@ func tryOpenVideoPlayer(pf *PanelsFrame, v vfs.VFS, path string) bool {
 }
 
 func tryOpenImageViewer(pf *PanelsFrame, v vfs.VFS, path string) bool {
-	if pf == nil || !IsImageFile(path) {
+	if pf == nil || !media.IsImageFile(path) {
 		return false
 	}
 	scr := vtui.FrameManager.Screen()
@@ -1524,7 +1525,7 @@ func tryOpenImageViewer(pf *PanelsFrame, v vfs.VFS, path string) bool {
 	}
 
 	vtui.RunAsync(func(ctx *vtui.TaskContext) {
-		iv, err := NewImageView(ctx.Context, v, path)
+		iv, err := media.NewImageView(ctx.Context, v, path)
 		ctx.RunOnUI(func() {
 			if err != nil {
 				vtui.DebugLog("IMAGE: failed to open %s: %v", path, err)
@@ -1806,7 +1807,7 @@ func openPlayerPanel(pf *PanelsFrame) *PlayerPanel {
 // opener — so the rule costs nobody anything they did not ask for.
 func tryPlayInPlayerPanel(pf *PanelsFrame, v vfs.VFS, path string) bool {
 	player := openPlayerPanel(pf)
-	if player == nil || !IsAudioFile(path) {
+	if player == nil || !media.IsAudioFile(path) {
 		return false
 	}
 	osv, isLocal := v.(*vfs.OSVFS)

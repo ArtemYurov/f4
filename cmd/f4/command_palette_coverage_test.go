@@ -99,9 +99,7 @@ var commandPaletteTargetPackage = map[string]string{
 	"fuse_mount_list.go":          "fileops",
 	"queue_manager.go":            "fileops",
 	"macro.go":                    "macro",
-	"image_view.go":               "media",
-	"player_panel.go":             "media",
-	"video_view.go":               "media",
+	"player_panel.go":             "panel",
 	"drive_bookmarks_ui.go":       "panel",
 	"file_associations_editor.go": "panel",
 	"file_associations_ui.go":     "panel",
@@ -159,7 +157,7 @@ var commandPaletteProcessKeyAudit = map[string]commandPaletteSurfaceAudit{
 	"media.(*VideoView).ProcessKey": {
 		class: paletteAuditModalLocal, rationale: "the video player is a modal frame over a window of its own; play, seek and volume are local primitives sent down mpv's socket",
 	},
-	"media.(*PlayerPanel).ProcessKey": {
+	"panel.(*PlayerPanel).ProcessKey": {
 		class: paletteAuditPanelProvider, rationale: "the player's transport, volume and playlist keys are navigation inside one panel; the panel toggle itself is the Panel.Player action",
 	},
 	"panel.(*InfoPanel).ProcessKey": {

@@ -12,6 +12,7 @@ import (
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/media"
 	"github.com/unxed/f4/internal/theme"
 	id3 "github.com/unxed/id3-go"
 	"github.com/unxed/vtinput"
@@ -44,7 +45,7 @@ type PlayerPanel struct {
 	frame   *vtui.BorderedFrame
 	focused bool
 
-	engine *audioEngine
+	engine *media.AudioEngine
 	root   *playlistItem // invisible root; children are the top level
 	rows   []playlistRow // flattened view, rebuilt on every Show
 	cursor int           // index into rows; -1 = control row has the cursor
@@ -97,7 +98,7 @@ func NewPlayerPanel(src *FileSystemPanel) *PlayerPanel {
 	x1, y1, x2, y2 := src.GetPosition()
 	pp := &PlayerPanel{
 		src:    src,
-		engine: newAudioEngine(),
+		engine: media.NewAudioEngine(),
 		root:   &playlistItem{Folder: true, Expanded: true},
 		cursor: -1,
 		button: playerBtnPlay,
@@ -338,7 +339,7 @@ func fillFolderFromDir(folder *playlistItem, dir string) int {
 }
 
 func playlistItemForFile(path string) *playlistItem {
-	if !IsAudioFile(path) {
+	if !media.IsAudioFile(path) {
 		return nil
 	}
 	return &playlistItem{Name: trackDisplayName(path), Path: path}
@@ -383,11 +384,11 @@ func (pp *PlayerPanel) playItem(it *playlistItem) bool {
 	if err := pp.engine.Load(it.Path); err != nil {
 		pp.status = err.Error()
 		pp.current = nil
-		if errors.Is(err, errNeedFFmpeg) {
+		if errors.Is(err, media.ErrNeedFFmpeg) {
 			pp.status = fmt.Sprintf(i18n.Msg("Player.NeedFFmpeg"), filepath.Ext(it.Path))
 			if !pp.ffmpegWarned {
 				pp.ffmpegWarned = true
-				vtui.ShowMessage(i18n.Msg("Player.Title"), toolFFmpeg.MissingMessage(), []string{i18n.Msg("vtui.Ok")})
+				vtui.ShowMessage(i18n.Msg("Player.Title"), media.ToolFFmpeg.MissingMessage(), []string{i18n.Msg("vtui.Ok")})
 			}
 		}
 		return false

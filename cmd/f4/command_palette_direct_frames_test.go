@@ -5,6 +5,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/media"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -119,26 +120,21 @@ func TestCommandPaletteArkanoidProviderRoutesCommandsAndGuardsState(t *testing.T
 }
 
 func TestCommandPaletteImageGalleryOpenIsTargetSpecific(t *testing.T) {
-	gallery := &imageGallery{cursor: 1}
-	image := &ImageView{
-		path:     "second.png",
-		siblings: []string{"first.png", "second.png"},
-		index:    1,
-		gal:      gallery,
-	}
+	image := media.NewGalleryView("second.png", []string{"first.png", "second.png"}, 1, 1)
+	gallery, _, _ := image.GalleryState()
 	setDirectPaletteTopFrame(t, image)
 	entry, found := commandPaletteTestEntryByID(commandPaletteFrameEntries(), "Image.Gallery.Open")
 	if !found {
 		t.Fatal("Image.Gallery.Open is missing while the gallery is active")
 	}
 
-	gallery.cursor = 0
-	if executeCommandPaletteEntry(entry) || image.gal == nil {
+	gallery.Cursor = 0
+	if executeCommandPaletteEntry(entry) || image.Gal == nil {
 		t.Fatal("stale gallery command opened a different cursor target")
 	}
-	gallery.cursor = 1
+	gallery.Cursor = 1
 	entry, _ = commandPaletteTestEntryByID(commandPaletteFrameEntries(), "Image.Gallery.Open")
-	if !executeCommandPaletteEntry(entry) || image.gal != nil {
+	if !executeCommandPaletteEntry(entry) || image.Gal != nil {
 		t.Fatal("Image.Gallery.Open did not open the captured gallery target")
 	}
 	if commandPaletteTestHasID(commandPaletteFrameEntries(), "Image.Gallery.Open") {

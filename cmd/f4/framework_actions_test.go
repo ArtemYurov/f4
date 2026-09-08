@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/media"
 	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -517,7 +518,7 @@ func TestWorkspaceNewFindsPanelsBehindFullScreenWorkspace(t *testing.T) {
 	// Image, Editor, Viewer and Queue screens are all separate workspaces with
 	// no PanelsFrame in their active stack. Image is a lightweight real frame
 	// that exercises that shared full-screen layout without test doubles.
-	image := &ImageView{}
+	image := &media.ImageView{}
 	vtui.FrameManager.AddScreen(image)
 	if got := len(vtui.FrameManager.Screens); got != 2 {
 		t.Fatalf("screens before fork = %d, want 2", got)

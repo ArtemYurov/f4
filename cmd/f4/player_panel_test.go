@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/media"
 	"io"
 	"os"
 	"path/filepath"
@@ -12,7 +13,7 @@ import (
 
 func newTestPlayerPanel() *PlayerPanel {
 	return &PlayerPanel{
-		engine: newAudioEngine(),
+		engine: media.NewAudioEngine(),
 		root:   &playlistItem{Folder: true, Expanded: true},
 		cursor: -1,
 		stop:   make(chan struct{}),
@@ -136,17 +137,17 @@ func TestAddPathsWalksDirectoriesAndSkipsOthers(t *testing.T) {
 func TestLinearResamplerKeepsDCAndLength(t *testing.T) {
 	// 100 frames of a constant stereo value at 48 kHz → ~92 frames at 44.1.
 	const frames = 100
-	src := make([]byte, frames*audioBytesPerFrame)
+	src := make([]byte, frames*media.AudioBytesPerFrame)
 	for i := 0; i < frames; i++ {
 		src[i*4], src[i*4+1] = 0x00, 0x10   // 4096
 		src[i*4+2], src[i*4+3] = 0x00, 0xF0 // -4096
 	}
-	r := newLinearResampler(bytes.NewReader(src), 48000, 44100)
+	r := media.NewLinearResampler(bytes.NewReader(src), 48000, 44100)
 	out, err := io.ReadAll(r)
 	if err != nil {
 		t.Fatal(err)
 	}
-	got := len(out) / audioBytesPerFrame
+	got := len(out) / media.AudioBytesPerFrame
 	if got < 90 || got > 93 {
 		t.Fatalf("output frames = %d, want ≈92", got)
 	}
@@ -161,11 +162,11 @@ func TestLinearResamplerKeepsDCAndLength(t *testing.T) {
 
 func TestLinearResamplerPropagatesSourceErrors(t *testing.T) {
 	wantErr := errors.New("decoder failure")
-	r := newLinearResampler(&failingPCMReader{err: wantErr}, 48000, 44100)
-	buf := make([]byte, 2*audioBytesPerFrame)
+	r := media.NewLinearResampler(&failingPCMReader{err: wantErr}, 48000, 44100)
+	buf := make([]byte, 2*media.AudioBytesPerFrame)
 	n, err := r.Read(buf)
-	if n != audioBytesPerFrame || !errors.Is(err, wantErr) {
-		t.Fatalf("Read() = (%d, %v), want (%d, %v)", n, err, audioBytesPerFrame, wantErr)
+	if n != media.AudioBytesPerFrame || !errors.Is(err, wantErr) {
+		t.Fatalf("Read() = (%d, %v), want (%d, %v)", n, err, media.AudioBytesPerFrame, wantErr)
 	}
 }
 
@@ -180,18 +181,18 @@ func (r *failingPCMReader) Read(p []byte) (int, error) {
 	}
 	r.done = true
 	copy(p, []byte{0, 0x10, 0, 0x10})
-	return audioBytesPerFrame, nil
+	return media.AudioBytesPerFrame, nil
 }
 
 func TestPCMTapSpectrumSilenceIsZero(t *testing.T) {
-	tap := newPCMTap(bytes.NewReader(make([]byte, 4096)), 44100)
+	tap := media.NewPCMTap(bytes.NewReader(make([]byte, 4096)), 44100)
 	if _, err := io.ReadAll(tap); err != nil {
 		t.Fatal(err)
 	}
-	if !tap.eof() || tap.bytesRead() != 4096 {
-		t.Fatalf("eof=%v read=%d", tap.eof(), tap.bytesRead())
+	if !tap.Eof() || tap.BytesRead() != 4096 {
+		t.Fatalf("eof=%v read=%d", tap.Eof(), tap.BytesRead())
 	}
-	for i, v := range tap.spectrum(8) {
+	for i, v := range tap.Spectrum(8) {
 		if v != 0 {
 			t.Fatalf("band %d = %v on silence", i, v)
 		}
@@ -223,10 +224,10 @@ func TestMP3FirstFrameIsMonoSkipsID3(t *testing.T) {
 	if err := os.WriteFile(sp, stereo, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if !mp3FirstFrameIsMono(mp) {
+	if !media.Mp3FirstFrameIsMono(mp) {
 		t.Fatalf("mono header not detected")
 	}
-	if mp3FirstFrameIsMono(sp) {
+	if media.Mp3FirstFrameIsMono(sp) {
 		t.Fatalf("stereo reported as mono")
 	}
 }

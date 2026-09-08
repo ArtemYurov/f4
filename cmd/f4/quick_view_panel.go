@@ -15,6 +15,7 @@ import (
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/media"
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/theme"
@@ -880,7 +881,7 @@ func (q *QuickViewPanel) renderImage(innerW int, writeLine func(string), attr ui
 
 	cw, ch := scr.Graphics().CellSize()
 	if cw <= 0 || ch <= 0 {
-		cw, ch = imageViewFallbackCellW, imageViewFallbackCellH
+		cw, ch = media.ImageViewFallbackCellW, media.ImageViewFallbackCellH
 	}
 
 	boxW := cols * cw
@@ -892,7 +893,7 @@ func (q *QuickViewPanel) renderImage(innerW int, writeLine func(string), attr ui
 	}
 
 	p := vtui.ImagePlacement{Surface: q.imageSurf}
-	p.Cols, p.Rows = cellsFor(fitW, cw, cols), cellsFor(fitH, ch, rows)
+	p.Cols, p.Rows = media.CellsFor(fitW, cw, cols), media.CellsFor(fitH, ch, rows)
 	p.Col = x1 + 1 + (cols-p.Cols)/2
 	p.Row = top + (rows-p.Rows)/2
 	p.SrcX, p.SrcY = 0, 0
@@ -1017,18 +1018,18 @@ func (q *QuickViewPanel) refreshCache(key quickViewSelectionKey, path string, it
 	}
 	q.cancelScan()
 
-	if IsImageFile(path) {
+	if media.IsImageFile(path) {
 		q.cacheImage = true
 		gen := q.imageLoadGen
 		source := q.src.vfs
 
-		if res, ok := ImagePipe.PreviewSync(context.Background(), source, path); ok {
+		if res, ok := media.ImagePipe.PreviewSync(context.Background(), source, path); ok {
 			if res.Surface != nil && res.Surface.Valid() {
 				q.imageSurf = res.Surface
 			}
 		}
 
-		ImagePipe.Load(source, path, func(res ImageResult) {
+		media.ImagePipe.Load(source, path, func(res media.ImageResult) {
 			vtui.FrameManager.PostTask(func() {
 				if q.imageLoadGen == gen && q.cacheValid && q.cacheKey == key {
 					if res.Err != nil {

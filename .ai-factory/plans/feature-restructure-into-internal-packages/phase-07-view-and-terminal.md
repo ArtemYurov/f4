@@ -517,6 +517,39 @@ GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build ./internal/media/...
 
 ---
 
+## What the media wave actually found
+
+**`internal/media` is layer 3, not the 1 the task assigns**, for the same
+reason `internal/term` is: it asks the terminal which graphics protocols work
+and reads the viewer's title bar.
+
+**One interface method.** The image view forwards the workspace-fork command
+the way every full-screen view does, and that is the only thing it hands
+upward.
+
+**`player_panel.go` stayed**, which is what step 2 predicted: its three
+`FileSystemPanel` references are one embedding relationship — the player's
+source panel — and a media package taking a panel type is the inversion the
+step warns about. It travels to `internal/panel` in Task 34, and its palette
+audit key moved with it.
+
+**Two files the roster did not name came along.** `external_tools.go` holds
+only ffmpeg and mpv, which is media's own business and which `audio_decode.go`
+and `video.go` cannot compile without. And `formatSize` went down to
+`internal/numeric` as `FormatSize`: the file operations and the player both
+print byte counts, and two copies are two roundings.
+
+**The rewriting tools damaged an ini key, silently.** A `path` → `Path`
+export, and then its revert, both reached inside string literals: `case
+"Path":` in the far2l bookmarks reader and again in the drive bookmarks reader
+became `case "path":`. That compiles and reads a key the user's file does not
+have — the exact failure step 5 names, and the only reason it was caught is
+that both readers have round-trip tests. `exportmethods2.py` skips string
+literals now; the lesson that stands is to grep the wave's diff for changed
+string content before running the suite, not after.
+
+---
+
 ## Phase Risks and Mitigations
 
 - **Risk:** the pty family is moved by filename and `pty_unix.go`

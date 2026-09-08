@@ -11,6 +11,7 @@ import (
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ini"
+	"github.com/unxed/f4/internal/media"
 	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/vtui"
 )
@@ -402,7 +403,7 @@ func nativeShortcutOwnedByCurrentContext(actionName, key string) bool {
 	}
 
 	switch frame := top.(type) {
-	case *ImageView:
+	case *media.ImageView:
 		// F12 belongs to the gallery while the image viewer is active, not to
 		// vtui's workspace list fallback.
 		return strings.EqualFold(key, "F12")

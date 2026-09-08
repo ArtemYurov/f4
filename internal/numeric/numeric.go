@@ -35,6 +35,18 @@ func NonNegativeUint64(v int64) uint64 {
 	return uint64(v)
 }
 
+// BoundedInt64 clamps a uint64 to the positive range of an int64. Sample and
+// frame counts arrive from container headers as unsigned and are multiplied
+// before use; a value past the sign bit would come back negative and read as
+// a stream running backwards.
+func BoundedInt64(v uint64) int64 {
+	if v > 1<<63-1 {
+		return 1<<63 - 1
+	}
+	// #nosec G115 -- clamped to the positive int64 range above.
+	return int64(v)
+}
+
 func BoundedInt16(v int) (int16, bool) {
 	if v < -1<<15 || v > 1<<15-1 {
 		return 0, false
