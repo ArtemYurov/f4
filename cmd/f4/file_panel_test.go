@@ -739,16 +739,27 @@ func TestFileSystemPanel_SelectedInfo(t *testing.T) {
 		}
 	}
 	statusResult := status.String()
-	if !strings.Contains(statusResult, "(2/1)") {
-		t.Errorf("Expected status line to contain file/directory counts, got: %q", statusResult)
-	}
 	info, ok := fsInfo(fp.vfs.GetPath())
 	if !ok {
 		t.Fatal("fsInfo failed for the local test directory")
 	}
 	freeSpace := strings.ReplaceAll(formatBytes(info.Free), " ", "")
-	if !strings.Contains(statusResult, freeSpace) {
-		t.Errorf("Expected status line to contain free space %q, got: %q", freeSpace, statusResult)
+	if strings.Contains(statusResult, "(2/1)") || strings.Contains(statusResult, freeSpace) {
+		t.Errorf("file counts/free space remained in the current-item line: %q", statusResult)
+	}
+
+	var total strings.Builder
+	for x := 0; x < 80; x++ {
+		cell := scr.GetCell(x, 23)
+		if cell.Char != 0 && cell.Char != ' ' {
+			if _, err := total.WriteRune(vtui.CellBaseRune(cell.Char)); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	totalResult := total.String()
+	if !strings.Contains(totalResult, "(2/1)") || !strings.Contains(totalResult, freeSpace) || !strings.Contains(totalResult, "—") {
+		t.Errorf("Expected centered total line to contain counts, separator, and free space %q, got: %q", freeSpace, totalResult)
 	}
 
 	// Hiding the separate file-information line must not hide the selection
@@ -4922,10 +4933,11 @@ func TestFileSystemPanel_BottomFrameShowsCursorEntry(t *testing.T) {
 	bottom := func() string { return ScreenRow(scr, fp.Y2, fp.X1, fp.X2) }
 
 	// The total keeps the centre, the entry under the cursor sits in the
-	// left corner; both are spelled out in exact bytes.
+	// left corner; both are spelled out in exact bytes. The directory summary
+	// also includes the separate file/folder counts and free space.
 	fp.SetCursorIndex(2)
 	fp.Show(scr)
-	if got := bottom(); !strings.Contains(got, "▸ 1 234 567") || !strings.Contains(got, "1 234 567 (2)") {
+	if got := bottom(); !strings.Contains(got, "▸ 1 234 567") || !strings.Contains(got, "1 234 567 (1/1)") || !strings.Contains(got, "—") {
 		t.Errorf("bottom frame for a file: %q", got)
 	}
 
