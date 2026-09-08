@@ -320,7 +320,7 @@ titles, not the ordering.
 - [x] Task 15: Keep `plugring/` in the root; spell its URL once and make its policy test run ([details](phase-02-repository-root.md#task-15-keep-plugring-in-the-root-and-make-its-two-seams-honest))
 
 ### Phase 3: Self-Contained Subsystems Under internal/
-- [ ] Task 16: Move `piecetable`, `textlayout` and `sheet` under `internal/` ([details](phase-03-subsystems.md#task-16-move-piecetable-textlayout-and-sheet)) (depends on 15)
+- [x] Task 16: Move `piecetable`, `textlayout` and `sheet` under `internal/` ([details](phase-03-subsystems.md#task-16-move-piecetable-textlayout-and-sheet)) (depends on 15)
 - [ ] Task 17: Move `fusefs`, `vtvibe` and `luaplug` under `internal/` ([details](phase-03-subsystems.md#task-17-move-fusefs-vtvibe-and-luaplug))
 
 ### Phase 4: The Shared Primitives Leave cmd/f4

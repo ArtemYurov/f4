@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/unxed/f4/piecetable"
+	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/unxed/f4/piecetable"
+	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/vfs"
 )
 

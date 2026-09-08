@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/unxed/f4/textlayout"
+	"github.com/unxed/f4/internal/textlayout"
 	"github.com/unxed/vtui"
 )
 

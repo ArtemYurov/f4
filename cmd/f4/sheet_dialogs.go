@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/unxed/f4/sheet"
+	"github.com/unxed/f4/internal/sheet"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )

@@ -33,9 +33,6 @@ plugins/         # one package per plugin: archive, cloudfox, netfox, mediainfo,
                  # dummy_internal / dummy_rpc / dummy_lua are transport fixtures
 sdk/             # plugin API: f4plugin, f4rpc, lua, extui
 luaplug/         # Lua plugin engine
-piecetable/      # piece table backing the editor
-textlayout/      # text layout and wrapping
-sheet/           # spreadsheet mode
 
 fusefs/          # FUSE mounting
 vtvibe/          # vtvibe session/provider layer
@@ -46,6 +43,9 @@ internal/        # module-private platform helpers
   testutil/      #   test scaffolding shared across packages; _test.go use only
   paneltest/     #   the same, for helpers that need a panels frame
   colorer/       #   the colour scheme f4 installs for colorer4go
+  piecetable/    #   piece table backing the editor
+  textlayout/    #   text layout and wrapping over it
+  sheet/         #   spreadsheet mode
   hideconsole/   #   console hiding on Windows
 tools/           # developer tooling, incl. the ttytest terminal harness
 docs/            # 48 subsystem documents — read the relevant one before editing

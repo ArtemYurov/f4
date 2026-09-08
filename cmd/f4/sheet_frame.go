@@ -7,7 +7,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/unxed/f4/sheet"
+	"github.com/unxed/f4/internal/sheet"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )

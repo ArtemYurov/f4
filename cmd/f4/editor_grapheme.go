@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/unxed/f4/textlayout"
+	"github.com/unxed/f4/internal/textlayout"
 )
 
 // editorGrapheme is a byte-addressable grapheme cluster. The editor keeps

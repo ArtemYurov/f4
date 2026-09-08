@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/unxed/f4/piecetable"
+	"github.com/unxed/f4/internal/piecetable"
 )
 
 func selectEditorBytes(ev *EditorView, end int) {

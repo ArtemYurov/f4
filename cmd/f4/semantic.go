@@ -7,7 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
-	"github.com/unxed/f4/piecetable"
+	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/sdk/extui"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"

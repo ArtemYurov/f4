@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"github.com/unxed/f4/textlayout"
+	"github.com/unxed/f4/internal/textlayout"
 	"github.com/unxed/vtui"
 )
 

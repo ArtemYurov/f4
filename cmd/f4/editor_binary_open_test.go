@@ -8,8 +8,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/testutil"
-	"github.com/unxed/f4/piecetable"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"

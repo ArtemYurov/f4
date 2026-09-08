@@ -14,7 +14,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/unxed/f4/internal/colorer"
-	"github.com/unxed/f4/piecetable"
+	"github.com/unxed/f4/internal/piecetable"
 
 	"github.com/unxed/vtui"
 )

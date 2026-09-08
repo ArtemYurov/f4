@@ -34,6 +34,12 @@ var architectureLayers = map[string]int{
 	// Data with an embed directive beside it, nothing else.
 	"internal/colorer": 0,
 
+	// Self-contained subsystems. textlayout is the only edge among them: it
+	// reads the piece table it lays out.
+	"internal/piecetable": 0,
+	"internal/sheet":      0,
+	"internal/textlayout": 1,
+
 	// Test scaffolding, placed by what it may import: testutil imports no
 	// package of ours, paneltest sits above the three it builds a frame from.
 	// Neither may be imported from production code.

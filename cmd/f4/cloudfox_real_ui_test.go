@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/unxed/f4/piecetable"
+	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/plugins/cloudfox"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"

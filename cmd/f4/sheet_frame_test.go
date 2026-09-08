@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/sheet"
 	"github.com/unxed/f4/internal/testutil"
-	"github.com/unxed/f4/sheet"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )

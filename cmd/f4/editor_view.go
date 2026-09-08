@@ -23,8 +23,8 @@ import (
 
 	"github.com/charlievieth/strcase"
 	"github.com/coregx/coregex"
-	"github.com/unxed/f4/piecetable"
-	"github.com/unxed/f4/textlayout"
+	"github.com/unxed/f4/internal/piecetable"
+	"github.com/unxed/f4/internal/textlayout"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
