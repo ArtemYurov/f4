@@ -9,6 +9,7 @@
 | **Windows 7/8/8.1** | .zip | [amd64](https://github.com/unxed/f4/releases/download/nightly/f4-windows7-amd64.zip) |
 | **macOS** | .tar.gz | [amd64](https://github.com/unxed/f4/releases/download/nightly/f4-darwin-amd64.tar.gz) / [arm64](https://github.com/unxed/f4/releases/download/nightly/f4-darwin-arm64.tar.gz) |
 | **Linux** | .tar.gz | [amd64](https://github.com/unxed/f4/releases/download/nightly/f4-linux-amd64.tar.gz) / [arm64](https://github.com/unxed/f4/releases/download/nightly/f4-linux-arm64.tar.gz) / [armv7l](https://github.com/unxed/f4/releases/download/nightly/f4-linux-arm.tar.gz) / [386](https://github.com/unxed/f4/releases/download/nightly/f4-linux-386.tar.gz) / [mips](https://github.com/unxed/f4/releases/download/nightly/f4-linux-mips.tar.gz) / [mipsle](https://github.com/unxed/f4/releases/download/nightly/f4-linux-mipsle.tar.gz) / [mips64](https://github.com/unxed/f4/releases/download/nightly/f4-linux-mips64.tar.gz) / [mips64le](https://github.com/unxed/f4/releases/download/nightly/f4-linux-mips64le.tar.gz) / [riscv64](https://github.com/unxed/f4/releases/download/nightly/f4-linux-riscv64.tar.gz) / [loong64](https://github.com/unxed/f4/releases/download/nightly/f4-linux-loong64.tar.gz) / [ppc64](https://github.com/unxed/f4/releases/download/nightly/f4-linux-ppc64.tar.gz) / [ppc64le](https://github.com/unxed/f4/releases/download/nightly/f4-linux-ppc64le.tar.gz) |
+| **Android (Termux)** | .tar.gz / .deb | [arm64 archive](https://github.com/unxed/f4/releases/download/nightly/f4-termux-arm64.tar.gz) / [arm64 package](https://github.com/unxed/f4/releases/download/nightly/f4-termux-arm64.deb) |
 | **FreeBSD** | .tar.gz | [amd64](https://github.com/unxed/f4/releases/download/nightly/f4-freebsd-amd64.tar.gz) / [arm64](https://github.com/unxed/f4/releases/download/nightly/f4-freebsd-arm64.tar.gz) |
 | **DragonflyBSD** | .tar.gz | [amd64](https://github.com/unxed/f4/releases/download/nightly/f4-dragonfly-amd64.tar.gz) |
 | **OpenBSD** | .tar.gz | [amd64](https://github.com/unxed/f4/releases/download/nightly/f4-openbsd-amd64.tar.gz) / [arm64](https://github.com/unxed/f4/releases/download/nightly/f4-openbsd-arm64.tar.gz) |
@@ -17,6 +18,20 @@
 | **Solaris** (experimental) | .tar.gz | [amd64](https://github.com/unxed/f4/releases/download/nightly/f4-solaris-amd64.tar.gz) |
 
 *These builds are automated and represent the current state of the `main` branch.*
+
+### 📱 Install on Android via Termux
+
+The Android build currently targets **arm64 in Termux**. Download the `.deb`
+package above and install it from Termux:
+
+```sh
+pkg install ./f4-termux-arm64.deb
+```
+
+Alternatively, extract the `.tar.gz` archive and run `./f4`. Both artifacts
+are linked against Termux's libraries and are intended to run inside Termux;
+they are not standalone Android APKs. Other Android architectures are not
+published yet.
 
 An installed f4 updates itself from the command line, no browser needed:
 
