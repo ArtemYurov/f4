@@ -278,6 +278,9 @@ and `TestMain` — the waves would otherwise strand.
 planning decision the user may wish to overrule, and doing so changes four task
 titles, not the ordering.
 
+**Session handoff:** [HANDOFF.md](HANDOFF.md) — where the work stands, the
+upstream merge that must happen first, the open tails and the tool hazards.
+
 ## Phase Index
 
 1. [Phase 1: Upstream Sync, Baseline and Barrier Removal](phase-01-baseline-and-barriers.md) — Tasks 0-9 and 43
