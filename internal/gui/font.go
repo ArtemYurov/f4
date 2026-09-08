@@ -1,4 +1,4 @@
-package main
+package gui
 
 import (
 	"github.com/unxed/f4/internal/config"

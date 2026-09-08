@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/gui"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/f4/vfs/hostmode"
 	"github.com/unxed/f4/vfs/hostpath"
@@ -77,7 +78,7 @@ func normalizeExternalDropPath(raw string) string {
 		// the \\?\unix form for a file no drive covers -- but a drop can
 		// just as well name C:\users\... or a drive the user mapped
 		// himself, and those a string rule cannot reach.
-		if unix, ok := hostUnixPath(raw); ok && unix != "" {
+		if unix, ok := gui.HostUnixPath(raw); ok && unix != "" {
 			cleaned := hostpath.Clean(unix)
 			vtui.DebugLog("DND: Wine translated %q to %q", raw, cleaned)
 			return cleaned
@@ -537,7 +538,7 @@ func localDragPaths(fsp *FileSystemPanel, names []string) ([]string, bool) {
 			// translation properly; the Z: rule below only guesses, and
 			// guesses wrong in any prefix whose Z: is not the root -- an
 			// unopenable path is why a target refuses the drop.
-			if dos, ok := hostDosPath(p); ok && dos != "" {
+			if dos, ok := gui.HostDosPath(p); ok && dos != "" {
 				p = dos
 			} else if strings.HasPrefix(p, "/") {
 				p = `Z:` + strings.ReplaceAll(p, "/", `\`)

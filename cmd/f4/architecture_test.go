@@ -107,6 +107,8 @@ var architectureLayers = map[string]int{
 	// leaf and none of the interactive subsystems.
 	"internal/plughost": 2,
 
+	"internal/gui": 2,
+
 	"internal/dialog": 3,
 
 	// Test scaffolding, placed by what it may import: testutil imports no

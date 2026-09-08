@@ -1,4 +1,4 @@
-package main
+package gui
 
 import (
 	"path/filepath"
@@ -7,15 +7,15 @@ import (
 	"strings"
 )
 
-// discoverInstalledGuiFonts is a variable so the settings dialog and the
+// DiscoverInstalledGuiFonts is a variable so the settings dialog and the
 // language recommendation can share one catalog while tests can avoid
 // depending on the host's installed fonts.
-var discoverInstalledGuiFonts = platformGuiFontFiles
+var DiscoverInstalledGuiFonts = platformGuiFontFiles
 
 // guiFontChoices keeps the current value even when it is a manually entered
 // path or family name that the platform catalog cannot discover.
 func guiFontChoices(language, current string) []string {
-	return guiFontChoicesFromInstalled(current, discoverInstalledGuiFonts(language))
+	return guiFontChoicesFromInstalled(current, DiscoverInstalledGuiFonts(language))
 }
 
 func guiFontChoicesFromInstalled(current string, installed []string) []string {
@@ -45,7 +45,7 @@ func guiFontChoicesFromInstalled(current string, installed []string) []string {
 // name helpers: those live in the //go:build windows file and override these
 // from init there. The non-Windows default uses the font file's short name.
 var platformGuiFontDisplayChoices = func(language, current string) []string {
-	installed := discoverInstalledGuiFonts(language)
+	installed := DiscoverInstalledGuiFonts(language)
 	choices := make([]string, 0)
 	seen := make(map[string]struct{})
 	for _, value := range guiFontChoicesFromInstalled(current, installed) {
@@ -73,10 +73,10 @@ var platformGuiFontDisplayNameFromInstalled = func(value string, _ []string) str
 	return platformGuiFontDisplayName(value)
 }
 
-// guiFontDisplayChoices returns the strings shown in the font picker. On
+// GuiFontDisplayChoices returns the strings shown in the font picker. On
 // Windows these are font family names (e.g. "Cascadia Mono"); on other
 // platforms they are short names derived from the discovered font files.
-func guiFontDisplayChoices(language, current string) []string {
+func GuiFontDisplayChoices(language, current string) []string {
 	return platformGuiFontDisplayChoices(language, current)
 }
 
@@ -89,7 +89,7 @@ func guiFontDisplayValue(language, value string) string {
 	if value == "" {
 		return ""
 	}
-	return guiFontDisplayValueFromInstalled(value, discoverInstalledGuiFonts(language))
+	return guiFontDisplayValueFromInstalled(value, DiscoverInstalledGuiFonts(language))
 }
 
 func guiFontDisplayValueFromInstalled(value string, installed []string) string {
@@ -101,19 +101,19 @@ func guiFontDisplayValueFromInstalled(value string, installed []string) string {
 	return value
 }
 
-func guiFontCurrentDisplayName(language, current string) string {
+func GuiFontCurrentDisplayName(language, current string) string {
 	return guiFontDisplayValue(language, current)
 }
 
-// guiFontValueForDisplay converts a picker label back to the value consumed by
+// GuiFontValueForDisplay converts a picker label back to the value consumed by
 // the GUI backend. Manual input that is not one of the catalog labels passes
 // through unchanged.
-func guiFontValueForDisplay(language, current, display string) string {
+func GuiFontValueForDisplay(language, current, display string) string {
 	display = strings.TrimSpace(display)
 	if display == "" {
 		return ""
 	}
-	installed := discoverInstalledGuiFonts(language)
+	installed := DiscoverInstalledGuiFonts(language)
 	for _, value := range guiFontChoicesFromInstalled(current, installed) {
 		if strings.EqualFold(guiFontDisplayValueFromInstalled(value, installed), display) {
 			return value
@@ -129,14 +129,14 @@ func sameGuiFontValue(left, right string) bool {
 	return filepath.Clean(left) == filepath.Clean(right)
 }
 
-func shouldSuggestFontForLanguage(language, current string) bool {
+func ShouldSuggestFontForLanguage(language, current string) bool {
 	if !isCJKLanguage(language) {
 		return false
 	}
 	if strings.TrimSpace(current) == "" {
-		return len(discoverInstalledGuiFonts(language)) > 0
+		return len(DiscoverInstalledGuiFonts(language)) > 0
 	}
-	for _, path := range discoverInstalledGuiFonts(language) {
+	for _, path := range DiscoverInstalledGuiFonts(language) {
 		if sameGuiFontValue(current, path) {
 			return false
 		}

@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"runtime"
 
+	"github.com/unxed/f4/internal/gui"
 	"github.com/unxed/vtui"
 )
 
@@ -17,7 +18,7 @@ const f4TerminalClipboardMaxBytes = 1024 * 1024
 
 func setF4Clipboard(text string) {
 	vtui.SetClipboard(text)
-	if runtime.GOOS == "windows" || runningGUI || !probeHostTTY() {
+	if runtime.GOOS == "windows" || gui.Running || !probeHostTTY() {
 		return
 	}
 

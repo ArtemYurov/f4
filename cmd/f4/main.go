@@ -16,6 +16,7 @@ import (
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/fusefs"
+	"github.com/unxed/f4/internal/gui"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
@@ -618,7 +619,7 @@ func runGuiBackend(backend string, fromConfig bool) error {
 	if backend == "" {
 		return tryRunDefaultGui()
 	}
-	err := RunGui(backend)
+	err := gui.RunGui(backend, setupGuiUI)
 	if err == nil || !fromConfig {
 		return err
 	}
@@ -653,10 +654,18 @@ func shouldTryGui() bool {
 	return os.Getenv("WAYLAND_DISPLAY") != "" || os.Getenv("DISPLAY") != ""
 }
 
+// setupGuiUI builds the interface inside a freshly opened GUI window. The file
+// named by -e is opened here rather than before RunGui, because it needs the
+// frames that SetupUI creates.
+func setupGuiUI() {
+	SetupUI()
+	openDashEFileIfRequested()
+}
+
 func tryRunDefaultGui() error {
 	if vtui.IsWine() {
 		vtui.DebugLog("GUI_AUTO: Under Wine, trying win32 GUI backend...")
-		if err := RunGui("win32"); err == nil {
+		if err := gui.RunGui("win32", setupGuiUI); err == nil {
 			return nil
 		}
 	}
@@ -666,14 +675,14 @@ func tryRunDefaultGui() error {
 		// Windows: try native win32 (GDI) first as the primary, lightweight, cgo-free backend.
 		if runtime.GOOS == "windows" {
 			vtui.DebugLog("GUI_AUTO: Trying win32...")
-			if err := RunGui("win32"); err == nil {
+			if err := gui.RunGui("win32", setupGuiUI); err == nil {
 				return nil
 			} else {
 				errs = append(errs, fmt.Sprintf("win32: %v", err))
 			}
 
 			vtui.DebugLog("GUI_AUTO: Trying ebiten...")
-			if err := RunGui("ebiten"); err == nil {
+			if err := gui.RunGui("ebiten", setupGuiUI); err == nil {
 				return nil
 			} else {
 				errs = append(errs, fmt.Sprintf("ebiten: %v", err))
@@ -682,7 +691,7 @@ func tryRunDefaultGui() error {
 
 		// Try gogpu (macOS default; Windows fallback)
 		vtui.DebugLog("GUI_AUTO: Trying gogpu...")
-		if err := RunGui("gogpu"); err == nil {
+		if err := gui.RunGui("gogpu", setupGuiUI); err == nil {
 			return nil
 		} else {
 			errs = append(errs, fmt.Sprintf("gogpu: %v", err))
@@ -691,7 +700,7 @@ func tryRunDefaultGui() error {
 		// Fallback to X11 if DISPLAY environment variable is set
 		if os.Getenv("DISPLAY") != "" {
 			vtui.DebugLog("GUI_AUTO: Trying x11...")
-			if err := RunGui("x11"); err == nil {
+			if err := gui.RunGui("x11", setupGuiUI); err == nil {
 				return nil
 			} else {
 				errs = append(errs, fmt.Sprintf("x11: %v", err))
@@ -700,7 +709,7 @@ func tryRunDefaultGui() error {
 	} else {
 		if os.Getenv("WAYLAND_DISPLAY") != "" {
 			vtui.DebugLog("GUI_AUTO: Trying wayland...")
-			if err := RunGui("wayland"); err == nil {
+			if err := gui.RunGui("wayland", setupGuiUI); err == nil {
 				return nil
 			} else {
 				errs = append(errs, fmt.Sprintf("wayland: %v", err))
@@ -708,7 +717,7 @@ func tryRunDefaultGui() error {
 		}
 		if os.Getenv("DISPLAY") != "" {
 			vtui.DebugLog("GUI_AUTO: Trying x11...")
-			if err := RunGui("x11"); err == nil {
+			if err := gui.RunGui("x11", setupGuiUI); err == nil {
 				return nil
 			} else {
 				errs = append(errs, fmt.Sprintf("x11: %v", err))

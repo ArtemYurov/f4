@@ -1,6 +1,6 @@
 //go:build !windows
 
-package main
+package gui
 
 // windowsFontFile is a no-op outside Windows: font name resolution there is
 // left entirely to vtui.

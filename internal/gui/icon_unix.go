@@ -1,6 +1,6 @@
 //go:build linux || openbsd || netbsd || dragonfly || freebsd || illumos || solaris
 
-package main
+package gui
 
 // applyDarwinDockIcon is a no-op away from macOS; on X11/Wayland the window
 // icon comes from the .desktop file shipped in packaging/linux.

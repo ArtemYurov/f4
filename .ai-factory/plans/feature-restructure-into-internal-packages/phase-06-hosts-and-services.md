@@ -509,6 +509,37 @@ The `noffi` build is the one most likely to break: it selects the stub backend.
 
 ---
 
+### What the wave actually found
+
+**`internal/gui` is layer 2, not the 1 the task text assigns.** Both `RunGui`
+variants route the `qt` and `ext:` backends to
+`plughost.RunExternalUIWithMapping`, so gui sits beside the host rather than
+below it. Rule 6 allows the same-layer edge; a `1` would have failed the
+auditor.
+
+**No application interface was needed — one callback was enough.** The package
+named three things above it: `SetupUI`, `openDashEFileIfRequested` and
+`withGUIRuntime`. The first two are always called together, in order, from the
+one place a window is created, so `RunGui` takes a `setupUI func()` and
+`main.go` supplies both. The third disappeared: `runningGUI` moved down into
+this package as `gui.Running`, because `clipboard.go` (term, Task 30),
+`external_editor_process_unix.go` (editor, Task 33) and `session_*.go` all read
+it, and each of those waves would otherwise have needed a seam of its own.
+
+**`gui_font_catalog_test.go` split.** Seven of its eight tests are about the
+font catalogue; `TestAppearanceSettingsFontComboRemainsEditable` drives the
+appearance dialog through a real `PanelsFrame` and stayed behind as
+`cmd/f4/gui_font_combo_dialog_test.go`, which is what made
+`discoverInstalledGuiFonts` an exported seam.
+
+**Two things the task told the wave to check, both confirmed:** `go generate`
+stays as `./cmd/f4`, because the directive is in `main.go`; and of the three
+path constructions in `tools/icons/main.go` only `iconDir` and `outDir` move —
+`cmd.Dir` stays, along with `build.yml`'s two `.syso` cache paths. Running the
+generator to prove the new paths work rewrites every committed icon binary with
+different bytes and emits three sizes the repository does not carry, so its
+output was reverted; that drift is real but it is not this commit's business.
+
 ## Task 28: Extract `internal/macro`
 
 ### Intent

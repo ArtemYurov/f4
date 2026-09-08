@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/unxed/f4/internal/gui"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/f4/internal/numeric"
@@ -107,7 +108,7 @@ func removeSessionInfo(sockPath string) {
 }
 
 func ManageSessions() {
-	runningGUI = false
+	gui.Running = false
 	if len(os.Args) > 1 && os.Args[1] == "--server" {
 		runServer(os.Args[2])
 		return

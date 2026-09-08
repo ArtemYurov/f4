@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package gui
 
 import (
 	"strings"
@@ -10,8 +10,11 @@ import (
 	"github.com/unxed/vtui"
 )
 
-func RunGui(backend string) error {
-	return withGUIRuntime(func() error {
+// RunGui opens a window on the named backend. setupUI is called once the
+// window exists and must build the interface inside it; everything after it
+// runs on the GUI thread.
+func RunGui(backend string, setupUI func()) error {
+	return WithRuntime(func() error {
 		if backend == "qt" || strings.HasPrefix(backend, "ext:") {
 			return plughost.RunExternalUIWithMapping(backend)
 		}
@@ -21,8 +24,7 @@ func RunGui(backend string) error {
 		stopIconManager := startWindowsWindowIconManager()
 		defer stopIconManager()
 		return vtui.RunInGUIWindow(config.App.GuiCols, config.App.GuiRows, backend, effectiveGuiFont(), float64(config.App.GuiFontSize), func() {
-			SetupUI()
-			openDashEFileIfRequested()
+			setupUI()
 			restoreGuiWindowPosition()
 		})
 	})

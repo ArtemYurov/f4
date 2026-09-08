@@ -97,6 +97,17 @@ each wave phase file so a task can be implemented from one file.
      Rename the local inside the affected function; renaming the package
      qualifier instead is how a wave loses a call it meant to keep.
 
+   - **A GOOS or GOARCH name at the end of a new filename.** Go reads
+     `transport_wasm.go` as constrained to `GOARCH=wasm`: the package still
+     compiles and the file is simply absent everywhere else. There are about
+     forty such suffixes and half of them read as ordinary words — `_js`,
+     `_ios`, `_android`, `_386`, `_mips`, `_plan9`, `_aix`. After renaming, run
+     ```
+     ls internal/<pkg>/*.go | grep -oE '_(android|ios|js|wasm|wasip1|plan9|aix|s390x|riscv64|loong64|mips|mipsle|ppc64|ppc64le|386)\.go$'
+     ```
+     and rename anything it prints. A file that already carries the matching
+     `//go:build` line is fine; a file that does not has silently left the build.
+
    And check the round trip on anything the rewrite touched that carried data: a
    struct literal replaced by a constructor drops the fields the constructor does
    not take. Task 20 lost two seeded history fixtures that way, and only one of
@@ -114,6 +125,17 @@ each wave phase file so a task can be implemented from one file.
    for it: read the header. A regression written into the
    file on wave N becomes "known red" on wave N+1 and is lost for good, which is
    exactly the failure the baseline exists to prevent.
+   **A cross-compile of `./...` does not build `_test.go` files.** A wave that
+   strands a test on a platform the host is not — a `//go:build linux` test
+   naming a constant the wave exported — leaves a package whose test binary
+   does not compile there, and every local check stays green. `go vet`
+   type-checks tests, so the sweep is
+   ```
+   for os in linux windows darwin freebsd; do GOOS=$os go vet ./...; done
+   ```
+   Task 23 stranded `child_env_universal_linux_test.go` this way and four waves
+   passed before anything noticed.
+
    Run all six modules, not only `go test ./...`: the four `tools/` modules are
    invisible to it and are touched by Task 13 (plugring) and Task 27 (icons).
    A cross-compile loop that includes freebsd or netbsd passes

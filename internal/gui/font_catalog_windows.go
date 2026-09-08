@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package gui
 
 import (
 	"sort"
@@ -69,7 +69,7 @@ func platformGuiFontFiles(language string) []string {
 // windowsGuiFontDisplayChoices returns the font family names to show in the
 // picker (e.g. "Cascadia Mono") instead of file paths.
 func windowsGuiFontDisplayChoices(language, current string) []string {
-	installed := discoverInstalledGuiFonts(language)
+	installed := DiscoverInstalledGuiFonts(language)
 	entries := windowsFontEntries()
 	pathToName := make(map[string]string)
 	nameNormToName := make(map[string]string)

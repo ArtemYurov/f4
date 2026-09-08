@@ -15,6 +15,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/dialog"
+	"github.com/unxed/f4/internal/gui"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
@@ -797,7 +798,7 @@ func actionEditFileExternal(pf *PanelsFrame, v vfs.VFS, path string, size int64)
 // remains a fallback so existing settings continue to work after the split
 // configuration is introduced.
 func configuredExternalEditorCommand() string {
-	if runningGUI {
+	if gui.Running {
 		if config.App.ExternalEditorGUI != "" {
 			return config.App.ExternalEditorGUI
 		}
@@ -4529,11 +4530,11 @@ func actionAppearanceSettings(pf *PanelsFrame) {
 			}
 		}
 	}
-	fontChoices := guiFontDisplayChoices(config.App.Language, config.App.GuiFont)
+	fontChoices := gui.GuiFontDisplayChoices(config.App.Language, config.App.GuiFont)
 	comboFont := vtui.NewComboBox(0, 0, 30, fontChoices)
-	comboFont.Edit.SetText(guiFontCurrentDisplayName(config.App.Language, config.App.GuiFont))
+	comboFont.Edit.SetText(gui.GuiFontCurrentDisplayName(config.App.Language, config.App.GuiFont))
 	comboFont.Edit.SelectAll()
-	configureGuiFontCombo(comboFont, fontChoices)
+	gui.ConfigureGuiFontCombo(comboFont, fontChoices)
 	lblFont := vtui.NewLabel(0, 0, i18n.Msg("AppearanceSettings.Font"), comboFont)
 	chkSystemMonospace := vtui.NewCheckbox(0, 0, i18n.Msg("AppearanceSettings.UseSystemMonospace"), false)
 	if config.App.GuiUseSystemMonospace {
@@ -4736,7 +4737,7 @@ func actionAppearanceSettings(pf *PanelsFrame) {
 			config.App.ColorStyle = names[comboStyle.Menu.SelectPos]
 		}
 		useSystemMonospace := chkSystemMonospace.State == 1
-		fontValue := guiFontValueForDisplay(config.App.Language, config.App.GuiFont, comboFont.Edit.GetText())
+		fontValue := gui.GuiFontValueForDisplay(config.App.Language, config.App.GuiFont, comboFont.Edit.GetText())
 		fontChanged := config.App.GuiUseSystemMonospace != useSystemMonospace || config.App.GuiFont != fontValue || fmt.Sprintf("%d", config.App.GuiFontSize) != editSize.GetText()
 
 		config.App.ConsoleTitleTemplate = editTitle.GetText()
@@ -5147,7 +5148,7 @@ func actionLanguage(pf *PanelsFrame) {
 		suggestFontChoice := false
 		if idx := comboUI.Menu.SelectPos; idx >= 0 && idx < len(uiLangs) {
 			if config.App.Language != uiLangs[idx].Code {
-				suggestFontChoice = shouldSuggestFontForLanguage(uiLangs[idx].Code, config.App.GuiFont)
+				suggestFontChoice = gui.ShouldSuggestFontForLanguage(uiLangs[idx].Code, config.App.GuiFont)
 				config.App.Language = uiLangs[idx].Code
 				uiChanged = true
 			}

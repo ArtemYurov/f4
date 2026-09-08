@@ -362,7 +362,7 @@ titles, not the ordering.
 ### Phase 6: Hosts and Services
 - [x] Task 25: Extract `internal/dialog`, and fix the silent dialog-test drop ([details](phase-06-hosts-and-services.md#task-25-extract-internaldialog)) (depends on 24)
 - [x] Task 26: Extract `internal/plughost`; cut `panel_plugins.go`'s `coreAPI` method ([details](phase-06-hosts-and-services.md#task-26-extract-internalplughost)) (depends on 25)
-- [ ] Task 27: Extract `internal/gui`; move two of three `tools/icons` paths ([details](phase-06-hosts-and-services.md#task-27-extract-internalgui)) (depends on 26)
+- [x] Task 27: Extract `internal/gui`; move two of three `tools/icons` paths ([details](phase-06-hosts-and-services.md#task-27-extract-internalgui)) (depends on 26)
 - [ ] Task 28: Extract `internal/macro` ([details](phase-06-hosts-and-services.md#task-28-extract-internalmacro)) (depends on 27)
 
 ### Phase 7: Viewer, Terminal and Media
@@ -494,6 +494,18 @@ with its own discussion, not a side effect of a refactor.
 So: two interfaces, two audiences. `vfs.HostAPI` is what the host gives a
 plugin — public, guarded, unchanged by this branch. The new one is what the
 application gives the host — internal, and no plugin ever sees it.
+
+**The list is measured, never inferred — and Task 26 proved it on itself.** Its
+own count moved in both directions once the wave was actually run: two of the
+five above were unnecessary, because `vfs.App` already declares
+`RunProgressTask` and `Menu`, so one method reaching the current application
+replaced both; and four were missing — `AskOverwrite` and `AskError`, which
+`newHostMethods` calls and this table did not count, plus `OpenPanelProvider`
+and `IsStale`. The last one is the warning worth keeping: translating the
+panel-liveness check as `Current() != app` compiles, reads correctly, and
+silently rejects every application object that is not a panels frame. Two tests
+caught it. A method list derived from another wave's is a guess with a
+plausible shape.
 
 **This decision covers the four waves after it.** `internal/gui`,
 `internal/macro`, `internal/viewer` and `internal/term` will each hit the same

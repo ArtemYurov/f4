@@ -251,7 +251,7 @@ CGO_ENABLED=0 go build ./cmd/f4
 ```
 
 The generated platform icons are committed to the repository, so a normal
-build does not need an image converter. If `cmd/f4/assets/icon/f4.svg` is changed,
+build does not need an image converter. If `internal/gui/assets/icon/f4.svg` is changed,
 regenerate PNG, ICO, ICNS, and Windows resources on any supported OS with:
 
 ```bash

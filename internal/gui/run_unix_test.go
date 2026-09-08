@@ -1,6 +1,6 @@
 //go:build linux || darwin || openbsd || netbsd || dragonfly || freebsd || illumos || solaris
 
-package main
+package gui
 
 import (
 	"strings"

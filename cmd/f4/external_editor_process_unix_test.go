@@ -3,14 +3,15 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/gui"
 	"os/exec"
 	"testing"
 )
 
 func TestConfigureExternalEditorProcessUsesControllingTTY(t *testing.T) {
-	oldRunningGUI := runningGUI
-	runningGUI = false
-	t.Cleanup(func() { runningGUI = oldRunningGUI })
+	oldRunningGUI := gui.Running
+	gui.Running = false
+	t.Cleanup(func() { gui.Running = oldRunningGUI })
 
 	cmd := exec.Command("true")
 	configureExternalEditorProcess(cmd)
@@ -23,9 +24,9 @@ func TestConfigureExternalEditorProcessUsesControllingTTY(t *testing.T) {
 }
 
 func TestConfigureExternalEditorProcessLeavesGUIEditorAlone(t *testing.T) {
-	oldRunningGUI := runningGUI
-	runningGUI = true
-	t.Cleanup(func() { runningGUI = oldRunningGUI })
+	oldRunningGUI := gui.Running
+	gui.Running = true
+	t.Cleanup(func() { gui.Running = oldRunningGUI })
 
 	cmd := exec.Command("true")
 	configureExternalEditorProcess(cmd)
@@ -35,9 +36,9 @@ func TestConfigureExternalEditorProcessLeavesGUIEditorAlone(t *testing.T) {
 }
 
 func TestConfigureExternalEditorProcessCanOpenDevTTY(t *testing.T) {
-	oldRunningGUI := runningGUI
-	runningGUI = false
-	t.Cleanup(func() { runningGUI = oldRunningGUI })
+	oldRunningGUI := gui.Running
+	gui.Running = false
+	t.Cleanup(func() { gui.Running = oldRunningGUI })
 
 	pty, err := NewPTY()
 	if err != nil {

@@ -92,7 +92,7 @@ jobs:
       run: |
         go generate ./cmd/f4
         git diff --exit-code -- \
-          cmd/f4/assets/icon/generated \
+          internal/gui/assets/icon/generated \
           cmd/f4/rsrc_windows_amd64.syso \
           cmd/f4/rsrc_windows_arm64.syso
 
@@ -208,11 +208,11 @@ jobs:
           for size in 16 24 28 30 32 36 42 48 56 64 128 256 512 1024; do
             icon_dir="build/share/icons/hicolor/${size}x${size}/apps"
             mkdir -p "$icon_dir"
-            cp "cmd/f4/assets/icon/generated/f4-${size}.png" \
+            cp "internal/gui/assets/icon/generated/f4-${size}.png" \
               "$icon_dir/io.github.unxed.f4.png"
           done
           mkdir -p build/share/icons/hicolor/scalable/apps
-          cp cmd/f4/assets/icon/f4.svg \
+          cp internal/gui/assets/icon/f4.svg \
             build/share/icons/hicolor/scalable/apps/io.github.unxed.f4.svg
         fi
 
@@ -321,7 +321,7 @@ jobs:
           mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
           cp build/f4 "$APP/Contents/MacOS/f4"
           chmod +x "$APP/Contents/MacOS/f4"
-          cp cmd/f4/assets/icon/generated/f4.icns "$APP/Contents/Resources/f4.icns"
+          cp internal/gui/assets/icon/generated/f4.icns "$APP/Contents/Resources/f4.icns"
           sed -e "s/__VERSION__/$VERSION/g" \
               -e "s/__BUILD_VERSION__/$GITHUB_RUN_NUMBER/g" \
               packaging/macos/Info.plist > "$APP/Contents/Info.plist"
@@ -435,11 +435,11 @@ jobs:
             for size in 16 24 28 30 32 36 42 48 56 64 128 256 512 1024; do
               icon_dir="$BUILD_DIR/share/icons/hicolor/${size}x${size}/apps"
               mkdir -p "$icon_dir"
-              cp "cmd/f4/assets/icon/generated/f4-${size}.png" \
+              cp "internal/gui/assets/icon/generated/f4-${size}.png" \
                 "$icon_dir/io.github.unxed.f4.png"
             done
             mkdir -p "$BUILD_DIR/share/icons/hicolor/scalable/apps"
-            cp cmd/f4/assets/icon/f4.svg \
+            cp internal/gui/assets/icon/f4.svg \
               "$BUILD_DIR/share/icons/hicolor/scalable/apps/io.github.unxed.f4.svg"
           fi
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/unxed/f4/internal/gui"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -29,8 +30,8 @@ func runSessionPicker(sessions []SessionInfo) *SessionInfo {
 }
 
 func ManageSessions() {
-	runningGUI = false
-	stopWindowAppearanceManager := startWindowsConsoleWindowAppearanceManager()
+	gui.Running = false
+	stopWindowAppearanceManager := gui.StartWindowsConsoleWindowAppearanceManager()
 	defer stopWindowAppearanceManager()
 
 	scr := InitCore()

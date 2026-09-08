@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/gui"
 	"os"
 	"path/filepath"
 	"testing"
@@ -9,22 +10,22 @@ import (
 
 func TestConfiguredExternalEditorCommand(t *testing.T) {
 	oldConfig := config.App
-	oldRunningGUI := runningGUI
+	oldRunningGUI := gui.Running
 	t.Cleanup(func() {
 		config.App = oldConfig
-		runningGUI = oldRunningGUI
+		gui.Running = oldRunningGUI
 	})
 
 	config.App.ExternalEditorCommand = "legacy-editor"
 	config.App.ExternalEditorConsole = "micro"
 	config.App.ExternalEditorGUI = "gedit"
 
-	runningGUI = false
+	gui.Running = false
 	if got := configuredExternalEditorCommand(); got != "micro" {
 		t.Fatalf("console editor = %q, want micro", got)
 	}
 
-	runningGUI = true
+	gui.Running = true
 	if got := configuredExternalEditorCommand(); got != "gedit" {
 		t.Fatalf("GUI editor = %q, want gedit", got)
 	}
@@ -36,7 +37,7 @@ func TestConfiguredExternalEditorCommand(t *testing.T) {
 
 	config.App.ExternalEditorCommand = ""
 	config.App.ExternalEditorConsole = ""
-	runningGUI = false
+	gui.Running = false
 	if got := configuredExternalEditorCommand(); got != "" {
 		t.Fatalf("empty editor configuration = %q, want empty", got)
 	}
@@ -44,17 +45,17 @@ func TestConfiguredExternalEditorCommand(t *testing.T) {
 
 func TestConfiguredExternalEditorCommandIgnoresDisplayBackendInTTY(t *testing.T) {
 	oldConfig := config.App
-	oldRunningGUI := runningGUI
+	oldRunningGUI := gui.Running
 	oldProbe := probeGUIBackend
 	t.Cleanup(func() {
 		config.App = oldConfig
-		runningGUI = oldRunningGUI
+		gui.Running = oldRunningGUI
 		probeGUIBackend = oldProbe
 	})
 
 	config.App.ExternalEditorConsole = "micro"
 	config.App.ExternalEditorGUI = "gedit"
-	runningGUI = false
+	gui.Running = false
 	probeGUIBackend = func() string { return "x11" }
 
 	if got := configuredExternalEditorCommand(); got != "micro" {

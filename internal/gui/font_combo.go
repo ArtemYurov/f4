@@ -1,4 +1,4 @@
-package main
+package gui
 
 import (
 	"strings"
@@ -29,7 +29,7 @@ func guiFontComboShouldCloseMenu(text string, filteredCount int) bool {
 	return strings.TrimSpace(text) == "" || filteredCount == 0
 }
 
-func configureGuiFontCombo(combo *vtui.ComboBox, choices []string) {
+func ConfigureGuiFontCombo(combo *vtui.ComboBox, choices []string) {
 	if combo == nil {
 		return
 	}

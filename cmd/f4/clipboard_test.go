@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/gui"
 	"github.com/unxed/vtui"
 )
 
@@ -16,13 +17,13 @@ func TestSetF4Clipboard_UsesTerminalClipboardInTTY(t *testing.T) {
 	}
 
 	oldProbeTTY := probeHostTTY
-	oldRunningGUI := runningGUI
+	oldRunningGUI := gui.Running
 	t.Cleanup(func() {
 		probeHostTTY = oldProbeTTY
-		runningGUI = oldRunningGUI
+		gui.Running = oldRunningGUI
 	})
 	probeHostTTY = func() bool { return true }
-	runningGUI = false
+	gui.Running = false
 	t.Cleanup(swapFrameManager(t))
 
 	var out bytes.Buffer
@@ -45,13 +46,13 @@ func TestSetF4Clipboard_UsesTerminalClipboardInTTY(t *testing.T) {
 
 func TestSetF4Clipboard_DoesNotWriteTerminalForGUI(t *testing.T) {
 	oldProbeTTY := probeHostTTY
-	oldRunningGUI := runningGUI
+	oldRunningGUI := gui.Running
 	t.Cleanup(func() {
 		probeHostTTY = oldProbeTTY
-		runningGUI = oldRunningGUI
+		gui.Running = oldRunningGUI
 	})
 	probeHostTTY = func() bool { return true }
-	runningGUI = true
+	gui.Running = true
 	t.Cleanup(swapFrameManager(t))
 
 	var out bytes.Buffer

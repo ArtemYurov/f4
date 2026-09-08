@@ -1,11 +1,10 @@
-package main
+package gui
 
 import (
 	"reflect"
 	"testing"
 
-	"github.com/unxed/f4/internal/config"
-	"github.com/unxed/f4/internal/theme"
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtui"
 )
 
@@ -18,47 +17,47 @@ func TestParseFontconfigPathsDeduplicatesAndFilters(t *testing.T) {
 }
 
 func TestGuiFontChoicesPreserveManualValueAndCJKRecommendation(t *testing.T) {
-	previous := discoverInstalledGuiFonts
-	discoverInstalledGuiFonts = func(string) []string {
+	previous := DiscoverInstalledGuiFonts
+	DiscoverInstalledGuiFonts = func(string) []string {
 		return []string{"/fonts/NotoSansCJK.ttc", "/fonts/Mono.ttf", "/fonts/NotoSansCJK.ttc"}
 	}
-	t.Cleanup(func() { discoverInstalledGuiFonts = previous })
+	t.Cleanup(func() { DiscoverInstalledGuiFonts = previous })
 
 	got := guiFontChoices("zh", "/custom/font.otf")
 	want := []string{"/custom/font.otf", "/fonts/NotoSansCJK.ttc", "/fonts/Mono.ttf"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("guiFontChoices = %#v, want %#v", got, want)
 	}
-	if shouldSuggestFontForLanguage("en", "") {
+	if ShouldSuggestFontForLanguage("en", "") {
 		t.Fatal("English must not trigger a CJK font recommendation")
 	}
-	if !shouldSuggestFontForLanguage("zh_CN", "") {
+	if !ShouldSuggestFontForLanguage("zh_CN", "") {
 		t.Fatal("empty font must trigger a CJK font recommendation")
 	}
-	if shouldSuggestFontForLanguage("zh-CN", "/fonts/NotoSansCJK.ttc") {
+	if ShouldSuggestFontForLanguage("zh-CN", "/fonts/NotoSansCJK.ttc") {
 		t.Fatal("already selected CJK font must not trigger another recommendation")
 	}
-	if !shouldSuggestFontForLanguage("ja", "/custom/font.otf") {
+	if !ShouldSuggestFontForLanguage("ja", "/custom/font.otf") {
 		t.Fatal("unknown manual font must trigger a CJK font recommendation")
 	}
 }
 
 func TestGuiFontDisplayChoicesUseShortNamesAndKeepManualPaths(t *testing.T) {
-	previous := discoverInstalledGuiFonts
-	discoverInstalledGuiFonts = func(string) []string {
+	previous := DiscoverInstalledGuiFonts
+	DiscoverInstalledGuiFonts = func(string) []string {
 		return []string{"/fonts/NotoSansCJK.ttc", "/fonts/JetBrainsMono-Regular.ttf"}
 	}
-	t.Cleanup(func() { discoverInstalledGuiFonts = previous })
+	t.Cleanup(func() { DiscoverInstalledGuiFonts = previous })
 
-	got := guiFontDisplayChoices("en", "/custom/my-font.otf")
+	got := GuiFontDisplayChoices("en", "/custom/my-font.otf")
 	want := []string{"/custom/my-font.otf", "NotoSansCJK", "JetBrainsMono-Regular"}
 	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("guiFontDisplayChoices = %#v, want %#v", got, want)
+		t.Fatalf("GuiFontDisplayChoices = %#v, want %#v", got, want)
 	}
-	if got := guiFontCurrentDisplayName("en", "/custom/my-font.otf"); got != "/custom/my-font.otf" {
+	if got := GuiFontCurrentDisplayName("en", "/custom/my-font.otf"); got != "/custom/my-font.otf" {
 		t.Fatalf("manual current font display = %q, want full path", got)
 	}
-	if got := guiFontValueForDisplay("en", "/custom/my-font.otf", "JetBrainsMono-Regular"); got != "/fonts/JetBrainsMono-Regular.ttf" {
+	if got := GuiFontValueForDisplay("en", "/custom/my-font.otf", "JetBrainsMono-Regular"); got != "/fonts/JetBrainsMono-Regular.ttf" {
 		t.Fatalf("selected font value = %q, want catalog path", got)
 	}
 }
@@ -80,12 +79,12 @@ func TestFilterGuiFontDisplayChoicesMatchesSubstring(t *testing.T) {
 }
 
 func TestConfigureGuiFontComboFiltersWhileKeepingManualInput(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(testutil.SwapFrameManager(t))
 	vtui.FrameManager = nil
 
 	choices := []string{"JetBrainsMono-Regular", "NotoSansCJK", "Liberation Mono"}
 	combo := vtui.NewComboBox(0, 0, 30, choices)
-	configureGuiFontCombo(combo, choices)
+	ConfigureGuiFontCombo(combo, choices)
 
 	if combo.DropdownOnly {
 		t.Fatal("font combo must allow manual input")
@@ -144,52 +143,5 @@ func TestFontconfigPatternByLanguage(t *testing.T) {
 		if got := cjkFontconfigPattern(test.language); got != test.want {
 			t.Errorf("cjkFontconfigPattern(%q) = %q, want %q", test.language, got, test.want)
 		}
-	}
-}
-
-func TestAppearanceSettingsFontComboRemainsEditable(t *testing.T) {
-	previous := discoverInstalledGuiFonts
-	discoverInstalledGuiFonts = func(string) []string { return []string{"/fonts/NotoSansCJK.ttc", "/fonts/Mono.ttf"} }
-	t.Cleanup(func() { discoverInstalledGuiFonts = previous })
-
-	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	theme.SetDefaultF4Palette()
-	oldConfig := config.App
-	oldPath := config.GetUserConfigIniPath
-	config.App.GuiFont = "/custom/font.otf"
-	config.App.Language = "zh"
-	config.GetUserConfigIniPath = func() string { return t.TempDir() + "/settings.ini" }
-	t.Cleanup(func() {
-		config.App = oldConfig
-		config.GetUserConfigIniPath = oldPath
-	})
-
-	pf := NewPanelsFrame()
-	t.Cleanup(pf.Close)
-	pf.ResizeConsole(80, 25)
-	actionAppearanceSettings(pf)
-	top := vtui.FrameManager.GetTopFrame().(vtui.Container)
-
-	var fontCombo *vtui.ComboBox
-	for _, child := range top.GetChildren() {
-		combo, ok := child.(*vtui.ComboBox)
-		if !ok || len(combo.Menu.Items) == 0 {
-			continue
-		}
-		if combo.Menu.Items[0].Text == "/custom/font.otf" {
-			fontCombo = combo
-			break
-		}
-	}
-	if fontCombo == nil {
-		t.Fatal("font catalog combobox not found")
-	}
-	if fontCombo.DropdownOnly {
-		t.Fatal("font catalog combobox must preserve manual entry")
-	}
-	fontCombo.Edit.SetText("/manually/entered/font.ttf")
-	clickDialogButton(t, top, "Ok")
-	if config.App.GuiFont != "/manually/entered/font.ttf" {
-		t.Fatalf("manual font path = %q", config.App.GuiFont)
 	}
 }

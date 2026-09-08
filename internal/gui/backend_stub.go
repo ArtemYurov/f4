@@ -1,6 +1,6 @@
 //go:build !windows && (!(linux || darwin || freebsd) || !(amd64 || arm64))
 
-package main
+package gui
 
 // goffi does not build for these targets -- its ffi package needs Windows, or
 // Linux/macOS on amd64/arm64 -- so f4 must not import it here just to

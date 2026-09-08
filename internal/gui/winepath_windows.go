@@ -1,6 +1,6 @@
 //go:build windows && (amd64 || arm64)
 
-package main
+package gui
 
 import (
 	"sync"
@@ -51,10 +51,10 @@ func logWinePathSupport() {
 	})
 }
 
-// hostUnixPath translates a DOS path into the POSIX path it names. The
+// HostUnixPath translates a DOS path into the POSIX path it names. The
 // second result is false when the translation is unavailable -- on real
 // Windows, or for a path no drive covers.
-func hostUnixPath(dos string) (string, bool) {
+func HostUnixPath(dos string) (string, bool) {
 	logWinePathSupport()
 	if dos == "" || procWineGetUnixFileName.Find() != nil {
 		return "", false
@@ -71,9 +71,9 @@ func hostUnixPath(dos string) (string, bool) {
 	return stringFromCString(out), true
 }
 
-// hostDosPath is the other direction: the DOS path a Wine application can
+// HostDosPath is the other direction: the DOS path a Wine application can
 // open, for a POSIX path we already hold.
-func hostDosPath(unix string) (string, bool) {
+func HostDosPath(unix string) (string, bool) {
 	logWinePathSupport()
 	if unix == "" || procWineGetDosFileName.Find() != nil {
 		return "", false

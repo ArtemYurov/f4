@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package gui
 
 import (
 	"os"
@@ -73,7 +73,7 @@ func startWindowsWindowIconManager() func() {
 	})
 }
 
-func startWindowsConsoleWindowAppearanceManager() func() {
+func StartWindowsConsoleWindowAppearanceManager() func() {
 	return startWindowsWindowAppearanceManager(func() uintptr {
 		hwnd, _, _ := procIconGetConsoleWindow.Call()
 		return hwnd

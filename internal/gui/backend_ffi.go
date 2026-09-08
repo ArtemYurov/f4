@@ -1,6 +1,6 @@
 //go:build windows || ((linux || darwin || freebsd) && (amd64 || arm64))
 
-package main
+package gui
 
 import "github.com/go-webgpu/goffi/ffi"
 

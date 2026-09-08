@@ -3,6 +3,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/gui"
 	"os/exec"
 	"syscall"
 )
@@ -13,7 +14,7 @@ import (
 // attached stdin/stdout is not enough for editors such as micro that open
 // /dev/tty during startup.
 func configureExternalEditorProcess(cmd *exec.Cmd) {
-	if runningGUI {
+	if gui.Running {
 		// GUI hosts normally have no terminal at all. In particular, forcing
 		// Setctty on /dev/null would make even a GUI editor fail before it
 		// starts.
