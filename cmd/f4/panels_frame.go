@@ -1678,7 +1678,7 @@ func (pf *PanelsFrame) Show(scr *vtui.ScreenBuf) {
 	if !isBusy && pf.cmdSession.idle() {
 		if fsp := pf.getActivePanel(); fsp != nil {
 			currentPath := fsp.vfs.GetPath()
-			if currentPath != pf.lastPtyPath || !sameVFSInstance(fsp.vfs, pf.lastPtyVFS) {
+			if currentPath != pf.lastPtyPath || !fileops.SameVFSInstance(fsp.vfs, pf.lastPtyVFS) {
 				if pf.syncPTYDirectory(currentPath, fsp.vfs) {
 					pf.lastPtyPath = currentPath
 					pf.lastPtyVFS = fsp.vfs
@@ -2581,7 +2581,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 				// this one-shot check only covers an Enter arriving before the
 				// next frame refresh.
 				if localShellVFS != nil && !isWindowsShell {
-					if path != pf.lastPtyPath || !sameVFSInstance(localShellVFS, pf.lastPtyVFS) {
+					if path != pf.lastPtyPath || !fileops.SameVFSInstance(localShellVFS, pf.lastPtyVFS) {
 						if pf.syncPTYDirectory(path, localShellVFS) {
 							pf.lastPtyPath = path
 							pf.lastPtyVFS = localShellVFS
@@ -3336,8 +3336,8 @@ func (pf *PanelsFrame) HandleCommand(cmd int, args any) bool {
 	switch cmd {
 	case vtui.CmQuit:
 		active := 0
-		if GlobalQueueManager != nil {
-			active = GlobalQueueManager.ActiveTasksCount()
+		if fileops.GlobalQueueManager != nil {
+			active = fileops.GlobalQueueManager.ActiveTasksCount()
 		}
 		if config.App.ConfirmExit || active > 0 {
 			msg := i18n.Msg("Quit.Confirm")
@@ -3948,18 +3948,18 @@ func (pf *PanelsFrame) runProgressTaskAfter(delay time.Duration, title, startMsg
 	}
 }
 func (pf *PanelsFrame) RunAdvancedProgressTask(title string, forked bool, worker func(ctx context.Context, reporter vfs.TaskReporter) error, onComplete func(err error)) {
-	dlg := NewFileOpProgressDialog(title)
+	dlg := fileops.NewFileOpProgressDialog(title)
 	var taskCtx *vtui.TaskContext
 	done := make(chan struct{})
 	dialogShown := false // accessed only from UI tasks
-	dlg.btnCancel.OnClick = func() { dlg.SetExitCode(1) }
+	dlg.SetOnCancel(func() { dlg.SetExitCode(1) })
 	dlg.OnResult = func(code int) {
 		if taskCtx != nil {
 			taskCtx.Cancel()
 		}
 	}
 
-	reporter := newDialogReporter(dlg)
+	reporter := fileops.NewDialogReporter(dlg)
 
 	uiFrames := vtui.FrameManager
 	var showDialog func()
@@ -4018,7 +4018,7 @@ func (p *progressTaskReporter) IsCancelled() bool { return false }
 
 func (pf *PanelsFrame) ExecuteDummyOp(mode int) {
 	desc := "Dummy 5-minute operation"
-	runFunc := func(ctx context.Context, reporter TaskReporter, anchor vtui.Frame) error {
+	runFunc := func(ctx context.Context, reporter fileops.TaskReporter, anchor vtui.Frame) error {
 		totalSteps := 300 // 5 minutes = 300 seconds
 		for i := 1; i <= totalSteps; i++ {
 			if ctx.Err() != nil {
@@ -4031,7 +4031,7 @@ func (pf *PanelsFrame) ExecuteDummyOp(mode int) {
 	}
 
 	if mode == 0 {
-		GlobalQueueManager.Enqueue(&QueueTask{
+		fileops.GlobalQueueManager.Enqueue(&fileops.QueueTask{
 			Type: "Dummy",
 			Desc: desc,
 			Run:  runFunc,
@@ -5259,7 +5259,7 @@ func (pf *PanelsFrame) switchToVFS(fsp *FileSystemPanel, newVFS vfs.VFS) {
 		}
 		keepOldVFS := false
 		if temp, ok := newVFS.(*TempPanelVFS); ok {
-			keepOldVFS = temp.parent != nil && sameVFSInstance(temp.parent, oldVFS)
+			keepOldVFS = temp.parent != nil && fileops.SameVFSInstance(temp.parent, oldVFS)
 		}
 		if oldVFS != nil && !keepOldVFS {
 			oldVFS.Close()
@@ -5495,8 +5495,8 @@ func sameFolderHistoryPath(a, b string) bool {
 	if a == "" || b == "" {
 		return false
 	}
-	uriA, aIsURI := normalizedURIIdentity(a)
-	uriB, bIsURI := normalizedURIIdentity(b)
+	uriA, aIsURI := fileops.NormalizedURIIdentity(a)
+	uriB, bIsURI := fileops.NormalizedURIIdentity(b)
 	if aIsURI || bIsURI {
 		return aIsURI && bIsURI && uriA == uriB
 	}

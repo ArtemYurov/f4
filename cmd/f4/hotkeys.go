@@ -10,6 +10,7 @@ import (
 
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/media"
 	"github.com/unxed/f4/internal/terminal"
@@ -407,9 +408,9 @@ func nativeShortcutOwnedByCurrentContext(actionName, key string) bool {
 		// F12 belongs to the gallery while the image viewer is active, not to
 		// vtui's workspace list fallback.
 		return strings.EqualFold(key, "F12")
-	case *QueueFrame:
+	case *fileops.QueueFrame:
 		// An active queue swallows Ctrl+W to preserve running operations.
-		return strings.EqualFold(key, "CtrlW") && queueHasActiveTasks()
+		return strings.EqualFold(key, "CtrlW") && fileops.QueueHasActiveTasks()
 	case *PanelsFrame:
 		terminalOwnsInput := !frame.showPanels &&
 			((frame.termView != nil && frame.termView.UseAltScreen) || frame.isPtyBusy())

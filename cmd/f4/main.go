@@ -804,7 +804,7 @@ func SetupUI() {
 		}
 		return pf.Clone()
 	}
-	StartQueueWorker()
+	fileops.StartQueueWorker()
 	// The registry is a leaf and cannot reach the message catalogue; the root
 	// hands it the lookup. Moves to internal/i18n's i18n.Msg when that package exists.
 	action.Localize = i18n.Msg

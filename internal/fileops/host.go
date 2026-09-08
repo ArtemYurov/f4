@@ -24,3 +24,12 @@ func BackgroundScreen(mode int) vtui.Frame {
 	}
 	return BackgroundWorkspace()
 }
+
+// HandleWorkspaceFork answers the "fork this workspace" command for the frames
+// this package owns. Forking duplicates the panels, which is the application's
+// business, so the root supplies it.
+//
+// The default declines, and declining is the honest answer rather than a
+// degraded one: a run with no workspaces to fork has nothing to do here, and
+// the command falls through to the base window exactly as it would have.
+var HandleWorkspaceFork = func(cmd int, args any) bool { return false }

@@ -5,6 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/numeric"
@@ -298,14 +299,14 @@ func (fp *FileSystemPanel) semanticPanelModel(ctx *vtui.SemanticContext, side in
 func semanticFileSize(entry *fileEntry) string {
 	if entry.IsDir {
 		if entry.SizeCalculated {
-			return formatIntWithSpaces(entry.Size)
+			return fileops.FormatIntWithSpaces(entry.Size)
 		}
 		if entry.Name == ".." {
 			return i18n.Msg("Panel.UpDir")
 		}
 		return ""
 	}
-	return formatIntWithSpaces(entry.Size)
+	return fileops.FormatIntWithSpaces(entry.Size)
 }
 
 func viewModeName(mode ViewMode) string {

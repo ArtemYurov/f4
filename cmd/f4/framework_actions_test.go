@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/media"
 	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/vtinput"
@@ -412,21 +413,18 @@ func TestWorkspacePaletteEntriesResolveStableNumbersAtExecution(t *testing.T) {
 
 func TestWorkspaceClosePreservesQueueVetoBelowHelpAndForBackgroundTarget(t *testing.T) {
 	initFrameworkActionTestScreen(t)
-	previousQueue := GlobalQueueManager
+	previousQueue := fileops.GlobalQueueManager
 	previousHelp := vtui.GlobalHelpEngine
 	t.Cleanup(func() {
-		GlobalQueueManager = previousQueue
+		fileops.GlobalQueueManager = previousQueue
 		vtui.GlobalHelpEngine = previousHelp
 	})
 
 	vtui.FrameManager.Push(&frameworkActionTestFrame{title: "Files"})
-	task := &QueueTask{ID: 41, State: "Running"}
-	GlobalQueueManager = &OpQueueManager{
-		tasks:      []*QueueTask{task},
-		activeKeys: make(map[string]bool),
-	}
-	queue := NewQueueFrame()
-	queue.UpdateTasks([]*QueueTask{task})
+	task := &fileops.QueueTask{ID: 41, State: "Running"}
+	fileops.GlobalQueueManager = fileops.NewQueueManagerWithTasks(task)
+	queue := fileops.NewQueueFrame()
+	queue.UpdateTasks([]*fileops.QueueTask{task})
 	vtui.FrameManager.AddScreen(queue)
 	vtui.FrameManager.RestoreScreenNumbers([]int{11, 29})
 
@@ -458,9 +456,7 @@ func TestWorkspaceClosePreservesQueueVetoBelowHelpAndForBackgroundTarget(t *test
 		t.Fatal("stable background Workspace.Close bypassed Queue veto")
 	}
 
-	task.mu.Lock()
-	task.State = "Done"
-	task.mu.Unlock()
+	task.SetState("Done")
 	if !executeCommandPaletteEntry(closeQueue) {
 		t.Fatal("stable background Workspace.Close failed after Queue became idle")
 	}

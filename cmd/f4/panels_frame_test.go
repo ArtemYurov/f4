@@ -6,6 +6,7 @@ import (
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/dialog"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/sysinfo"
@@ -2194,16 +2195,9 @@ func TestPanelsFrame_ExitWarning_ActiveTasks(t *testing.T) {
 	defer pf.Close()
 	fm.Push(pf)
 
-	qm := GlobalQueueManager
-	qm.mu.Lock()
-	oldTasks := append([]*QueueTask(nil), qm.tasks...)
-	qm.tasks = []*QueueTask{{ID: 1, State: "Running"}}
-	qm.mu.Unlock()
-	t.Cleanup(func() {
-		qm.mu.Lock()
-		qm.tasks = oldTasks
-		qm.mu.Unlock()
-	})
+	qm := fileops.GlobalQueueManager
+	oldTasks := qm.SetTasks([]*fileops.QueueTask{{ID: 1, State: "Running"}})
+	t.Cleanup(func() { qm.SetTasks(oldTasks) })
 
 	// Триггерим выход
 	pf.HandleCommand(vtui.CmQuit, nil)
@@ -4695,7 +4689,7 @@ func TestArchiveBulkExtract_ProgressTracking(t *testing.T) {
 	}
 	dstVFS := vfs.NewOSVFS(destDir)
 
-	// 2. Pre-calculate stats (this mimics ExecuteFileOp's scan phase)
+	// 2. Pre-calculate stats (this mimics fileops.ExecuteFileOp's scan phase)
 	names := []string{"dir"}
 	totalStats, err := vfs.CalculateStats(context.Background(), arcVFS, arcVFS.GetPath(), names, nil)
 	if err != nil {
@@ -4707,13 +4701,13 @@ func TestArchiveBulkExtract_ProgressTracking(t *testing.T) {
 		t.Errorf("Unexpected scanned stats: %+v", totalStats)
 	}
 
-	tracker := NewFileOpTracker(totalStats)
+	tracker := fileops.NewFileOpTracker(totalStats)
 
 	var bytesReported int64
 
 	mockOriginalReporter := &mockTaskReporter{}
 
-	// We want to verify that when we call CopyBulk, the globalAwareReporter updates the tracker
+	// We want to verify that when we call CopyBulk, the fileops.GlobalAwareReporter updates the tracker
 	// and invokes updateUI, which in turn updates the dialog.
 	getGlobalStats := func(action string) (string, int, string) {
 		_, totalPct, _ := tracker.GetProgress()
@@ -4723,14 +4717,9 @@ func TestArchiveBulkExtract_ProgressTracking(t *testing.T) {
 		return totalText, totalPct, timeSpeedText
 	}
 
-	wrapRep := &globalAwareReporter{
-		original:  mockOriginalReporter,
-		getGlobal: getGlobalStats,
-		tracker:   tracker,
-		onBytes: func(n int) {
-			bytesReported += int64(n)
-		},
-	}
+	wrapRep := fileops.NewGlobalAwareReporter(mockOriginalReporter, getGlobalStats, tracker, func(n int) {
+		bytesReported += int64(n)
+	})
 
 	// Auto-queue to bypass the interactive UI busy-lock prompt.
 	ctx := archive.WithAutoQueue(context.Background())

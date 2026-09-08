@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/f4/internal/media"
@@ -140,7 +141,7 @@ func commandPaletteImageGalleryOpenEntry(image *media.ImageView) []commandPalett
 	)}
 }
 
-func commandPaletteQueueZoomEntry(queue *QueueFrame) []commandPaletteEntry {
+func commandPaletteQueueZoomEntry(queue *fileops.QueueFrame) []commandPaletteEntry {
 	if queue == nil || !queue.ShowZoom {
 		return nil
 	}

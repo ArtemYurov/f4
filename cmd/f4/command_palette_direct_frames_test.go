@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/media"
 	"github.com/unxed/vtinput"
@@ -144,7 +145,7 @@ func TestCommandPaletteImageGalleryOpenIsTargetSpecific(t *testing.T) {
 
 func TestCommandPaletteQueueToggleZoomTracksWindowState(t *testing.T) {
 	setDirectPaletteTopFrame(t, &directPaletteOtherFrame{})
-	queue := NewQueueFrame()
+	queue := fileops.NewQueueFrame()
 	vtui.FrameManager.Push(queue)
 
 	entry, found := commandPaletteTestEntryByID(commandPaletteFrameEntries(), "Queue.ToggleZoom")

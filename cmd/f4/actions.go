@@ -541,7 +541,7 @@ func confirmAndPruneMissingFolderHistory(h *[]string, rich *[]history.HistoryRec
 				kept = append(kept, record)
 				continue
 			}
-			if isPersistentURIPath(p) || vfs.FindStandaloneProvider(context.Background(), nil, p) != nil {
+			if fileops.IsPersistentURIPath(p) || vfs.FindStandaloneProvider(context.Background(), nil, p) != nil {
 				kept = append(kept, record)
 				continue
 			}
@@ -692,7 +692,7 @@ func actionEditFileExternal(pf *PanelsFrame, v vfs.VFS, path string, size int64)
 		if err != nil {
 			return err
 		}
-		closeDst := closeOnce(dst)
+		closeDst := fileops.CloseOnce(dst)
 		defer func() { _ = closeDst() }()
 
 		buf := make([]byte, 128*1024)
@@ -754,7 +754,7 @@ func actionEditFileExternal(pf *PanelsFrame, v vfs.VFS, path string, size int64)
 				if err != nil {
 					return err
 				}
-				closeDst := closeOnce(dst)
+				closeDst := fileops.CloseOnce(dst)
 				defer func() { _ = closeDst() }()
 
 				buf := make([]byte, 128*1024)
@@ -2072,14 +2072,14 @@ func actionCalcDirSize(pf *PanelsFrame, fsp *FileSystemPanel, idx int) {
 
 	var targetPath = fsp.vfs.Join(basePath, name)
 
-	opDlg := NewFileOpProgressDialog(" Calculating Size... ")
+	opDlg := fileops.NewFileOpProgressDialog(" Calculating Size... ")
 	var taskCtx *vtui.TaskContext
-	opDlg.btnCancel.OnClick = func() {
+	opDlg.SetOnCancel(func() {
 		if taskCtx != nil {
 			taskCtx.Cancel()
 		}
 		opDlg.Close()
-	}
+	})
 
 	vtui.FrameManager.PostTask(func() {
 		vtui.FrameManager.AddScreenHeadless(opDlg)
@@ -2250,12 +2250,12 @@ func actionCopyMove(pf *PanelsFrame, isMove bool) {
 	}
 
 	if isMove && !config.App.ConfirmMove {
-		go ExecuteFileOpAt(srcVfs, dstVfs, srcBasePath, names, initialDest, isMove, config.App.DefaultFileOpMode, onCompleteWithClear)
+		go fileops.ExecuteFileOpAt(srcVfs, dstVfs, srcBasePath, names, initialDest, isMove, config.App.DefaultFileOpMode, onCompleteWithClear)
 		return
 	}
 
 	if !isMove && !config.App.ConfirmCopy {
-		go ExecuteFileOpAt(srcVfs, dstVfs, srcBasePath, names, initialDest, isMove, config.App.DefaultFileOpMode, onCompleteWithClear)
+		go fileops.ExecuteFileOpAt(srcVfs, dstVfs, srcBasePath, names, initialDest, isMove, config.App.DefaultFileOpMode, onCompleteWithClear)
 		return
 	}
 
@@ -2292,7 +2292,7 @@ func actionCopyMove(pf *PanelsFrame, isMove bool) {
 		dlg.Close()
 		if dest != "" {
 			history.CommitHistory(editDest, dest)
-			go ExecuteFileOpAt(srcVfs, dstVfs, srcBasePath, names, dest, isMove, mode, onCompleteWithClear)
+			go fileops.ExecuteFileOpAt(srcVfs, dstVfs, srcBasePath, names, dest, isMove, mode, onCompleteWithClear)
 		}
 	}
 	dlg.AddItem(btnOk)
@@ -2538,7 +2538,7 @@ func actionCopyInPlace(pf *PanelsFrame) {
 			}
 		}
 
-		go ExecuteFileOpAt(sourceVFS, sourceVFS, sourceBasePath, []string{name}, newPath, false, config.App.DefaultFileOpMode, onCompleteWithClear)
+		go fileops.ExecuteFileOpAt(sourceVFS, sourceVFS, sourceBasePath, []string{name}, newPath, false, config.App.DefaultFileOpMode, onCompleteWithClear)
 	})
 }
 func actionEditorSettings(pf *PanelsFrame) {
@@ -2958,7 +2958,7 @@ func actionDeleteWithDisposition(pf *PanelsFrame, disposition vfs.DeleteDisposit
 	if !config.App.ConfirmDelete {
 		fsp.pendingSelection = fsp.GetSuccessorName()
 		stopPlayerForDelete(pf, activeVfs, basePath, names)
-		go ExecuteDeleteOpWithDispositionAt(activeVfs, basePath, names, config.App.DefaultFileOpMode, disposition, pf.RefreshAll)
+		go fileops.ExecuteDeleteOpWithDispositionAt(activeVfs, basePath, names, config.App.DefaultFileOpMode, disposition, pf.RefreshAll)
 		return
 	}
 
@@ -3024,7 +3024,7 @@ func actionDeleteWithDisposition(pf *PanelsFrame, disposition vfs.DeleteDisposit
 		fsp.pendingSelection = fsp.GetSuccessorName()
 		dlg.Close()
 		stopPlayerForDelete(pf, activeVfs, basePath, names)
-		go ExecuteDeleteOpWithDispositionAt(activeVfs, basePath, names, mode, disposition, pf.RefreshAll)
+		go fileops.ExecuteDeleteOpWithDispositionAt(activeVfs, basePath, names, mode, disposition, pf.RefreshAll)
 	}
 
 	if config.App.DeleteCancelFocused {
@@ -3114,19 +3114,19 @@ func actionMkDir(pf *PanelsFrame) {
 		fullPath := activeVfs.Join(activeVfs.GetPath(), name)
 
 		desc := fmt.Sprintf("Create folder %s", name)
-		runFunc := func(ctx context.Context, reporter TaskReporter, anchor vtui.Frame) error {
+		runFunc := func(ctx context.Context, reporter fileops.TaskReporter, anchor vtui.Frame) error {
 			reporter.UpdateTransfer("Creating", name, 100, "Folder", 100, "")
 			err := activeVfs.MkDir(ctx, fullPath)
 			return err
 		}
 
 		if mode == 0 { // Queue
-			rk := getResourceKey(activeVfs)
+			rk := fileops.GetResourceKey(activeVfs)
 			var keys []string
 			if rk != "" {
 				keys = append(keys, rk)
 			}
-			task := &QueueTask{
+			task := &fileops.QueueTask{
 				Type:    "MkDir",
 				Desc:    desc,
 				ResKeys: keys,
@@ -3136,10 +3136,10 @@ func actionMkDir(pf *PanelsFrame) {
 					pf.RefreshAll()
 				},
 			}
-			GlobalQueueManager.Enqueue(task)
+			fileops.GlobalQueueManager.Enqueue(task)
 		} else { // Background / Foreground
 			taskCtx := vtui.RunAsync(func(ctx *vtui.TaskContext) {
-				err := runFunc(ctx.Context, &DummyReporter{}, nil)
+				err := runFunc(ctx.Context, &fileops.DummyReporter{}, nil)
 				ctx.RunOnUI(func() {
 					if err != nil {
 						vtui.ShowMessage(" Error ", fmt.Sprintf(i18n.Msg("Operation.Error"), err.Error()), []string{"&Ok"})
@@ -3192,17 +3192,17 @@ func actionFindDuplicates(pf *PanelsFrame) {
 
 	v := fsp.vfs
 	root := v.GetPath()
-	opDlg := NewFileOpProgressDialog(" Searching for duplicates... ")
+	opDlg := fileops.NewFileOpProgressDialog(" Searching for duplicates... ")
 	var taskCtx *vtui.TaskContext
 	// detached is read and written on the UI thread only, which is where
 	// both the buttons and the progress updates run.
 	detached := false
-	opDlg.btnCancel.OnClick = func() {
+	opDlg.SetOnCancel(func() {
 		if taskCtx != nil {
 			taskCtx.Cancel()
 		}
 		opDlg.Close()
-	}
+	})
 	// The hashing runs on the remote host, so the window is only a way of
 	// watching it. Closing it that way leaves the work in the job registry.
 	opDlg.EnableBackground(func() {
@@ -4879,7 +4879,7 @@ func actionFileAttributes(pf *PanelsFrame) {
 	}
 
 	vtui.RunAsync(func(ctx *vtui.TaskContext) {
-		targets := make([]attributesTarget, 0, len(paths))
+		targets := make([]dialog.AttributesTarget, 0, len(paths))
 		for _, path := range paths {
 			item, err := vfs.Lstat(ctx.Context, fsp.vfs, path)
 			if err != nil {
@@ -4888,10 +4888,10 @@ func actionFileAttributes(pf *PanelsFrame) {
 				})
 				return
 			}
-			targets = append(targets, attributesTarget{path: path, item: item})
+			targets = append(targets, dialog.AttributesTarget{Path: path, Item: item})
 		}
 		ctx.RunOnUI(func() {
-			showAttributesDialogForTargets(pf, fsp.vfs, targets)
+			dialog.ShowAttributesDialogForTargets(pf.RefreshAll, fsp.vfs, targets)
 		})
 	})
 }
@@ -4934,7 +4934,7 @@ func actionEditSymlink(pf *PanelsFrame) {
 			return
 		}
 		ctx.RunOnUI(func() {
-			showSymlinkTargetDialog(pf, v, path, target)
+			dialog.ShowSymlinkTargetDialog(pf.RefreshAll, v, path, target)
 		})
 	})
 }

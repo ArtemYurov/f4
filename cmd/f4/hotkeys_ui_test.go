@@ -3,14 +3,15 @@ package main
 import (
 	"testing"
 
-	"github.com/unxed/f4/internal/dialog"
+	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
 
 func TestDialogTableUsesThemePalette(t *testing.T) {
 	table := vtui.NewTable(0, 0, 20, 5, []vtui.TableColumn{{Title: "Value", Width: 20}})
-	dialog.UseTableColors(table)
+	theme.UseTableColors(table)
 
 	if table.ColorTextIdx != vtui.ColDialogText ||
 		table.ColorSelectedTextIdx != vtui.ColDialogSelectedButton ||
@@ -232,7 +233,7 @@ func TestActionHotkeyConfigBuildsNativeRowsAndFitsScreen(t *testing.T) {
 		if !ok {
 			continue
 		}
-		switch getCleanText(button) {
+		switch testutil.GetCleanText(button) {
 		case "Save":
 			hasSave = true
 		case "Cancel":
@@ -276,7 +277,7 @@ func TestActionHotkeyConfigUnbindUsesDraftUntilSave(t *testing.T) {
 			case *vtui.Table:
 				table = candidate
 			case *vtui.Button:
-				switch getCleanText(candidate) {
+				switch testutil.GetCleanText(candidate) {
 				case "Unbind":
 					unbind = candidate
 				case "Save":
@@ -304,7 +305,7 @@ func TestActionHotkeyConfigUnbindUsesDraftUntilSave(t *testing.T) {
 	if !ok {
 		t.Fatalf("confirmation frame = %T, want container", vtui.FrameManager.GetTopFrame())
 	}
-	clickDialogButton(t, confirmation, "Cancel")
+	testutil.ClickDialogButton(t, confirmation, "Cancel")
 	if got := manager.GetAction("Shell", "F8"); got != "File.Delete" {
 		t.Fatalf("cancelled confirmation changed live binding: got %q", got)
 	}
@@ -314,7 +315,7 @@ func TestActionHotkeyConfigUnbindUsesDraftUntilSave(t *testing.T) {
 	if !ok {
 		t.Fatalf("confirmation frame = %T, want container", vtui.FrameManager.GetTopFrame())
 	}
-	clickDialogButton(t, confirmation, "Ok")
+	testutil.ClickDialogButton(t, confirmation, "Ok")
 	if got := manager.GetAction("Shell", "F8"); got != "File.Delete" {
 		t.Fatalf("accepted draft removal changed live binding before Save: got %q", got)
 	}

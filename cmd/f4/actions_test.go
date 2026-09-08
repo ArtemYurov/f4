@@ -14,10 +14,12 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/terminal"
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/f4/internal/viewer"
@@ -313,18 +315,18 @@ func TestActionDelete_BulkErrorAccumulation(t *testing.T) {
 
 	// 3. Прокручиваем очередь задач, ожидая появления диалога с итогами ошибок
 	timeout := time.After(2 * time.Second)
-	var progress *FileOpProgressDialog
+	var progress *fileops.FileOpProgressDialog
 	summaryShown := false
 Loop:
 	for {
 		select {
 		case task := <-fm.TaskChan:
 			task()
-			if top, ok := fm.GetTopFrame().(*FileOpProgressDialog); ok {
+			if top, ok := fm.GetTopFrame().(*fileops.FileOpProgressDialog); ok {
 				progress = top
 			}
 
-			// Если выскочил диалог ошибки удаления (AskError), нажимаем Skip
+			// Если выскочил диалог ошибки удаления (fileops.AskError), нажимаем Skip
 			if fm.GetTopFrameType() == vtui.TypeDialog && fm.GetTopFrame().GetTitle() == " Error " {
 				if dlg, ok := fm.GetTopFrame().(vtui.Container); ok {
 					for _, itm := range dlg.GetChildren() {
@@ -429,22 +431,22 @@ func TestActionDelete_RetrySuccess(t *testing.T) {
 			c.Menu.SetSelectPos(2) // Foreground
 		}
 	}
-	clickDialogButton(t, dlgConfirm, "Delete")
+	testutil.ClickDialogButton(t, dlgConfirm, "Delete")
 
 	// 2. Ждем диалог ошибки и жмем Retry
 	timeout := time.After(2 * time.Second)
 	retryClicked := false
-	var progress *FileOpProgressDialog
+	var progress *fileops.FileOpProgressDialog
 Loop:
 	for {
 		select {
 		case task := <-fm.TaskChan:
 			task()
-			if top, ok := fm.GetTopFrame().(*FileOpProgressDialog); ok {
+			if top, ok := fm.GetTopFrame().(*fileops.FileOpProgressDialog); ok {
 				progress = top
 			}
 			if !retryClicked && fm.GetTopFrameType() == vtui.TypeDialog && fm.GetTopFrame().GetTitle() == " Error " {
-				clickDialogButton(t, fm.GetTopFrame().(vtui.Container), "Retry")
+				testutil.ClickDialogButton(t, fm.GetTopFrame().(vtui.Container), "Retry")
 				retryClicked = true
 			}
 			if progress != nil && progress.IsDone() {
@@ -501,22 +503,22 @@ func TestActionDelete_Abort(t *testing.T) {
 			c.Menu.SetSelectPos(2) // Foreground
 		}
 	}
-	clickDialogButton(t, dlgConfirm, "Delete")
+	testutil.ClickDialogButton(t, dlgConfirm, "Delete")
 
 	// Ждем ошибку и жмем Abort
 	timeout := time.After(2 * time.Second)
 	abortClicked := false
-	var progress *FileOpProgressDialog
+	var progress *fileops.FileOpProgressDialog
 Loop:
 	for {
 		select {
 		case task := <-fm.TaskChan:
 			task()
-			if top, ok := fm.GetTopFrame().(*FileOpProgressDialog); ok {
+			if top, ok := fm.GetTopFrame().(*fileops.FileOpProgressDialog); ok {
 				progress = top
 			}
 			if !abortClicked && fm.GetTopFrameType() == vtui.TypeDialog && fm.GetTopFrame().GetTitle() == " Error " {
-				clickDialogButton(t, fm.GetTopFrame().(vtui.Container), "Abort")
+				testutil.ClickDialogButton(t, fm.GetTopFrame().(vtui.Container), "Abort")
 				abortClicked = true
 			}
 			if abortClicked && progress != nil && progress.IsDone() {
@@ -576,19 +578,19 @@ func TestActionDelete_SkipAll(t *testing.T) {
 			c.Menu.SetSelectPos(2) // Foreground
 		}
 	}
-	clickDialogButton(t, dlgConfirm, "Delete")
+	testutil.ClickDialogButton(t, dlgConfirm, "Delete")
 
 	// 2. Ждем первую ошибку и жмем "Skip All"
 	timeout := time.After(2 * time.Second)
 	skipAllClicked := false
-	var progress *FileOpProgressDialog
+	var progress *fileops.FileOpProgressDialog
 	summaryShown := false
 Loop:
 	for {
 		select {
 		case task := <-fm.TaskChan:
 			task()
-			if top, ok := fm.GetTopFrame().(*FileOpProgressDialog); ok {
+			if top, ok := fm.GetTopFrame().(*fileops.FileOpProgressDialog); ok {
 				progress = top
 			}
 
@@ -1673,7 +1675,7 @@ func TestActionPanelSettings_FitsSmallTerminal(t *testing.T) {
 	}
 	vtui.AssertLayout(t, mainDlg)
 
-	clickDialogButton(t, mainDlg, "Additional settings")
+	testutil.ClickDialogButton(t, mainDlg, "Additional settings")
 	additionalDlg := vtui.FrameManager.GetTopFrame().(*vtui.Window)
 	_, y1, _, y2 = additionalDlg.GetPosition()
 	if got := y2 - y1 + 1; got > 25 {
@@ -1706,7 +1708,7 @@ func TestActionPanelSettings_ConsoleModes(t *testing.T) {
 		t.Fatal("Panel settings dialog not shown")
 	}
 	dlg := top.(vtui.Container)
-	clickDialogButton(t, dlg, "Additional settings")
+	testutil.ClickDialogButton(t, dlg, "Additional settings")
 	top = vtui.FrameManager.GetTopFrame()
 	if top == nil {
 		t.Fatal("Additional panel settings dialog not shown")
@@ -1748,7 +1750,7 @@ func TestActionPanelSettings_ConsoleModes(t *testing.T) {
 	}
 	chkOverlay.State = 1
 
-	clickDialogButton(t, dlg, "Ok")
+	testutil.ClickDialogButton(t, dlg, "Ok")
 	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
 	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
 
@@ -1794,7 +1796,7 @@ func TestActionPanelAdditionalSettings_SearchExactOnHit(t *testing.T) {
 	}
 	chkExact.State = 1
 
-	clickDialogButton(t, dlg, "Ok")
+	testutil.ClickDialogButton(t, dlg, "Ok")
 	if !config.App.SearchExactOnHit {
 		t.Error("config.App.SearchExactOnHit = false, want true after OK")
 	}
@@ -2329,7 +2331,7 @@ func TestActionAppearanceSettings_SaveCursor(t *testing.T) {
 	}
 
 	chkCursor.State = 1
-	clickDialogButton(t, top, "Ok")
+	testutil.ClickDialogButton(t, top, "Ok")
 
 	for i := 0; i < 10; i++ {
 		select {
@@ -2380,7 +2382,7 @@ func TestActionAppearanceSettingsSavesSystemMonospace(t *testing.T) {
 		t.Fatal("system monospace checkbox must be enabled by default")
 	}
 	systemFont.Toggle()
-	clickDialogButton(t, top, "Ok")
+	testutil.ClickDialogButton(t, top, "Ok")
 	if config.App.GuiUseSystemMonospace {
 		t.Fatal("system monospace setting was not saved")
 	}
@@ -2422,7 +2424,7 @@ func TestActionAppearanceSettingsSavesFullPathInTitle(t *testing.T) {
 		t.Fatal("full path in title checkbox must be disabled by default")
 	}
 	fullPath.Toggle()
-	clickDialogButton(t, top, "Ok")
+	testutil.ClickDialogButton(t, top, "Ok")
 	if !config.App.DisplayFullPathInTitle {
 		t.Fatal("full path in title setting was not saved")
 	}
@@ -2464,7 +2466,7 @@ func TestActionAppearanceSettingsSavesWorkspaceTabRestoration(t *testing.T) {
 		t.Fatal("workspace tab restoration must be enabled by default")
 	}
 	restoreTabs.Toggle()
-	clickDialogButton(t, top, "Ok")
+	testutil.ClickDialogButton(t, top, "Ok")
 	if config.App.RestoreWorkspaceTabs {
 		t.Fatal("disabled workspace tab restoration setting was not saved")
 	}
@@ -2506,7 +2508,7 @@ func TestActionAppearanceSettingsSavesWorkspaceTabOverlay(t *testing.T) {
 		t.Fatal("workspace tab overlay must be enabled by default")
 	}
 	overlayTabs.Toggle()
-	clickDialogButton(t, top, "Ok")
+	testutil.ClickDialogButton(t, top, "Ok")
 	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
 	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
 	if config.App.WorkspaceTabsOverlay {
@@ -2547,7 +2549,7 @@ func TestActionAppearanceSettingsSavesWorkspaceTabNumbering(t *testing.T) {
 		t.Fatal("workspace tab numbering combobox not found in Appearance Settings")
 	}
 	numbering.Menu.SetSelectPos(int(config.WorkspaceTabNumbersOrder))
-	clickDialogButton(t, top, "Ok")
+	testutil.ClickDialogButton(t, top, "Ok")
 	if config.App.WorkspaceTabNumbering != config.WorkspaceTabNumbersOrder {
 		t.Fatalf("workspace tab numbering = %v, want order", config.App.WorkspaceTabNumbering)
 	}
@@ -2607,7 +2609,7 @@ func TestActionAppearanceSettings_CancelPreservesPalette(t *testing.T) {
 		t.Fatal("test setup: live preview didn't overwrite the sentinel — need a different palette slot or style pair")
 	}
 
-	clickDialogButton(t, top, "Cancel")
+	testutil.ClickDialogButton(t, top, "Cancel")
 
 	if got := vtui.Palette[theme.ColPanelText]; got != sentinel {
 		t.Errorf("Cancel dropped the override: palette[theme.ColPanelText]=%016x, want sentinel %016x", got, sentinel)
@@ -2667,7 +2669,7 @@ func TestActionAppearanceSettings_LivePreviewRecolorsExistingLabels(t *testing.T
 		t.Fatalf("existing Appearance label kept stale color %#x after style switch, want %#x", got, want)
 	}
 
-	clickDialogButton(t, top, "Cancel")
+	testutil.ClickDialogButton(t, top, "Cancel")
 }
 
 func TestPanelsFrame_RunAdvancedProgressTask(t *testing.T) {
@@ -2701,14 +2703,14 @@ func TestPanelsFrame_RunAdvancedProgressTask(t *testing.T) {
 
 	// Wait for the dialog to appear on top
 	timeout := time.After(2 * time.Second)
-	var dlg *FileOpProgressDialog
+	var dlg *fileops.FileOpProgressDialog
 	for dlg == nil {
 		select {
 		case task := <-vtui.FrameManager.TaskChan:
 			task()
 			top := vtui.FrameManager.GetTopFrame()
 			if top != nil && top.GetTitle() == "Test Action" {
-				dlg = top.(*FileOpProgressDialog)
+				dlg = top.(*fileops.FileOpProgressDialog)
 			}
 		case <-timeout:
 			t.Fatal("Timeout waiting for dialog to appear")
@@ -2719,7 +2721,10 @@ func TestPanelsFrame_RunAdvancedProgressTask(t *testing.T) {
 
 	// Wait for UI to update with progress
 	timeout = time.After(2 * time.Second)
-	for !dlg.pbCurrent.IsVisible() || dlg.pbCurrent.Percent != 75 {
+	for {
+		if state := dlg.Progress(); state.CurrentVisible && state.CurrentPercent == 75 {
+			break
+		}
 		select {
 		case task := <-vtui.FrameManager.TaskChan:
 			task()
@@ -2728,14 +2733,15 @@ func TestPanelsFrame_RunAdvancedProgressTask(t *testing.T) {
 		}
 	}
 
-	if !dlg.pbCurrent.IsVisible() || dlg.pbCurrent.Percent != 75 {
-		t.Errorf("Current progress bar not updated: visible=%v, pct=%d", dlg.pbCurrent.IsVisible(), dlg.pbCurrent.Percent)
+	state := dlg.Progress()
+	if !state.CurrentVisible || state.CurrentPercent != 75 {
+		t.Errorf("Current progress bar not updated: visible=%v, pct=%d", state.CurrentVisible, state.CurrentPercent)
 	}
-	if !dlg.pbTotal.IsVisible() || dlg.pbTotal.Percent != 35 {
-		t.Errorf("Total progress bar not updated: visible=%v, pct=%d", dlg.pbTotal.IsVisible(), dlg.pbTotal.Percent)
+	if !state.TotalVisible || state.TotalPercent != 35 {
+		t.Errorf("Total progress bar not updated: visible=%v, pct=%d", state.TotalVisible, state.TotalPercent)
 	}
-	if dlg.lblSpeed.GetText() != "10 MB/s" {
-		t.Errorf("Speed label not updated, got %q", dlg.lblSpeed.GetText())
+	if state.Speed != "10 MB/s" {
+		t.Errorf("Speed label not updated, got %q", state.Speed)
 	}
 
 	// Close dialog and unblock worker
@@ -2774,19 +2780,19 @@ func TestExecuteFileOp_ContextualTitles(t *testing.T) {
 	dstVfs := vfs.NewOSVFS(t.TempDir())
 
 	done := make(chan struct{})
-	ExecuteFileOp(srcVfs, dstVfs, []string{"data.txt"}, dstVfs.GetPath(), false, 2, func() {
+	fileops.ExecuteFileOp(srcVfs, dstVfs, []string{"data.txt"}, dstVfs.GetPath(), false, 2, func() {
 		close(done)
 	})
 
 	appeared := time.After(10 * time.Second)
-	var dlg *FileOpProgressDialog
+	var dlg *fileops.FileOpProgressDialog
 	for dlg == nil {
 		select {
 		case task := <-vtui.FrameManager.TaskChan:
 			task()
 			top := vtui.FrameManager.GetTopFrame()
 			if top != nil && strings.Contains(top.GetTitle(), "Extracting") {
-				dlg = top.(*FileOpProgressDialog)
+				dlg = top.(*fileops.FileOpProgressDialog)
 			}
 		case <-appeared:
 			t.Fatal("Timeout waiting for Extracting dialog to appear")
@@ -2811,7 +2817,7 @@ func TestExecuteFileOp_ContextualTitles(t *testing.T) {
 		vtui.FrameManager.Pop()
 	}
 
-	// ExecuteFileOp runs on its own goroutine and reads the temporary
+	// fileops.ExecuteFileOp runs on its own goroutine and reads the temporary
 	// directories above. Returning before it exits leaves it running into
 	// whatever test comes next, reading directories t.TempDir has removed.
 	select {
@@ -3009,7 +3015,7 @@ func TestActionCreateLink_Flow(t *testing.T) {
 
 	srcGeneration := fspSrc.loadingGeneration
 	dstGeneration := fspDst.loadingGeneration
-	clickDialogButton(t, dlg, "Create link")
+	testutil.ClickDialogButton(t, dlg, "Create link")
 
 	// Drain task queue to execute async creation task
 	timeout := time.After(2 * time.Second)
@@ -3219,7 +3225,7 @@ func TestActionSwitchEditorToViewer_ModifiedFilePrompt(t *testing.T) {
 	}
 
 	// Click "Don't Save" button in confirmation dialog
-	clickDialogButton(t, confirmDlg, "Don't Save")
+	testutil.ClickDialogButton(t, confirmDlg, "Don't Save")
 
 	var vv *viewer.ViewerView
 	timeout = time.After(2 * time.Second)

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/vfs"
@@ -50,11 +51,11 @@ func (hostApplication) RunSemanticAction(action map[string]any) bool {
 }
 
 func (hostApplication) AskOverwrite(ctx context.Context, destPath string, src, dst vfs.VFSItem, anchor vtui.Frame) (int, bool) {
-	return AskOverwrite(ctx, destPath, src, dst, anchor)
+	return fileops.AskOverwrite(ctx, destPath, src, dst, anchor)
 }
 
 func (hostApplication) AskError(ctx context.Context, op string, err error, anchor vtui.Frame) int {
-	return AskError(ctx, op, err, anchor)
+	return fileops.AskError(ctx, op, err, anchor)
 }
 
 var _ plughost.Application = hostApplication{}

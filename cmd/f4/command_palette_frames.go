@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/f4/internal/media"
@@ -25,7 +26,7 @@ func commandPaletteFrameEntries() []commandPaletteEntry {
 		return commandPaletteHelpEntries(frame)
 	case *media.ImageView:
 		return append(commandPaletteImageEntries(frame), commandPaletteImageGalleryOpenEntry(frame)...)
-	case *QueueFrame:
+	case *fileops.QueueFrame:
 		return append(commandPaletteQueueEntries(frame), commandPaletteQueueZoomEntry(frame)...)
 	case *GrabberFrame:
 		return commandPaletteGrabberEntries(frame)
@@ -102,12 +103,12 @@ func commandPaletteImageEntries(image *media.ImageView) []commandPaletteEntry {
 	return entries
 }
 
-func commandPaletteQueueEntries(queue *QueueFrame) []commandPaletteEntry {
+func commandPaletteQueueEntries(queue *fileops.QueueFrame) []commandPaletteEntry {
 	if queue == nil {
 		return nil
 	}
 	category := i18n.Msg("CommandPalette.CategoryQueue")
-	newEntry := func(id, labelKey, english, description, shortcut string, run func(*QueueFrame) bool) commandPaletteEntry {
+	newEntry := func(id, labelKey, english, description, shortcut string, run func(*fileops.QueueFrame) bool) commandPaletteEntry {
 		label := i18n.Msg(labelKey)
 		if label == "" || strings.HasPrefix(label, "{") {
 			label = english
@@ -131,71 +132,50 @@ func commandPaletteQueueEntries(queue *QueueFrame) []commandPaletteEntry {
 		}
 	}
 	return []commandPaletteEntry{
-		newEntry("OpenDetails", "CommandPalette.Queue.OpenDetails", "Open task details", "Open details for the selected queue task", "Enter", func(qf *QueueFrame) bool {
-			index := qf.table.SelectPos
-			if index < 0 || index >= len(qf.tasks) {
+		newEntry("OpenDetails", "CommandPalette.Queue.OpenDetails", "Open task details", "Open details for the selected queue task", "Enter", func(qf *fileops.QueueFrame) bool {
+			index := qf.SelectedIndex()
+			if index < 0 {
 				return false
 			}
-			qf.openTaskDetails(index)
+			qf.OpenTaskDetails(index)
 			return true
 		}),
 		newEntry("Cancel", "Queue.BtnCancel", "Cancel task", "Cancel the selected queue task", "", commandPaletteCancelQueueTask),
 		newEntry("Clear", "Queue.BtnClear", "Clear completed tasks", "Remove completed tasks from the queue", "", commandPaletteClearQueueTasks),
-		newEntry("Close", "CommandPalette.Queue.Close", "Close queue", "Close the operations queue", "Esc, F10, Ctrl+W", func(qf *QueueFrame) bool {
+		newEntry("Close", "CommandPalette.Queue.Close", "Close queue", "Close the operations queue", "Esc, F10, Ctrl+W", func(qf *fileops.QueueFrame) bool {
 			return actionCloseQueueWorkspace(qf)
 		}),
 	}
 }
 
 // actionCloseQueueWorkspace is shared by Queue.Close and the generic
-// Workspace.Close action. Active operations keep QueueFrame's exact veto and
+// Workspace.Close action. Active operations keep fileops.QueueFrame's exact veto and
 // toast; once the queue is idle the screen is actually removed instead of
 // stopping at BaseWindow's (unhandled) Ctrl+W path.
-func actionCloseQueueWorkspace(queue *QueueFrame) bool {
+func actionCloseQueueWorkspace(queue *fileops.QueueFrame) bool {
 	if queue == nil || vtui.FrameManager == nil || vtui.FrameManager.GetTopFrame() != queue {
 		return false
 	}
 	return actionWorkspaceClose()
 }
 
-func commandPaletteCancelQueueTask(queue *QueueFrame) bool {
-	index := queue.table.SelectPos
-	if index < 0 || index >= len(queue.tasks) {
+func commandPaletteCancelQueueTask(queue *fileops.QueueFrame) bool {
+	task := queue.SelectedTask()
+	if task == nil {
 		return false
 	}
-	task := queue.tasks[index]
-	task.mu.Lock()
-	state, id := task.State, task.ID
-	task.mu.Unlock()
-	if !queueTaskCancellable(state) {
+	state, id, _ := task.Status()
+	if !fileops.QueueTaskCancellable(state) {
 		return false
 	}
 	vtui.ShowMessageOn(queue, " "+i18n.Msg("CommandPalette.Confirm")+" ", fmt.Sprintf(i18n.Msg("CommandPalette.Queue.CancelQuestion"), id), []string{i18n.Msg("CommandPalette.Yes"), i18n.Msg("CommandPalette.No")}).OnResult = func(choice int) {
 		if choice == 0 {
-			GlobalQueueManager.Cancel(id)
+			fileops.GlobalQueueManager.Cancel(id)
 		}
 	}
 	return true
 }
 
-func commandPaletteClearQueueTasks(*QueueFrame) bool {
-	GlobalQueueManager.mu.Lock()
-	active := make([]*QueueTask, 0, len(GlobalQueueManager.tasks))
-	removed := false
-	for _, task := range GlobalQueueManager.tasks {
-		task.mu.Lock()
-		terminal := queueTaskTerminal(task.State)
-		task.mu.Unlock()
-		if terminal {
-			removed = true
-			continue
-		}
-		active = append(active, task)
-	}
-	GlobalQueueManager.tasks = active
-	GlobalQueueManager.mu.Unlock()
-	if removed {
-		GlobalQueueManager.RefreshUI()
-	}
-	return removed
+func commandPaletteClearQueueTasks(*fileops.QueueFrame) bool {
+	return fileops.GlobalQueueManager.ClearFinished()
 }

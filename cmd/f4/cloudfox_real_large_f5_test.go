@@ -15,6 +15,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/plugins/cloudfox"
 	"github.com/unxed/f4/vfs"
@@ -31,7 +32,7 @@ const (
 
 // TestRealSavedCloudLargeF5RoundTrip copies one caller-supplied large file
 // local -> cloud -> a new local directory through the production F5 action,
-// ExecuteFileOpAt and FileOpProgressDialog route. It hashes both local copies,
+// fileops.ExecuteFileOpAt and fileops.FileOpProgressDialog route. It hashes both local copies,
 // records the visible progress percentages and permanently removes only its
 // UUID-named cloud workspace.
 //
@@ -363,7 +364,7 @@ func runRealCloudFoxLargeF5Action(t *testing.T, source, destination vfs.VFS, nam
 	trace := realCloudFoxLargeF5ProgressTrace{startedAt: time.Now()}
 	// This is the registered production F5 handler. ConfirmCopy=false makes it
 	// dispatch the same accepted operation without synthesizing a test-only
-	// call to ExecuteFileOpAt or to a provider API.
+	// call to fileops.ExecuteFileOpAt or to a provider API.
 	actionCopyMove(pf, false)
 	err := awaitRealCloudFoxLargeF5Progress(&trace, timeout)
 	trace.finished = time.Since(trace.startedAt)
@@ -384,14 +385,15 @@ func awaitRealCloudFoxLargeF5Progress(trace *realCloudFoxLargeF5ProgressTrace, t
 				if frame == nil || frame.IsDone() {
 					continue
 				}
-				if dialog, ok := frame.(*FileOpProgressDialog); ok {
+				if dlg, ok := frame.(*fileops.FileOpProgressDialog); ok {
 					activeProgress = true
 					trace.sawDialog = true
-					if dialog.pbCurrent.IsVisible() {
-						trace.record(&trace.current, dialog.pbCurrent.Percent)
+					state := dlg.Progress()
+					if state.CurrentVisible {
+						trace.record(&trace.current, state.CurrentPercent)
 					}
-					if dialog.pbTotal.IsVisible() {
-						trace.record(&trace.total, dialog.pbTotal.Percent)
+					if state.TotalVisible {
+						trace.record(&trace.total, state.TotalPercent)
 					}
 					continue
 				}

@@ -5376,7 +5376,7 @@ func (ev *EditorView) saveToFile(afterSave func(), fullWrite bool) {
 				// sibling name also makes leaving an unconfirmed stage non-destructive.
 				// Definitive pre-commit errors are safe to clean once; uncertain,
 				// partial and canceled operations must remain untouched.
-				if !operationMustNotRetry(err) {
+				if !fileops.OperationMustNotRetry(err) {
 					cleanupEditorStage(ev.vfs, tempPath)
 				}
 				ctx.RunOnUI(func() {

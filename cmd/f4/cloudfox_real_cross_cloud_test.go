@@ -14,6 +14,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/fileops"
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/plugins/cloudfox"
 	"github.com/unxed/f4/vfs"
@@ -30,7 +32,7 @@ var errRealCrossCloudOperationTimeout = errors.New("real cross-cloud file operat
 
 // TestRealSavedCloudCrossProviderF5 performs destructive, real-account
 // Google Drive <-> Yandex.Disk tests through CloudFox's production ManagerVFS,
-// VFSProvider, CloudVFS, F5 action, ExecuteFileOpAt and conflict dialogs.
+// VFSProvider, CloudVFS, F5 action, fileops.ExecuteFileOpAt and conflict dialogs.
 //
 // The test is intentionally separate from TestRealSavedCloudConnectionsUI and
 // cannot run accidentally with its opt-in. It does not inspect profiles or
@@ -688,7 +690,7 @@ func runRealCrossCloudF5(t *testing.T, source, destination *realCrossCloudEndpoi
 	right.SetFocus(false)
 
 	// This is the production F5 handler. With ConfirmCopy disabled it captures
-	// the panel paths and dispatches ExecuteFileOpAt exactly as an accepted F5
+	// the panel paths and dispatches fileops.ExecuteFileOpAt exactly as an accepted F5
 	// dialog does, including the real progress and conflict UI routes.
 	actionCopyMove(pf, false)
 	return awaitRealCrossCloudFileOp(conflict, 10*time.Minute)
@@ -712,7 +714,7 @@ func awaitRealCrossCloudFileOp(conflict *realCrossCloudConflict, timeout time.Du
 				if frame == nil || frame.IsDone() {
 					continue
 				}
-				if _, ok := frame.(*FileOpProgressDialog); ok {
+				if _, ok := frame.(*fileops.FileOpProgressDialog); ok {
 					started = true
 					activeProgress = true
 					continue
@@ -834,7 +836,7 @@ func realCrossCloudDialogSummary(frame vtui.Frame) string {
 func clickRealCrossCloudButton(dialog vtui.Container, text string) bool {
 	for _, child := range dialog.GetChildren() {
 		button, ok := child.(*vtui.Button)
-		if !ok || getCleanText(button) != text || button.OnClick == nil {
+		if !ok || testutil.GetCleanText(button) != text || button.OnClick == nil {
 			continue
 		}
 		button.OnClick()
@@ -851,7 +853,7 @@ func enterRealCrossCloudRename(dialog vtui.Container, name string) bool {
 		case *vtui.Edit:
 			edit = item
 		case *vtui.Button:
-			if strings.EqualFold(getCleanText(item), "Ok") {
+			if strings.EqualFold(testutil.GetCleanText(item), "Ok") {
 				okButton = item
 			}
 		}
@@ -876,11 +878,11 @@ func closeRealCrossCloudDialog(frame vtui.Frame) {
 func cancelRealCrossCloudProgressDialogs() {
 	for _, screen := range vtui.FrameManager.Screens {
 		for _, frame := range screen.Frames {
-			dialog, ok := frame.(*FileOpProgressDialog)
-			if !ok || dialog.IsDone() || dialog.btnCancel.OnClick == nil {
+			dlg, ok := frame.(*fileops.FileOpProgressDialog)
+			if !ok || dlg.IsDone() {
 				continue
 			}
-			dialog.btnCancel.OnClick()
+			dlg.Cancel()
 		}
 	}
 }
@@ -897,7 +899,7 @@ func quiesceRealCrossCloudFileOps(timeout time.Duration) bool {
 				if frame == nil || frame.IsDone() {
 					continue
 				}
-				if _, ok := frame.(*FileOpProgressDialog); ok {
+				if _, ok := frame.(*fileops.FileOpProgressDialog); ok {
 					active = true
 					continue
 				}

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/gui"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/f4/vfs/hostmode"
@@ -307,7 +308,7 @@ func (pf *PanelsFrame) dropExternalFiles(info dropTargetInfo, paths []string, is
 				fsp.pendingSelection = fsp.GetSuccessorName()
 			}
 		}
-		go ExecuteFileOp(src, dst, g.names, dstDir, isMove, config.App.DefaultFileOpMode, func() {
+		go fileops.ExecuteFileOp(src, dst, g.names, dstDir, isMove, config.App.DefaultFileOpMode, func() {
 			pf.RefreshAll()
 			run(i + 1)
 		})
@@ -486,7 +487,7 @@ func (pf *PanelsFrame) startDragOut(fsp *FileSystemPanel, names []string) bool {
 		src := fsp.vfs
 		dst := vfs.NewOSVFS(tempDir)
 
-		ExecuteFileOp(src, dst, names, tempDir, false, 1, func() {
+		fileops.ExecuteFileOp(src, dst, names, tempDir, false, 1, func() {
 			pf.RefreshAll()
 			var dragPaths []string
 			for _, name := range names {

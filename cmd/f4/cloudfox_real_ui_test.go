@@ -17,6 +17,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/viewer"
@@ -829,7 +830,7 @@ func realCloudFoxUIWaitFileOp(t *testing.T, timeout time.Duration) {
 		running := false
 		for _, screen := range vtui.FrameManager.Screens {
 			for _, frame := range screen.Frames {
-				if dialog, ok := frame.(*FileOpProgressDialog); ok && !dialog.IsDone() {
+				if dialog, ok := frame.(*fileops.FileOpProgressDialog); ok && !dialog.IsDone() {
 					running = true
 					started = true
 				}

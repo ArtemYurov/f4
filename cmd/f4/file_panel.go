@@ -461,14 +461,14 @@ func (f *fileEntry) GetCellText(col int) string {
 	case 1:
 		if f.IsDir {
 			if f.SizeCalculated {
-				return formatIntWithSpaces(f.Size)
+				return fileops.FormatIntWithSpaces(f.Size)
 			}
 			if f.Name == ".." {
 				return i18n.Msg("Panel.UpDir")
 			}
 			return ""
 		}
-		return formatIntWithSpaces(f.Size)
+		return fileops.FormatIntWithSpaces(f.Size)
 	case 2:
 		if f.MTime.IsZero() {
 			return ""
@@ -661,20 +661,6 @@ func directoryCacheKey(fs vfs.VFS, path string) dirCacheKey {
 	return key
 }
 
-// sameVFSInstance is deliberately stricter than cache identity. Two pooled
-// remote views may share cached directory data, but an asynchronous provider
-// transition belongs to the exact parent object it was started from.
-func sameVFSInstance(a, b vfs.VFS) bool {
-	if a == nil || b == nil {
-		return a == nil && b == nil
-	}
-	ta, tb := reflect.TypeOf(a), reflect.TypeOf(b)
-	if ta != tb || !ta.Comparable() {
-		return false
-	}
-	return a == b
-}
-
 // isNilVFS reports whether v is nil, including a typed nil wrapped inside a
 // non-nil interface (e.g. (*ArchiveVFS)(nil) returned as vfs.VFS). Such a
 // value compares != nil but dereferences to a panic on any method call.
@@ -800,7 +786,7 @@ func (fp *FileSystemPanel) SetItemSelected(idx int, state bool) {
 
 func (fp *FileSystemPanel) previousSelectionMatches(filesystem vfs.VFS, path string) bool {
 	return fp != nil && fp.previousSelectionVFS != nil && filesystem != nil &&
-		sameVFSInstance(fp.previousSelectionVFS, filesystem) && fp.previousSelectionPath == path
+		fileops.SameVFSInstance(fp.previousSelectionVFS, filesystem) && fp.previousSelectionPath == path
 }
 
 func (fp *FileSystemPanel) clearPreviousSelection() {
@@ -2031,7 +2017,7 @@ func (fp *FileSystemPanel) openVFSAsync(
 			fp.providerOpenResult = nil
 			fp.providerOpenTarget = ""
 			fp.providerOpenSourceSelect = ""
-			if !sameVFSInstance(fp.vfs, sourceVFS) || fp.vfs.GetPath() != sourcePath {
+			if !fileops.SameVFSInstance(fp.vfs, sourceVFS) || fp.vfs.GetPath() != sourcePath {
 				if !isNilVFS(newVFS) {
 					_ = newVFS.Close()
 				}
@@ -2132,7 +2118,7 @@ func shouldRecordFolderHistory(fp *FileSystemPanel, path string) bool {
 	if fp.vfs.ParentVFS() == nil {
 		return true
 	}
-	if isPersistentURIPath(path) || vfs.FindStandaloneProvider(context.Background(), nil, path) != nil {
+	if fileops.IsPersistentURIPath(path) || vfs.FindStandaloneProvider(context.Background(), nil, path) != nil {
 		return true
 	}
 	// filepath.IsAbs does not treat a slash-rooted POSIX path as absolute on
@@ -2728,7 +2714,7 @@ func (fp *FileSystemPanel) Show(scr *vtui.ScreenBuf) {
 			sizeStr := ""
 			if e.IsDir {
 				if e.SizeCalculated {
-					sizeStr = formatIntWithSpaces(e.Size)
+					sizeStr = fileops.FormatIntWithSpaces(e.Size)
 				} else if e.Name == ".." {
 					sizeStr = "UP-DIR"
 				} else if e.IsSymlink {
@@ -2739,7 +2725,7 @@ func (fp *FileSystemPanel) Show(scr *vtui.ScreenBuf) {
 			} else if e.IsSymlink {
 				sizeStr = "<LNK>"
 			} else {
-				sizeStr = formatIntWithSpaces(e.Size)
+				sizeStr = fileops.FormatIntWithSpaces(e.Size)
 			}
 
 			nameStr := e.Name
@@ -2806,7 +2792,7 @@ func (fp *FileSystemPanel) Show(scr *vtui.ScreenBuf) {
 
 	selStr := ""
 	if selFiles > 0 || selDirs > 0 {
-		selStr = fmt.Sprintf(" "+i18n.Msg("Panel.SelectedInfo")+" ", formatIntWithSpaces(selSize), selFiles, selDirs)
+		selStr = fmt.Sprintf(" "+i18n.Msg("Panel.SelectedInfo")+" ", fileops.FormatIntWithSpaces(selSize), selFiles, selDirs)
 	}
 
 	totalStr := ""
@@ -2815,9 +2801,9 @@ func (fp *FileSystemPanel) Show(scr *vtui.ScreenBuf) {
 		totalStr = selStr
 		attrTotal = vtui.Palette[theme.ColPanelSelectedInfo]
 	} else if totCount > 0 {
-		totalStr = fmt.Sprintf(" %s (%d/%d) ", formatIntWithSpaces(totSize), totFiles, totDirs)
+		totalStr = fmt.Sprintf(" %s (%d/%d) ", fileops.FormatIntWithSpaces(totSize), totFiles, totDirs)
 		if freeSpaceStr != "" {
-			totalStr = fmt.Sprintf(" %s (%d/%d) — %s ", formatIntWithSpaces(totSize), totFiles, totDirs, freeSpaceStr)
+			totalStr = fmt.Sprintf(" %s (%d/%d) — %s ", fileops.FormatIntWithSpaces(totSize), totFiles, totDirs, freeSpaceStr)
 		}
 		attrTotal = vtui.Palette[theme.ColPanelTotalInfo]
 	}
@@ -2849,7 +2835,7 @@ func (fp *FileSystemPanel) Show(scr *vtui.ScreenBuf) {
 	if !config.App.ShowPanelFileInfo && fp.gridColumnCount() > 1 {
 		if idx := fp.GetCursorIndex(); idx >= 0 && idx < len(fp.entries) {
 			e := fp.entries[idx]
-			curStr := formatIntWithSpaces(e.Size)
+			curStr := fileops.FormatIntWithSpaces(e.Size)
 			if e.IsDir && !e.SizeCalculated {
 				curStr = "<DIR>"
 				if e.Name == ".." {
@@ -3715,7 +3701,7 @@ func (fp *FileSystemPanel) captureSelectionToken(name string) (panelSelectionTok
 }
 
 func (fp *FileSystemPanel) clearSelectionIfUnchanged(token panelSelectionToken) bool {
-	if fp == nil || token.panel != fp || fp.vfs == nil || !sameVFSInstance(fp.vfs, token.vfs) || fp.vfs.GetPath() != token.path ||
+	if fp == nil || token.panel != fp || fp.vfs == nil || !fileops.SameVFSInstance(fp.vfs, token.vfs) || fp.vfs.GetPath() != token.path ||
 		fp.directoryEpoch != token.directoryEpoch || fp.selectionEpoch[token.name] != token.selectionEpoch ||
 		!fp.IsNameSelected(token.name) {
 		return false

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -56,10 +57,10 @@ func (p *queuedDeleteProbe) MoveToTrash(_ context.Context, path string) error {
 }
 
 func TestQueuedTrashUsesActionBoundaryPathSnapshot(t *testing.T) {
-	oldQueue := GlobalQueueManager
-	queue := &OpQueueManager{activeKeys: make(map[string]bool)}
-	GlobalQueueManager = queue
-	defer func() { GlobalQueueManager = oldQueue }()
+	oldQueue := fileops.GlobalQueueManager
+	queue := fileops.NewQueueManagerWithTasks()
+	fileops.GlobalQueueManager = queue
+	defer func() { fileops.GlobalQueueManager = oldQueue }()
 
 	probe := &queuedDeleteProbe{NullVFS: vfs.NewNullVFS(0)}
 	if err := probe.SetPath("/original"); err != nil {
@@ -69,16 +70,12 @@ func TestQueuedTrashUsesActionBoundaryPathSnapshot(t *testing.T) {
 	if err := probe.SetPath("/navigated"); err != nil {
 		t.Fatal(err)
 	}
-	ExecuteDeleteOpWithDispositionAt(probe, basePath, []string{"item.txt"}, 0, vfs.DeleteToTrash, nil)
-	queue.mu.Lock()
-	task := queue.tasks[0]
-	queue.mu.Unlock()
-	if err := task.Run(context.Background(), &DummyReporter{}, nil); err != nil {
+	fileops.ExecuteDeleteOpWithDispositionAt(probe, basePath, []string{"item.txt"}, 0, vfs.DeleteToTrash, nil)
+	task := queue.Tasks()[0]
+	if err := task.Run(context.Background(), &fileops.DummyReporter{}, nil); err != nil {
 		t.Fatal(err)
 	}
-	task.mu.Lock()
-	task.State = "Done"
-	task.mu.Unlock()
+	task.SetState("Done")
 	want := probe.Join(basePath, "item.txt")
 	if len(probe.trashed) != 1 || probe.trashed[0] != want {
 		t.Fatalf("trashed paths = %v, want %q", probe.trashed, want)
@@ -86,21 +83,17 @@ func TestQueuedTrashUsesActionBoundaryPathSnapshot(t *testing.T) {
 }
 
 func TestDeleteDoesNotRetryPartialRemoteMutation(t *testing.T) {
-	oldQueue := GlobalQueueManager
-	queue := &OpQueueManager{activeKeys: make(map[string]bool)}
-	GlobalQueueManager = queue
-	defer func() { GlobalQueueManager = oldQueue }()
+	oldQueue := fileops.GlobalQueueManager
+	queue := fileops.NewQueueManagerWithTasks()
+	fileops.GlobalQueueManager = queue
+	defer func() { fileops.GlobalQueueManager = oldQueue }()
 
 	partial := &vfs.PartialOperationError{Operation: "remote trash", Completed: []string{"child"}, Err: errors.New("later child failed")}
 	probe := &queuedDeleteProbe{NullVFS: vfs.NewNullVFS(0), err: partial}
-	ExecuteDeleteOpWithDispositionAt(probe, "/original", []string{"item.txt"}, 0, vfs.DeleteToTrash, nil)
-	queue.mu.Lock()
-	task := queue.tasks[0]
-	queue.mu.Unlock()
-	err := task.Run(context.Background(), &DummyReporter{}, nil)
-	task.mu.Lock()
-	task.State = "Done"
-	task.mu.Unlock()
+	fileops.ExecuteDeleteOpWithDispositionAt(probe, "/original", []string{"item.txt"}, 0, vfs.DeleteToTrash, nil)
+	task := queue.Tasks()[0]
+	err := task.Run(context.Background(), &fileops.DummyReporter{}, nil)
+	task.SetState("Done")
 	if !errors.Is(err, vfs.ErrOperationPartial) {
 		t.Fatalf("Run error = %v, want partial operation", err)
 	}
@@ -112,7 +105,7 @@ func TestDeleteDoesNotRetryPartialRemoteMutation(t *testing.T) {
 func TestDeletePathDispositionDoesNotFallback(t *testing.T) {
 	ctx := context.Background()
 	trashable := &deleteDispositionProbe{}
-	if err := deletePathWithDisposition(ctx, trashable, "item", vfs.DeleteToTrash); err != nil {
+	if err := fileops.DeletePathWithDisposition(ctx, trashable, "item", vfs.DeleteToTrash); err != nil {
 		t.Fatal(err)
 	}
 	if trashable.trashCalls != 1 || trashable.removeCalls != 0 {
@@ -120,7 +113,7 @@ func TestDeletePathDispositionDoesNotFallback(t *testing.T) {
 	}
 
 	permanentOnly := &permanentOnlyDeleteProbe{}
-	err := deletePathWithDisposition(ctx, permanentOnly, "item", vfs.DeleteToTrash)
+	err := fileops.DeletePathWithDisposition(ctx, permanentOnly, "item", vfs.DeleteToTrash)
 	if !errors.Is(err, vfs.ErrTrashUnsupported) {
 		t.Fatalf("trash on incapable VFS returned %v, want ErrTrashUnsupported", err)
 	}
@@ -128,14 +121,14 @@ func TestDeletePathDispositionDoesNotFallback(t *testing.T) {
 		t.Fatal("trash failure silently fell back to permanent Remove")
 	}
 
-	if err := deletePathWithDisposition(ctx, trashable, "item", vfs.DeletePermanently); err != nil {
+	if err := fileops.DeletePathWithDisposition(ctx, trashable, "item", vfs.DeletePermanently); err != nil {
 		t.Fatal(err)
 	}
 	if trashable.removeCalls != 1 {
 		t.Fatal("permanent disposition did not call Remove")
 	}
 
-	if err := deletePathWithDisposition(ctx, trashable, "item", vfs.DeleteDisposition(255)); err == nil {
+	if err := fileops.DeletePathWithDisposition(ctx, trashable, "item", vfs.DeleteDisposition(255)); err == nil {
 		t.Fatal("unknown disposition was accepted")
 	}
 	if trashable.removeCalls != 1 || trashable.trashCalls != 1 {
@@ -145,7 +138,7 @@ func TestDeletePathDispositionDoesNotFallback(t *testing.T) {
 
 func TestTrashDeleteStatsDoNotWalkTree(t *testing.T) {
 	probe := &deleteDispositionProbe{}
-	stats, err := calculateDeleteStats(context.Background(), probe, "/", []string{"one", "two"}, vfs.DeleteToTrash, nil)
+	stats, err := fileops.CalculateDeleteStats(context.Background(), probe, "/", []string{"one", "two"}, vfs.DeleteToTrash, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,35 +151,31 @@ func TestTrashDeleteStatsDoNotWalkTree(t *testing.T) {
 }
 
 func TestQueuedTrashCapturesOriginalDirectory(t *testing.T) {
-	oldQueue := GlobalQueueManager
-	queue := &OpQueueManager{activeKeys: make(map[string]bool)}
-	GlobalQueueManager = queue
-	defer func() { GlobalQueueManager = oldQueue }()
+	oldQueue := fileops.GlobalQueueManager
+	queue := fileops.NewQueueManagerWithTasks()
+	fileops.GlobalQueueManager = queue
+	defer func() { fileops.GlobalQueueManager = oldQueue }()
 
 	probe := &queuedDeleteProbe{NullVFS: vfs.NewNullVFS(0)}
 	if err := probe.SetPath("/upload"); err != nil {
 		t.Fatal(err)
 	}
 	wantPath := probe.Join(probe.GetPath(), "item.txt")
-	ExecuteDeleteOpWithDisposition(probe, []string{"item.txt"}, 0, vfs.DeleteToTrash, nil)
+	fileops.ExecuteDeleteOpWithDisposition(probe, []string{"item.txt"}, 0, vfs.DeleteToTrash, nil)
 	if err := probe.SetPath("/"); err != nil {
 		t.Fatal(err)
 	}
 
-	queue.mu.Lock()
-	taskCount := len(queue.tasks)
+	tasks := queue.Tasks()
+	taskCount := len(tasks)
 	if taskCount != 1 {
-		queue.mu.Unlock()
 		t.Fatalf("queued tasks = %d, want 1", taskCount)
 	}
-	task := queue.tasks[0]
-	queue.mu.Unlock()
-	if err := task.Run(context.Background(), &DummyReporter{}, nil); err != nil {
+	task := tasks[0]
+	if err := task.Run(context.Background(), &fileops.DummyReporter{}, nil); err != nil {
 		t.Fatal(err)
 	}
-	task.mu.Lock()
-	task.State = "Done"
-	task.mu.Unlock()
+	task.SetState("Done")
 	if len(probe.trashed) != 1 || probe.trashed[0] != wantPath {
 		t.Fatalf("trashed paths = %v, want original panel path %q", probe.trashed, wantPath)
 	}

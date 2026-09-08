@@ -43,3 +43,17 @@ func IsLocalOSVFS(v any) bool {
 	}
 	return false
 }
+
+// SameVFSInstance is deliberately stricter than cache identity. Two pooled
+// remote views may share cached directory data, but an asynchronous provider
+// transition belongs to the exact parent object it was started from.
+func SameVFSInstance(a, b vfs.VFS) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	ta, tb := reflect.TypeOf(a), reflect.TypeOf(b)
+	if ta != tb || !ta.Comparable() {
+		return false
+	}
+	return a == b
+}

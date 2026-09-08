@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/vtui"
 )
 
@@ -217,12 +218,12 @@ func workspaceByNumber(number int) *vtui.AppScreen {
 	return nil
 }
 
-func queueFrameInWorkspace(screen *vtui.AppScreen) *QueueFrame {
+func queueFrameInWorkspace(screen *vtui.AppScreen) *fileops.QueueFrame {
 	if screen == nil {
 		return nil
 	}
 	for index := len(screen.Frames) - 1; index >= 0; index-- {
-		if queue, ok := screen.Frames[index].(*QueueFrame); ok {
+		if queue, ok := screen.Frames[index].(*fileops.QueueFrame); ok {
 			return queue
 		}
 	}
@@ -257,7 +258,7 @@ func isOnlyPanelsWorkspace(screen *vtui.AppScreen) bool {
 // actionWorkspaceCloseNumber resolves the stable workspace number at
 // execution time. Queue may be underneath contextual Help, or the target may
 // be a background workspace selected by a dynamic palette entry; both cases
-// must preserve QueueFrame's active-operation veto before semantic close.
+// must preserve fileops.QueueFrame's active-operation veto before semantic close.
 func actionWorkspaceCloseNumber(number int) bool {
 	screen := workspaceByNumber(number)
 	if screen == nil {
@@ -270,7 +271,7 @@ func actionWorkspaceCloseNumber(number int) bool {
 	if isOnlyPanelsWorkspace(screen) {
 		return true
 	}
-	if queue := queueFrameInWorkspace(screen); queue != nil && queue.vetoCloseWhileActive() {
+	if queue := queueFrameInWorkspace(screen); queue != nil && queue.VetoCloseWhileActive() {
 		return true
 	}
 	return vtui.FrameManager.HandleSemanticAction(map[string]any{

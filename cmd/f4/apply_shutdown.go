@@ -3,14 +3,15 @@ package main
 import (
 	"time"
 
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/f4/internal/terminal"
 )
 
 func cancelOperationsForShutdown() {
 	cancelAllForegroundApplyCommands()
-	if GlobalQueueManager != nil {
-		GlobalQueueManager.CancelAll()
+	if fileops.GlobalQueueManager != nil {
+		fileops.GlobalQueueManager.CancelAll()
 	}
 	if terminal.GlobalBackgroundJobs != nil {
 		terminal.GlobalBackgroundJobs.CancelAll()
@@ -18,8 +19,8 @@ func cancelOperationsForShutdown() {
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		queued, background := 0, 0
-		if GlobalQueueManager != nil {
-			queued = GlobalQueueManager.ActiveTasksCount()
+		if fileops.GlobalQueueManager != nil {
+			queued = fileops.GlobalQueueManager.ActiveTasksCount()
 		}
 		if terminal.GlobalBackgroundJobs != nil {
 			background = terminal.GlobalBackgroundJobs.ActiveCount()

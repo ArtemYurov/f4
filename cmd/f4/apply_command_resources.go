@@ -16,6 +16,7 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 )
@@ -209,7 +210,7 @@ func materializeApplyCommandResources(ctx context.Context, target vfs.VFS, dir s
 		// independently or Close is a no-op, so they use the same work shield.
 		resourceTargetWork.Add(1)
 		defer resourceTargetWork.Done()
-		ownedClone := !sameVFSInstance(resourceTarget, target)
+		ownedClone := !fileops.SameVFSInstance(resourceTarget, target)
 		drained := make(chan struct{})
 		if !group.addCleanupWithDrain(func() {
 			go func() {

@@ -12,6 +12,7 @@ import (
 	"unicode"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/toast"
@@ -627,7 +628,7 @@ func (s *applyCommandSession) prepareExecution() error {
 	if s.passive.panelVFS != nil {
 		passiveClone = s.passive.panelVFS.Clone()
 		if passiveClone == nil {
-			if !sameVFSInstance(activeClone, s.active.panelVFS) {
+			if !fileops.SameVFSInstance(activeClone, s.active.panelVFS) {
 				_ = activeClone.Close()
 			}
 			return fmt.Errorf("apply command: passive file system could not be captured")
@@ -635,19 +636,19 @@ func (s *applyCommandSession) prepareExecution() error {
 	}
 	runner, info, ok := resolveApplyCommandRunner(activeClone)
 	if !ok {
-		if !sameVFSInstance(activeClone, s.active.panelVFS) {
+		if !fileops.SameVFSInstance(activeClone, s.active.panelVFS) {
 			_ = activeClone.Close()
 		}
-		if passiveClone != nil && !sameVFSInstance(passiveClone, s.passive.panelVFS) {
+		if passiveClone != nil && !fileops.SameVFSInstance(passiveClone, s.passive.panelVFS) {
 			_ = passiveClone.Close()
 		}
 		return fmt.Errorf("%s", i18n.Msg("ApplyCommand.Unsupported"))
 	}
 	if info.Dialect == vfs.CommandDialectUnknown && s.template.Metadata().RequiresDialect {
-		if !sameVFSInstance(activeClone, s.active.panelVFS) {
+		if !fileops.SameVFSInstance(activeClone, s.active.panelVFS) {
 			_ = activeClone.Close()
 		}
-		if passiveClone != nil && !sameVFSInstance(passiveClone, s.passive.panelVFS) {
+		if passiveClone != nil && !fileops.SameVFSInstance(passiveClone, s.passive.panelVFS) {
 			_ = passiveClone.Close()
 		}
 		return fmt.Errorf("%s", i18n.Msg("ApplyCommand.UnknownDialect"))
@@ -655,10 +656,10 @@ func (s *applyCommandSession) prepareExecution() error {
 	s.active.vfs = activeClone
 	s.passive.vfs = passiveClone
 	s.runner, s.info, s.items = runner, info, items
-	if !sameVFSInstance(activeClone, s.active.panelVFS) {
+	if !fileops.SameVFSInstance(activeClone, s.active.panelVFS) {
 		s.ownedVFS = append(s.ownedVFS, activeClone)
 	}
-	if passiveClone != nil && !sameVFSInstance(passiveClone, s.passive.panelVFS) {
+	if passiveClone != nil && !fileops.SameVFSInstance(passiveClone, s.passive.panelVFS) {
 		s.ownedVFS = append(s.ownedVFS, passiveClone)
 	}
 	return nil
@@ -771,7 +772,7 @@ func (s *applyCommandSession) refreshCapturedPanels() {
 	}
 	seen := make(map[*FileSystemPanel]bool)
 	for _, capture := range []applyPanelCapture{s.active, s.passive} {
-		if capture.panel == nil || seen[capture.panel] || !sameVFSInstance(capture.panel.vfs, capture.panelVFS) || capture.panel.vfs.GetPath() != capture.dir {
+		if capture.panel == nil || seen[capture.panel] || !fileops.SameVFSInstance(capture.panel.vfs, capture.panelVFS) || capture.panel.vfs.GetPath() != capture.dir {
 			continue
 		}
 		seen[capture.panel] = true
@@ -781,11 +782,11 @@ func (s *applyCommandSession) refreshCapturedPanels() {
 
 func (s *applyCommandSession) enqueue(request applyBatchRequest, model *applyBatchViewModel) {
 	preconditions := s.queuePreconditions()
-	task := &QueueTask{
+	task := &fileops.QueueTask{
 		Type: i18n.Msg("ApplyCommand.QueueType"), Desc: fmt.Sprintf(i18n.Msg("ApplyCommand.QueueDescriptionFmt"), len(s.targets)),
-		Preconditions: preconditions, ResKeys: []string{getResourceKey(s.active.panelVFS)},
+		Preconditions: preconditions, ResKeys: []string{fileops.GetResourceKey(s.active.panelVFS)},
 	}
-	task.Run = func(ctx context.Context, reporter TaskReporter, _ vtui.Frame) error {
+	task.Run = func(ctx context.Context, reporter fileops.TaskReporter, _ vtui.Frame) error {
 		defer s.releaseCapturedVFSes()
 		originalObserve := request.Observe
 		request.Observe = func(event applyBatchEvent) {
@@ -807,15 +808,13 @@ func (s *applyCommandSession) enqueue(request applyBatchRequest, model *applyBat
 		return nil
 	}
 	task.OpenDetails = func(anchor vtui.Frame) {
-		showApplyOutputDialog(anchor, model, func() { GlobalQueueManager.Cancel(task.ID) })
+		showApplyOutputDialog(anchor, model, func() { fileops.GlobalQueueManager.Cancel(task.ID) })
 	}
 	task.Finalize = s.releaseCapturedVFSes
 	task.OnComplete = func() {
 		s.releaseCapturedVFSes()
 		if !model.IsDone() {
-			task.mu.Lock()
-			state, taskErr := task.State, task.ErrorMsg
-			task.mu.Unlock()
+			state, _, taskErr := task.Status()
 			fallback := applyBatchResult{Items: make([]applyBatchItemResult, len(request.Items)), NotStarted: len(request.Items)}
 			if state == "Cancelled" {
 				model.transcript.Add(i18n.Msg("ApplyCommand.ResultCancelled"))
@@ -829,11 +828,11 @@ func (s *applyCommandSession) enqueue(request applyBatchRequest, model *applyBat
 		s.refreshCapturedPanels()
 		toast.Show(i18n.Msg("ApplyCommand.StatusFinishedToast"), 3*time.Second)
 	}
-	GlobalQueueManager.Enqueue(task)
+	fileops.GlobalQueueManager.Enqueue(task)
 	toast.Show(i18n.Msg("ApplyCommand.QueuedToast"), 3*time.Second)
 }
 
-func (s *applyCommandSession) queuePreconditions() []OpPrecondition {
+func (s *applyCommandSession) queuePreconditions() []fileops.OpPrecondition {
 	if s.active.panel == nil || s.active.vfs == nil {
 		return nil
 	}
@@ -842,7 +841,7 @@ func (s *applyCommandSession) queuePreconditions() []OpPrecondition {
 		wanted[name] = struct{}{}
 	}
 	_, local := s.active.panelVFS.(*vfs.OSVFS)
-	conditions := make([]OpPrecondition, 0, len(wanted))
+	conditions := make([]fileops.OpPrecondition, 0, len(wanted))
 	for _, panelEntry := range s.active.panel.entries {
 		if _, ok := wanted[panelEntry.Name]; !ok {
 			continue
@@ -862,7 +861,7 @@ func (s *applyCommandSession) queuePreconditions() []OpPrecondition {
 			}
 			entry = statEntry
 		}
-		conditions = append(conditions, OpPrecondition{
+		conditions = append(conditions, fileops.OpPrecondition{
 			Vfs: s.active.vfs, Path: path,
 			MTime: entry.MTime, Size: entry.Size, IsDir: entry.IsDir,
 		})

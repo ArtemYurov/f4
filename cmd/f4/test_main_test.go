@@ -8,6 +8,8 @@ import (
 
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/dialog"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/keymap"
@@ -65,7 +67,7 @@ func installTestSeams() {
 	// Unit tests must never hand control to the user's desktop. Individual
 	// tests that exercise these routes install per-dialog/per-frame recorders.
 	defaultExternalUICommandRunner = func(string, []string, string) error { return nil }
-	defaultNativePropertiesOpener = func(string) error { return nil }
+	dialog.DefaultNativePropertiesOpener = func(string) error { return nil }
 
 	// Frames must not fork the user's shell during unit tests; the few
 	// tests that exercise the term.PTY path construct one explicitly.
@@ -80,7 +82,7 @@ func installTestSeams() {
 		const minimumObservableToastDuration = 100 * time.Millisecond
 		return minimumObservableToastDuration
 	}
-	queueShowToast = func(string, time.Duration) {}
+	fileops.QueueShowToast = func(string, time.Duration) {}
 
 	// os.UserConfigDir ignores XDG_CONFIG_HOME and APPDATA on darwin, so the
 	// seam is what actually isolates the suite from the developer's profile.

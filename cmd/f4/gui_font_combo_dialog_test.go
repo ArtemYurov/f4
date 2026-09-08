@@ -5,6 +5,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/gui"
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtui"
 )
@@ -53,7 +54,7 @@ func TestAppearanceSettingsFontComboRemainsEditable(t *testing.T) {
 		t.Fatal("font catalog combobox must preserve manual entry")
 	}
 	fontCombo.Edit.SetText("/manually/entered/font.ttf")
-	clickDialogButton(t, top, "Ok")
+	testutil.ClickDialogButton(t, top, "Ok")
 	if config.App.GuiFont != "/manually/entered/font.ttf" {
 		t.Fatalf("manual font path = %q", config.App.GuiFont)
 	}

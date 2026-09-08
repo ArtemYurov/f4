@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/f4/internal/macro"
@@ -355,7 +356,7 @@ func TestCommandPaletteIndexesImageAndQueueFrameCommands(t *testing.T) {
 		t.Fatalf("Russian image query = %#v", results)
 	}
 
-	queueEntries := commandPaletteQueueEntries(&QueueFrame{})
+	queueEntries := commandPaletteQueueEntries(&fileops.QueueFrame{})
 	wantQueue := map[string]bool{"Queue.OpenDetails": true, "Queue.Cancel": true, "Queue.Clear": true, "Queue.Close": true}
 	for _, entry := range queueEntries {
 		delete(wantQueue, entry.ID)
@@ -447,22 +448,19 @@ func TestCommandPaletteImageGalleryCommandsUseGalleryCursor(t *testing.T) {
 
 func TestCommandPaletteQueueClosePreservesVetoAndClosesWhenIdle(t *testing.T) {
 	initFrameworkActionTestScreen(t)
-	previousQueue := GlobalQueueManager
+	previousQueue := fileops.GlobalQueueManager
 	previousHotkeys := GlobalHotkeysMgr
 	GlobalHotkeysMgr = nil
 	t.Cleanup(func() {
-		GlobalQueueManager = previousQueue
+		fileops.GlobalQueueManager = previousQueue
 		GlobalHotkeysMgr = previousHotkeys
 	})
 
 	vtui.FrameManager.Push(&commandPaletteOtherFrame{})
-	task := &QueueTask{ID: 1, State: "Running"}
-	GlobalQueueManager = &OpQueueManager{
-		tasks:      []*QueueTask{task},
-		activeKeys: make(map[string]bool),
-	}
-	queue := NewQueueFrame()
-	queue.UpdateTasks([]*QueueTask{task})
+	task := &fileops.QueueTask{ID: 1, State: "Running"}
+	fileops.GlobalQueueManager = fileops.NewQueueManagerWithTasks(task)
+	queue := fileops.NewQueueFrame()
+	queue.UpdateTasks([]*fileops.QueueTask{task})
 	vtui.FrameManager.AddScreen(queue)
 
 	var closeEntry commandPaletteEntry
@@ -486,9 +484,7 @@ func TestCommandPaletteQueueClosePreservesVetoAndClosesWhenIdle(t *testing.T) {
 		t.Fatalf("active queue advertised veto-owned Ctrl+W workspace close: %v", got)
 	}
 
-	task.mu.Lock()
-	task.State = "Done"
-	task.mu.Unlock()
+	task.SetState("Done")
 	if got := NativeShortcutsForAction("Other", workspaceClose); len(got) != 1 || got[0] != "Ctrl+W" {
 		t.Fatalf("idle queue workspace-close shortcut = %v, want [Ctrl+W]", got)
 	}

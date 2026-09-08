@@ -10,6 +10,7 @@ import (
 
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -313,7 +314,7 @@ func captureComparePanel(fsp *FileSystemPanel, opts config.CompareOptions) (comp
 // when the comparison started.
 func (s comparePanelSnapshot) stillCurrent() bool {
 	fsp := s.panel
-	return fsp != nil && fsp.vfs != nil && sameVFSInstance(fsp.vfs, s.fs) &&
+	return fsp != nil && fsp.vfs != nil && fileops.SameVFSInstance(fsp.vfs, s.fs) &&
 		fsp.vfs.GetPath() == s.root && fsp.directoryEpoch == s.epoch
 }
 
@@ -349,14 +350,14 @@ func runCompareFolders(pf *PanelsFrame, opts config.CompareOptions) {
 		return
 	}
 
-	opDlg := NewFileOpProgressDialog(i18n.Msg("Compare.Progress"))
+	opDlg := fileops.NewFileOpProgressDialog(i18n.Msg("Compare.Progress"))
 	var taskCtx *vtui.TaskContext
-	opDlg.btnCancel.OnClick = func() {
+	opDlg.SetOnCancel(func() {
 		if taskCtx != nil {
 			taskCtx.Cancel()
 		}
 		opDlg.Close()
-	}
+	})
 	vtui.FrameManager.PostTask(func() {
 		vtui.FrameManager.AddScreenHeadless(opDlg)
 	})
@@ -377,16 +378,16 @@ func runCompareFolders(pf *PanelsFrame, opts config.CompareOptions) {
 
 		scanning := i18n.Msg("Compare.Scanning")
 		comparing := i18n.Msg("Compare.Comparing")
-		leftItems, err := collectCompareSide(ctx.Context, leftSnap.fs, leftSnap.root, leftSnap.allow, opts,
+		leftItems, err := fileops.CollectCompareSide(ctx.Context, leftSnap.fs, leftSnap.root, leftSnap.allow, opts,
 			func(path string) { show(scanning, path, 0, 0) })
-		var rightItems map[string]compareItem
+		var rightItems map[string]fileops.CompareItem
 		if err == nil {
-			rightItems, err = collectCompareSide(ctx.Context, rightSnap.fs, rightSnap.root, rightSnap.allow, opts,
+			rightItems, err = fileops.CollectCompareSide(ctx.Context, rightSnap.fs, rightSnap.root, rightSnap.allow, opts,
 				func(path string) { show(scanning, path, 0, 0) })
 		}
-		var outcome *compareOutcome
+		var outcome *fileops.CompareOutcome
 		if err == nil {
-			outcome, err = compareSides(ctx.Context, leftSnap.fs, rightSnap.fs, leftItems, rightItems, opts,
+			outcome, err = fileops.CompareSides(ctx.Context, leftSnap.fs, rightSnap.fs, leftItems, rightItems, opts,
 				func(path string, done, total int) { show(comparing, path, done, total) })
 		}
 
@@ -405,16 +406,16 @@ func runCompareFolders(pf *PanelsFrame, opts config.CompareOptions) {
 				vtui.ShowMessage(i18n.Msg("Compare.Title"), i18n.Msg("Compare.Moved"), []string{"&Ok"})
 				return
 			}
-			leftSnap.applyCompareMarks(outcome.left)
-			rightSnap.applyCompareMarks(outcome.right)
+			leftSnap.applyCompareMarks(outcome.Left)
+			rightSnap.applyCompareMarks(outcome.Right)
 			vtui.FrameManager.Redraw()
 
-			if outcome.readErr != nil {
+			if outcome.ReadErr != nil {
 				vtui.ShowMessage(i18n.Msg("Compare.Title"),
-					fmt.Sprintf(i18n.Msg("Compare.ReadFailed"), outcome.readErr.Error()), []string{"&Ok"})
+					fmt.Sprintf(i18n.Msg("Compare.ReadFailed"), outcome.ReadErr.Error()), []string{"&Ok"})
 				return
 			}
-			if outcome.differing == 0 && opts.ReportEqual {
+			if outcome.Differing == 0 && opts.ReportEqual {
 				vtui.ShowMessage(i18n.Msg("Compare.Title"), i18n.Msg("Compare.Equal"), []string{"&Ok"})
 			}
 		})

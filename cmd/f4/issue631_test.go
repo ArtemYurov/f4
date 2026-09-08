@@ -5,6 +5,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtui"
 )
@@ -24,11 +25,11 @@ func TestIssue631TrashSettingIsInPanelSettings(t *testing.T) {
 	actionPanelSettings(pf)
 	panelFrame := vtui.FrameManager.GetTopFrame()
 	panelDialog := panelFrame.(vtui.Container)
-	wantText := getCleanText(vtui.NewCheckbox(0, 0, i18n.Msg("PanelSettings.UseTrash"), false))
+	wantText := testutil.GetCleanText(vtui.NewCheckbox(0, 0, i18n.Msg("PanelSettings.UseTrash"), false))
 
 	var trashCheckbox *vtui.Checkbox
 	for _, child := range panelDialog.GetChildren() {
-		if checkbox, ok := child.(*vtui.Checkbox); ok && getCleanText(checkbox) == wantText {
+		if checkbox, ok := child.(*vtui.Checkbox); ok && testutil.GetCleanText(checkbox) == wantText {
 			trashCheckbox = checkbox
 			break
 		}
@@ -46,7 +47,7 @@ func TestIssue631TrashSettingIsInPanelSettings(t *testing.T) {
 	confirmationsFrame := vtui.FrameManager.GetTopFrame()
 	confirmationsDialog := confirmationsFrame.(vtui.Container)
 	for _, child := range confirmationsDialog.GetChildren() {
-		if checkbox, ok := child.(*vtui.Checkbox); ok && getCleanText(checkbox) == wantText {
+		if checkbox, ok := child.(*vtui.Checkbox); ok && testutil.GetCleanText(checkbox) == wantText {
 			t.Fatalf("trash setting %q is duplicated in Confirmations Settings", wantText)
 		}
 	}

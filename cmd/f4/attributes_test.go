@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -175,7 +176,7 @@ func TestAttributesDialog_SetAttributesFailure(t *testing.T) {
 	}
 
 	item := vfs.VFSItem{Name: "file.txt"}
-	showAttributesUnix(nil, mockVFS, "/file.txt", item)
+	dialog.ShowAttributesUnix(nil, mockVFS, "/file.txt", item)
 	attrDlg := fm.GetTopFrame()
 
 	var btnSet *vtui.Button
@@ -227,7 +228,7 @@ func TestAttributesDialog_UnixSetAll(t *testing.T) {
 	}
 	item := vfs.VFSItem{Name: "test.sh", Uid: 1000, Gid: 1000, UnixMode: 0644, MTime: time.Now()}
 
-	showAttributesUnix(nil, mockVFS, "test.sh", item)
+	dialog.ShowAttributesUnix(nil, mockVFS, "test.sh", item)
 	dlg := fm.GetTopFrame().(vtui.Container)
 
 	var editOwner, editGroup, editOctal, editMTime *vtui.Edit
@@ -291,7 +292,7 @@ func TestAttributesDialog_WindowsSetFlags(t *testing.T) {
 	}
 
 	item := vfs.VFSItem{Name: "win.exe", MTime: time.Now()}
-	showAttributesWindows(nil, mockVFS, "win.exe", item)
+	dialog.ShowAttributesWindows(nil, mockVFS, "win.exe", item)
 	dlg := fm.GetTopFrame().(vtui.Container)
 
 	var chkRO, chkHidden *vtui.Checkbox
@@ -343,12 +344,12 @@ func TestAttributesDialog_WindowsSetFlagsForSelectedTargets(t *testing.T) {
 			calls = append(calls, attrCall{path: path, item: item})
 		},
 	}
-	targets := []attributesTarget{
-		{path: "first.txt", item: vfs.VFSItem{Name: "first.txt", WinAttrs: 0x10 | 1, MTime: time.Now()}},
-		{path: "second.txt", item: vfs.VFSItem{Name: "second.txt", WinAttrs: 0x10 | 2, MTime: time.Now().Add(-time.Hour)}},
+	targets := []dialog.AttributesTarget{
+		{Path: "first.txt", Item: vfs.VFSItem{Name: "first.txt", WinAttrs: 0x10 | 1, MTime: time.Now()}},
+		{Path: "second.txt", Item: vfs.VFSItem{Name: "second.txt", WinAttrs: 0x10 | 2, MTime: time.Now().Add(-time.Hour)}},
 	}
 
-	showAttributesWindowsForTargets(nil, mockVFS, targets)
+	dialog.ShowAttributesWindowsForTargets(nil, mockVFS, targets)
 	dlg := fm.GetTopFrame().(vtui.Container)
 	var chkRO, chkHidden *vtui.Checkbox
 	var setButton *vtui.Button
@@ -450,7 +451,7 @@ func TestAttributesDialog_InvalidTime(t *testing.T) {
 	mockVFS := &mockMetadataVFS{VFS: vfs.NewOSVFS(t.TempDir())}
 	item := vfs.VFSItem{Name: "file.txt", MTime: time.Now()}
 
-	showAttributesUnix(nil, mockVFS, "file.txt", item)
+	dialog.ShowAttributesUnix(nil, mockVFS, "file.txt", item)
 	dlg := fm.GetTopFrame().(vtui.Container)
 
 	var editMTime *vtui.Edit
@@ -518,7 +519,7 @@ func TestAttributesDialog_Layout(t *testing.T) {
 	item := vfs.VFSItem{Name: "test.txt", Uid: 1000, Gid: 1000, UnixMode: 0644}
 
 	// We test only Unix layout in this env, but it proves the engine works
-	showAttributesUnix(nil, v, "test.txt", item)
+	dialog.ShowAttributesUnix(nil, v, "test.txt", item)
 
 	top := vtui.FrameManager.GetTopFrame()
 	dlg, ok := top.(vtui.Container)
@@ -543,7 +544,7 @@ func TestAttributesDialog_WindowsCheckboxes(t *testing.T) {
 
 	// WinAttrs: 1 (ReadOnly) | 32 (Archive) = 33
 	item := vfs.VFSItem{Name: "win.exe", WinAttrs: 33}
-	showAttributesWindows(nil, mockVFS, "win.exe", item)
+	dialog.ShowAttributesWindows(nil, mockVFS, "win.exe", item)
 	dlg := fm.GetTopFrame().(vtui.Container)
 
 	var chkRO, chkHD, chkSY, chkAR *vtui.Checkbox
@@ -598,7 +599,7 @@ func TestAttributesDialog_UnixSync(t *testing.T) {
 	v := vfs.NewOSVFS(".")
 	item := vfs.VFSItem{Name: "test.txt", UnixMode: 0644} // rw-r--r--
 
-	showAttributesUnix(nil, v, "test.txt", item)
+	dialog.ShowAttributesUnix(nil, v, "test.txt", item)
 	dlg := fm.GetTopFrame().(vtui.Container)
 
 	var editOct *vtui.Edit
@@ -649,7 +650,7 @@ func TestAttributesDialog_Validation(t *testing.T) {
 	v := vfs.NewOSVFS(".")
 	item := vfs.VFSItem{Name: "test", UnixMode: 0644}
 
-	showAttributesUnix(nil, v, "test", item)
+	dialog.ShowAttributesUnix(nil, v, "test", item)
 	dlg := fm.GetTopFrame().(vtui.Container)
 
 	var editOct *vtui.Edit
@@ -700,7 +701,7 @@ func TestAttributesDialog_SetFlow(t *testing.T) {
 
 	item := vfs.VFSItem{Name: "file.txt", UnixMode: 0644, Uid: 10, Gid: 10}
 
-	showAttributesUnix(nil, mock, path, item)
+	dialog.ShowAttributesUnix(nil, mock, path, item)
 	frame := fm.GetTopFrame()
 	dlg := frame.(vtui.Container)
 
@@ -765,7 +766,7 @@ func TestAttributesDialog_WindowsLayout(t *testing.T) {
 	v := vfs.NewOSVFS(".")
 	item := vfs.VFSItem{Name: "winfile.exe", MTime: time.Now()}
 
-	showAttributesWindows(nil, v, "winfile.exe", item)
+	dialog.ShowAttributesWindows(nil, v, "winfile.exe", item)
 
 	top := fm.GetTopFrame()
 	dlg, ok := top.(vtui.Container)
@@ -789,7 +790,7 @@ func TestAttributesDialog_UnixNameResolution(t *testing.T) {
 
 	// Initial item with different IDs
 	item := vfs.VFSItem{Name: "file", Uid: 10, Gid: 10}
-	showAttributesUnix(nil, mockVFS, "file", item)
+	dialog.ShowAttributesUnix(nil, mockVFS, "file", item)
 	dlg := fm.GetTopFrame().(vtui.Container)
 
 	var editOwner, editGroup *vtui.Edit
@@ -830,7 +831,7 @@ func TestAttributesDialog_Truncation(t *testing.T) {
 	longName := "this_is_a_very_long_filename_that_should_definitely_be_truncated_by_the_attributes_dialog_header_logic.txt"
 	item := vfs.VFSItem{Name: longName}
 
-	showAttributesUnix(nil, v, longName, item)
+	dialog.ShowAttributesUnix(nil, v, longName, item)
 	dlg := fm.GetTopFrame().(vtui.Container)
 
 	foundTruncated := false
@@ -860,7 +861,7 @@ func TestAttributesDialog_Cancel(t *testing.T) {
 		onSetAttr: func(item vfs.VFSItem) { called = true },
 	}
 
-	showAttributesUnix(nil, mockVFS, "test", vfs.VFSItem{Name: "test"})
+	dialog.ShowAttributesUnix(nil, mockVFS, "test", vfs.VFSItem{Name: "test"})
 	dlg := fm.GetTopFrame().(vtui.Container)
 
 	var btnCancel *vtui.Button
@@ -903,7 +904,7 @@ func TestShowAttributesDialog_Dispatch(t *testing.T) {
 	}
 
 	item := vfs.VFSItem{Name: "test"}
-	ShowAttributesDialog(nil, mockUnixVFS, "test", item)
+	dialog.ShowAttributesDialog(nil, mockUnixVFS, "test", item)
 
 	top := vtui.FrameManager.GetTopFrame()
 	if top == nil {
@@ -949,7 +950,7 @@ func TestAttributesDialog_SymlinkUsesLinkMetadata(t *testing.T) {
 		t.Fatalf("test setup did not distinguish target and link metadata: target=%+v link=%+v", targetItem, linkInfo)
 	}
 
-	ShowAttributesDialog(nil, v, linkPath, targetItem)
+	dialog.ShowAttributesDialog(nil, v, linkPath, targetItem)
 	dlg := fm.GetTopFrame().(vtui.Container)
 
 	wantMode := fmt.Sprintf("%04o", linkInfo.Mode().Perm())
@@ -998,7 +999,7 @@ func TestAttributesDialog_SymlinkToDirectoryIsIdentifiedAsLink(t *testing.T) {
 		t.Fatal("test setup: symlink target is not reported as a directory")
 	}
 
-	ShowAttributesDialog(nil, v, linkPath, targetItem)
+	dialog.ShowAttributesDialog(nil, v, linkPath, targetItem)
 	dlg := fm.GetTopFrame().(vtui.Container)
 	foundTarget := false
 	walkUI(dlg.(vtui.UIElement), func(el vtui.UIElement) bool {
@@ -1027,7 +1028,7 @@ func TestReplaceSymlinkTargetRestoresOriginalOnCreateFailure(t *testing.T) {
 	}
 	v := &symlinkTargetVFS{OSVFS: vfs.NewOSVFS(root), failTarget: "new-target"}
 
-	err := replaceSymlinkTarget(context.Background(), v, linkPath, "new-target")
+	err := dialog.ReplaceSymlinkTarget(context.Background(), v, linkPath, "new-target")
 	if err == nil || !strings.Contains(err.Error(), "original target restored") {
 		t.Fatalf("replaceSymlinkTarget error = %v, want restored-target error", err)
 	}
@@ -1057,7 +1058,7 @@ func TestReplaceSymlinkTargetPreservesTargetSpelling(t *testing.T) {
 
 	targets := []string{"relative-target", filepath.Join(root, "absolute-target"), "missing-target"}
 	for _, want := range targets {
-		if err := replaceSymlinkTarget(context.Background(), v, linkPath, want); err != nil {
+		if err := dialog.ReplaceSymlinkTarget(context.Background(), v, linkPath, want); err != nil {
 			t.Fatalf("replaceSymlinkTarget(%q): %v", want, err)
 		}
 		got, err := os.Readlink(linkPath)
@@ -1082,7 +1083,7 @@ func TestReplaceSymlinkTargetRejectsEmptyTargetWithoutMutation(t *testing.T) {
 	}
 	v := &symlinkTargetVFS{OSVFS: vfs.NewOSVFS(root)}
 
-	if err := replaceSymlinkTarget(context.Background(), v, linkPath, ""); err == nil {
+	if err := dialog.ReplaceSymlinkTarget(context.Background(), v, linkPath, ""); err == nil {
 		t.Fatal("replaceSymlinkTarget accepted an empty target")
 	}
 	got, readErr := os.Readlink(linkPath)
@@ -1107,7 +1108,7 @@ func TestAttributesDialog_WindowsSetTime(t *testing.T) {
 	oldTime := time.Date(2020, 1, 1, 12, 0, 0, 0, time.Local)
 	item := vfs.VFSItem{Name: "winfile", MTime: oldTime}
 
-	showAttributesWindows(nil, mockVFS, "winfile", item)
+	dialog.ShowAttributesWindows(nil, mockVFS, "winfile", item)
 	dlg := fm.GetTopFrame().(vtui.Container)
 
 	var editTime *vtui.Edit
@@ -1147,7 +1148,7 @@ func TestAttributesDialog_SecurityButton(t *testing.T) {
 	}
 	item := vfs.VFSItem{Name: "winfile.exe", MTime: time.Now()}
 	var openedPropertiesPath string
-	showAttributesWindowsWithProperties(nil, mockVFS, "winfile.exe", item, func(path string) error {
+	dialog.ShowAttributesWindowsWithProperties(nil, mockVFS, "winfile.exe", item, func(path string) error {
 		openedPropertiesPath = path
 		return nil
 	})
@@ -1191,7 +1192,7 @@ func TestAttributesDialog_SecurityButton(t *testing.T) {
 
 	// 2. Test non-local VFS (e.g. NullVFS) -> button should be disabled
 	mockNullVFS := vfs.NewNullVFS(0)
-	showAttributesWindows(nil, mockNullVFS, "winfile.exe", item)
+	dialog.ShowAttributesWindows(nil, mockNullVFS, "winfile.exe", item)
 	dlgNull := fm.GetTopFrame().(vtui.Container)
 
 	var btnSecNull *vtui.Button
