@@ -294,6 +294,28 @@ table places it at layer 1 rather than 3.
    points stay in `cmd/f4` and travel with the composition root in Task 36. The
    `coreAPI` construction is a plugin-notification concern and stays behind with
    them.
+
+   Four more edges the eight-type gate is silent about, all resolved in this
+   wave:
+   - `buildLibc` (`libc_default.go` / `libc_musl.go`) has exactly one non-test
+     consumer, the asset picker. The two build-tagged files and their two tests
+     come here rather than to `internal/app`, against phase 10's roster: leaving
+     a constant behind whose only reader is this package would make it a seam
+     set from the root for no gain.
+   - `formatBuildTimeForDisplay` (`title.go`) is called by
+     `nightlyDisplayVersion`, which moves. It becomes `update.FormatBuildTime`
+     and `title.go` calls it — the direction the layers allow, and the comment on
+     it already said it exists so the updater and F1's Help Index show one value.
+   - `update_elevation_windows.go` reads `shellExecuteInfo`, `swShow`,
+     `seeMaskFlagNoUI` and `procShellExecuteEx` from
+     `attributes_dialog_windows.go`, which is bound for `internal/dialog` — above
+     this layer. The package declares its own, the same way `internal/sysinfo`
+     keeps a private `boundedUint64ToInt`. It is thirty lines of Win32 ABI, and
+     the alternative is an upward import.
+   - `sanitizeExtractPath` has a consumer in `colorer_downloader.go` and the two
+     zip/tar extractors have one in `plugring_ui.go`, neither of them updater
+     code. They are exported as `SanitizePath`, `ExtractZip` and `ExtractTarGz`;
+     both consumers land above layer 1, so the edge is legal.
 2. `AppConfig` fields `UpdateChannel`, `UpdateInterval`, `LastUpdateCheck` and
    `LastUpdateVersion` are read here. `internal/config` does not exist yet
    (Task 24), so this wave must not read `AppConfig` directly. Pass the four values
@@ -320,15 +342,33 @@ table places it at layer 1 rather than 3.
    the file stops hiding what it covers. Leave the function names alone; renaming
    those breaks nothing but buys nothing either, and a move commit does not
    rewrite code.
-4. Move the eight `_test.go` files Task 43's roster lists for `internal/update`:
-   `manual_uac_validation_windows_test.go`, `self_exec_linux_test.go`,
-   `self_exec_test.go`, `update_cli_test.go`, `updater_libc_test.go`,
-   `updater_repro_lock_other_test.go`, `updater_repro_lock_windows_test.go`,
-   `updater_test.go`. **Not** `updater_issue635_test.go` and not
-   `updater_repro_test.go`: both call `performUpdate(pf, …)` on a
-   `NewPanelsFrame()`, and `performUpdate` is one of the two entry points step 1
-   leaves in `cmd/f4`; they travel with it in Task 36. An earlier draft listed
-   `updater_issue635_test.go` here — a measurement error.
+4. Move the `_test.go` files whose subjects moved. Five travel whole —
+   `manual_uac_validation_windows_test.go` → `elevation_manual_windows_test.go`,
+   `self_exec_linux_test.go`, `self_exec_test.go`, `update_cli_test.go` →
+   `cli_test.go`, `updater_libc_test.go` → `assets_test.go` (its subject is asset
+   selection; the libc flavour is what it varies) — plus the two `libc_*_test.go`
+   that follow their constants from step 1.
+
+   **Not** `updater_issue635_test.go` and not `updater_repro_test.go`: both call
+   `performUpdate(pf, …)` on a `NewPanelsFrame()`, and `performUpdate` is one of
+   the two entry points step 1 leaves in `cmd/f4`; they travel with it in
+   Task 36. An earlier draft listed `updater_issue635_test.go` here — a
+   measurement error.
+
+   **And not `updater_repro_lock_{other,windows}_test.go` either**, which the
+   same draft did list. They declare nothing but `lockFileExclusively`, and its
+   only caller is `updater_repro_test.go`, which stays. Moving them would leave
+   the repro test undefined on both platforms.
+
+   `updater_test.go` **splits**, because its subject does. Eight of its sixteen
+   declarations follow the machinery — `ParseHelperArgs`, the build-timestamp
+   comparison, the three extractors and the three `writeFileSafe` cases, plus the
+   `memoryWriteSeeker` the 7z case writes through. The other eight test
+   `shouldCheck`, `CheckForUpdates`, `getCurrentVersion` and `performUpdate` and
+   stay with them; they reach the moved package through `update.APIURL`,
+   `update.CurrentOS`, `update.CurrentArch`, `update.Release` and `update.Asset`,
+   which is what those five are exported for. `title_test.go` loses one function
+   the same way, to `FormatBuildTime`.
 5. Add `"internal/update": 1` to the auditor's layer map.
 
 ### Required Interfaces and Contracts
@@ -345,7 +385,14 @@ type Settings struct {
 ```
 
 - The four fields keep the exact semantics documented on `F4Config`
-  (`config.go`), comments included.
+  (`config.go`), comments included. `Check` and `RunCLI` take them by value;
+  `RunCLI` writes back through a `func(Settings)` the root supplies, so the
+  package never names `SaveConfig`.
+- A second parameter object carries what the *binary* knows about itself, which
+  `internal/app` owns and this package cannot reach: `Build{Version, IsRelease,
+  TimeText}`, built in `cmd/f4/updater.go` from `getCurrentVersion`,
+  `isReleaseVersion` and `getVCSInfo`. It replaces the three calls
+  `fetchUpdateCandidate` used to make into `title.go` and `api.go`.
 - The elevation path's platform split stays file-level; no
   `runtime.GOOS ==` branching is introduced.
 - `--update` remains a `cmd/f4` flag; only the implementation moves.
@@ -372,8 +419,8 @@ part of this package.
 
 ### Acceptance Criteria
 
-- Eight files moved whole with their tests; `updater.go` moved minus the three
-  view-bound references from step 1, which stay in `cmd/f4`.
+- Eight files moved whole, plus the two `libc_*.go`; `updater.go` moved minus
+  the three view-bound references from step 1, which stay in `cmd/f4`.
 - `grep -rn 'AppConfig' internal/update/` returns nothing.
 - `grep -rnE '\b(PanelsFrame|coreAPI)\b' internal/update/` returns nothing — this
   is the check that step 1 was actually performed.

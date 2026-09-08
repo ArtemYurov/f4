@@ -91,7 +91,7 @@ Starting f4 from f4 on Ubuntu 26.04 dumped core with frame #0 at address zero.
 The universal Linux build reaches its libc by re-execing through the host
 loader and leaves `GOFFI_UNIVERSAL_REEXEC` behind; a child that inherits it is
 told the loader has already run when it has not, binds no libc, and dies
-before `main`. `selfCommand` has known this since #402 and starts copies of f4
+before `main`. `update.SelfCommand` has known this since #402 and starts copies of f4
 through the loader itself, but the terminal starts other people's programs,
 and the program most likely to be a universal build is f4. `buildChildEnv` now
 drops the bridge's variables, so a child does its own libc binding -- and with

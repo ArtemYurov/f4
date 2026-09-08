@@ -6,6 +6,7 @@ import (
 	"os"
 	"syscall"
 
+	"github.com/unxed/f4/internal/update"
 	"golang.org/x/sys/unix"
 )
 
@@ -14,12 +15,12 @@ func checkAndDetach(attached bool) {
 		return
 	}
 
-	exe, err := f4Executable()
+	exe, err := update.Executable()
 	if err != nil {
 		return
 	}
 
-	cmd := selfCommand(exe, os.Args[1:]...)
+	cmd := update.SelfCommand(exe, os.Args[1:]...)
 	cmd.Env = append(cmd.Env, "F4_DETACHED=1")
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setsid: true,

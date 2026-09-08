@@ -8,9 +8,9 @@ import (
 	"runtime/debug"
 	"strings"
 	"sync"
-	"time"
 	"unicode"
 
+	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/vtui"
 )
 
@@ -141,7 +141,7 @@ func getLongVersionInfo() string {
 	if buildVersion != "" {
 		_, _, timeStr := getVCSInfo()
 		if timeStr != "" {
-			return buildVersion + " [" + formatBuildTimeForDisplay(timeStr) + "]"
+			return buildVersion + " [" + update.FormatBuildTime(timeStr) + "]"
 		}
 		return buildVersion
 	}
@@ -167,31 +167,9 @@ func getLongVersionInfo() string {
 		sb.WriteString(baseVer)
 	}
 	if timeStr != "" {
-		sb.WriteString(" [" + formatBuildTimeForDisplay(timeStr) + "]")
+		sb.WriteString(" [" + update.FormatBuildTime(timeStr) + "]")
 	}
 	return sb.String()
-}
-
-// formatBuildTimeForDisplay converts the UTC timestamp embedded by Go in
-// release binaries to the user's local time. Nightly release metadata uses
-// the same commit timestamp, so the updater and F1's Help Index show one
-// value instead of one UTC value and one local value.
-func formatBuildTimeForDisplay(value string) string {
-	for _, layout := range []string{time.RFC3339, "2006-01-02 15:04:05", "2006-01-02 15:04"} {
-		var (
-			parsed time.Time
-			err    error
-		)
-		if layout == time.RFC3339 {
-			parsed, err = time.Parse(layout, value)
-		} else {
-			parsed, err = time.ParseInLocation(layout, value, time.UTC)
-		}
-		if err == nil {
-			return parsed.Local().Format("2006-01-02 15:04")
-		}
-	}
-	return value
 }
 
 func UpdateWindowTitle(scr *vtui.ScreenBuf) {

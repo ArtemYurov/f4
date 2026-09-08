@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package update
 
 import (
 	"errors"
@@ -15,13 +15,45 @@ import (
 
 const (
 	seeMaskNoCloseProcess = 0x00000040
-	waitObject0           = 0x00000000
+	// SEE_MASK_FLAG_NO_UI tells the Windows shell not to create its own modal
+	// error dialog. Errors come back to f4 instead.
+	seeMaskFlagNoUI = 0x00000400
+	swShow          = 5
+	waitObject0     = 0x00000000
 )
 
-// updateDirNeedsElevation probes the destination directory without touching
+// shellExecuteInfo is SHELLEXECUTEINFOW. The field order and widths are the
+// ABI, not a choice: cbSize is checked by the shell against the layout below.
+//
+// This package keeps its own declaration because the dependency rules put it
+// below the dialog code that has one too, and a leaf may not import upwards.
+type shellExecuteInfo struct {
+	cbSize         uint32
+	fMask          uint32
+	hwnd           syscall.Handle
+	lpVerb         *uint16
+	lpFile         *uint16
+	lpParameters   *uint16
+	lpDirectory    *uint16
+	nShow          int32
+	hInstApp       syscall.Handle
+	lpIDList       uintptr
+	lpClass        *uint16
+	hkeyClass      syscall.Handle
+	dwHotKey       uint32
+	hIconOrMonitor syscall.Handle
+	hProcess       syscall.Handle
+}
+
+var (
+	shell32            = syscall.NewLazyDLL("shell32.dll")
+	procShellExecuteEx = shell32.NewProc("ShellExecuteExW")
+)
+
+// dirNeedsElevation probes the destination directory without touching
 // an installed file. This lets a normal user get one UAC prompt before any
 // archive entry is partially installed in a protected directory.
-func updateDirNeedsElevation(dir string) bool {
+func dirNeedsElevation(dir string) bool {
 	f, err := os.CreateTemp(dir, ".f4-update-permission-*")
 	if err == nil {
 		name := f.Name()
@@ -29,17 +61,17 @@ func updateDirNeedsElevation(dir string) bool {
 		_ = os.Remove(name)
 		return false
 	}
-	return isPermissionErrorForUpdate(err)
+	return isPermissionError(err)
 }
 
-func isPermissionErrorForUpdate(err error) bool {
+func isPermissionError(err error) bool {
 	if err == nil {
 		return false
 	}
 	return os.IsPermission(err) || errors.Is(err, windows.ERROR_ACCESS_DENIED) || errors.Is(err, windows.ERROR_PRIVILEGE_NOT_HELD)
 }
 
-func runElevatedUpdate(data []byte, archiveKind string) error {
+func runElevated(data []byte, archiveKind string) error {
 	tmp, err := os.CreateTemp("", "f4-update-*.archive")
 	if err != nil {
 		return fmt.Errorf("failed to create temporary update archive: %w", err)
@@ -54,7 +86,7 @@ func runElevatedUpdate(data []byte, archiveKind string) error {
 		return fmt.Errorf("failed to close temporary update archive: %w", err)
 	}
 
-	exePath, err := osExecutable()
+	exePath, err := Executable()
 	if err != nil {
 		return fmt.Errorf("failed to locate f4 for UAC elevation: %w", err)
 	}
@@ -71,7 +103,7 @@ func runElevatedUpdate(data []byte, archiveKind string) error {
 	if err != nil {
 		return err
 	}
-	params, err := windows.UTF16PtrFromString(windows.ComposeCommandLine([]string{updateHelperFlag, tmpPath, archiveKind}))
+	params, err := windows.UTF16PtrFromString(windows.ComposeCommandLine([]string{HelperFlag, tmpPath, archiveKind}))
 	if err != nil {
 		return err
 	}
@@ -117,9 +149,9 @@ func runElevatedUpdate(data []byte, archiveKind string) error {
 	return nil
 }
 
-var runUpdateHelper = runUpdateHelperOS
+var RunHelper = runHelperOS
 
-func runUpdateHelperOS(archivePath, archiveKind string) error {
+func runHelperOS(archivePath, archiveKind string) error {
 	data, err := os.ReadFile(archivePath)
 	if err != nil {
 		return fmt.Errorf("failed to read update archive: %w", err)
@@ -132,5 +164,5 @@ func runUpdateHelperOS(archivePath, archiveKind string) error {
 	if err != nil {
 		return fmt.Errorf("failed to resolve executable path: %w", err)
 	}
-	return extractUpdateArchive(data, archiveKind, filepath.Dir(exePath))
+	return extract(data, archiveKind, filepath.Dir(exePath))
 }

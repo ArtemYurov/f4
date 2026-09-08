@@ -8,23 +8,24 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/vtui"
 )
 
 func TestIssue635NetworkDropWhileProgressScreenIsBackground(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldTimeout := updateDownloadIdleTimeout
-	updateDownloadIdleTimeout = 50 * time.Millisecond
-	defer func() { updateDownloadIdleTimeout = oldTimeout }()
+	oldTimeout := update.DownloadIdleTimeout
+	update.DownloadIdleTimeout = 50 * time.Millisecond
+	defer func() { update.DownloadIdleTimeout = oldTimeout }()
 	tmpDir := t.TempDir()
 	exePath := filepath.Join(tmpDir, "f4")
 	if err := os.WriteFile(exePath, []byte("old"), 0755); err != nil { // #nosec G306 -- the updater fixture represents an executable binary.
 		t.Fatal(err)
 	}
-	oldExe := osExecutable
-	osExecutable = func() (string, error) { return exePath, nil }
-	defer func() { osExecutable = oldExe }()
+	oldExe := update.Executable
+	update.Executable = func() (string, error) { return exePath, nil }
+	defer func() { update.Executable = oldExe }()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Length", "100")
@@ -40,11 +41,11 @@ func TestIssue635NetworkDropWhileProgressScreenIsBackground(t *testing.T) {
 	pf := NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	performUpdate(pf, updateCandidate{
-		downloadURL: ts.URL,
-		archiveKind: "zip",
-		updateKey:   "v9.9.9",
-		needsUpdate: true,
+	performUpdate(pf, update.Candidate{
+		DownloadURL: ts.URL,
+		ArchiveKind: "zip",
+		UpdateKey:   "v9.9.9",
+		NeedsUpdate: true,
 	})
 
 	backgrounded := false

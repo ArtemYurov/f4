@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/history"
+	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -25,14 +26,14 @@ func TestActionUpdateSettings_ManualCheckDoesNotBlockMouseDispatch(t *testing.T)
 	SetDefaultF4Palette()
 
 	oldCfg := AppConfig
-	oldAPIURL := githubAPIURL
-	oldOS := currentOS
-	oldArch := currentArch
+	oldAPIURL := update.APIURL
+	oldOS := update.CurrentOS
+	oldArch := update.CurrentArch
 	t.Cleanup(func() {
 		AppConfig = oldCfg
-		githubAPIURL = oldAPIURL
-		currentOS = oldOS
-		currentArch = oldArch
+		update.APIURL = oldAPIURL
+		update.CurrentOS = oldOS
+		update.CurrentArch = oldArch
 	})
 
 	requestStarted := make(chan struct{})
@@ -51,9 +52,9 @@ func TestActionUpdateSettings_ManualCheckDoesNotBlockMouseDispatch(t *testing.T)
 	}))
 	defer server.Close()
 
-	githubAPIURL = server.URL + "/repos/unxed/f4/releases"
-	currentOS = "windows"
-	currentArch = "amd64"
+	update.APIURL = server.URL + "/repos/unxed/f4/releases"
+	update.CurrentOS = "windows"
+	update.CurrentArch = "amd64"
 	AppConfig.UpdateChannel = 0
 	AppConfig.UpdateInterval = 0
 

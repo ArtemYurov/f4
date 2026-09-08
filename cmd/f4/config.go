@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/netproxy"
+	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -30,7 +31,7 @@ var userConfigDir = os.UserConfigDir
 
 func GetF4ConfigDir() string {
 	configDirOnce.Do(func() {
-		exe, err := osExecutable()
+		exe, err := update.Executable()
 		if err != nil {
 			exe = os.Args[0]
 		}

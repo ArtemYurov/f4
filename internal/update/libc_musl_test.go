@@ -1,6 +1,6 @@
 //go:build linux && goffi_musl
 
-package main
+package update
 
 import "testing"
 
@@ -13,7 +13,7 @@ func TestBuildLibcIsMusl(t *testing.T) {
 	if buildLibc != "musl" {
 		t.Fatalf("buildLibc = %q under -tags goffi_musl, want \"musl\"", buildLibc)
 	}
-	suffixes := updateAssetSuffixes("linux", "amd64", currentLibc)
+	suffixes := assetSuffixes("linux", "amd64", currentLibc)
 	if len(suffixes) == 0 || suffixes[0] != "-linux-musl-amd64.tar.gz" {
 		t.Fatalf("musl build prefers %v, want the musl asset first", suffixes)
 	}

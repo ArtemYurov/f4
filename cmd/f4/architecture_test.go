@@ -48,6 +48,11 @@ var architectureLayers = map[string]int{
 	// ours, which is what lets any layer call it.
 	"internal/sysinfo": 0,
 
+	// Self-update: check, download, install, elevate, and the self-exec rules
+	// the install has to know. A leaf over the network, not an interactive
+	// subsystem, which is why it is layer 1 and not layer 3.
+	"internal/update": 1,
+
 	// Data with an embed directive beside it, nothing else.
 	"internal/colorer": 0,
 

@@ -1,6 +1,6 @@
 //go:build linux && (amd64 || arm64)
 
-package main
+package update
 
 import (
 	"os"
@@ -46,8 +46,8 @@ func TestF4ExecutableUnknownInUniversalBuild(t *testing.T) {
 	t.Setenv(goffiUniversalExe, "")
 	t.Setenv(f4ExeEnv, "")
 
-	if got, err := f4Executable(); err == nil {
-		t.Errorf("f4Executable() = %q, nil; want an error", got)
+	if got, err := executable(); err == nil {
+		t.Errorf("executable() = %q, nil; want an error", got)
 	}
 }
 
@@ -56,12 +56,12 @@ func TestF4ExecutablePrefersGoffiRecord(t *testing.T) {
 	t.Setenv(goffiUniversalExe, strconv.Itoa(os.Getpid())+":/usr/bin/f4")
 	t.Setenv(f4ExeEnv, "/handed/down/f4")
 
-	got, err := f4Executable()
+	got, err := executable()
 	if err != nil {
-		t.Fatalf("f4Executable() error: %v", err)
+		t.Fatalf("executable() error: %v", err)
 	}
 	if want := "/usr/bin/f4"; got != want {
-		t.Errorf("f4Executable() = %q, want %q", got, want)
+		t.Errorf("executable() = %q, want %q", got, want)
 	}
 }
 
@@ -72,12 +72,12 @@ func TestF4ExecutableIgnoresInheritedRecord(t *testing.T) {
 	t.Setenv(goffiUniversalExe, strconv.Itoa(os.Getpid()+1)+":/usr/bin/some-other-program")
 	t.Setenv(f4ExeEnv, "/usr/bin/f4")
 
-	got, err := f4Executable()
+	got, err := executable()
 	if err != nil {
-		t.Fatalf("f4Executable() error: %v", err)
+		t.Fatalf("executable() error: %v", err)
 	}
 	if want := "/usr/bin/f4"; got != want {
-		t.Errorf("f4Executable() = %q, want %q", got, want)
+		t.Errorf("executable() = %q, want %q", got, want)
 	}
 }
 
@@ -90,12 +90,12 @@ func TestF4ExecutableWithoutGuard(t *testing.T) {
 	if err != nil {
 		t.Skipf("os.Executable unavailable here: %v", err)
 	}
-	got, err := f4Executable()
+	got, err := executable()
 	if err != nil {
-		t.Fatalf("f4Executable() error: %v", err)
+		t.Fatalf("executable() error: %v", err)
 	}
 	if got != want {
-		t.Errorf("f4Executable() = %q, want %q", got, want)
+		t.Errorf("executable() = %q, want %q", got, want)
 	}
 }
 

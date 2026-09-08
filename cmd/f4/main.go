@@ -15,6 +15,7 @@ import (
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/f4/internal/history"
+	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -168,12 +169,12 @@ func sudoStartupMode(args []string, askpassParent bool) (dispatcher string, askp
 func main() {
 	vtui.AppName = "f4"
 	configureF4DebugLogPath(GetF4ConfigDir())
-	if archivePath, archiveKind, found, err := parseUpdateHelperArgs(os.Args[1:]); found {
+	if archivePath, archiveKind, found, err := update.ParseHelperArgs(os.Args[1:]); found {
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(2)
 		}
-		if err := runUpdateHelper(archivePath, archiveKind); err != nil {
+		if err := update.RunHelper(archivePath, archiveKind); err != nil {
 			fmt.Fprintf(os.Stderr, "f4 update helper failed: %v\n", err)
 			os.Exit(1)
 		}
@@ -183,7 +184,7 @@ func main() {
 	var sudoDispatcher string
 
 	// Initialize SudoClient immediately for all process types
-	execPath, err := f4Executable()
+	execPath, err := update.Executable()
 	if err != nil {
 		execPath = os.Args[0]
 	}
@@ -498,7 +499,7 @@ see in vtinput project: https://github.com/unxed/vtinput
 	// and no session come up here. os.Exit skips the deferred SaveSession on
 	// purpose, this run never touched the session.
 	if updateRequested {
-		os.Exit(runUpdateCLI(updateChannelArg))
+		os.Exit(update.RunCLI(updateChannelArg, updateSettings(), currentBuild(), applyUpdateSettings))
 	}
 
 	for _, arg := range os.Args {

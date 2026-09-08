@@ -1,6 +1,6 @@
 //go:build !linux || (!amd64 && !arm64)
 
-package main
+package update
 
 import "os"
 
@@ -21,9 +21,9 @@ func universalHostLoader() (loader, libc string, ok bool) {
 	return "", "", false
 }
 
-// f4Executable is os.Executable where no build mode moves the executable out
+// executable is os.Executable where no build mode moves the executable out
 // from under the program.
-func f4Executable() (string, error) {
+func executable() (string, error) {
 	return os.Executable()
 }
 

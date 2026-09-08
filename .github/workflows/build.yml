@@ -616,7 +616,7 @@ jobs:
         grep -q "RUNPATH.*$TERMUX_PREFIX/lib" /tmp/dyn
 
     # Two artifacts. The tarball mirrors the other platforms and is what
-    # the in-app updater picks up (updateAssetSuffixes maps GOOS=android
+    # the in-app updater picks up (internal/update assetSuffixes maps GOOS=android
     # to the termux name). The .deb is the
     # native way to install in Termux: `pkg install ./f4-termux-arm64.deb`.
     # Termux runs with no chroot, so the paths inside are absolute

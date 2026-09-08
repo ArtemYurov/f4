@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/unxed/f4/internal/update"
 )
 
 // iniResolvers lists per-INI path functions and the fragment they append to
@@ -23,7 +25,7 @@ var iniResolvers = []struct {
 	{"userColorOverridesPath", userColorOverridesPath, "farcolors.ini"},
 }
 
-// setupPortableIni points osExecutable at a mock f4 binary accompanied by an
+// setupPortableIni points update.Executable at a mock f4 binary accompanied by an
 // f4.ini that selects the given UseSystemProfiles value, then drops the cached
 // config directory so GetF4ConfigDir/IsPortableProfile re-detect from scratch.
 // It returns the directory holding the mock executable.
@@ -39,10 +41,10 @@ func setupPortableIni(t *testing.T, useSystemProfiles string) string {
 		t.Fatal(err)
 	}
 
-	origExe := osExecutable
-	osExecutable = func() (string, error) { return mockExe, nil }
+	origExe := update.Executable
+	update.Executable = func() (string, error) { return mockExe, nil }
 	t.Cleanup(func() {
-		osExecutable = origExe
+		update.Executable = origExe
 		resetConfigDirForTest()
 		cachedF4Portable = false
 		cachedF4ConfigDir = ""

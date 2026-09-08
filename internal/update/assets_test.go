@@ -1,4 +1,4 @@
-package main
+package update
 
 import (
 	"strings"
@@ -12,8 +12,8 @@ import (
 // preference order and -- more importantly -- the directions the fallback
 // must NOT go are pinned here.
 
-func linuxAssets() []githubAsset {
-	return []githubAsset{
+func linuxAssets() []Asset {
+	return []Asset{
 		{Name: "f4-linux-amd64.tar.gz", BrowserDownloadURL: "https://example/generic-amd64"},
 		{Name: "f4-linux-musl-amd64.tar.gz", BrowserDownloadURL: "https://example/musl-amd64"},
 		{Name: "f4-linux-arm64.tar.gz", BrowserDownloadURL: "https://example/generic-arm64"},
@@ -28,7 +28,7 @@ func TestUpdateAssetSuffixes_PicksMatchingFlavor(t *testing.T) {
 		goos    string
 		goarch  string
 		libc    string
-		assets  []githubAsset
+		assets  []Asset
 		wantURL string
 	}{
 		{
@@ -55,7 +55,7 @@ func TestUpdateAssetSuffixes_PicksMatchingFlavor(t *testing.T) {
 			goos:   "linux",
 			goarch: "amd64",
 			libc:   "musl",
-			assets: []githubAsset{
+			assets: []Asset{
 				{Name: "f4-linux-amd64.tar.gz", BrowserDownloadURL: "https://example/generic-amd64"},
 			},
 			wantURL: "https://example/generic-amd64",
@@ -75,7 +75,7 @@ func TestUpdateAssetSuffixes_PicksMatchingFlavor(t *testing.T) {
 			goos:   "linux",
 			goarch: "amd64",
 			libc:   "",
-			assets: []githubAsset{
+			assets: []Asset{
 				{Name: "f4-linux-musl-amd64.tar.gz", BrowserDownloadURL: "https://example/musl-amd64"},
 			},
 			wantURL: "",
@@ -84,7 +84,7 @@ func TestUpdateAssetSuffixes_PicksMatchingFlavor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			url, _, kind := pickAsset(tt.assets, updateAssetSuffixes(tt.goos, tt.goarch, tt.libc))
+			url, _, kind := pickAsset(tt.assets, assetSuffixes(tt.goos, tt.goarch, tt.libc))
 			if url != tt.wantURL {
 				t.Errorf("picked %q, want %q", url, tt.wantURL)
 			}
@@ -102,7 +102,7 @@ func TestUpdateAssetSuffixes_PicksMatchingFlavor(t *testing.T) {
 func TestUpdateAssetSuffixes_MuslNameDoesNotMatchGenericSuffix(t *testing.T) {
 	for _, arch := range []string{"amd64", "arm64"} {
 		muslName := "f4-linux-musl-" + arch + ".tar.gz"
-		for _, suffix := range updateAssetSuffixes("linux", arch, "") {
+		for _, suffix := range assetSuffixes("linux", arch, "") {
 			if strings.HasSuffix(muslName, suffix) {
 				t.Errorf("glibc suffix %q matches musl asset %q", suffix, muslName)
 			}
@@ -112,10 +112,10 @@ func TestUpdateAssetSuffixes_MuslNameDoesNotMatchGenericSuffix(t *testing.T) {
 
 func TestUpdateAssetSuffixes_NonLinuxUnchanged(t *testing.T) {
 	// A libc value must not leak into platforms that have no such split.
-	if got := updateAssetSuffixes("darwin", "arm64", "musl"); len(got) != 1 || got[0] != "-darwin-arm64.tar.gz" {
+	if got := assetSuffixes("darwin", "arm64", "musl"); len(got) != 1 || got[0] != "-darwin-arm64.tar.gz" {
 		t.Errorf("darwin suffixes = %v, want [-darwin-arm64.tar.gz]", got)
 	}
-	got := updateAssetSuffixes("windows", "amd64", "")
+	got := assetSuffixes("windows", "amd64", "")
 	want := []string{"-windows-amd64.7z", "-windows-amd64.zip"}
 	if len(got) != len(want) {
 		t.Fatalf("windows suffixes = %v, want %v", got, want)

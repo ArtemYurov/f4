@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/netproxy"
+	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/vtui"
 	"github.com/unxed/zip"
 )
@@ -30,7 +31,7 @@ func DownloadColorerSchemas(pf *PanelsFrame, onComplete func(success bool)) {
 	url := colorerDownloadURL
 	destDir := ColorerConfigsDir()
 
-	pf.RunProgressTask(" Downloading Colorer Schemas ", "Connecting to GitHub...", false, func(ctx context.Context, update func(msg string, percent int)) error {
+	pf.RunProgressTask(" Downloading Colorer Schemas ", "Connecting to GitHub...", false, func(ctx context.Context, updateProgress func(msg string, percent int)) error {
 		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 		if err != nil {
 			return err
@@ -70,7 +71,7 @@ func DownloadColorerSchemas(pf *PanelsFrame, onComplete func(success bool)) {
 				if contentLength > 0 {
 					pct = int((downloaded * 100) / contentLength)
 				}
-				update("Downloading schemas...", pct)
+				updateProgress("Downloading schemas...", pct)
 			}
 			if readErr != nil {
 				if readErr == io.EOF {
@@ -80,7 +81,7 @@ func DownloadColorerSchemas(pf *PanelsFrame, onComplete func(success bool)) {
 			}
 		}
 
-		update("Extracting schemas...", -1)
+		updateProgress("Extracting schemas...", -1)
 		return installColorerSchemas(buf.Bytes(), destDir, ctx)
 	}, func(err error) {
 		if err != nil {
@@ -116,7 +117,7 @@ func installColorerSchemas(data []byte, destDir string, ctx context.Context) err
 		if relPath == "" {
 			continue
 		}
-		if _, err := sanitizeExtractPath(relPath, destDir); err != nil {
+		if _, err := update.SanitizePath(relPath, destDir); err != nil {
 			return fmt.Errorf("invalid Colorer archive member %q: %w", f.Name, err)
 		}
 		if f.Mode()&os.ModeSymlink != 0 {
@@ -158,7 +159,7 @@ func installColorerSchemas(data []byte, destDir string, ctx context.Context) err
 		if relPath == "" {
 			continue
 		}
-		targetPath, err := sanitizeExtractPath(relPath, stage)
+		targetPath, err := update.SanitizePath(relPath, stage)
 		if err != nil {
 			return err
 		}

@@ -46,7 +46,7 @@ var terminalGraphicsSeen atomic.Bool
 // leaves GOFFI_UNIVERSAL_REEXEC behind to say the job is done. The bridge in
 // a child reads that variable, concludes it too already came through the
 // loader, and binds no libc -- so the child dies before main, on the first
-// libc symbol it touches. selfCommand already knows this and starts copies of
+// libc symbol it touches. update.SelfCommand already knows this and starts copies of
 // f4 through the loader itself; the terminal starts other people's programs,
 // which have no such arrangement, and the one program most likely to be a
 // universal build is f4 itself (issue #87: `./f4` from f4's own terminal died

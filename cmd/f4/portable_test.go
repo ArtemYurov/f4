@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/vtui"
 )
 
@@ -17,13 +18,13 @@ func TestPortableSettingsDialogUsesContextHelp(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	oldExecutable := osExecutable
+	oldExecutable := update.Executable
 	oldUserConfigDir := userConfigDir
-	osExecutable = func() (string, error) { return exe, nil }
+	update.Executable = func() (string, error) { return exe, nil }
 	userConfigDir = func() (string, error) { return tmpDir, nil }
 	resetConfigDirForTest()
 	t.Cleanup(func() {
-		osExecutable = oldExecutable
+		update.Executable = oldExecutable
 		userConfigDir = oldUserConfigDir
 		resetConfigDirForTest()
 	})
@@ -61,11 +62,11 @@ func TestConfig_PortableProfile(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Имитируем путь исполняемого файла в тестовой директории
-	origExeFunc := osExecutable
+	origExeFunc := update.Executable
 	origConfigDir := GetF4ConfigDir()
 	origPortable := cachedF4Portable
 	t.Cleanup(func() {
-		osExecutable = origExeFunc
+		update.Executable = origExeFunc
 		resetConfigDirForTest()
 		cachedF4ConfigDir = origConfigDir
 		cachedF4Portable = origPortable
@@ -75,7 +76,7 @@ func TestConfig_PortableProfile(t *testing.T) {
 	if err := os.WriteFile(mockExe, []byte(""), 0600); err != nil {
 		t.Fatal(err)
 	}
-	osExecutable = func() (string, error) {
+	update.Executable = func() (string, error) {
 		return mockExe, nil
 	}
 

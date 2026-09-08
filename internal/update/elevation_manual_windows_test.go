@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package update
 
 import (
 	"archive/zip"
@@ -37,11 +37,11 @@ func TestManualUACElevationValidation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	oldExecutable := osExecutable
-	osExecutable = func() (string, error) { return binary, nil }
-	defer func() { osExecutable = oldExecutable }()
+	oldExecutable := Executable
+	Executable = func() (string, error) { return binary, nil }
+	defer func() { Executable = oldExecutable }()
 
-	if err := runElevatedUpdate(archive.Bytes(), "zip"); err != nil {
+	if err := runElevated(archive.Bytes(), "zip"); err != nil {
 		t.Fatal(err)
 	}
 	path := filepath.Join(filepath.Dir(binary), marker)

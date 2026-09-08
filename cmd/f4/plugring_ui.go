@@ -14,6 +14,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/netproxy"
+	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/vtui"
 )
 
@@ -268,7 +269,7 @@ func actionInstallPlugRingItem(pf *PanelsFrame, parent *vtui.Window, item PlugRi
 	plugringDir := filepath.Join(GetF4ConfigDir(), "plugring")
 	pluginDir := filepath.Join(plugringDir, item.ID)
 
-	pf.RunProgressTask(" Installing Plugin ", "Downloading "+item.Name+"...", false, func(ctx context.Context, update func(msg string, percent int)) error {
+	pf.RunProgressTask(" Installing Plugin ", "Downloading "+item.Name+"...", false, func(ctx context.Context, updateProgress func(msg string, percent int)) error {
 		var archiveBytes []byte
 		if strings.HasPrefix(url, "file://") {
 			localPath := strings.TrimPrefix(url, "file://")
@@ -311,7 +312,7 @@ func actionInstallPlugRingItem(pf *PanelsFrame, parent *vtui.Window, item PlugRi
 					if contentLength > 0 {
 						pct = int((downloaded * 100) / contentLength)
 					}
-					update("Downloading...", pct)
+					updateProgress("Downloading...", pct)
 				}
 				if readErr != nil {
 					if readErr == io.EOF {
@@ -323,7 +324,7 @@ func actionInstallPlugRingItem(pf *PanelsFrame, parent *vtui.Window, item PlugRi
 			archiveBytes = archiveData.Bytes()
 		}
 
-		update("Extracting files...", -1)
+		updateProgress("Extracting files...", -1)
 
 		if err := os.RemoveAll(pluginDir); err != nil {
 			return fmt.Errorf("failed to replace existing plugin: %w", err)
@@ -335,9 +336,9 @@ func actionInstallPlugRingItem(pf *PanelsFrame, parent *vtui.Window, item PlugRi
 		if isArchive {
 			var err error
 			if isTarGz {
-				err = extractTarGzToDir(archiveBytes, pluginDir)
+				err = update.ExtractTarGz(archiveBytes, pluginDir)
 			} else {
-				err = extractZipToDir(archiveBytes, pluginDir)
+				err = update.ExtractZip(archiveBytes, pluginDir)
 			}
 			if err != nil {
 				os.RemoveAll(pluginDir)

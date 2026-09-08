@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/vtui"
 )
 
@@ -87,9 +88,9 @@ func TestUpdateFailureMessageRepro(t *testing.T) {
 	defer ts.Close()
 
 	// 4. Mock globals
-	oldExe := osExecutable
-	osExecutable = func() (string, error) { return exePath, nil }
-	defer func() { osExecutable = oldExe }()
+	oldExe := update.Executable
+	update.Executable = func() (string, error) { return exePath, nil }
+	defer func() { update.Executable = oldExe }()
 
 	// 5. Initialize headless UI environment
 	scr := vtui.NewScreenBuf()
@@ -103,11 +104,11 @@ func TestUpdateFailureMessageRepro(t *testing.T) {
 	pf := NewPanelsFrame()
 	pf.ResizeConsole(80, 25)
 
-	performUpdate(pf, updateCandidate{
-		downloadURL: ts.URL,
-		archiveKind: "zip",
-		updateKey:   "v9.9.9",
-		needsUpdate: true,
+	performUpdate(pf, update.Candidate{
+		DownloadURL: ts.URL,
+		ArchiveKind: "zip",
+		UpdateKey:   "v9.9.9",
+		NeedsUpdate: true,
 	})
 
 	// 7. Wait for the background task to hit the error and show the dialog by pumping TaskChan

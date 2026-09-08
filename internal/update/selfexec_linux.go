@@ -1,6 +1,6 @@
 //go:build linux && (amd64 || arm64)
 
-package main
+package update
 
 import (
 	"errors"
@@ -29,12 +29,12 @@ const goffiUniversalGuard = "GOFFI_UNIVERSAL_REEXEC"
 // must not read it as being about itself.
 //
 // Recording it needs a goffi that does so. Against one that does not the
-// variable is simply absent, and f4Executable answers "unknown" instead of
+// variable is simply absent, and executable answers "unknown" instead of
 // answering with the loader's path, which is the failure this is here to
 // prevent.
 const goffiUniversalExe = "GOFFI_UNIVERSAL_EXE"
 
-// f4ExeEnv passes this executable's path to the copies of f4 that selfCommand
+// f4ExeEnv passes this executable's path to the copies of f4 that SelfCommand
 // starts. goffi's record cannot cover them: it is tagged with the pid of the
 // process the bridge re-execed, and a child has a different one -- but the
 // child is the same binary, so the parent's answer is the child's answer.
@@ -45,7 +45,7 @@ var errExecutableUnknown = errors.New(
 		"re-execing through the host dynamic loader, which leaves /proc/self/exe " +
 		"pointing at ld.so and argv[0] at an in-memory copy")
 
-// f4Executable is os.Executable, corrected for the universal build.
+// executable is os.Executable, corrected for the universal build.
 //
 // os.Executable reads /proc/self/exe, which after the bridge's re-exec names
 // the loader rather than f4 -- so anything that installs, updates, re-runs or
@@ -58,7 +58,7 @@ var errExecutableUnknown = errors.New(
 // nothing recorded it this reports that rather than guessing. Callers that can
 // carry on without knowing (portable-config detection, say) already fall back
 // to os.Args[0]; callers that cannot must refuse.
-func f4Executable() (string, error) {
+func executable() (string, error) {
 	// On Android f4 comes up through the system loader, so /proc/self/exe names
 	// linker64 and os.Executable would point callers at /system/bin.
 	if p, ok := systemLinkerExecutable(); ok {
@@ -94,7 +94,7 @@ func recordedExecutable(raw string) (string, bool) {
 // path we know and it cannot work out.
 func selfExecEnv() []string {
 	env := os.Environ()
-	if exe, err := f4Executable(); err == nil && exe != "" {
+	if exe, err := executable(); err == nil && exe != "" {
 		env = append(env, f4ExeEnv+"="+exe)
 	}
 	return env

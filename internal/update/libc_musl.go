@@ -1,6 +1,6 @@
 //go:build linux && goffi_musl
 
-package main
+package update
 
 // buildLibc names the C library this binary was linked against.
 //

@@ -1,6 +1,6 @@
 //go:build !linux || !goffi_musl
 
-package main
+package update
 
 import "testing"
 

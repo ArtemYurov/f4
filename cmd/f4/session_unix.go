@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/numeric"
+	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 	"golang.org/x/sys/unix"
@@ -143,7 +144,7 @@ func startNewSession() {
 	sockPath := filepath.Join(sessionDir(), fmt.Sprintf("f4-new-%d-%d.sock", pid, time.Now().Unix()))
 	vtui.DebugLog("SESSION: Starting new daemon server at %s", sockPath)
 
-	cmd := selfCommand(os.Args[0], "--server", sockPath)
+	cmd := update.SelfCommand(os.Args[0], "--server", sockPath)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true} // Detach from terminal
 
 	// Crucial for GUI startup: redirect daemon's own I/O to null so it doesn't

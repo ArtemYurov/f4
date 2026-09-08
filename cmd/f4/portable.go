@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/vtui"
 )
 
@@ -77,7 +78,7 @@ func expandProfileVars(value, exeDir string) string {
 
 // currentPortableIniPath is portableIniPath for the running binary.
 func currentPortableIniPath() string {
-	exe, err := osExecutable()
+	exe, err := update.Executable()
 	if err != nil {
 		exe = os.Args[0]
 	}

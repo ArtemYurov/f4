@@ -13,6 +13,7 @@ import (
 	"unicode/utf16"
 	"unsafe"
 
+	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/vtui"
 	"golang.org/x/sys/windows"
 )
@@ -45,7 +46,7 @@ func conPTYBundleDirectory() (string, error) {
 	if conPTYBundleDirectoryOverride != nil {
 		return conPTYBundleDirectoryOverride()
 	}
-	exe, err := f4Executable()
+	exe, err := update.Executable()
 	if err != nil {
 		return "", fmt.Errorf("find f4 executable: %w", err)
 	}

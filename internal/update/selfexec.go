@@ -1,11 +1,11 @@
-package main
+package update
 
 import (
 	"os"
 	"os/exec"
 )
 
-// selfCommand builds a command that starts another copy of this executable
+// SelfCommand builds a command that starts another copy of this executable
 // with args. self is the path the caller would otherwise have handed
 // exec.Command: call sites disagree on whether that is os.Args[0] or
 // os.Executable(), and this does not settle the argument for them.
@@ -39,7 +39,7 @@ import (
 // goffi's bridge would have built. The loader shifts argv the way it always
 // does, so the child still sees os.Args[0] as the image and its own arguments
 // from os.Args[1] on.
-func selfCommand(self string, args ...string) *exec.Cmd {
+func SelfCommand(self string, args ...string) *exec.Cmd {
 	name, argv := selfExecArgv(self, args)
 	// #nosec G204 -- the program is this executable and the loader it was
 	// started through; args are built by f4, never taken from user input.
@@ -53,7 +53,7 @@ func selfCommand(self string, args ...string) *exec.Cmd {
 	return cmd
 }
 
-// selfExecArgv picks the program and arguments selfCommand runs. Split out so
+// selfExecArgv picks the program and arguments SelfCommand runs. Split out so
 // the universal case can be checked without starting a process.
 func selfExecArgv(self string, args []string) (string, []string) {
 	loader, libc, ok := universalHostLoader()

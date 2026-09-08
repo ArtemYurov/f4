@@ -347,7 +347,7 @@ titles, not the ordering.
 
 ### Phase 5: Leaf Packages
 - [x] Task 22: Extract `internal/sysinfo` (1 outbound) ([details](phase-05-leaf-packages.md#task-22-extract-internalsysinfo)) (depends on 6, 7, 19, 20, 21, 43)
-- [ ] Task 23: Extract `internal/update` (3 outbound) ([details](phase-05-leaf-packages.md#task-23-extract-internalupdate)) (depends on 22)
+- [x] Task 23: Extract `internal/update` (3 outbound) ([details](phase-05-leaf-packages.md#task-23-extract-internalupdate)) (depends on 22)
 - [ ] Task 24: Extract `internal/config`, `internal/i18n`, `internal/theme`, `internal/keymap` ([details](phase-05-leaf-packages.md#task-24-extract-internalconfig-internali18n-internaltheme-internalkeymap)) (depends on 4, 23)
 
 ### Phase 6: Hosts and Services
@@ -386,6 +386,29 @@ titles, not the ordering.
 
 Things measured and not yet settled. Each names the evidence and the next step,
 so that whoever picks this up does not re-derive it.
+
+### `internal/config` needs an `Executable` seam in Task 24
+
+`self_exec*.go` went to `internal/update` in Task 23, as the roster says, and
+with it `Executable` — os.Executable corrected for the universal Linux build,
+where `/proc/self/exe` names the loader. Five callers outside the updater use
+it, and two of them are `config.go:33` and `portable.go:80`: the
+portable-configuration probe, which is the first thing that runs.
+
+Those two land in `internal/config`, a layer-0 package that may import no other
+`internal/*`. So Task 24 cannot simply carry the call across. It declares the
+seam instead — `var Executable = os.Executable` in `internal/config`, set to
+`update.Executable` by the root — which is the shape `history.SamePath` and
+`action.Localize` already use.
+
+The hazard to watch is the default. `os.Executable` is *wrong* on a universal
+build rather than merely unavailable, and a forgotten assignment leaves the
+portable probe reading the ini next to `ld.so` with no error. Set it in
+`main.go` beside the other two hooks, and before the first `GetF4ConfigDir()`.
+
+The other three callers — `pty_windows.go`, `session_unix.go` and
+`detach_unix.go` — are layer 3 and above and keep calling `update.Executable`
+directly.
 
 ### Two CI-only test failures, cause not identified
 
