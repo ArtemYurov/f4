@@ -222,7 +222,7 @@ func filterKnownHosts(w io.Writer, data []byte, address string) error {
 		}
 		trimmed := strings.Trim(string(line), " \t\r\n")
 		if trimmed == "" || strings.HasPrefix(trimmed, "#") || knownHostLineApplies(trimmed, address) {
-			if _, err := io.WriteString(w, string(line)); err != nil {
+			if _, err := w.Write(line); err != nil {
 				return err
 			}
 			continue
@@ -271,7 +271,7 @@ func knownHostLineApplies(line, address string) bool {
 		return true
 	}
 	name := probe.Name()
-	defer os.Remove(name)
+	defer func() { _ = os.Remove(name) }()
 	if _, err := fmt.Fprintf(probe, "%s %s %s\n", fields[patternIndex], knownHostProbeKey.Type(),
 		base64.StdEncoding.EncodeToString(knownHostProbeKey.Marshal())); err != nil {
 		_ = probe.Close()
