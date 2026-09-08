@@ -393,6 +393,76 @@ titles, not the ordering.
 Things measured and not yet settled. Each names the evidence and the next step,
 so that whoever picks this up does not re-derive it.
 
+### Open: `internal/plughost` needs a host interface, not a file move — Task 26
+
+**The question.** Every extraction through Task 25 was mechanical: score the
+gate, `git mv`, requalify the call sites. Task 26 is the first that cannot be,
+and the next four (`gui`, `macro`, `viewer`, `term`) are likely the same shape.
+Somebody has to decide whether this pull request designs a host interface or
+stops short of the packages that need one.
+
+**What was measured.** The wave was attempted and reverted; the tree is
+unchanged and green. Thirteen files moved cleanly into `internal/plughost`
+before anything broke — all four transports, permissions, scaffold, the plugring
+reader, the sqlite actions. Then:
+
+- All twenty candidate files name `Plugin` or `PluginTransport`, both declared
+  in `plughost.go`. Nothing moves until that file does.
+- `plughost.go` is 272 lines in two halves. Lines 1-94 are host plumbing —
+  `pluginInitTimeout`, `startPluginSession`, the `PluginTransport` interface —
+  and move. Lines 95-238 are `newHostMethods`, the RPC table a plugin calls
+  into, and two of its entries do `pf := findPanelsFrame()` and then
+  `pf.RunProgressTask(…)` / `pf.Menu(…)`. That is layer 4 by definition.
+- `extui_host.go` (678 lines) calls `SetupUI()` at :473, `setF4Clipboard` at
+  :584 and `HandleSemanticAction` at :592. It is the external-UI protocol: a
+  plugin asking f4 to restart its UI, set the clipboard, run a semantic action.
+- `api.go` is 60 lines and 10 methods, and the task text calls it "this is its
+  home". It is not: `coreAPI` implements `vfs.HostAPI` and its bodies call
+  `getShortVersionInfo`, `RunAction`, `RegisterGlobalHotkey`,
+  `findPanelsFrameAnyScreen` and `SetupUI`. It is the composition root's
+  implementation of an interface that already exists in `vfs` (layer 0).
+
+**The dead end, so it is not walked again.** Moving `api.go` into
+`internal/plughost` and resolving symbols outward does not converge: each
+resolved name pulls in another app function, and the closure is most of
+`cmd/f4`. The gate says 0 for eleven of these files and it is right about view
+types and wrong about the package — the same false confidence `colors.go` and
+`grabber.go` gave in the other direction.
+
+**The options, and what each costs.**
+
+1. *Design the host boundary.* `internal/plughost` takes `vfs.HostAPI` — which
+   it already receives as a parameter — plus the app-facing RPC table, supplied
+   by the root rather than built in the package. `newHostMethods` and
+   `extui_host.go` stay in `cmd/f4` and travel to `internal/app`; `api.go` goes
+   with them. This is what `ARCHITECTURE.md` already prescribes ("a lower layer
+   that needs something from the host defines its own interface") and it is the
+   only option that produces the package the target tree names. It is design
+   work per subsystem, not a move, and the same question returns for `gui`,
+   `macro`, `viewer` and `term`.
+2. *Extract only what moves mechanically, and say so.* Run the gate over the
+   remaining rosters, report how much of each package is reachable without
+   designing an interface, and finish at Phase 11 with the tree that produces.
+   Cheap, honest, and leaves `ARCHITECTURE.md`'s tree partly unrealised — which
+   Task 41 then has to describe as fact rather than as target.
+3. *Stop at Phase 5.* Twenty-six of forty-six tasks, `cmd/f4` down from 687
+   files to 592, ten new packages, every commit green. Phase 11 closes the pull
+   request on that.
+
+**What is missing to decide.** Not a measurement — the numbers above are the
+measurement. It is a scope decision that belongs to whoever owns the pull
+request, because option 1 changes what this branch *is*: a restructuring that
+also redesigns the plugin host's boundary is a different review, and a different
+conversation with the upstream maintainer, than a restructuring that moves
+files.
+
+**What goes wrong if it is decided badly.** Choosing option 1 without saying so
+produces a pull request whose reviewer meets a new host interface halfway
+through a 300-file diff, with no issue and no discussion behind it — the exact
+"broad reorganization proposal" the maintainer already declined once. Choosing
+option 2 or 3 without recording it leaves `ARCHITECTURE.md` describing packages
+that do not exist, which is worse than describing none.
+
 ### Two packages the plan did not name
 
 Both were forced by the dependency rules rather than chosen, and both import
