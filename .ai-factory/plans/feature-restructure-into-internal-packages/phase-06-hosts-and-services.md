@@ -607,6 +607,47 @@ go test ./internal/macro/... ./internal/luaplug/...
 
 ---
 
+### What the wave actually found
+
+**The interface was already there.** `MacroHost` — eleven methods — was written
+before this branch, implemented by `f4MacroHost` and injected through
+`NewLuaMacroEngine`. Nothing had to be designed; the wave only had to put the
+two halves in different packages. That is what the previous three waves were
+converging on, arrived at independently by whoever wrote the Lua engine.
+
+**`macro.go` is not the macro engine.** It holds `MacroManager` — recording,
+playback, storage, the assign dialog — and also `Filter`, `LookupHotkey` and
+`GetCurrentArea`, which are the application's key router: they consult the
+macro engine first and the hotkey manager, the action registry, the plugin
+actions and the panels afterwards. Those three, with their five helpers, stayed
+behind as free functions in `cmd/f4/macro_dispatch.go`; every field they touch
+was already exported, so the split cost nothing. `ToggleRecording` now takes the
+area instead of deriving it, because naming the current area means naming the
+view types.
+
+**Two methods followed the host they construct.** `LoadLuaMacros` and
+`ReloadLuaMacros` built the engine with `f4MacroHost{}` inline; they take a
+`MacroHost` now, which is the same injection the constructor already used.
+
+**Three test files split rather than moved**, each keeping the half that tests
+what stayed: the router (`macro_test.go`), the action registration
+(`macro_reload_action_test.go`) and the palette's macro entries. The palette
+test needed a host that records injected keys and got a four-method one
+embedding the real host.
+
+**`tools/icons/main_test.go` is fixed rather than left red.** It read
+`../../assets/icon/f4.svg` while its own tool read `cmd/f4/assets/icon/` — one
+segment above, so it had never passed. It now reads the same directory the tool
+does, and the module's tests are green. Task 27 said to leave it; that was right
+while the failure looked unrelated, and it is not: the test points at the icons
+this phase moved.
+
+**The qualifier hit a local named `macro`.** `macro_export_test.go` and
+`macro_lua_test.go` both do `macro := engine.Find(…)`, so a package-qualifier
+rewrite silently turned `macro.Description` into `Description`. It failed the
+build rather than compiling wrong, but only because the field name is not
+otherwise in scope.
+
 ## Phase Risks and Mitigations
 
 - **Risk:** `TestAllDialogs_LayoutValidation` stops running and CI stays green.

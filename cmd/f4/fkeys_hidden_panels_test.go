@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -96,12 +97,12 @@ func TestPanelsFrame_F2_OpensUserMenu_WhenPanelsHidden_Issue354(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
 	previousHotkeys := GlobalHotkeysMgr
-	previousMacros := MacroMgr
+	previousMacros := macro.MacroMgr
 	GlobalHotkeysMgr = NewHotkeyManager("")
-	MacroMgr = NewMacroManager("")
+	macro.MacroMgr = macro.NewMacroManager("")
 	t.Cleanup(func() {
 		GlobalHotkeysMgr = previousHotkeys
-		MacroMgr = previousMacros
+		macro.MacroMgr = previousMacros
 	})
 	pf := setupMockPanelsFrame(t)
 	defer pf.Close()

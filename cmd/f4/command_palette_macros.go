@@ -6,12 +6,13 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
 
 func commandPaletteMacroEntries(area string) []commandPaletteEntry {
-	if MacroMgr == nil {
+	if macro.MacroMgr == nil {
 		return nil
 	}
 	category := i18n.Msg("CommandPalette.CategoryMacro")
@@ -28,13 +29,13 @@ func commandPaletteMacroEntries(area string) []commandPaletteEntry {
 
 func commandPaletteMacroRecordEntry(category string, aliases []string) commandPaletteEntry {
 	labelKey := "CommandPalette.StartMacroRecording"
-	if MacroMgr != nil && MacroMgr.Recording {
+	if macro.MacroMgr != nil && macro.MacroMgr.Recording {
 		labelKey = "CommandPalette.StopMacroRecording"
 	}
 	return commandPaletteEntry{
 		Key:          "macro:record-toggle",
 		Label:        i18n.Msg(labelKey),
-		EnglishLabel: map[bool]string{true: "Stop macro recording", false: "Start macro recording"}[MacroMgr != nil && MacroMgr.Recording],
+		EnglishLabel: map[bool]string{true: "Stop macro recording", false: "Start macro recording"}[macro.MacroMgr != nil && macro.MacroMgr.Recording],
 		Description:  i18n.Msg("CommandPalette.MacroRecording.Desc"),
 		ID:           "Macro.RecordToggle",
 		Category:     category,
@@ -45,19 +46,19 @@ func commandPaletteMacroRecordEntry(category string, aliases []string) commandPa
 			"CommandPalette.MacroRecording.Desc",
 		)...),
 		run: func() bool {
-			return MacroMgr != nil && MacroMgr.ToggleRecording()
+			return macro.MacroMgr != nil && macro.MacroMgr.ToggleRecording(macroCurrentArea())
 		},
 	}
 }
 
 func commandPaletteRecordedMacroEntries(area, category string, aliases []string) []commandPaletteEntry {
-	if MacroMgr == nil {
+	if macro.MacroMgr == nil {
 		return nil
 	}
 	seen := make(map[string]bool)
 	var entries []commandPaletteEntry
 	appendArea := func(bindingArea string) {
-		for key, events := range MacroMgr.Macros[bindingArea] {
+		for key, events := range macro.MacroMgr.Macros[bindingArea] {
 			if len(events) == 0 || seen[strings.ToLower(key)] {
 				continue
 			}
@@ -89,10 +90,10 @@ func commandPaletteRecordedMacroEntries(area, category string, aliases []string)
 }
 
 func runRecordedMacro(area, key string) bool {
-	if MacroMgr == nil || vtui.FrameManager == nil {
+	if macro.MacroMgr == nil || vtui.FrameManager == nil {
 		return false
 	}
-	areaMacros := MacroMgr.Macros[area]
+	areaMacros := macro.MacroMgr.Macros[area]
 	sequence, ok := areaMacros[key]
 	if !ok || len(sequence) == 0 {
 		return false
@@ -103,10 +104,10 @@ func runRecordedMacro(area, key string) bool {
 }
 
 func commandPaletteLuaMacroEntries(area, category string, aliases []string) []commandPaletteEntry {
-	if MacroMgr == nil || MacroMgr.Lua == nil {
+	if macro.MacroMgr == nil || macro.MacroMgr.Lua == nil {
 		return nil
 	}
-	bindings := MacroMgr.Lua.Bindings(area)
+	bindings := macro.MacroMgr.Lua.Bindings(area)
 	entries := make([]commandPaletteEntry, 0, len(bindings))
 	for _, binding := range bindings {
 		binding := binding
@@ -129,7 +130,7 @@ func commandPaletteLuaMacroEntries(area, category string, aliases []string) []co
 				"CommandPalette.LuaMacro",
 			)...),
 			run: func() bool {
-				return MacroMgr != nil && MacroMgr.Lua != nil && MacroMgr.Lua.RunExact(bindingArea, bindingKey)
+				return macro.MacroMgr != nil && macro.MacroMgr.Lua != nil && macro.MacroMgr.Lua.RunExact(bindingArea, bindingKey)
 			},
 		})
 	}

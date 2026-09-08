@@ -1,4 +1,4 @@
-package main
+package macro
 
 import (
 	"context"
@@ -434,9 +434,9 @@ func (e *LuaMacroEngine) execute(macro *LuaMacro, key string, original *vtinput.
 	}
 }
 
-// waitIdle blocks until no macro is running. Tests use it; macro execution is
+// WaitIdle blocks until no macro is running. Tests use it; macro execution is
 // asynchronous by design.
-func (e *LuaMacroEngine) waitIdle(timeout time.Duration) bool {
+func (e *LuaMacroEngine) WaitIdle(timeout time.Duration) bool {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		if !e.running.Load() {

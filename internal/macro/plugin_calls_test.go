@@ -1,4 +1,4 @@
-package main
+package macro
 
 import (
 	"context"
@@ -10,9 +10,8 @@ import (
 )
 
 func TestMacroCallProviderAliasesAndCleanup(t *testing.T) {
-	api := &coreAPI{}
 	wantContext := vfs.MacroCallContext{Current: vfs.FileRef{Dir: "/media", Name: "clip.mkv", Path: "/media/clip.mkv"}}
-	registration, err := api.RegisterMacroCallProvider(vfs.MacroCallProvider{
+	registration, err := RegisterMacroCallProvider(vfs.MacroCallProvider{
 		IDs: []string{"test.macro-provider", "{AABBCCDD-0000-0000-0000-000000000001}"},
 		Call: func(_ context.Context, got vfs.MacroCallContext, args []any) ([]any, error) {
 			if got.Current.Path != wantContext.Current.Path {
@@ -26,7 +25,7 @@ func TestMacroCallProviderAliasesAndCleanup(t *testing.T) {
 	}
 	t.Cleanup(registration.Unregister)
 
-	results, err := dispatchMacroPluginCall(context.Background(), "aabbccdd-0000-0000-0000-000000000001", wantContext, []any{"file"})
+	results, err := DispatchMacroPluginCall(context.Background(), "aabbccdd-0000-0000-0000-000000000001", wantContext, []any{"file"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +35,7 @@ func TestMacroCallProviderAliasesAndCleanup(t *testing.T) {
 
 	registration.Unregister()
 	registration.Unregister()
-	if _, err := dispatchMacroPluginCall(context.Background(), "test.macro-provider", wantContext, nil); !errors.Is(err, errMacroCallProviderNotFound) {
+	if _, err := DispatchMacroPluginCall(context.Background(), "test.macro-provider", wantContext, nil); !errors.Is(err, errMacroCallProviderNotFound) {
 		t.Fatalf("error after unregister = %v", err)
 	}
 }

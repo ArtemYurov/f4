@@ -89,7 +89,7 @@ func ShowCommandPalette() bool {
 		// palette chord without stacking an unrelated dialog above them.
 		return true
 	}
-	area := (&MacroManager{}).GetCurrentArea()
+	area := macroCurrentArea()
 	if !commandPaletteAreaAllowed(area) {
 		// Ctrl+Shift+P is deliberately consumed over other modal surfaces; it
 		// must never leak through and edit a field or activate a menu item.

@@ -25,6 +25,7 @@ import (
 	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs/hostmode"
@@ -1814,7 +1815,7 @@ func (pf *PanelsFrame) Show(scr *vtui.ScreenBuf) {
 
 // InterceptPluginKey lets global plugin hotkeys and the active panel's
 // PanelController consume a key before built-in hotkey dispatch. It is
-// called from MacroManager.Filter, so plugins keep their priority over
+// called from macro.MacroManager.Filter, so plugins keep their priority over
 // the default bindings.
 func (pf *PanelsFrame) InterceptPluginKey(e *vtinput.InputEvent) bool {
 	if e.Type != vtinput.KeyEventType || !e.KeyDown {
@@ -2122,8 +2123,8 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 		}
 		pf.SetFocus(e.SetFocus)
 		// Reload macros from disk when regaining focus to share them across instances
-		if e.SetFocus && MacroMgr != nil {
-			MacroMgr.Load()
+		if e.SetFocus && macro.MacroMgr != nil {
+			macro.MacroMgr.Load()
 		}
 		// Propagate application focus without losing the explicit search-first target.
 		if pf.searchFirstMode() {
@@ -2796,7 +2797,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 	// clicking F3/F4/F5/… on the bottom bar still triggers View/Edit/Copy.
 	// Real key events reach ProcessKey only when Filter already declined
 	// them, so re-checking here is a no-op for those.
-	if MacroMgr.LookupHotkey(e) {
+	if macroLookupHotkey(macro.MacroMgr, e) {
 		return true
 	}
 
@@ -3660,7 +3661,7 @@ func (pf *PanelsFrame) HandleCommand(cmd int, args any) bool {
 }
 
 func (pf *PanelsFrame) GetKeyLabels() *vtui.KeySet {
-	area := MacroMgr.GetCurrentArea()
+	area := macroCurrentArea()
 
 	f2 := i18n.Msg("KeyBar.F2")
 	f7 := i18n.Msg("KeyBar.F7")

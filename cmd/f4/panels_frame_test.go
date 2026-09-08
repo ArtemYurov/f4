@@ -7,6 +7,7 @@ import (
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/internal/theme"
@@ -1653,11 +1654,11 @@ func TestPanelsFrame_AIHotkeyCanBeUnbound(t *testing.T) {
 
 	oldHotkeys := GlobalHotkeysMgr
 	oldGlobalHotkeys := GlobalHotkeys
-	oldMacroMgr := MacroMgr
+	oldMacroMgr := macro.MacroMgr
 	t.Cleanup(func() {
 		GlobalHotkeysMgr = oldHotkeys
 		GlobalHotkeys = oldGlobalHotkeys
-		MacroMgr = oldMacroMgr
+		macro.MacroMgr = oldMacroMgr
 	})
 	GlobalHotkeys = nil
 
@@ -1673,7 +1674,7 @@ func TestPanelsFrame_AIHotkeyCanBeUnbound(t *testing.T) {
 	hm.Bind("Shell", "CtrlA", "Test.CtrlA")
 	hm.Bind("Shell", "RCtrlA", "None")
 	GlobalHotkeysMgr = hm
-	MacroMgr = NewMacroManager("")
+	macro.MacroMgr = macro.NewMacroManager("")
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -1693,7 +1694,7 @@ func TestPanelsFrame_AIHotkeyCanBeUnbound(t *testing.T) {
 	if pf.InterceptPluginKey(e) {
 		t.Fatal("unbound RCtrl+A was intercepted before the hotkey manager")
 	}
-	if !MacroMgr.Filter(e) {
+	if !macroFilter(macro.MacroMgr, e) {
 		t.Fatal("unbound RCtrl+A was not consumed by the hotkey manager")
 	}
 	if _, ok := pf.panels[1].(*FileSystemPanel).vfs.(*aiVFSWrapper); ok {
@@ -5180,11 +5181,11 @@ func TestPanelsFrame_CtrlViewModes(t *testing.T) {
 	oldHotkeys := GlobalHotkeysMgr
 	GlobalHotkeysMgr = NewHotkeyManager("")
 	defer func() { GlobalHotkeysMgr = oldHotkeys }()
-	oldMacroMgr := MacroMgr
-	MacroMgr = &MacroManager{Macros: make(map[string]map[string][]*vtinput.InputEvent)}
-	defer func() { MacroMgr = oldMacroMgr }()
+	oldMacroMgr := macro.MacroMgr
+	macro.MacroMgr = &macro.MacroManager{Macros: make(map[string]map[string][]*vtinput.InputEvent)}
+	defer func() { macro.MacroMgr = oldMacroMgr }()
 	rightCtrl3 := &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: '3', ControlKeyState: vtinput.RightCtrlPressed}
-	if MacroMgr.Filter(rightCtrl3) {
+	if macroFilter(macro.MacroMgr, rightCtrl3) {
 		t.Fatal("RightCtrl+3 was consumed by the configurable hotkey filter")
 	}
 	if !pressKey(pf, rightCtrl3) {

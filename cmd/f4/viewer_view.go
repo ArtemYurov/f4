@@ -12,6 +12,7 @@ import (
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/theme"
@@ -759,7 +760,7 @@ func (vv *ViewerView) ProcessKey(e *vtinput.InputEvent) bool {
 	// InjectEvents, which skips FrameManager.EventFilter and therefore the
 	// hotkey manager. Route them through the same lookup so clicking F2/F5/
 	// F7/… on the bottom bar triggers the configured Viewer action.
-	if MacroMgr.LookupHotkey(e) {
+	if macroLookupHotkey(macro.MacroMgr, e) {
 		return true
 	}
 

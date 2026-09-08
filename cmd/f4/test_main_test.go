@@ -11,6 +11,7 @@ import (
 	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/internal/update"
@@ -26,10 +27,12 @@ func pressKey(f vtui.Frame, e *vtinput.InputEvent) bool {
 	if GlobalHotkeysMgr == nil {
 		GlobalHotkeysMgr = NewHotkeyManager("")
 	}
-	if MacroMgr == nil {
-		MacroMgr = NewMacroManager("")
+	if macro.MacroMgr == nil {
+		macro.MacroMgr = macro.NewMacroManager("")
 	}
-	return testutil.PressKey(f, e, MacroMgr.Filter)
+	return testutil.PressKey(f, e, func(e *vtinput.InputEvent) bool {
+		return macroFilter(macro.MacroMgr, e)
+	})
 }
 
 // preserveActionRegistry keeps tests that register synthetic actions from

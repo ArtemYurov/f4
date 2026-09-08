@@ -8,6 +8,7 @@ import (
 
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -332,16 +333,16 @@ func TestCommandPaletteHotkeyPrecedesPluginsAndDoesNotStack(t *testing.T) {
 
 	host := &commandPalettePrimaryFrame{}
 	vtui.FrameManager.Push(host)
-	previousHotkeys, previousMacro := GlobalHotkeysMgr, MacroMgr
+	previousHotkeys, previousMacro := GlobalHotkeysMgr, macro.MacroMgr
 	GlobalHotkeysMgr = &HotkeyManager{
 		Defaults: map[string]map[string]string{"Common": {"CtrlShiftP": commandPaletteActionName}},
 		Bindings: map[string]map[string]string{"Common": {"CtrlShiftP": commandPaletteActionName}},
 	}
-	manager := &MacroManager{Macros: make(map[string]map[string][]*vtinput.InputEvent)}
-	MacroMgr = manager
+	manager := &macro.MacroManager{Macros: make(map[string]map[string][]*vtinput.InputEvent)}
+	macro.MacroMgr = manager
 	t.Cleanup(func() {
 		GlobalHotkeysMgr = previousHotkeys
-		MacroMgr = previousMacro
+		macro.MacroMgr = previousMacro
 	})
 
 	event := &vtinput.InputEvent{
@@ -349,7 +350,7 @@ func TestCommandPaletteHotkeyPrecedesPluginsAndDoesNotStack(t *testing.T) {
 		VirtualKeyCode: vtinput.VK_P, Char: 'P',
 		ControlKeyState: vtinput.LeftCtrlPressed | vtinput.ShiftPressed,
 	}
-	if !manager.Filter(event) {
+	if !macroFilter(manager, event) {
 		t.Fatal("Ctrl+Shift+P was not consumed")
 	}
 	if host.pluginIntercepted {
@@ -359,7 +360,7 @@ func TestCommandPaletteHotkeyPrecedesPluginsAndDoesNotStack(t *testing.T) {
 		t.Fatalf("top frame = %T, want command palette", vtui.FrameManager.GetTopFrame())
 	}
 	frameCount := len(vtui.FrameManager.Screens[vtui.FrameManager.ActiveIdx].Frames)
-	if !manager.Filter(event) {
+	if !macroFilter(manager, event) {
 		t.Fatal("second Ctrl+Shift+P was not consumed")
 	}
 	if got := len(vtui.FrameManager.Screens[vtui.FrameManager.ActiveIdx].Frames); got != frameCount {

@@ -21,6 +21,7 @@ import (
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/update"
@@ -830,13 +831,15 @@ func SetupUI() {
 		keymap.CreateDefaultKeymapIni(keymapPath)
 	}
 	keymap.GlobalKeyRemap = keymap.NewKeyRemap(keymapPath)
-	MacroMgr = NewMacroManager(filepath.Join(configDir, "key_macros.ini"))
-	MacroMgr.LoadLuaMacros(filepath.Join(configDir, "Macros", "scripts"))
+	macro.MacroMgr = macro.NewMacroManager(filepath.Join(configDir, "key_macros.ini"))
+	macro.MacroMgr.LoadLuaMacros(f4MacroHost{}, filepath.Join(configDir, "Macros", "scripts"))
 	// Help is initialized after the hotkey manager: key binding topics
 	// are generated from the action registry and must reflect the
 	// user's overrides from hotkeys.ini.
 	InitHelpSystem()
-	vtui.FrameManager.EventFilter = MacroMgr.Filter
+	vtui.FrameManager.EventFilter = func(e *vtinput.InputEvent) bool {
+		return macroFilter(macro.MacroMgr, e)
+	}
 
 	pluginsDisabled := false
 	for _, arg := range os.Args {

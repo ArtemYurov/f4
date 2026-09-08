@@ -520,6 +520,13 @@ None.
 
 ## Task 45: Write the pull request
 
+**One more line the body owes the reader**, recorded here so it survives to
+Task 45: `tools/icons`' own test never passed. It read
+`../../assets/icon/f4.svg` while the tool it tests read `cmd/f4/assets/icon/`,
+one directory apart, and the module has its own `go.mod` so `go test ./...`
+from the root never saw it. Fixed in the icons wave, which is what moved the
+directory. That drops the branch's pre-existing failures from three to two.
+
 ### Intent
 
 Six earlier tasks each end with "call this out in the PR body" and none of them

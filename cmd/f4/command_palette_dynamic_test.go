@@ -8,11 +8,13 @@ import (
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
+	"sync"
 )
 
 type commandPaletteOtherFrame struct{ vtui.BaseFrame }
@@ -28,9 +30,55 @@ func setCommandPaletteActivePanelsForTest(t *testing.T, pf *PanelsFrame) {
 	t.Cleanup(testutil.SetFrameManagerScreens(t, []*vtui.AppScreen{{Number: 1, Frames: []vtui.Frame{pf}}}, 0))
 }
 
+// paletteMacroHost records what a macro would type. Everything else falls
+// through to the real host: these tests list and select palette entries, and
+// the only host call that reaches is the key injection they assert on.
+type paletteMacroHost struct {
+	f4MacroHost
+	mu       sync.Mutex
+	injected []*vtinput.InputEvent
+}
+
+func (h *paletteMacroHost) InjectKeys(keys []*vtinput.InputEvent) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.injected = append(h.injected, keys...)
+}
+
+func (h *paletteMacroHost) injectedKeys() []string {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	names := make([]string, 0, len(h.injected))
+	for _, event := range h.injected {
+		names = append(names, keymap.EventToFarString(event))
+	}
+	return names
+}
+
+// newTestMacroEngine builds a Lua engine over the real host: the palette lists
+// macro bindings and never runs one, so nothing here reaches the UI.
+func newTestMacroEngine(t *testing.T, host macro.MacroHost, source string) *macro.LuaMacroEngine {
+	t.Helper()
+	engine, err := macro.NewLuaMacroEngine(host)
+	if err != nil {
+		t.Fatalf("NewLuaMacroEngine: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := engine.Close(); err != nil {
+			t.Errorf("close Lua macro engine: %v", err)
+		}
+	})
+	if source != "" {
+		if err := engine.LoadString("test", source); err != nil {
+			t.Fatalf("LoadString: %v", err)
+		}
+	}
+	return engine
+}
+
 func TestCommandPaletteIncludesRecordedAndLuaMacros(t *testing.T) {
-	previous := MacroMgr
-	host := newFakeMacroHost()
+	previous := macro.MacroMgr
+	host := &paletteMacroHost{}
 	engine := newTestMacroEngine(t, host, `
 		Macro { area = "Shell"; key = "CtrlL"; description = "Lint current item";
 			action = function() Keys("F7") end }
@@ -39,9 +87,9 @@ func TestCommandPaletteIncludesRecordedAndLuaMacros(t *testing.T) {
 		if err := engine.Close(); err != nil {
 			t.Errorf("close Lua macro engine: %v", err)
 		}
-		MacroMgr = previous
+		macro.MacroMgr = previous
 	})
-	MacroMgr = &MacroManager{
+	macro.MacroMgr = &macro.MacroManager{
 		Macros: map[string]map[string][]*vtinput.InputEvent{
 			"Shell":  {"CtrlR": {keymap.ParseFarKey("F5")}},
 			"Common": {"AltR": {keymap.ParseFarKey("F6")}},
@@ -66,7 +114,7 @@ func TestCommandPaletteIncludesRecordedAndLuaMacros(t *testing.T) {
 	if !executeCommandPaletteEntry(byKey["lua-macro:shell:ctrll"]) {
 		t.Fatal("Lua macro did not start from the palette")
 	}
-	if !engine.waitIdle(time.Second) {
+	if !engine.WaitIdle(time.Second) {
 		t.Fatal("Lua macro did not finish")
 	}
 	if got := strings.Join(host.injectedKeys(), " "); got != "F7" {
@@ -75,16 +123,16 @@ func TestCommandPaletteIncludesRecordedAndLuaMacros(t *testing.T) {
 }
 
 func TestCommandPaletteLuaMacroStaleAreaBindingDoesNotFallBackToCommon(t *testing.T) {
-	previous := MacroMgr
-	host := newFakeMacroHost()
+	previous := macro.MacroMgr
+	host := &paletteMacroHost{}
 	engine := newTestMacroEngine(t, host, `
 		Macro { area = "Shell"; key = "CtrlX"; description = "Shell command";
 			action = function() Keys("F5") end }
 		Macro { area = "Common"; key = "CtrlX"; description = "Common command";
 			action = function() Keys("F6") end }
 	`)
-	t.Cleanup(func() { MacroMgr = previous })
-	MacroMgr = &MacroManager{Lua: engine}
+	t.Cleanup(func() { macro.MacroMgr = previous })
+	macro.MacroMgr = &macro.MacroManager{Lua: engine}
 
 	var shellEntry commandPaletteEntry
 	for _, entry := range commandPaletteLuaMacroEntries("Shell", "Macros", nil) {
@@ -102,7 +150,7 @@ func TestCommandPaletteLuaMacroStaleAreaBindingDoesNotFallBackToCommon(t *testin
 	if executeCommandPaletteEntry(shellEntry) {
 		t.Fatal("stale Shell entry fell back to a Common macro")
 	}
-	if !engine.waitIdle(time.Second) {
+	if !engine.WaitIdle(time.Second) {
 		t.Fatal("macro engine did not become idle")
 	}
 	if got := strings.Join(host.injectedKeys(), " "); got != "" {
@@ -213,23 +261,23 @@ func TestCommandPaletteKeysAreNotCapturedWhileRecording(t *testing.T) {
 	vtui.FrameManager.Init(screen)
 	vtui.FrameManager.Push(&commandPaletteOtherFrame{})
 
-	previousHotkeys, previousMacro := GlobalHotkeysMgr, MacroMgr
+	previousHotkeys, previousMacro := GlobalHotkeysMgr, macro.MacroMgr
 	GlobalHotkeysMgr = &HotkeyManager{
 		Defaults: map[string]map[string]string{"Common": {"CtrlShiftP": commandPaletteActionName}},
 		Bindings: map[string]map[string]string{"Common": {"CtrlShiftP": commandPaletteActionName}},
 	}
-	manager := &MacroManager{Recording: true, Buffer: make([]*vtinput.InputEvent, 0)}
-	MacroMgr = manager
+	manager := &macro.MacroManager{Recording: true, Buffer: make([]*vtinput.InputEvent, 0)}
+	macro.MacroMgr = manager
 	t.Cleanup(func() {
 		GlobalHotkeysMgr = previousHotkeys
-		MacroMgr = previousMacro
+		macro.MacroMgr = previousMacro
 	})
 
 	open := &vtinput.InputEvent{
 		Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_P, Char: 'P',
 		ControlKeyState: vtinput.LeftCtrlPressed | vtinput.ShiftPressed,
 	}
-	if !manager.Filter(open) {
+	if !macroFilter(manager, open) {
 		t.Fatal("recording shadowed the command palette shortcut")
 	}
 	if len(manager.Buffer) != 0 {
@@ -238,14 +286,14 @@ func TestCommandPaletteKeysAreNotCapturedWhileRecording(t *testing.T) {
 	if _, ok := vtui.FrameManager.GetTopFrame().(*commandPaletteDialog); !ok {
 		t.Fatalf("top frame = %T, want command palette", vtui.FrameManager.GetTopFrame())
 	}
-	if !manager.Filter(open) {
+	if !macroFilter(manager, open) {
 		t.Fatal("an already-open palette did not consume its shortcut")
 	}
 	if len(manager.Buffer) != 0 {
 		t.Fatalf("repeated palette shortcut was recorded: %#v", manager.Buffer)
 	}
 	query := &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_H, Char: 'h'}
-	if manager.Filter(query) {
+	if macroFilter(manager, query) {
 		t.Fatal("palette query key was consumed by the macro manager")
 	}
 	if len(manager.Buffer) != 0 {
@@ -260,16 +308,16 @@ func TestCommandPaletteOpensInOtherFullScreenAreas(t *testing.T) {
 	vtui.FrameManager.Init(screen)
 	vtui.FrameManager.Push(&commandPaletteOtherFrame{})
 
-	previousHotkeys, previousMacro := GlobalHotkeysMgr, MacroMgr
+	previousHotkeys, previousMacro := GlobalHotkeysMgr, macro.MacroMgr
 	GlobalHotkeysMgr = &HotkeyManager{
 		Defaults: map[string]map[string]string{"Common": {"CtrlShiftP": commandPaletteActionName}},
 		Bindings: map[string]map[string]string{"Common": {"CtrlShiftP": commandPaletteActionName}},
 	}
-	manager := &MacroManager{Macros: make(map[string]map[string][]*vtinput.InputEvent)}
-	MacroMgr = manager
+	manager := &macro.MacroManager{Macros: make(map[string]map[string][]*vtinput.InputEvent)}
+	macro.MacroMgr = manager
 	t.Cleanup(func() {
 		GlobalHotkeysMgr = previousHotkeys
-		MacroMgr = previousMacro
+		macro.MacroMgr = previousMacro
 	})
 
 	event := &vtinput.InputEvent{
@@ -277,7 +325,7 @@ func TestCommandPaletteOpensInOtherFullScreenAreas(t *testing.T) {
 		VirtualKeyCode: vtinput.VK_P, Char: 'P',
 		ControlKeyState: vtinput.LeftCtrlPressed | vtinput.ShiftPressed,
 	}
-	if !manager.Filter(event) {
+	if !macroFilter(manager, event) {
 		t.Fatal("Ctrl+Shift+P was not consumed in an Other full-screen area")
 	}
 	if _, ok := vtui.FrameManager.GetTopFrame().(*commandPaletteDialog); !ok {

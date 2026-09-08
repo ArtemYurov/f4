@@ -9,6 +9,7 @@ import (
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/sdk/extui"
@@ -44,7 +45,7 @@ func (pf *PanelsFrame) SemanticNode(ctx *vtui.SemanticContext) map[string]any {
 	if pf.termView != nil {
 		shell.Terminal = pf.termView.semanticModel(ctx)
 	}
-	if MacroMgr != nil && MacroMgr.Recording {
+	if macro.MacroMgr != nil && macro.MacroMgr.Recording {
 		shell.MacroRecording = true
 	}
 

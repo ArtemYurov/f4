@@ -27,6 +27,7 @@ import (
 	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/textlayout"
@@ -1989,12 +1990,12 @@ func (ev *EditorView) processKeyInner(e *vtinput.InputEvent) bool {
 			// KeyBar clicks inject F-key events after the frame-manager filter
 			// has already been bypassed. zoin-bot routes those events through
 			// the configured editor action before yielding to framework fallbacks.
-			if MacroMgr.LookupHotkey(e) {
+			if macroLookupHotkey(macro.MacroMgr, e) {
 				return true
 			}
 			return false // Let framework fallbacks handle unbound F-keys
 		}
-		if MacroMgr.LookupHotkey(e) {
+		if macroLookupHotkey(macro.MacroMgr, e) {
 			return true
 		}
 		return true // Consume all other keys in Hex mode so they don't insert text
@@ -2687,7 +2688,7 @@ func (ev *EditorView) processKeyInner(e *vtinput.InputEvent) bool {
 	// InjectEvents, which skips FrameManager.EventFilter and therefore the
 	// hotkey manager. Route them through the same lookup so clicking F2/F7/
 	// F10/… on the bottom bar triggers the configured Editor action.
-	if MacroMgr.LookupHotkey(e) {
+	if macroLookupHotkey(macro.MacroMgr, e) {
 		return true
 	}
 

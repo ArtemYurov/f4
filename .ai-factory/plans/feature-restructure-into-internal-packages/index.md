@@ -363,7 +363,7 @@ titles, not the ordering.
 - [x] Task 25: Extract `internal/dialog`, and fix the silent dialog-test drop ([details](phase-06-hosts-and-services.md#task-25-extract-internaldialog)) (depends on 24)
 - [x] Task 26: Extract `internal/plughost`; cut `panel_plugins.go`'s `coreAPI` method ([details](phase-06-hosts-and-services.md#task-26-extract-internalplughost)) (depends on 25)
 - [x] Task 27: Extract `internal/gui`; move two of three `tools/icons` paths ([details](phase-06-hosts-and-services.md#task-27-extract-internalgui)) (depends on 26)
-- [ ] Task 28: Extract `internal/macro` ([details](phase-06-hosts-and-services.md#task-28-extract-internalmacro)) (depends on 27)
+- [x] Task 28: Extract `internal/macro` ([details](phase-06-hosts-and-services.md#task-28-extract-internalmacro)) (depends on 27)
 
 ### Phase 7: Viewer, Terminal and Media
 - [ ] Task 29: Extract `internal/viewer`, removing the `editor ↔ viewer` cycle ([details](phase-07-view-and-terminal.md#task-29-extract-internalviewer)) (depends on 28)

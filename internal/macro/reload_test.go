@@ -1,23 +1,10 @@
-package main
+package macro
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
 )
-
-func TestMacroReloadActionRegistration(t *testing.T) {
-	action, ok := GetAction("Macro.Reload")
-	if !ok {
-		t.Fatal("Macro.Reload is not registered")
-	}
-	if action.Area != "Common" || len(action.DefaultKeys) != 1 || action.DefaultKeys[0] != "CtrlAltShiftM" {
-		t.Fatalf("action metadata = %+v", action)
-	}
-	if got := NewHotkeyManager("").GetAction("Shell", "CtrlAltShiftM"); got != "Macro.Reload" {
-		t.Fatalf("default hotkey = %q, want Macro.Reload", got)
-	}
-}
 
 func TestMacroManagerReloadLuaMacros(t *testing.T) {
 	dir := t.TempDir()
@@ -34,7 +21,7 @@ func TestMacroManagerReloadLuaMacros(t *testing.T) {
 		}
 	})
 
-	count, err := mgr.ReloadLuaMacros(dir)
+	count, err := mgr.ReloadLuaMacros(newFakeMacroHost(), dir)
 	if err != nil || count != 1 {
 		t.Fatalf("first reload = (%d, %v), want (1, nil)", count, err)
 	}
@@ -54,7 +41,7 @@ func TestMacroManagerReloadLuaMacros(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	count, err = mgr.ReloadLuaMacros(dir)
+	count, err = mgr.ReloadLuaMacros(newFakeMacroHost(), dir)
 	if err != nil || count != 1 {
 		t.Fatalf("second reload = (%d, %v), want (1, nil)", count, err)
 	}

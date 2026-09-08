@@ -8,6 +8,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -40,20 +41,20 @@ func onUI[T any](fn func() T) T {
 	}
 }
 
-// f4MacroHost is the real MacroHost, bound to f4's panels and screen.
+// f4MacroHost is the real macro.MacroHost, bound to f4's panels and screen.
 type f4MacroHost struct{}
 
 func (f4MacroHost) CurrentArea() string {
 	return onUI(func() string {
-		if MacroMgr == nil {
+		if macro.MacroMgr == nil {
 			return "Common"
 		}
-		return MacroMgr.GetCurrentArea()
+		return macroCurrentArea()
 	})
 }
 
-func (f4MacroHost) Panel(active bool) MacroPanelInfo {
-	return onUI(func() (info MacroPanelInfo) {
+func (f4MacroHost) Panel(active bool) macro.MacroPanelInfo {
+	return onUI(func() (info macro.MacroPanelInfo) {
 		// Panel contents are replaced wholesale by directory reads. Today
 		// those land on this goroutine, but a future background reader would
 		// not, and a macro is not worth a crash: report what is safe.
@@ -65,7 +66,7 @@ func (f4MacroHost) Panel(active bool) MacroPanelInfo {
 
 		frame := findPanelsFrame()
 		if frame == nil {
-			return MacroPanelInfo{}
+			return macro.MacroPanelInfo{}
 		}
 
 		index := frame.activeIdx
@@ -73,7 +74,7 @@ func (f4MacroHost) Panel(active bool) MacroPanelInfo {
 			index = 1 - index
 		}
 
-		info = MacroPanelInfo{
+		info = macro.MacroPanelInfo{
 			Left:    index == 0,
 			Visible: frame.showPanels,
 		}
@@ -188,57 +189,15 @@ func (f4MacroHost) CallPlugin(ctx context.Context, id string, args []any) ([]any
 		snapshot.Current = vfs.FileRef{VFS: panel.vfs, Dir: dir, Name: name, Path: path}
 		return snapshot
 	})
-	return dispatchMacroPluginCall(ctx, id, callContext, args)
-}
-
-// LoadLuaMacros starts the Far-compatible macro engine and reads dir, which is
-// the equivalent of Far's Macros/scripts. A missing directory is not an error:
-// most users have no macros, and they should pay nothing for the feature.
-func (m *MacroManager) LoadLuaMacros(dir string) {
-	count, err := m.ReloadLuaMacros(dir)
-	if err != nil {
-		vtui.DebugLog("MACRO: %v", err)
-	}
-	if count > 0 {
-		vtui.DebugLog("MACRO: loaded %d Lua macro(s) from %s", count, dir)
-	}
-}
-
-// ReloadLuaMacros builds a fresh interpreter from disk, then swaps it in as a
-// single pointer update. A macro already running on the old interpreter is
-// allowed to finish; closing that interpreter happens asynchronously so a
-// reload cannot deadlock while the old macro is waiting for the UI goroutine.
-func (m *MacroManager) ReloadLuaMacros(dir string) (int, error) {
-	engine, err := NewLuaMacroEngine(f4MacroHost{})
-	if err != nil {
-		return 0, fmt.Errorf("cannot start the Lua macro engine: %w", err)
-	}
-	loadErr := engine.LoadDir(dir)
-	count := engine.Count()
-
-	old := m.Lua
-	if count == 0 {
-		m.Lua = nil
-		_ = engine.Close()
-	} else {
-		m.Lua = engine
-	}
-	if old != nil {
-		go func() {
-			if closeErr := old.Close(); closeErr != nil {
-				vtui.DebugLog("MACRO: closing replaced Lua engine: %v", closeErr)
-			}
-		}()
-	}
-	return count, loadErr
+	return macro.DispatchMacroPluginCall(ctx, id, callContext, args)
 }
 
 func actionReloadLuaMacros() bool {
-	if MacroMgr == nil {
+	if macro.MacroMgr == nil {
 		return false
 	}
 	dir := filepath.Join(config.GetF4ConfigDir(), "Macros", "scripts")
-	count, err := MacroMgr.ReloadLuaMacros(dir)
+	count, err := macro.MacroMgr.ReloadLuaMacros(f4MacroHost{}, dir)
 	if err != nil {
 		vtui.DebugLog("MACRO: reload: %v", err)
 		toast.Show(fmt.Sprintf("%s (%d loaded)", i18n.Msg("Macro.ReloadFailed"), count), 3*time.Second)

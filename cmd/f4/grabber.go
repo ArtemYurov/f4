@@ -119,7 +119,7 @@ func actionScreenGrab() bool {
 	return true
 }
 
-// VetoActionKey leaves physical Alt+Ins to GrabberFrame.ProcessKey. MacroManager
+// VetoActionKey leaves physical Alt+Ins to GrabberFrame.ProcessKey. macro.MacroManager
 // otherwise resolves the Common App.ScreenGrab action before a focused frame's
 // normal key handler gets a chance to close the grabber.
 func (g *GrabberFrame) VetoActionKey(e *vtinput.InputEvent) bool {

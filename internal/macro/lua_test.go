@@ -1,4 +1,4 @@
-package main
+package macro
 
 import (
 	"context"
@@ -129,7 +129,7 @@ func newTestMacroEngine(t *testing.T, host MacroHost, source string) *LuaMacroEn
 func fireMacro(t *testing.T, engine *LuaMacroEngine, key string) bool {
 	t.Helper()
 	consumed := engine.Trigger(engine.host.CurrentArea(), keymap.ParseFarKey(key))
-	if !engine.waitIdle(5 * time.Second) {
+	if !engine.WaitIdle(5 * time.Second) {
 		t.Fatal("macro did not finish in time")
 	}
 	return consumed

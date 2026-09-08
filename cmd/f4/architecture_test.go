@@ -109,6 +109,8 @@ var architectureLayers = map[string]int{
 
 	"internal/gui": 2,
 
+	"internal/macro": 3,
+
 	"internal/dialog": 3,
 
 	// Test scaffolding, placed by what it may import: testutil imports no

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -11,7 +12,7 @@ import (
 // TestKeyBarClick_DispatchesHotkeyAction guards the regression introduced by
 // the KeyBind refactor (commit 5b91218): mouse clicks on the F-key bar reach
 // PanelsFrame via FrameManager.InjectEvents, which sets is_injected=true and
-// therefore skips FrameManager.EventFilter — the MacroMgr.Filter path where
+// therefore skips FrameManager.EventFilter — the macro.MacroMgr.Filter path where
 // configured hotkey actions (F3=View, F4=Edit, F5=Copy, …) are dispatched.
 // Before the fix, the injected VK_F5 fell through PanelsFrame.ProcessKey
 // unhandled, so clicking F5 in the bottom bar did nothing.
@@ -21,8 +22,8 @@ func TestKeyBarClick_DispatchesHotkeyAction(t *testing.T) {
 	if GlobalHotkeysMgr == nil {
 		GlobalHotkeysMgr = NewHotkeyManager("")
 	}
-	if MacroMgr == nil {
-		MacroMgr = NewMacroManager("")
+	if macro.MacroMgr == nil {
+		macro.MacroMgr = macro.NewMacroManager("")
 	}
 
 	// Register a probe action bound to F5 in the Shell area, overriding
@@ -54,7 +55,7 @@ func TestKeyBarClick_DispatchesHotkeyAction(t *testing.T) {
 
 	// Simulate what vtui's KeyBar.ProcessMouse synthesizes on an F5 click:
 	// a KeyEvent that reaches ProcessKey directly (via InjectEvents),
-	// bypassing MacroMgr.Filter.
+	// bypassing macro.MacroMgr.Filter.
 	ev := &vtinput.InputEvent{
 		Type:           vtinput.KeyEventType,
 		KeyDown:        true,

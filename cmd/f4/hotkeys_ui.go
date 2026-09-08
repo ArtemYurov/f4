@@ -275,7 +275,7 @@ func buildHotkeyRows(draft *HotkeyManager) []hotkeyRow {
 	// second key. That is exactly the case a user hits when the host swallows
 	// the native chord: Ctrl+Tab switches browser tabs when f4 runs in a
 	// browser, and iTerm2 over ssh does not deliver it either (issue #72).
-	// Dispatch already honors such a binding -- MacroManager.Filter resolves
+	// Dispatch already honors such a binding -- macro.MacroManager.Filter resolves
 	// it through configuredHotkeyAction and RunAction, with Common as the
 	// fallback area -- so only this inventory stood in the way. The read-only
 	// native row stays alongside the editable one.

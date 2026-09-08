@@ -9,6 +9,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -24,7 +25,7 @@ Sequence=Up Up CtrlEnter Esc F5 Down ShiftF5 Esc Esc
 		t.Fatal(err)
 	}
 
-	mgr := NewMacroManager(tmpFile)
+	mgr := macro.NewMacroManager(tmpFile)
 
 	shellMacros, ok := mgr.Macros["Shell"]
 	if !ok {
@@ -100,17 +101,16 @@ func (m *mockAreaFrame) GetTitle() string        { return m.title }
 
 func TestMacro_GetCurrentArea(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	mgr := NewMacroManager("")
 
 	// 1. Empty FrameManager -> "Common"
-	if area := mgr.GetCurrentArea(); area != "Common" {
+	if area := macroCurrentArea(); area != "Common" {
 		t.Errorf("Expected 'Common' for empty FrameManager, got %q", area)
 	}
 
 	// 2. Dialog -> "Dialog"
 	fDialog := &mockAreaFrame{typ: vtui.TypeDialog}
 	vtui.FrameManager.Push(fDialog)
-	if area := mgr.GetCurrentArea(); area != "Dialog" {
+	if area := macroCurrentArea(); area != "Dialog" {
 		t.Errorf("Expected 'Dialog', got %q", area)
 	}
 	vtui.FrameManager.Pop()
@@ -118,7 +118,7 @@ func TestMacro_GetCurrentArea(t *testing.T) {
 	// 3. Menu -> "Menu"
 	fMenu := &mockAreaFrame{typ: vtui.TypeMenu}
 	vtui.FrameManager.Push(fMenu)
-	if area := mgr.GetCurrentArea(); area != "Menu" {
+	if area := macroCurrentArea(); area != "Menu" {
 		t.Errorf("Expected 'Menu', got %q", area)
 	}
 	vtui.FrameManager.Pop()
@@ -126,7 +126,7 @@ func TestMacro_GetCurrentArea(t *testing.T) {
 	// 4. EditorView -> "Editor"
 	fEditor := &mockAreaFrame{typ: vtui.TypeUser + 2}
 	vtui.FrameManager.Push(fEditor)
-	if area := mgr.GetCurrentArea(); area != "Editor" {
+	if area := macroCurrentArea(); area != "Editor" {
 		t.Errorf("Expected 'Editor', got %q", area)
 	}
 	vtui.FrameManager.Pop()
@@ -134,7 +134,7 @@ func TestMacro_GetCurrentArea(t *testing.T) {
 	// 5. ViewerView -> "Viewer"
 	fViewer := &mockAreaFrame{typ: vtui.TypeUser + 3}
 	vtui.FrameManager.Push(fViewer)
-	if area := mgr.GetCurrentArea(); area != "Viewer" {
+	if area := macroCurrentArea(); area != "Viewer" {
 		t.Errorf("Expected 'Viewer', got %q", area)
 	}
 	vtui.FrameManager.Pop()
@@ -150,7 +150,7 @@ func TestMacroRecordingAndPlayback(t *testing.T) {
 		}
 	})
 
-	mgr := NewMacroManager(tmpFile)
+	mgr := macro.NewMacroManager(tmpFile)
 
 	// Trigger recording start (Ctrl+.)
 	ctrlDot := &vtinput.InputEvent{
@@ -160,7 +160,7 @@ func TestMacroRecordingAndPlayback(t *testing.T) {
 		ControlKeyState: vtinput.LeftCtrlPressed,
 	}
 
-	if !mgr.Filter(ctrlDot) {
+	if !macroFilter(mgr, ctrlDot) {
 		t.Fatal("Ctrl+. should be filtered and start recording")
 	}
 	if !mgr.Recording {
@@ -174,14 +174,14 @@ func TestMacroRecordingAndPlayback(t *testing.T) {
 		VirtualKeyCode: vtinput.VK_A,
 		Char:           'a',
 	}
-	mgr.Filter(keyA)
+	macroFilter(mgr, keyA)
 
 	if len(mgr.Buffer) != 1 {
 		t.Fatalf("Expected 1 event in buffer, got %d", len(mgr.Buffer))
 	}
 
 	// Stop recording
-	mgr.Filter(ctrlDot)
+	macroFilter(mgr, ctrlDot)
 	if mgr.Recording {
 		t.Fatal("Manager should stop recording")
 	}
@@ -194,7 +194,7 @@ func TestMacroRecordingAndPlayback(t *testing.T) {
 		ControlKeyState: vtinput.LeftCtrlPressed,
 	}
 
-	assignFrame := NewMacroAssignFrame(mgr)
+	assignFrame := macro.NewMacroAssignFrame(mgr)
 	assignFrame.ProcessKey(ctrlF1)
 
 	f1Key := keymap.EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_F1, ControlKeyState: vtinput.LeftCtrlPressed})
@@ -203,7 +203,7 @@ func TestMacroRecordingAndPlayback(t *testing.T) {
 	}
 
 	// Test reloading from file
-	mgr2 := NewMacroManager(tmpFile)
+	mgr2 := macro.NewMacroManager(tmpFile)
 	if _, ok := mgr2.Macros["Common"][f1Key]; !ok {
 		t.Fatal("Macro was not correctly loaded from INI file")
 	}
@@ -475,15 +475,15 @@ func TestPanelBookmarkHotkeysKeepRightCtrlDistinct(t *testing.T) {
 func TestMacroFastFindEscapeBypassesPanelToggle(t *testing.T) {
 	oldCfg := config.App
 	oldHotkeys := GlobalHotkeysMgr
-	oldMacroMgr := MacroMgr
+	oldMacroMgr := macro.MacroMgr
 	defer func() {
 		config.App = oldCfg
 		GlobalHotkeysMgr = oldHotkeys
-		MacroMgr = oldMacroMgr
+		macro.MacroMgr = oldMacroMgr
 	}()
 
 	config.App.NavigationMode = config.NavigationClassic
-	MacroMgr = nil
+	macro.MacroMgr = nil
 	pf, left, _ := newSearchFirstTestFrame(t)
 	vtui.FrameManager.Push(pf)
 	vtui.FrameManager.SyncCurrentScreen()
@@ -494,7 +494,7 @@ func TestMacroFastFindEscapeBypassesPanelToggle(t *testing.T) {
 
 	GlobalHotkeysMgr = NewHotkeyManager("")
 	GlobalHotkeysMgr.Bind("Shell", "Esc", "Panel.Toggle")
-	mgr := NewMacroManager("")
+	mgr := macro.NewMacroManager("")
 	escape := &vtinput.InputEvent{
 		Type:           vtinput.KeyEventType,
 		KeyDown:        true,
@@ -503,7 +503,7 @@ func TestMacroFastFindEscapeBypassesPanelToggle(t *testing.T) {
 
 	left.fastFindMode = true
 	left.fastFindStr = "a"
-	if mgr.Filter(escape) {
+	if macroFilter(mgr, escape) {
 		t.Fatal("macro filter consumed Esc while Fast Find was active")
 	}
 	if !pf.showPanels {
@@ -519,7 +519,7 @@ func TestMacroFastFindEscapeBypassesPanelToggle(t *testing.T) {
 	// The bypass is contextual: without Fast Find, the configured Esc action
 	// must still run normally.
 	pf.showPanels = true
-	if !mgr.Filter(escape) {
+	if !macroFilter(mgr, escape) {
 		t.Fatal("Esc without Fast Find did not invoke Panel.Toggle")
 	}
 	if pf.showPanels {
@@ -530,16 +530,16 @@ func TestMacroFastFindEscapeBypassesPanelToggle(t *testing.T) {
 func TestMacroFastFindDeleteBypassesPanelToggle(t *testing.T) {
 	oldCfg := config.App
 	oldHotkeys := GlobalHotkeysMgr
-	oldMacroMgr := MacroMgr
+	oldMacroMgr := macro.MacroMgr
 	defer func() {
 		config.App = oldCfg
 		GlobalHotkeysMgr = oldHotkeys
-		MacroMgr = oldMacroMgr
+		macro.MacroMgr = oldMacroMgr
 	}()
 
 	config.App.NavigationMode = config.NavigationClassic
 	config.App.EscTogglePanels = true
-	MacroMgr = nil
+	macro.MacroMgr = nil
 	pf, left, _ := newSearchFirstTestFrame(t)
 	vtui.FrameManager.Push(pf)
 	vtui.FrameManager.SyncCurrentScreen()
@@ -549,7 +549,7 @@ func TestMacroFastFindDeleteBypassesPanelToggle(t *testing.T) {
 	}()
 
 	GlobalHotkeysMgr = NewHotkeyManager("")
-	mgr := NewMacroManager("")
+	mgr := macro.NewMacroManager("")
 	deleteKey := &vtinput.InputEvent{
 		Type:            vtinput.KeyEventType,
 		KeyDown:         true,
@@ -559,7 +559,7 @@ func TestMacroFastFindDeleteBypassesPanelToggle(t *testing.T) {
 
 	left.fastFindMode = true
 	left.fastFindStr = "a"
-	if mgr.Filter(deleteKey) {
+	if macroFilter(mgr, deleteKey) {
 		t.Fatal("macro filter consumed Delete while Fast Find was active")
 	}
 	if !pf.ProcessKey(deleteKey) {
@@ -570,7 +570,7 @@ func TestMacroFastFindDeleteBypassesPanelToggle(t *testing.T) {
 	}
 
 	left.fastFindMode = false
-	if !mgr.Filter(deleteKey) {
+	if !macroFilter(mgr, deleteKey) {
 		t.Fatal("Delete without Fast Find did not invoke Panel.Toggle")
 	}
 	if pf.showPanels {
@@ -581,15 +581,15 @@ func TestMacroFastFindDeleteBypassesPanelToggle(t *testing.T) {
 func TestMacroShellDoesNotRunDuringFastFind(t *testing.T) {
 	oldCfg := config.App
 	oldHotkeys := GlobalHotkeysMgr
-	oldMacroMgr := MacroMgr
+	oldMacroMgr := macro.MacroMgr
 	defer func() {
 		config.App = oldCfg
 		GlobalHotkeysMgr = oldHotkeys
-		MacroMgr = oldMacroMgr
+		macro.MacroMgr = oldMacroMgr
 	}()
 
 	config.App.NavigationMode = config.NavigationClassic
-	MacroMgr = nil
+	macro.MacroMgr = nil
 	GlobalHotkeysMgr = NewHotkeyManager("")
 	pf, left, _ := newSearchFirstTestFrame(t)
 	vtui.FrameManager.Push(pf)
@@ -599,7 +599,7 @@ func TestMacroShellDoesNotRunDuringFastFind(t *testing.T) {
 		vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	})
 
-	mgr := NewMacroManager("")
+	mgr := macro.NewMacroManager("")
 	key := &vtinput.InputEvent{
 		Type:           vtinput.KeyEventType,
 		KeyDown:        true,
@@ -612,13 +612,13 @@ func TestMacroShellDoesNotRunDuringFastFind(t *testing.T) {
 	}
 
 	left.fastFindMode = true
-	if mgr.Filter(key) {
+	if macroFilter(mgr, key) {
 		t.Fatal("Shell macro consumed input while Fast Find was active")
 	}
 }
 
 func TestMacroPlaybackLogic(t *testing.T) {
-	mgr := NewMacroManager("unused.ini")
+	mgr := macro.NewMacroManager("unused.ini")
 
 	// Create macro: print "hi" on F2 press
 	f2Key := keymap.EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_F2})
@@ -638,12 +638,12 @@ func TestMacroPlaybackLogic(t *testing.T) {
 
 	// Hack for test: intercepting InjectEvents by replacing global FrameManager is not easy,
 	// but we can check that Filter returned true (event consumed to be replaced by macro)
-	if !mgr.Filter(pressF2) {
+	if !macroFilter(mgr, pressF2) {
 		t.Error("Filter should return true when triggering a macro")
 	}
 }
 func TestMacro_FilterTriggerSwallowing_Order(t *testing.T) {
-	mgr := NewMacroManager("unused.ini")
+	mgr := macro.NewMacroManager("unused.ini")
 	mgr.Recording = true
 	mgr.Buffer = make([]*vtinput.InputEvent, 0)
 
@@ -653,7 +653,7 @@ func TestMacro_FilterTriggerSwallowing_Order(t *testing.T) {
 		Char: '.', ControlKeyState: vtinput.LeftCtrlPressed,
 	}
 
-	res := mgr.Filter(stopEvent)
+	res := macroFilter(mgr, stopEvent)
 
 	if !res {
 		t.Error("Filter should swallow the stop trigger even if recording is active")
@@ -663,27 +663,27 @@ func TestMacro_FilterTriggerSwallowing_Order(t *testing.T) {
 	}
 }
 func TestMacro_TriggerSwallowing(t *testing.T) {
-	mgr := NewMacroManager("unused.ini")
+	mgr := macro.NewMacroManager("unused.ini")
 
 	// 1. Start recording via Ctrl+. (using Char for compatibility)
 	startEvent := &vtinput.InputEvent{
 		Type: vtinput.KeyEventType, KeyDown: true,
 		Char: '.', ControlKeyState: vtinput.LeftCtrlPressed,
 	}
-	mgr.Filter(startEvent)
+	macroFilter(mgr, startEvent)
 	if !mgr.Recording {
 		t.Fatal("Should be recording")
 	}
 
 	// 2. Type 'A'
-	mgr.Filter(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: 'a', VirtualKeyCode: vtinput.VK_A})
+	macroFilter(mgr, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: 'a', VirtualKeyCode: vtinput.VK_A})
 
 	// 3. Stop recording via Ctrl+.
 	stopEvent := &vtinput.InputEvent{
 		Type: vtinput.KeyEventType, KeyDown: true,
 		Char: '.', ControlKeyState: vtinput.LeftCtrlPressed,
 	}
-	res := mgr.Filter(stopEvent)
+	res := macroFilter(mgr, stopEvent)
 
 	if !res {
 		t.Error("Stop trigger should be consumed (return true)")
@@ -700,12 +700,12 @@ func TestMacro_TriggerSwallowing(t *testing.T) {
 
 func TestMacro_AssignRobustness(t *testing.T) {
 	// Clean manager for testing
-	mgr := &MacroManager{
+	mgr := &macro.MacroManager{
 		Macros:    make(map[string]map[string][]*vtinput.InputEvent),
 		StartArea: "Common",
 	}
 	mgr.Buffer = []*vtinput.InputEvent{{Char: 'x', KeyDown: true}}
-	f := NewMacroAssignFrame(mgr)
+	f := macro.NewMacroAssignFrame(mgr)
 
 	// 1. Standalone modifiers should be ignored (dialog stays open)
 	f.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_SHIFT})
@@ -742,14 +742,14 @@ func TestMacro_AssignRobustness(t *testing.T) {
 }
 
 func TestMacro_KeyUpConsumption(t *testing.T) {
-	mgr := NewMacroManager("unused.ini")
+	mgr := macro.NewMacroManager("unused.ini")
 
 	// Start recording
 	ctrlDot := &vtinput.InputEvent{
 		Type: vtinput.KeyEventType, KeyDown: true,
 		VirtualKeyCode: vtinput.VK_OEM_PERIOD, ControlKeyState: vtinput.LeftCtrlPressed,
 	}
-	mgr.Filter(ctrlDot)
+	macroFilter(mgr, ctrlDot)
 
 	// Release trigger (KeyUp)
 	ctrlDotUp := &vtinput.InputEvent{
@@ -757,7 +757,7 @@ func TestMacro_KeyUpConsumption(t *testing.T) {
 		VirtualKeyCode: vtinput.VK_OEM_PERIOD, ControlKeyState: vtinput.LeftCtrlPressed,
 	}
 
-	if !mgr.Filter(ctrlDotUp) {
+	if !macroFilter(mgr, ctrlDotUp) {
 		t.Error("KeyUp for Ctrl+. should be consumed by the filter")
 	}
 
@@ -766,7 +766,7 @@ func TestMacro_KeyUpConsumption(t *testing.T) {
 		Type: vtinput.KeyEventType, KeyDown: false,
 		VirtualKeyCode: vtinput.VK_A, Char: 'a',
 	}
-	mgr.Filter(keyAUp)
+	macroFilter(mgr, keyAUp)
 	if len(mgr.Buffer) != 0 {
 		t.Errorf("KeyUp should not be recorded in macro buffer, got length %d", len(mgr.Buffer))
 	}
@@ -775,11 +775,11 @@ func TestMacro_KeyUpConsumption(t *testing.T) {
 func TestMacro_CancelEsc(t *testing.T) {
 	tmpPath := filepath.Join(t.TempDir(), "esc.ini")
 
-	mgr := NewMacroManager(tmpPath)
+	mgr := macro.NewMacroManager(tmpPath)
 	mgr.Recording = true
 	mgr.Buffer = []*vtinput.InputEvent{{Char: 'h', KeyDown: true}}
 
-	assign := NewMacroAssignFrame(mgr)
+	assign := macro.NewMacroAssignFrame(mgr)
 	escEvent := &vtinput.InputEvent{
 		Type: vtinput.KeyEventType, KeyDown: true,
 		VirtualKeyCode: vtinput.VK_ESCAPE,
@@ -798,7 +798,7 @@ func TestMacro_CancelEsc(t *testing.T) {
 
 func TestMacro_Clear(t *testing.T) {
 	tmpFile := filepath.Join(t.TempDir(), "clear_macros.ini")
-	mgr := NewMacroManager(tmpFile)
+	mgr := macro.NewMacroManager(tmpFile)
 
 	mgr.StartArea = "Common"
 
@@ -813,7 +813,7 @@ func TestMacro_Clear(t *testing.T) {
 	// 2. Simulate empty recording and assigning to F3 (to clear it)
 	mgr.Buffer = nil // Empty recording
 
-	assignFrame := NewMacroAssignFrame(mgr)
+	assignFrame := macro.NewMacroAssignFrame(mgr)
 	assignFrame.ProcessKey(&vtinput.InputEvent{
 		Type:           vtinput.KeyEventType,
 		KeyDown:        true,
@@ -826,14 +826,14 @@ func TestMacro_Clear(t *testing.T) {
 	}
 
 	// 4. Verify it is deleted from saved file
-	mgr2 := NewMacroManager(tmpFile)
+	mgr2 := macro.NewMacroManager(tmpFile)
 	if _, ok := mgr2.Macros["Common"][key]; ok {
 		t.Error("Cleared macro should not persist in the saved INI file")
 	}
 }
 
 func TestMacro_CharTrigger(t *testing.T) {
-	mgr := NewMacroManager("unused.ini")
+	mgr := macro.NewMacroManager("unused.ini")
 
 	// Test trigger using Char instead of VK (for terminals that map dot differently)
 	event := &vtinput.InputEvent{
@@ -841,7 +841,7 @@ func TestMacro_CharTrigger(t *testing.T) {
 		Char: '.', VirtualKeyCode: 0, ControlKeyState: vtinput.LeftCtrlPressed,
 	}
 
-	if !mgr.Filter(event) {
+	if !macroFilter(mgr, event) {
 		t.Error("Macro recording should start via Char '.' detection")
 	}
 	if !mgr.Recording {
@@ -854,15 +854,15 @@ func TestMacro_AssignFrame_Structure(t *testing.T) {
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
 
-	mgr := &MacroManager{
+	mgr := &macro.MacroManager{
 		Macros:    make(map[string]map[string][]*vtinput.InputEvent),
 		StartArea: "Common",
 	}
-	f := NewMacroAssignFrame(mgr)
+	f := macro.NewMacroAssignFrame(mgr)
 
 	// Check that it's a proper window with a child (the prompt text)
 	if len(f.GetChildren()) == 0 {
-		t.Error("MacroAssignFrame should have at least one child (prompt)")
+		t.Error("macro.MacroAssignFrame should have at least one child (prompt)")
 	}
 
 	// Validate Layout
@@ -880,10 +880,10 @@ func TestMacro_AssignFrame_Structure(t *testing.T) {
 	handled := f.ProcessKey(tabEvent)
 
 	if !handled {
-		t.Error("MacroAssignFrame should handle (capture) Tab key")
+		t.Error("macro.MacroAssignFrame should handle (capture) Tab key")
 	}
 	if !f.IsDone() {
-		t.Error("MacroAssignFrame should close after capturing a key")
+		t.Error("macro.MacroAssignFrame should close after capturing a key")
 	}
 
 	// Verify that macro was assigned to Tab
@@ -906,7 +906,7 @@ func TestMacroKeyStrDistinguishesEnhancedKeys(t *testing.T) {
 }
 
 func TestMacroIgnoresStandaloneModifiers(t *testing.T) {
-	mgr := NewMacroManager("")
+	mgr := macro.NewMacroManager("")
 	mgr.Recording = true
 	mgr.Buffer = nil
 
@@ -921,7 +921,7 @@ func TestMacroIgnoresStandaloneModifiers(t *testing.T) {
 	}
 
 	for _, ev := range events {
-		mgr.Filter(ev)
+		macroFilter(mgr, ev)
 	}
 
 	if len(mgr.Buffer) != 1 {
@@ -932,7 +932,7 @@ func TestMacroIgnoresStandaloneModifiers(t *testing.T) {
 }
 
 func TestMacroClearRecordingIsEmpty(t *testing.T) {
-	mgr := NewMacroManager("")
+	mgr := macro.NewMacroManager("")
 
 	// Start recording
 	startEvent := &vtinput.InputEvent{
@@ -942,10 +942,10 @@ func TestMacroClearRecordingIsEmpty(t *testing.T) {
 		Char:            '.',
 		ControlKeyState: vtinput.LeftCtrlPressed,
 	}
-	mgr.Filter(startEvent)
+	macroFilter(mgr, startEvent)
 
 	if !mgr.Recording {
-		t.Error("Expected MacroManager to be in Recording state")
+		t.Error("Expected macro.MacroManager to be in Recording state")
 	}
 
 	// Pressing Ctrl key before pressing '.' to stop recording
@@ -954,7 +954,7 @@ func TestMacroClearRecordingIsEmpty(t *testing.T) {
 		KeyDown:        true,
 		VirtualKeyCode: vtinput.VK_CONTROL,
 	}
-	mgr.Filter(ctrlDown)
+	macroFilter(mgr, ctrlDown)
 
 	// Pressing '.' to stop recording
 	stopEvent := &vtinput.InputEvent{
@@ -964,10 +964,10 @@ func TestMacroClearRecordingIsEmpty(t *testing.T) {
 		Char:            '.',
 		ControlKeyState: vtinput.LeftCtrlPressed,
 	}
-	mgr.Filter(stopEvent)
+	macroFilter(mgr, stopEvent)
 
 	if mgr.Recording {
-		t.Error("Expected MacroManager to stop Recording")
+		t.Error("Expected macro.MacroManager to stop Recording")
 	}
 
 	if len(mgr.Buffer) != 0 {
@@ -976,7 +976,7 @@ func TestMacroClearRecordingIsEmpty(t *testing.T) {
 }
 
 func TestMacroClearResetsExisting(t *testing.T) {
-	mgr := NewMacroManager("")
+	mgr := macro.NewMacroManager("")
 	clearKeyStr := keymap.EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_CLEAR})
 	mgr.Macros = map[string]map[string][]*vtinput.InputEvent{
 		"Common": {
@@ -997,10 +997,10 @@ func TestMacroClearResetsExisting(t *testing.T) {
 		Char:            '.',
 		ControlKeyState: vtinput.LeftCtrlPressed,
 	}
-	mgr.Filter(startEvent)
+	macroFilter(mgr, startEvent)
 
 	if !mgr.Recording {
-		t.Error("Expected MacroManager to be in Recording state")
+		t.Error("Expected macro.MacroManager to be in Recording state")
 	}
 
 	// 2. Останавливаем запись (буфер пуст)
@@ -1011,10 +1011,10 @@ func TestMacroClearResetsExisting(t *testing.T) {
 		Char:            '.',
 		ControlKeyState: vtinput.LeftCtrlPressed,
 	}
-	mgr.Filter(stopEvent)
+	macroFilter(mgr, stopEvent)
 
 	if mgr.Recording {
-		t.Error("Expected MacroManager to stop Recording")
+		t.Error("Expected macro.MacroManager to stop Recording")
 	}
 
 	// Выполняем все накопившиеся асинхронные задачи, пока не включится нужный режим
@@ -1031,7 +1031,7 @@ WaitLoop:
 	}
 
 	if !mgr.Assigning {
-		t.Error("Expected MacroManager to be in Assigning state")
+		t.Error("Expected macro.MacroManager to be in Assigning state")
 	}
 
 	// Пытаемся нажать 'Clear' (VK_CLEAR = 0x0C)
@@ -1043,13 +1043,13 @@ WaitLoop:
 
 	// Фильтр НЕ должен поглотить событие воспроизведением старого макроса,
 	// так как активен режим назначения (Assigning == true)
-	consumed := mgr.Filter(clearEvent)
+	consumed := macroFilter(mgr, clearEvent)
 	if consumed {
 		t.Error("Expected Filter to not consume VK_CLEAR while Assigning is active")
 	}
 
 	// Симулируем обработку нажатия диалогом
-	frame := NewMacroAssignFrame(mgr)
+	frame := macro.NewMacroAssignFrame(mgr)
 	frame.ProcessKey(clearEvent)
 
 	// После обработки флаг назначения должен сброситься, а макрос удалиться
@@ -1063,7 +1063,7 @@ WaitLoop:
 }
 func TestMacro_ReassignAndCleanup(t *testing.T) {
 	tmpFile := filepath.Join(t.TempDir(), "reassign_macros.ini")
-	mgr := NewMacroManager(tmpFile)
+	mgr := macro.NewMacroManager(tmpFile)
 	mgr.StartArea = "Common"
 
 	key := keymap.EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_F3})
@@ -1074,8 +1074,7 @@ func TestMacro_ReassignAndCleanup(t *testing.T) {
 	}
 	mgr.Save()
 
-	host := newFakeMacroHost()
-	engine, err := NewLuaMacroEngine(host)
+	engine, err := macro.NewLuaMacroEngine(f4MacroHost{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1090,7 +1089,7 @@ func TestMacro_ReassignAndCleanup(t *testing.T) {
 	if err := os.MkdirAll(scriptDir, 0700); err != nil {
 		t.Fatal(err)
 	}
-	scriptPath := filepath.Join(scriptDir, RecordedMacroFileName("Common", key))
+	scriptPath := filepath.Join(scriptDir, macro.RecordedMacroFileName("Common", key))
 	if err := os.WriteFile(scriptPath, []byte(""), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -1100,7 +1099,7 @@ func TestMacro_ReassignAndCleanup(t *testing.T) {
 	}
 
 	mgr.Buffer = nil
-	assignFrame := NewMacroAssignFrame(mgr)
+	assignFrame := macro.NewMacroAssignFrame(mgr)
 	assignFrame.ProcessKey(&vtinput.InputEvent{
 		Type:           vtinput.KeyEventType,
 		KeyDown:        true,

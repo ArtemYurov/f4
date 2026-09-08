@@ -86,7 +86,7 @@ func TestPanelsFrame_CtrlEnterOnDirectoryInsertsWithoutEntering(t *testing.T) {
 		t.Fatalf("hotkey Ctrl+Enter entered %q, want to stay in %q", got, tmp)
 	}
 
-	// Exercise the frame-level fallback independently of MacroManager.Filter.
+	// Exercise the frame-level fallback independently of macro.MacroManager.Filter.
 	pf.cmdLine.Clear()
 	pf.ProcessKey(mainCtrlEnter)
 	if got := pf.cmdLine.Edit.GetText(); got != "subdir" {

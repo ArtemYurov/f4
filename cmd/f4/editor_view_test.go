@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/internal/theme"
@@ -809,16 +810,16 @@ func TestEditorView_HexModeToggleAndTyping(t *testing.T) {
 
 // TestEditorView_HexMode_KeyBarClickDispatchesConfiguredAction guards the
 // injected-event path used by vtui.KeyBar.ProcessMouse. Real key presses pass
-// through MacroMgr.Filter, but a key-bar click calls EditorView.ProcessKey
+// through macro.MacroMgr.Filter, but a key-bar click calls EditorView.ProcessKey
 // directly; Hex mode must still honor a user binding such as F9 -> Hex Mode.
 func TestEditorView_HexMode_KeyBarClickDispatchesConfiguredAction(t *testing.T) {
 	oldHotkeys := GlobalHotkeysMgr
-	oldMacro := MacroMgr
+	oldMacro := macro.MacroMgr
 	GlobalHotkeysMgr = NewHotkeyManager("")
-	MacroMgr = &MacroManager{}
+	macro.MacroMgr = &macro.MacroManager{}
 	t.Cleanup(func() {
 		GlobalHotkeysMgr = oldHotkeys
-		MacroMgr = oldMacro
+		macro.MacroMgr = oldMacro
 	})
 
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())

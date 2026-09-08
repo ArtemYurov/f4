@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtinput"
@@ -409,11 +410,11 @@ func TestPanelsFrame_TerminalMouseSelect_EscapeDismissesWithoutPTY(t *testing.T)
 func TestPanelsFrame_TerminalMouseSelect_EscapeWinsOverEscToggle(t *testing.T) {
 	pf, pty := panelsFrameWithMouseSelect(t)
 	pty.busy = false // idle terminal: EscToggle would otherwise be disabled
-	oldHotkeys, oldMacros := GlobalHotkeysMgr, MacroMgr
+	oldHotkeys, oldMacros := GlobalHotkeysMgr, macro.MacroMgr
 	GlobalHotkeysMgr = NewHotkeyManager("")
-	MacroMgr = NewMacroManager("")
+	macro.MacroMgr = macro.NewMacroManager("")
 	t.Cleanup(func() {
-		GlobalHotkeysMgr, MacroMgr = oldHotkeys, oldMacros
+		GlobalHotkeysMgr, macro.MacroMgr = oldHotkeys, oldMacros
 	})
 
 	tv := pf.termView

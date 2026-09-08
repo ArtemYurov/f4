@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -210,7 +211,7 @@ func TestResolvePluginMenuHotkeysKeepsEveryLetterUnique(t *testing.T) {
 
 func TestPluginChordHotkeyStaysGlobal(t *testing.T) {
 	previousHotkeys := GlobalHotkeysMgr
-	previousMacro := MacroMgr
+	previousMacro := macro.MacroMgr
 	GlobalHotkeysMgr = &HotkeyManager{
 		Bindings: map[string]map[string]string{
 			"Common": {
@@ -220,10 +221,10 @@ func TestPluginChordHotkeyStaysGlobal(t *testing.T) {
 		},
 		Defaults: map[string]map[string]string{},
 	}
-	MacroMgr = &MacroManager{Macros: make(map[string]map[string][]*vtinput.InputEvent)}
+	macro.MacroMgr = &macro.MacroManager{Macros: make(map[string]map[string][]*vtinput.InputEvent)}
 	t.Cleanup(func() {
 		GlobalHotkeysMgr = previousHotkeys
-		MacroMgr = previousMacro
+		macro.MacroMgr = previousMacro
 	})
 
 	called := 0
@@ -250,7 +251,7 @@ func TestPluginChordHotkeyStaysGlobal(t *testing.T) {
 		VirtualKeyCode:  vtinput.VK_F9,
 		ControlKeyState: vtinput.LeftCtrlPressed,
 	}
-	if !MacroMgr.LookupHotkey(chord) {
+	if !macroLookupHotkey(macro.MacroMgr, chord) {
 		t.Fatal("a plugin command bound to a chord must still be dispatched")
 	}
 	if called != 1 {
@@ -264,7 +265,7 @@ func TestPluginChordHotkeyStaysGlobal(t *testing.T) {
 		VirtualKeyCode: vtinput.VK_Q,
 		Char:           'q',
 	}
-	if MacroMgr.LookupHotkey(letter) {
+	if macroLookupHotkey(macro.MacroMgr, letter) {
 		t.Fatal("a plugin menu accelerator must stay out of the command line")
 	}
 	if called != 1 {
@@ -281,17 +282,17 @@ func TestPluginMenuKeyLabelsAdvertiseF4(t *testing.T) {
 
 func TestPanelsFrameDoesNotConsumePluginMenuShortcut(t *testing.T) {
 	previousHotkeys := GlobalHotkeysMgr
-	previousMacro := MacroMgr
+	previousMacro := macro.MacroMgr
 	GlobalHotkeysMgr = &HotkeyManager{
 		Bindings: map[string]map[string]string{
 			"Shell": {"Q": "Plugin.Command.test.menu-only"},
 		},
 		Defaults: map[string]map[string]string{},
 	}
-	MacroMgr = &MacroManager{Macros: make(map[string]map[string][]*vtinput.InputEvent)}
+	macro.MacroMgr = &macro.MacroManager{Macros: make(map[string]map[string][]*vtinput.InputEvent)}
 	t.Cleanup(func() {
 		GlobalHotkeysMgr = previousHotkeys
-		MacroMgr = previousMacro
+		macro.MacroMgr = previousMacro
 	})
 	called := 0
 	registration, err := (&coreAPI{}).RegisterPluginCommand(vfs.PluginCommand{
@@ -316,10 +317,10 @@ func TestPanelsFrameDoesNotConsumePluginMenuShortcut(t *testing.T) {
 		VirtualKeyCode: vtinput.VK_Q,
 		Char:           'q',
 	}
-	if MacroMgr.Filter(e) {
+	if macroFilter(macro.MacroMgr, e) {
 		t.Fatal("plugin menu shortcut must remain available to the panel command line")
 	}
-	if MacroMgr.LookupHotkey(e) {
+	if macroLookupHotkey(macro.MacroMgr, e) {
 		t.Fatal("injected plugin menu shortcut must remain available to the panel command line")
 	}
 	if called != 0 {

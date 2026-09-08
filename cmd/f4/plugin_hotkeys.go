@@ -11,6 +11,7 @@ import (
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -520,7 +521,7 @@ func (f *PluginHotkeyAssignFrame) GetType() vtui.FrameType                 { ret
 func (f *PluginHotkeyAssignFrame) IsModal() bool                           { return true }
 
 func pluginMenuKeyLabels(pf *PanelsFrame) *vtui.KeySet {
-	if pf != nil && MacroMgr != nil {
+	if pf != nil && macro.MacroMgr != nil {
 		if base := pf.GetKeyLabels(); base != nil {
 			labels := *base
 			labels.Normal[3] = "F4"

@@ -11,6 +11,7 @@ import (
 	"unicode"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/vtui"
 )
@@ -183,7 +184,7 @@ func UpdateWindowTitle(scr *vtui.ScreenBuf) {
 	vtui.SetWindowTitle(currentWindowTitle())
 
 	// Macro recording indicator — drawn after MenuBar so it's always on top
-	if MacroMgr != nil && MacroMgr.Recording {
+	if macro.MacroMgr != nil && macro.MacroMgr.Recording {
 		scr.Write(0, 0, vtui.StringToCharInfo(" R ", vtui.SetRGBBoth(0, 0xFFFFFF, 0xFF0000)))
 	}
 }
