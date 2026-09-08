@@ -382,6 +382,43 @@ titles, not the ordering.
 - [ ] Task 44: Review the finished tree before calling it done ([details](phase-11-ci-and-docs.md#task-44-review-the-finished-tree-before-calling-it-done)) (depends on 42)
 - [ ] Task 45: Write the pull request ([details](phase-11-ci-and-docs.md#task-45-write-the-pull-request)) (depends on 44)
 
+## Open Findings
+
+Things measured and not yet settled. Each names the evidence and the next step,
+so that whoever picks this up does not re-derive it.
+
+### Two CI-only test failures, cause not identified
+
+The first full matrix run after Phase 4 failed two test cells that pass locally
+on darwin/arm64, in isolation and in a shuffled full-suite run:
+
+- `Test (linux/amd64)` — `TestMainMenuFilePath_HasExpectedSuffix`:
+  `MainMenuFilePath()="settings/user_menu.ini"`, want suffix
+  `"f4/settings/user_menu.ini"`.
+- `Test (darwin/amd64)` — `TestMacKeysSkipsCommandRulesWithoutTheChannelSplit`:
+  `mackeys_test.go:109: Opt+Left was not rewritten`.
+
+Neither test, and neither subject, was touched by this branch. The phase-3 run
+was green, which narrows the window to Phase 4 or the upstream merge inside it —
+but CI runs with `-shuffle=on` and a fresh seed each time, so a green run is not
+evidence that an order-dependent test is healthy.
+
+The lead worth following first: `MainMenuFilePath` returned a path built from an
+**empty** config directory, and no branch of `resolveProfileDir` can return `""`
+— the system branch yields at least `"f4"`, the portable branch at least
+`"Profile"`. An empty `cachedF4ConfigDir` is what a reader observes between
+`setupPortableIni`'s cleanup replacing `configDirOnce` and the next `Do`
+completing (`portable_paths_test.go:44-49`, `config.go:118`). That is a race
+between a fixture's teardown and any concurrent reader, and shuffling changes
+which tests are adjacent enough to hit it.
+
+Next step, in order: run `go test ./cmd/f4 -shuffle=<seed>` over several seeds on
+this branch and on `upstream/main`, and compare. If it reproduces on
+`upstream/main` it is pre-existing and belongs in the PR body rather than in a
+fix here.
+
+---
+
 ## Commit Plan
 
 Thirty-nine commits. Task 0 is a rebase, Task 39 a measurement, and Task 43 a

@@ -16,7 +16,7 @@ func TestBoundedInt64ToInt(t *testing.T) {
 	for _, tt := range []struct {
 		name string
 		in   int64
-		want int
+		want int64
 		ok   bool
 	}{
 		{"zero", 0, 0, true},
@@ -30,7 +30,7 @@ func TestBoundedInt64ToInt(t *testing.T) {
 			if ok != tt.ok {
 				t.Fatalf("ok = %v, want %v", ok, tt.ok)
 			}
-			if ok && got != tt.want {
+			if ok && int64(got) != tt.want {
 				t.Errorf("value = %d, want %d", got, tt.want)
 			}
 			if !ok && got != 0 {
@@ -57,6 +57,8 @@ func TestBoundedUint64ToInt(t *testing.T) {
 			if ok != tt.ok {
 				t.Fatalf("ok = %v, want %v", ok, tt.ok)
 			}
+			// #nosec G115 -- ok reports the value fits in an int, which is
+			// precisely what is being asserted here.
 			if ok && uint64(got) != tt.in {
 				t.Errorf("value = %d, want %d", got, tt.in)
 			}
@@ -106,7 +108,11 @@ func TestBoundedInt32(t *testing.T) {
 		}
 	}
 	if strconv.IntSize == 64 {
-		if _, ok := BoundedInt32(math.MaxInt32 + 1); ok {
+		// Through a variable: int(int64constant + 1) is still a constant
+		// conversion, and a constant that does not fit in an int fails to
+		// compile on a 32-bit target even in a branch that never runs.
+		aboveInt32 := int64(math.MaxInt32) + 1
+		if _, ok := BoundedInt32(int(aboveInt32)); ok {
 			t.Error("BoundedInt32 accepted a value above int32 on a 64-bit build")
 		}
 	}
@@ -133,7 +139,8 @@ func TestBoundedUint32(t *testing.T) {
 		}
 	}
 	if strconv.IntSize == 64 {
-		if _, ok := BoundedUint32(math.MaxUint32 + 1); ok {
+		aboveUint32 := int64(math.MaxUint32) + 1
+		if _, ok := BoundedUint32(int(aboveUint32)); ok {
 			t.Error("BoundedUint32 accepted a value above uint32 on a 64-bit build")
 		}
 	}
