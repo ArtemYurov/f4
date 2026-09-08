@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"runtime"
@@ -102,11 +103,11 @@ func replaceSymlinkTarget(ctx context.Context, v vfs.VFS, path, newTarget string
 		return err
 	}
 	if newTarget == "" {
-		return fmt.Errorf("symlink target cannot be empty")
+		return errors.New("symlink target cannot be empty")
 	}
 	symVFS, ok := v.(vfs.SymlinkVFS)
 	if !ok {
-		return fmt.Errorf("VFS does not support symbolic links")
+		return errors.New("VFS does not support symbolic links")
 	}
 	oldTarget, err := symVFS.Readlink(ctx, path)
 	if err != nil {
