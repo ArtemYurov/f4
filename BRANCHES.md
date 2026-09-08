@@ -1,7 +1,7 @@
 # Ветки Лунобота
 
 Инвентарь веток и рабочих деревьев, проверенный 08-09-2026 по текущему `main`
-(`a782f44766b4f7d96d4218ea5a45ea6274f4c7c5`), списку PR GitHub и локальному
+(`37ab5d835290c612029357e5f61d6f55a57bb85f`), списку PR GitHub и локальному
 `git worktree list`.
 
 Статус `слита` означает, что соответствующий PR уже в `main`. Статус
@@ -32,6 +32,7 @@
 | `codex/lunobot2-607-status` | PR #958, слита; remote ref ещё существует |
 | `codex/lunobot2-901-status` | PR #956, слита; remote ref ещё существует |
 | `codex/branches-doc` | PR #959, слита; remote ref после merge не обнаружен |
+| `codex/branches-audit-final` | PR #962, слита; remote ref после merge не обнаружен |
 | `codex/lunobot2-branches-fix` | PR #960, слита; remote ref ещё существует |
 | `codex/lunobot-1-511-status` | PR #947, слита; remote ref ещё существует |
 | `codex/lunobot-1-screen-dump` | PR #933, слита; remote ref ещё существует |
@@ -41,7 +42,6 @@
 | `codex/lunobot2-885-ci-status` | PR #950, слита; remote ref ещё существует |
 | `codex/lunobot2-885-conpty` | PR #948, слита; локальное рабочее дерево ещё существует, remote ref удалён |
 | `codex/lunobot2-885-status` | PR #945, слита; remote ref ещё существует |
-| `codex/lunobot2-branches-fix` | PR #960, слита; remote ref ещё существует |
 | `codex/232-codepage-cycle` | PR #830, #841 и #844, слита; сохранилась локально |
 | `codex/878-220-temp-panel` | PR #879, слита; сохранилась локально и в рабочем дереве |
 | `codex/fix-492-right-ctrl-default-hotkeys` | PR #829, слита; сохранилась локально |
