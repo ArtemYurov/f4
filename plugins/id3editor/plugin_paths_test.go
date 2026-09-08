@@ -29,7 +29,7 @@ func (a *id3AppStub) Message(_ string, msg string, _ []string) int {
 	return 0
 }
 func (*id3AppStub) InputBox(string, string, string, func(string)) {}
-func (*id3AppStub) Menu(string, []string, func(int))         {}
+func (*id3AppStub) Menu(string, []string, func(int))              {}
 
 func TestPluginCloseClearsLegacyRegistrationState(t *testing.T) {
 	host := &id3HostMock{}
