@@ -114,7 +114,9 @@ func (a Action) DisplayDescription() string {
 
 var actionRegistry = make(map[string]Action)
 
-// actionOrder keeps registration order so generated menus are deterministic.
+// actionOrder keeps registration order. It decides presentation order only for
+// actions actionMenuOrder does not name — plugins, and anything registered at
+// runtime.
 var actionOrder []string
 
 // RegisterAction adds an action to the global registry.
@@ -157,10 +159,18 @@ func GetActions() []Action {
 	return actions
 }
 
-// GetOrderedActions returns all registered actions in registration order.
+// GetOrderedActions returns all registered actions in presentation order:
+// actionMenuOrder's order for the actions it names, then everything else in
+// registration order. This is what the user sees in the menu, so it must not
+// depend on which file or which package a RegisterAction call happens to sit
+// in — see actionMenuOrder.
 func GetOrderedActions() []Action {
-	actions := make([]Action, 0, len(actionOrder))
-	for _, key := range actionOrder {
+	keys := append([]string(nil), actionOrder...)
+	sort.SliceStable(keys, func(i, j int) bool {
+		return actionMenuRank(keys[i]) < actionMenuRank(keys[j])
+	})
+	actions := make([]Action, 0, len(keys))
+	for _, key := range keys {
 		actions = append(actions, actionRegistry[key])
 	}
 	return actions
