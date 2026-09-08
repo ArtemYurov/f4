@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -192,10 +193,10 @@ func actionViewerEditorHistory(pf *PanelsFrame) {
 		return
 	}
 
-	paths := make([]HistoryRecord, len(entries))
+	paths := make([]history.HistoryRecord, len(entries))
 	modes := make([]string, len(entries))
 	for i, entry := range entries {
-		paths[i] = HistoryRecord{Name: entry.Display, Lock: entry.Lock, Timestamp: entry.Timestamp}
+		paths[i] = history.HistoryRecord{Name: entry.Display, Lock: entry.Lock, Timestamp: entry.Timestamp}
 		if entry.Mode == historyModeEdit {
 			modes[i] = Msg("History.Mode.Edit")
 		} else {
@@ -299,7 +300,7 @@ func confirmAndClearViewerEditorHistory(entries *[]viewerEditorHistoryEntry, sea
 			return
 		}
 		keptEntries := make([]viewerEditorHistoryEntry, 0)
-		keptRecords := make([]HistoryRecord, 0)
+		keptRecords := make([]history.HistoryRecord, 0)
 		for i, entry := range *entries {
 			if entry.Lock {
 				keptEntries = append(keptEntries, entry)

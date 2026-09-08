@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -82,11 +83,8 @@ func TestActionCommandHistory_WiresHint(t *testing.T) {
 
 func TestActionCommandHistoryInsertPersistsLock(t *testing.T) {
 	initHistoryTestScreen(t)
-	hp := &F4HistoryProvider{
-		path: filepath.Join(t.TempDir(), "history.json"),
-		data: make(map[string][]string),
-		rich: map[string][]HistoryRecord{"cmdline": {{Name: "echo pinned"}}},
-	}
+	hp := history.NewProviderAtPath(filepath.Join(t.TempDir(), "history.json"))
+	hp.SaveRichHistory("cmdline", []history.HistoryRecord{{Name: "echo pinned"}})
 	previous := vtui.GlobalHistoryProvider
 	vtui.GlobalHistoryProvider = hp
 	t.Cleanup(func() { vtui.GlobalHistoryProvider = previous })
@@ -145,11 +143,8 @@ func TestActionFoldersHistoryInsertPersistsLock(t *testing.T) {
 	// Ins now also claims a folder bookmark slot (#407), so the bookmark
 	// table has to resolve inside a temp profile, not the developer's own.
 	setupPortableIni(t, "0")
-	hp := &F4HistoryProvider{
-		path: filepath.Join(t.TempDir(), "history.json"),
-		data: map[string][]string{"folders": {"C:\\newest", "C:\\older"}},
-		rich: make(map[string][]HistoryRecord),
-	}
+	hp := history.NewProviderAtPath(filepath.Join(t.TempDir(), "history.json"))
+	hp.SaveHistory("folders", []string{"C:\\newest", "C:\\older"})
 	previous := vtui.GlobalHistoryProvider
 	vtui.GlobalHistoryProvider = hp
 	t.Cleanup(func() { vtui.GlobalHistoryProvider = previous })
@@ -163,7 +158,7 @@ func TestActionFoldersHistoryInsertPersistsLock(t *testing.T) {
 		t.Fatal("folder history did not enable persistent locking")
 	}
 	menu.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_INSERT})
-	records, _ := loadFolderHistoryRecords(hp)
+	records, _ := history.LoadFolderHistoryRecords(hp)
 	if len(records) != 2 || !records[0].Lock {
 		t.Fatalf("Insert did not persist selected folder lock: %#v", records)
 	}
@@ -171,7 +166,7 @@ func TestActionFoldersHistoryInsertPersistsLock(t *testing.T) {
 		Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_DELETE,
 		ControlKeyState: vtinput.ShiftPressed,
 	})
-	records, _ = loadFolderHistoryRecords(hp)
+	records, _ = history.LoadFolderHistoryRecords(hp)
 	if len(records) != 2 || !records[0].Lock {
 		t.Fatalf("Shift+Del removed locked folder: %#v", records)
 	}
@@ -405,7 +400,7 @@ func TestActionCommandHistory_PathColumnAndInsertion(t *testing.T) {
 	if err := os.Mkdir(path, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	rememberCommandHistoryPath("echo newest", path, provider["cmdline"])
+	history.RememberCommandHistoryPath("echo newest", path, provider["cmdline"])
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -461,7 +456,7 @@ func TestActionCommandHistory_CtrlPgDnNavigatesToStoredPath(t *testing.T) {
 	t.Cleanup(func() { vtui.GlobalHistoryProvider = previous })
 
 	target := t.TempDir()
-	rememberCommandHistoryPath("echo newest", target, provider["cmdline"])
+	history.RememberCommandHistoryPath("echo newest", target, provider["cmdline"])
 	pf := NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(120, 40)

@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -306,7 +307,7 @@ type OpQueueManager struct {
 
 var GlobalQueueManager *OpQueueManager
 var queueShowToast = func(message string, duration time.Duration) {
-	showToast(message, duration)
+	toast.Show(message, duration)
 }
 
 func init() {

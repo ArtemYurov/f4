@@ -34,6 +34,12 @@ var architectureLayers = map[string]int{
 	// Checked conversions, shared by seven packages. Zero imports of ours.
 	"internal/numeric": 0,
 
+	// The shared primitives: a notification channel and the history store.
+	// Both are leaves and both take what they cannot reach as a seam —
+	// history.SamePath and the config directory are set by the root.
+	"internal/toast":   0,
+	"internal/history": 0,
+
 	// Data with an embed directive beside it, nothing else.
 	"internal/colorer": 0,
 

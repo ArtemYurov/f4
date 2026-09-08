@@ -1,4 +1,4 @@
-package main
+package history
 
 import (
 	"encoding/json"
@@ -6,21 +6,21 @@ import (
 	"github.com/unxed/vtui"
 )
 
-const commandHistoryPathsID = "cmdline.paths"
+const CommandHistoryPathsID = "cmdline.paths"
 
 type commandHistoryPathRecord struct {
 	Command string `json:"command"`
 	Path    string `json:"path"`
 }
 
-func loadCommandHistoryPaths(commands []string) []string {
+func LoadCommandHistoryPaths(commands []string) []string {
 	paths := make([]string, len(commands))
 	if vtui.GlobalHistoryProvider == nil || len(commands) == 0 {
 		return paths
 	}
 
 	byCommand := make(map[string]string)
-	for _, encoded := range vtui.GlobalHistoryProvider.LoadHistory(commandHistoryPathsID) {
+	for _, encoded := range vtui.GlobalHistoryProvider.LoadHistory(CommandHistoryPathsID) {
 		var record commandHistoryPathRecord
 		if json.Unmarshal([]byte(encoded), &record) == nil && record.Command != "" {
 			byCommand[record.Command] = record.Path
@@ -32,7 +32,7 @@ func loadCommandHistoryPaths(commands []string) []string {
 	return paths
 }
 
-func saveCommandHistoryPaths(commands, paths []string) {
+func SaveCommandHistoryPaths(commands, paths []string) {
 	if vtui.GlobalHistoryProvider == nil {
 		return
 	}
@@ -47,19 +47,19 @@ func saveCommandHistoryPaths(commands, paths []string) {
 			encoded = append(encoded, string(data))
 		}
 	}
-	vtui.GlobalHistoryProvider.SaveHistory(commandHistoryPathsID, encoded)
+	vtui.GlobalHistoryProvider.SaveHistory(CommandHistoryPathsID, encoded)
 }
 
-func rememberCommandHistoryPath(command, path string, commands []string) {
+func RememberCommandHistoryPath(command, path string, commands []string) {
 	if command == "" || path == "" || len(commands) == 0 {
 		return
 	}
-	paths := loadCommandHistoryPaths(commands)
+	paths := LoadCommandHistoryPaths(commands)
 	for i, candidate := range commands {
 		if candidate == command {
 			paths[i] = path
 			break
 		}
 	}
-	saveCommandHistoryPaths(commands, paths)
+	SaveCommandHistoryPaths(commands, paths)
 }

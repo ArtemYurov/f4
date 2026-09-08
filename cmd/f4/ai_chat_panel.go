@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/internal/vtvibe"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -176,7 +177,7 @@ func (cp *AIChatPanel) ProcessKey(e *vtinput.InputEvent) bool {
 		for i := len(turns) - 1; i >= 0; i-- {
 			if turns[i].Role != "user" && turns[i].Text != "RCtrl+A to hide" {
 				setClipboardAsync(turns[i].Text)
-				showToast("Copied last response to clipboard", 2*time.Second)
+				toast.Show("Copied last response to clipboard", 2*time.Second)
 				break
 			}
 		}
@@ -879,7 +880,7 @@ func (cp *AIChatPanel) copyLinkTarget(target string) {
 				vtui.ShowMessage(" Error ", "Copy failed:\n"+err.Error(), []string{"&Ok"})
 			} else {
 				dstFSP.ReadDirectory()
-				showToast("Copied "+fileName+" to "+dstDir, 2*time.Second)
+				toast.Show("Copied "+fileName+" to "+dstDir, 2*time.Second)
 			}
 		})
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"strings"
 
+	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -58,7 +59,7 @@ func BuildMenuBarItems(area string) []vtui.MenuBarItem {
 		item := vtui.MenuItem{
 			Text:     text,
 			OnClick:  func() { RunAction(a.Name) },
-			UserData: menuHistoryItemKey(a.Name),
+			UserData: history.MenuHistoryItemKey(a.Name),
 		}
 		item.Shortcut = MenuShortcutsForAction(area, a.Name)
 		if a.MenuLast {
@@ -83,7 +84,7 @@ func BuildMenuBarItems(area string) []vtui.MenuBarItem {
 				}
 				m.items = append(m.items, vtui.MenuItem{
 					Text:     subTitle,
-					UserData: menuHistoryItemKey("submenu:" + a.MenuPath + "." + a.MenuSubPath),
+					UserData: history.MenuHistoryItemKey("submenu:" + a.MenuPath + "." + a.MenuSubPath),
 				})
 				heading = len(m.items) - 1
 				if m.subMenus == nil {
@@ -128,7 +129,7 @@ func BuildMenuBarItems(area string) []vtui.MenuBarItem {
 		m.items = append(m.items, vtui.MenuItem{
 			Text:     text,
 			Shortcut: pluginCommandShortcut(command),
-			UserData: menuHistoryItemKey("plugin:" + command.ID),
+			UserData: history.MenuHistoryItemKey("plugin:" + command.ID),
 			OnClick: func() {
 				if pf := findPanelsFrameAnyScreen(); pf != nil {
 					executeRegisteredPluginCommand(vfs.PluginCommandPanel, command.ID, pf)

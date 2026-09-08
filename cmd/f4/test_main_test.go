@@ -8,6 +8,7 @@ import (
 
 	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -66,7 +67,7 @@ func installTestSeams() {
 	// display times. Keep a small observable window: tests may observe another
 	// effect of the same UI task (for example, clipboard contents) before they
 	// pump the nested toast task, and a 1 ms toast can expire in that gap.
-	toastDurationOverride = func(time.Duration) time.Duration {
+	toast.DurationOverride = func(time.Duration) time.Duration {
 		const minimumObservableToastDuration = 100 * time.Millisecond
 		return minimumObservableToastDuration
 	}

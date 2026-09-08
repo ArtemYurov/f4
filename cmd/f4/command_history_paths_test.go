@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/vtui"
 )
 
@@ -15,17 +16,17 @@ func TestCommandHistoryPathsFollowDeduplicatedCommands(t *testing.T) {
 	t.Cleanup(func() { vtui.GlobalHistoryProvider = previous })
 
 	commands := []string{"git status", "go test ./..."}
-	rememberCommandHistoryPath("git status", "/work/first", commands)
-	rememberCommandHistoryPath("go test ./...", "/work/tests", commands)
-	rememberCommandHistoryPath("git status", "/work/latest", commands)
+	history.RememberCommandHistoryPath("git status", "/work/first", commands)
+	history.RememberCommandHistoryPath("go test ./...", "/work/tests", commands)
+	history.RememberCommandHistoryPath("git status", "/work/latest", commands)
 
-	paths := loadCommandHistoryPaths(commands)
+	paths := history.LoadCommandHistoryPaths(commands)
 	if got, want := paths, []string{"/work/latest", "/work/tests"}; len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
 		t.Fatalf("command paths = %v, want %v", got, want)
 	}
 
-	saveCommandHistoryPaths(commands[:1], paths[:1])
-	if got := loadCommandHistoryPaths(commands); got[1] != "" {
+	history.SaveCommandHistoryPaths(commands[:1], paths[:1])
+	if got := history.LoadCommandHistoryPaths(commands); got[1] != "" {
 		t.Fatalf("deleted command retained path %q", got[1])
 	}
 }

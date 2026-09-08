@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -17,7 +18,7 @@ func historyKey(char rune) *vtinput.InputEvent {
 func TestHistorySearchFiltersAndTogglesPrefixMode(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	menu := vtui.NewVMenu("History")
-	search := newHistorySearch(menu, []HistoryRecord{{Name: "xGIT status"}, {Name: "Git commit"}, {Name: "dir"}}, "F2: switch search mode")
+	search := newHistorySearch(menu, []history.HistoryRecord{{Name: "xGIT status"}, {Name: "Git commit"}, {Name: "dir"}}, "F2: switch search mode")
 	defer search.cleanup()
 
 	for _, r := range "git" {
@@ -47,7 +48,7 @@ func TestHistorySearchTimeAndDirectoryModes(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	menu := vtui.NewVMenu("History")
 	stamp := time.Date(2026, time.August, 24, 12, 34, 56, 0, time.UTC)
-	search := newHistorySearch(menu, []HistoryRecord{{Name: "echo hi", Dir: "/very/long/work/tree", Timestamp: stamp}}, "")
+	search := newHistorySearch(menu, []history.HistoryRecord{{Name: "echo hi", Dir: "/very/long/work/tree", Timestamp: stamp}}, "")
 	defer search.cleanup()
 	search.showTimes = true
 	search.timeMode = historyShowDateTime
@@ -88,7 +89,7 @@ func TestHistorySearchTimeAndDirectoryModes(t *testing.T) {
 func TestHistorySearchCtrlDirectoryWidth(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	menu := vtui.NewVMenu("History")
-	search := newHistorySearch(menu, []HistoryRecord{{Name: "cmd", Dir: "/work"}}, "")
+	search := newHistorySearch(menu, []history.HistoryRecord{{Name: "cmd", Dir: "/work"}}, "")
 	defer search.cleanup()
 	search.showDirPrefix = true
 	search.timeMode = historyShowDateTime
@@ -112,7 +113,7 @@ func TestHistorySearchCtrlDirectoryWidth(t *testing.T) {
 func TestHistorySearchUsesOriginalIndexWhenFiltered(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	menu := vtui.NewVMenu("History")
-	search := newHistorySearch(menu, []HistoryRecord{{Name: "first"}, {Name: "keep"}, {Name: "second match"}}, "F2: switch search mode")
+	search := newHistorySearch(menu, []history.HistoryRecord{{Name: "first"}, {Name: "keep"}, {Name: "second match"}}, "F2: switch search mode")
 	defer search.cleanup()
 
 	for _, r := range "match" {
@@ -152,7 +153,7 @@ func TestHistorySearchDrawHighlightsMatchAndSearchTitle(t *testing.T) {
 	vtui.FrameManager.Init(scr)
 	menu := vtui.NewVMenu("History")
 	menu.SetPosition(2, 2, 30, 7)
-	search := newHistorySearch(menu, []HistoryRecord{{Name: "before MATCH after"}}, "F2: switch search mode")
+	search := newHistorySearch(menu, []history.HistoryRecord{{Name: "before MATCH after"}}, "F2: switch search mode")
 	defer search.cleanup()
 	for _, r := range "match" {
 		search.processKey(historyKey(r))
@@ -215,7 +216,7 @@ func TestHistorySearchLockColumnAndDetailsAreCapabilityGated(t *testing.T) {
 	vtui.FrameManager.Init(scr)
 	menu := vtui.NewVMenu("History")
 	menu.SetPosition(2, 2, 30, 7)
-	search := newHistorySearch(menu, []HistoryRecord{{Name: "entry"}}, "")
+	search := newHistorySearch(menu, []history.HistoryRecord{{Name: "entry"}}, "")
 	defer search.cleanup()
 
 	insert := &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_INSERT}
@@ -265,7 +266,7 @@ func TestHistorySearchResolvesDialogThemeAtRenderTime(t *testing.T) {
 	})
 
 	menu := vtui.NewVMenu("History")
-	search := newHistorySearch(menu, []HistoryRecord{
+	search := newHistorySearch(menu, []history.HistoryRecord{
 		{Name: "newest", Lock: true}, {Name: "middle"}, {Name: "older"}, {Name: "oldest"},
 	}, "")
 	defer search.cleanup()
@@ -313,7 +314,7 @@ func TestHistorySearchResizesWithFilteredItemCount(t *testing.T) {
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
 	menu := vtui.NewVMenu("History")
-	search := newHistorySearch(menu, []HistoryRecord{{Name: "alpha"}, {Name: "beta"}, {Name: "alphabet"}, {Name: "gamma"}}, "F2: switch search mode")
+	search := newHistorySearch(menu, []history.HistoryRecord{{Name: "alpha"}, {Name: "beta"}, {Name: "alphabet"}, {Name: "gamma"}}, "F2: switch search mode")
 	defer search.cleanup()
 
 	_, initialY1, _, initialY2 := menu.GetPosition()
@@ -342,7 +343,7 @@ func TestHistorySearchShowsNewestAtBottomAndScrollsToIt(t *testing.T) {
 	scr.AllocBuf(80, 12)
 	vtui.FrameManager.Init(scr)
 	menu := vtui.NewVMenu("History")
-	stored := []HistoryRecord{
+	stored := []history.HistoryRecord{
 		{Name: "newest"}, {Name: "item-09"}, {Name: "item-08"}, {Name: "item-07"}, {Name: "item-06"}, {Name: "item-05"},
 		{Name: "item-04"}, {Name: "item-03"}, {Name: "item-02"}, {Name: "item-01"}, {Name: "oldest"},
 	}
@@ -381,7 +382,7 @@ func TestHistorySearchPadsRowsWithoutTimestamp(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	menu := vtui.NewVMenu("History")
 	stamp := time.Date(2026, time.August, 24, 12, 34, 56, 0, time.UTC)
-	search := newHistorySearch(menu, []HistoryRecord{
+	search := newHistorySearch(menu, []history.HistoryRecord{
 		{Name: "legacy.txt"},
 		{Name: "stamped.txt", Timestamp: stamp},
 	}, "")

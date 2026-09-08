@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/vtui"
 )
@@ -36,7 +37,7 @@ func TestAttachHistory_LoadsExistingEntries(t *testing.T) {
 	store["SearchText"] = []string{"needle", "haystack"}
 
 	edit := vtui.NewEdit(0, 0, 20, "current")
-	attachHistory(edit, searchTextHistoryID)
+	history.AttachHistory(edit, history.SearchTextHistoryID)
 
 	if !edit.ShowHistoryButton {
 		t.Error("history field should show the drop-down marker")
@@ -55,7 +56,7 @@ func TestAttachHistoryUseLast_OnlyFillsEmptyField(t *testing.T) {
 	store := useStubHistory(t)
 	store["SearchText"] = []string{"remembered"}
 
-	empty := attachHistoryUseLast(vtui.NewEdit(0, 0, 20, ""), searchTextHistoryID)
+	empty := history.AttachHistoryUseLast(vtui.NewEdit(0, 0, 20, ""), history.SearchTextHistoryID)
 	if got := empty.GetText(); got != "remembered" {
 		t.Errorf("empty field: got %q, want %q", got, "remembered")
 	}
@@ -65,7 +66,7 @@ func TestAttachHistoryUseLast_OnlyFillsEmptyField(t *testing.T) {
 		t.Errorf("typing over the pre-filled entry gave %q, want %q", got, "x")
 	}
 
-	filled := attachHistoryUseLast(vtui.NewEdit(0, 0, 20, "typed"), searchTextHistoryID)
+	filled := history.AttachHistoryUseLast(vtui.NewEdit(0, 0, 20, "typed"), history.SearchTextHistoryID)
 	if got := filled.GetText(); got != "typed" {
 		t.Errorf("non-empty field was overwritten: got %q", got)
 	}
@@ -74,9 +75,9 @@ func TestAttachHistoryUseLast_OnlyFillsEmptyField(t *testing.T) {
 func TestCommitHistory_IgnoresUnboundAndEmpty(t *testing.T) {
 	store := useStubHistory(t)
 
-	commitHistory(nil, "value")
-	commitHistory(vtui.NewEdit(0, 0, 20, ""), "no history id")
-	commitHistory(attachHistory(vtui.NewEdit(0, 0, 20, ""), searchTextHistoryID), "")
+	history.CommitHistory(nil, "value")
+	history.CommitHistory(vtui.NewEdit(0, 0, 20, ""), "no history id")
+	history.CommitHistory(history.AttachHistory(vtui.NewEdit(0, 0, 20, ""), history.SearchTextHistoryID), "")
 
 	if len(store) != 0 {
 		t.Errorf("nothing should have been stored, got %v", store)
@@ -87,8 +88,8 @@ func TestCommitHistory_MovesRepeatToFront(t *testing.T) {
 	store := useStubHistory(t)
 	store["SearchText"] = []string{"older", "repeat"}
 
-	edit := attachHistory(vtui.NewEdit(0, 0, 20, ""), searchTextHistoryID)
-	commitHistory(edit, "repeat")
+	edit := history.AttachHistory(vtui.NewEdit(0, 0, 20, ""), history.SearchTextHistoryID)
+	history.CommitHistory(edit, "repeat")
 
 	want := []string{"repeat", "older"}
 	got := store["SearchText"]
@@ -117,13 +118,13 @@ func TestEditorSearchDialog_RemembersPattern(t *testing.T) {
 	dlg := vtui.FrameManager.GetTopFrame().(vtui.Container)
 	defer vtui.FrameManager.Pop()
 
-	edit := findHistoryEdit(t, dlg, searchTextHistoryID)
+	edit := findHistoryEdit(t, dlg, history.SearchTextHistoryID)
 	if got := edit.GetText(); got != "from history" {
 		t.Errorf("empty search field was not pre-filled: got %q", got)
 	}
 
 	edit.SetText("beta")
-	commitHistory(edit, edit.GetText())
+	history.CommitHistory(edit, edit.GetText())
 	if got := store["SearchText"]; len(got) == 0 || got[0] != "beta" {
 		t.Errorf("accepted pattern not stored: %v", got)
 	}
@@ -144,7 +145,7 @@ func TestEditorReplaceDialog_UsesSeparateBuckets(t *testing.T) {
 	dlg := vtui.FrameManager.GetTopFrame().(vtui.Container)
 	defer vtui.FrameManager.Pop()
 
-	replace := findHistoryEdit(t, dlg, replaceTextHistoryID)
+	replace := findHistoryEdit(t, dlg, history.ReplaceTextHistoryID)
 	if got := replace.GetText(); got != "" {
 		t.Errorf("replacement field must not be pre-filled from history, got %q", got)
 	}
@@ -152,7 +153,7 @@ func TestEditorReplaceDialog_UsesSeparateBuckets(t *testing.T) {
 		t.Errorf("replacement field should still offer its history: %v", replace.History)
 	}
 	// The search field is a different bucket and must not pick up replacements.
-	pattern := findHistoryEdit(t, dlg, searchTextHistoryID)
+	pattern := findHistoryEdit(t, dlg, history.SearchTextHistoryID)
 	if len(pattern.History) != 0 {
 		t.Errorf("search field leaked replacement history: %v", pattern.History)
 	}
@@ -173,11 +174,11 @@ func TestFindFileDialog_SharesSearchTextBucket(t *testing.T) {
 	dlg := vtui.FrameManager.GetTopFrame().(vtui.Container)
 	defer vtui.FrameManager.Pop()
 
-	text := findHistoryEdit(t, dlg, searchTextHistoryID)
+	text := findHistoryEdit(t, dlg, history.SearchTextHistoryID)
 	if len(text.History) != 1 || text.History[0] != "typed in the editor" {
 		t.Errorf("containing-text field does not share the editor bucket: %v", text.History)
 	}
-	mask := findHistoryEdit(t, dlg, fileMasksHistoryID)
+	mask := findHistoryEdit(t, dlg, history.FileMasksHistoryID)
 	if len(mask.History) != 1 || mask.History[0] != "*.go" {
 		t.Errorf("mask field history not loaded: %v", mask.History)
 	}
@@ -198,7 +199,7 @@ func TestViewerSearchDialog_AttachesHistory(t *testing.T) {
 	dlg := vtui.FrameManager.GetTopFrame().(vtui.Container)
 	defer vtui.FrameManager.Pop()
 
-	edit := findHistoryEdit(t, dlg, searchTextHistoryID)
+	edit := findHistoryEdit(t, dlg, history.SearchTextHistoryID)
 	if got := edit.GetText(); got != "previous search" {
 		t.Errorf("viewer search field not pre-filled: got %q", got)
 	}
@@ -256,7 +257,7 @@ func TestSelectGroupDialog_UsesMaskHistory(t *testing.T) {
 			dlg := vtui.FrameManager.GetTopFrame().(vtui.Container)
 			defer vtui.FrameManager.Pop()
 
-			edit := findHistoryEdit(t, dlg, fileMasksHistoryID)
+			edit := findHistoryEdit(t, dlg, history.FileMasksHistoryID)
 			if len(edit.History) != 1 || edit.History[0] != "*.go" {
 				t.Errorf("mask history not loaded: %v", edit.History)
 			}
@@ -272,11 +273,11 @@ func TestAssocEditor_SharesMaskHistory(t *testing.T) {
 	store := useStubHistory(t)
 	store["Masks"] = []string{"*.md"}
 
-	edit := attachHistory(vtui.NewEdit(0, 0, 20, "*.txt"), fileMasksHistoryID)
+	edit := history.AttachHistory(vtui.NewEdit(0, 0, 20, "*.txt"), history.FileMasksHistoryID)
 	if len(edit.History) != 1 || edit.History[0] != "*.md" {
 		t.Errorf("association mask field does not share the Masks bucket: %v", edit.History)
 	}
-	commitHistory(edit, "*.txt")
+	history.CommitHistory(edit, "*.txt")
 	if got := store["Masks"]; len(got) != 2 || got[0] != "*.txt" {
 		t.Errorf("saved mask not pushed to the shared bucket: %v", got)
 	}
@@ -298,7 +299,7 @@ func TestMkDirDialog_PreFillsFromNewFolderHistory(t *testing.T) {
 	dlg := vtui.FrameManager.GetTopFrame().(vtui.Container)
 	defer vtui.FrameManager.Pop()
 
-	edit := findHistoryEdit(t, dlg, newFolderHistoryID)
+	edit := findHistoryEdit(t, dlg, history.NewFolderHistoryID)
 	// far2l's mkdir field carries DIF_USELASTHISTORY, so the empty prompt
 	// opens on the last folder that was created.
 	if got := edit.GetText(); got != "build" {
@@ -318,7 +319,7 @@ func TestCopyDialog_KeepsPathHintsAlongsideHistory(t *testing.T) {
 	// ride on top of it rather than replace it.
 	edit := vtui.NewEdit(0, 0, 20, "/mnt/passive/")
 	edit.PathHintsEnabled = true
-	attachHistoryUseLast(edit, copyDestHistoryID)
+	history.AttachHistoryUseLast(edit, history.CopyDestHistoryID)
 
 	if !edit.PathHintsEnabled {
 		t.Error("path hints were switched off by the history wiring")
@@ -335,15 +336,15 @@ func TestCopyDialog_KeepsPathHintsAlongsideHistory(t *testing.T) {
 func TestNewEditPrompt_DoesNotStorePlaceholderName(t *testing.T) {
 	store := useStubHistory(t)
 
-	edit := attachHistory(vtui.NewEdit(0, 0, 20, ""), newEditHistoryID)
+	edit := history.AttachHistory(vtui.NewEdit(0, 0, 20, ""), history.NewEditHistoryID)
 	// An empty prompt falls back to "newfile.txt"; that placeholder is not
 	// something the user typed, so it must not reach the bucket.
-	commitHistory(edit, "")
+	history.CommitHistory(edit, "")
 	if len(store) != 0 {
 		t.Errorf("placeholder leaked into history: %v", store)
 	}
 
-	commitHistory(edit, "notes.md")
+	history.CommitHistory(edit, "notes.md")
 	if got := store["NewEdit"]; len(got) != 1 || got[0] != "notes.md" {
 		t.Errorf("typed name not stored: %v", got)
 	}
@@ -378,9 +379,9 @@ func TestDialogAutoComplete_CannotReachUnqualifiedFields(t *testing.T) {
 	store := useStubHistory(t)
 	store["SearchText"] = []string{"needle"}
 
-	// A field wired by attachHistory qualifies; a bare one never does, and
+	// A field wired by history.AttachHistory qualifies; a bare one never does, and
 	// the setting is subtractive so it cannot change that.
-	withHistory := attachHistory(vtui.NewEdit(0, 0, 20, ""), searchTextHistoryID)
+	withHistory := history.AttachHistory(vtui.NewEdit(0, 0, 20, ""), history.SearchTextHistoryID)
 	if len(withHistory.History) == 0 {
 		t.Fatal("history field did not load its bucket")
 	}

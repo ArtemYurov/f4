@@ -11,6 +11,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -823,10 +824,10 @@ func (s *applyCommandSession) enqueue(request applyBatchRequest, model *applyBat
 			model.Finish(fallback)
 		}
 		s.refreshCapturedPanels()
-		showToast(Msg("ApplyCommand.StatusFinishedToast"), 3*time.Second)
+		toast.Show(Msg("ApplyCommand.StatusFinishedToast"), 3*time.Second)
 	}
 	GlobalQueueManager.Enqueue(task)
-	showToast(Msg("ApplyCommand.QueuedToast"), 3*time.Second)
+	toast.Show(Msg("ApplyCommand.QueuedToast"), 3*time.Second)
 }
 
 func (s *applyCommandSession) queuePreconditions() []OpPrecondition {

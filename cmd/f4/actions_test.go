@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -728,9 +729,9 @@ Times=804c4587aa28dd01 004e237daa28dd01 0021f27baa28dd01
 		t.Fatal(err)
 	}
 
-	recs, err := importFar2lHistory(hstPath)
+	recs, err := history.ImportFar2lHistory(LoadIni(hstPath), hstPath)
 	if err != nil {
-		t.Fatalf("importFar2lHistory failed: %v", err)
+		t.Fatalf("history.ImportFar2lHistory failed: %v", err)
 	}
 	if len(recs) != 3 {
 		t.Fatalf("Expected 3 records, got %d", len(recs))

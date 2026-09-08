@@ -1,5 +1,7 @@
 package main
 
+import "github.com/unxed/f4/internal/history"
+
 import "github.com/unxed/vtui"
 
 // Pinned folders — issue #407.
@@ -90,7 +92,7 @@ func (p *folderPins) save() {
 // folder is no longer pinned gives it back. Occupied slots are never taken
 // over, so bookmarks stored from the panel with Ctrl+Shift+N, or inherited
 // from far2l, survive untouched. Reports whether anything changed.
-func (p *folderPins) reconcile(records []HistoryRecord) bool {
+func (p *folderPins) reconcile(records []history.HistoryRecord) bool {
 	if p == nil {
 		return false
 	}
@@ -129,7 +131,7 @@ func (p *folderPins) reconcile(records []HistoryRecord) bool {
 }
 
 // folderIsPinned reports whether path is marked in the history list.
-func folderIsPinned(records []HistoryRecord, path string) bool {
+func folderIsPinned(records []history.HistoryRecord, path string) bool {
 	for i := range records {
 		if records[i].Lock && sameFolderHistoryPath(records[i].Name, path) {
 			return true
@@ -146,11 +148,11 @@ func folderIsPinned(records []HistoryRecord, path string) bool {
 //
 // New entries land at the end, the oldest position: a folder nobody has
 // visited must not take the "most recent" row the dialog opens on.
-func mergeFolderPins(records []HistoryRecord, p *folderPins) []HistoryRecord {
+func mergeFolderPins(records []history.HistoryRecord, p *folderPins) []history.HistoryRecord {
 	if p == nil {
 		return records
 	}
-	merged := append([]HistoryRecord(nil), records...)
+	merged := append([]history.HistoryRecord(nil), records...)
 	claimed := make(map[int]bool, len(p.set))
 	for i := range merged {
 		if slot := p.slotOf(merged[i].Name); slot >= 0 {
@@ -163,7 +165,7 @@ func mergeFolderPins(records []HistoryRecord, p *folderPins) []HistoryRecord {
 		if path == "" || claimed[slot] {
 			continue
 		}
-		merged = append(merged, HistoryRecord{Name: path, Lock: true})
+		merged = append(merged, history.HistoryRecord{Name: path, Lock: true})
 	}
 	return merged
 }

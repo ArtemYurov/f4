@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -101,7 +102,7 @@ func openRegisteredPanelProvider(app vfs.App, providerID string) {
 	controller, err := provider.Open(ctx)
 	if err != nil {
 		vtui.DebugLog("PANEL [%s]: open failed: %v", provider.ID, err)
-		showToast(fmt.Sprintf("Panel %s: %v", provider.Title, err), 3e9)
+		toast.Show(fmt.Sprintf("Panel %s: %v", provider.Title, err), 3e9)
 		return
 	}
 	if controller == nil {

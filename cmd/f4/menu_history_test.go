@@ -3,24 +3,25 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/vtui"
 )
 
 func TestMenuHistory_ShiftF10SelectsLastExecutedItem(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	clearMenuHistory()
-	t.Cleanup(clearMenuHistory)
+	history.ClearMenuHistory()
+	t.Cleanup(history.ClearMenuHistory)
 
 	first := vtui.NewVMenu("&Files")
-	first.AddItem(vtui.MenuItem{Text: "&View", UserData: menuHistoryItemKey("view")})
-	first.AddItem(vtui.MenuItem{Text: "√ &Copy", UserData: menuHistoryItemKey("copy")})
-	hookMenuHistory(first)
-	recordMenuHistory(first, 1)
+	first.AddItem(vtui.MenuItem{Text: "&View", UserData: history.MenuHistoryItemKey("view")})
+	first.AddItem(vtui.MenuItem{Text: "√ &Copy", UserData: history.MenuHistoryItemKey("copy")})
+	history.HookMenuHistory(first)
+	history.RecordMenuHistory(first, 1)
 
 	second := vtui.NewVMenu("&Files")
-	second.AddItem(vtui.MenuItem{Text: "&View", UserData: menuHistoryItemKey("view")})
-	second.AddItem(vtui.MenuItem{Text: " &Copy", UserData: menuHistoryItemKey("copy")})
+	second.AddItem(vtui.MenuItem{Text: "&View", UserData: history.MenuHistoryItemKey("view")})
+	second.AddItem(vtui.MenuItem{Text: " &Copy", UserData: history.MenuHistoryItemKey("copy")})
 	vtui.FrameManager.Push(second)
 
 	if !actionSelectLastMenuItem() {
@@ -34,22 +35,22 @@ func TestMenuHistory_ShiftF10SelectsLastExecutedItem(t *testing.T) {
 func TestMenuHistory_ShiftF10OpensMainMenuAtLastExecutedItem(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	clearMenuHistory()
-	t.Cleanup(clearMenuHistory)
+	history.ClearMenuHistory()
+	t.Cleanup(history.ClearMenuHistory)
 
 	vtui.FrameManager.Push(vtui.NewDesktop())
 
 	first := vtui.NewVMenu("&Commands")
-	first.AddItem(vtui.MenuItem{Text: "&Open", UserData: menuHistoryItemKey("open")})
-	first.AddItem(vtui.MenuItem{Text: "&Save", UserData: menuHistoryItemKey("save")})
-	hookMenuHistory(first)
-	recordMenuHistory(first, 1)
+	first.AddItem(vtui.MenuItem{Text: "&Open", UserData: history.MenuHistoryItemKey("open")})
+	first.AddItem(vtui.MenuItem{Text: "&Save", UserData: history.MenuHistoryItemKey("save")})
+	history.HookMenuHistory(first)
+	history.RecordMenuHistory(first, 1)
 
 	menuBar := vtui.NewMenuBar([]string{"&Files", "&Commands"})
 	menuBar.Items[0].SubItems = []vtui.MenuItem{{Text: "&Open"}}
 	menuBar.Items[1].SubItems = []vtui.MenuItem{
-		{Text: "&Open", UserData: menuHistoryItemKey("open")},
-		{Text: "&Save", UserData: menuHistoryItemKey("save")},
+		{Text: "&Open", UserData: history.MenuHistoryItemKey("open")},
+		{Text: "&Save", UserData: history.MenuHistoryItemKey("save")},
 	}
 	vtui.FrameManager.MenuBar = menuBar
 
@@ -86,11 +87,11 @@ func TestLastMenuItemActionHasShiftF10Default(t *testing.T) {
 func TestMenuHistory_ShiftF10DoesNotOverrideUserMenu(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	clearMenuHistory()
-	t.Cleanup(clearMenuHistory)
+	history.ClearMenuHistory()
+	t.Cleanup(history.ClearMenuHistory)
 
 	menu := vtui.NewVMenu("User menu")
-	markUserMenu(menu)
+	history.MarkUserMenu(menu)
 	menu.AddItem(vtui.MenuItem{Text: "First"})
 	menu.AddItem(vtui.MenuItem{Text: "Second"})
 	menu.SetSelectPos(1)

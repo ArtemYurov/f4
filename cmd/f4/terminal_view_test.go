@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -242,15 +243,15 @@ func TestTerminalView_ProcessFar2lInteract_LocalAuth(t *testing.T) {
 
 func TestTerminalView_ProcessFar2lInteract_Notification(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
-	previousToastOverride := toastDurationOverride
-	toastDurationOverride = func(duration time.Duration) time.Duration {
+	previousToastOverride := toast.DurationOverride
+	toast.DurationOverride = func(duration time.Duration) time.Duration {
 		const minimumObservableToastDuration = 100 * time.Millisecond
 		if duration < minimumObservableToastDuration {
 			return minimumObservableToastDuration
 		}
 		return duration
 	}
-	t.Cleanup(func() { toastDurationOverride = previousToastOverride })
+	t.Cleanup(func() { toast.DurationOverride = previousToastOverride })
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	tv := NewTerminalView(80, 24)
 	defer tv.Close()

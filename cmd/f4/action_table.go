@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unxed/f4/internal/history"
+	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -578,12 +580,12 @@ func init() {
 			if fsp := pf.getActivePanel(); fsp != nil {
 				var maskEdit *vtui.Edit
 				dlg := vtui.InputBox(Msg("Select.Title"), Msg("Select.Mask"), "*", func(mask string) {
-					commitHistory(maskEdit, mask)
+					history.CommitHistory(maskEdit, mask)
 					fsp.ApplyMaskSelection(mask, true)
 				})
 				// Plain DIF_HISTORY, as in far2l: the dialog opens on "*"
 				// rather than on whatever was selected last time.
-				maskEdit = attachHistory(inputBoxEdit(dlg), fileMasksHistoryID)
+				maskEdit = history.AttachHistory(history.InputBoxEdit(dlg), history.FileMasksHistoryID)
 			}
 		}),
 	})
@@ -600,10 +602,10 @@ func init() {
 			if fsp := pf.getActivePanel(); fsp != nil {
 				var maskEdit *vtui.Edit
 				dlg := vtui.InputBox(Msg("Deselect.Title"), Msg("Select.Mask"), "*", func(mask string) {
-					commitHistory(maskEdit, mask)
+					history.CommitHistory(maskEdit, mask)
 					fsp.ApplyMaskSelection(mask, false)
 				})
-				maskEdit = attachHistory(inputBoxEdit(dlg), fileMasksHistoryID)
+				maskEdit = history.AttachHistory(history.InputBoxEdit(dlg), history.FileMasksHistoryID)
 			}
 		}),
 	})
@@ -2367,7 +2369,7 @@ func init() {
 			// is switched wherever the editor is: the toast says what the
 			// decode view will read the bytes as.
 			mode := ev.cycleDisasmMode()
-			showToast(fmt.Sprintf(Msg("Viewer.DisasmBits"), mode), time.Second)
+			toast.Show(fmt.Sprintf(Msg("Viewer.DisasmBits"), mode), time.Second)
 			vtui.FrameManager.Redraw()
 		}),
 	})
@@ -2396,7 +2398,7 @@ func init() {
 			next := vfs.GetNextFastSwitchCodepage(ev.Codepage)
 			saveCodepageOverride(ev.vfs, ev.filePath, next)
 			ev.ReloadWithCodepage(next)
-			showToast(fmt.Sprintf("Codepage: %s", vfs.DisplayCodepageName(next)), time.Second)
+			toast.Show(fmt.Sprintf("Codepage: %s", vfs.DisplayCodepageName(next)), time.Second)
 		}),
 	})
 	RegisterAction(Action{
@@ -2561,7 +2563,7 @@ func init() {
 		MenuPath:    "View",
 		Handler: withViewer(func(vv *ViewerView) {
 			mode := vv.cycleDisasmMode()
-			showToast(fmt.Sprintf(Msg("Viewer.DisasmBits"), mode), time.Second)
+			toast.Show(fmt.Sprintf(Msg("Viewer.DisasmBits"), mode), time.Second)
 			vtui.FrameManager.Redraw()
 		}),
 	})
@@ -2613,7 +2615,7 @@ func init() {
 			next := vfs.GetNextFastSwitchCodepage(vv.Codepage)
 			saveCodepageOverride(vv.vfs, vv.path, next)
 			vv.ReloadWithCodepage(next)
-			showToast(fmt.Sprintf("Codepage: %s", vfs.DisplayCodepageName(next)), time.Second)
+			toast.Show(fmt.Sprintf("Codepage: %s", vfs.DisplayCodepageName(next)), time.Second)
 		}),
 	})
 	RegisterAction(Action{

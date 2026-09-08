@@ -1,4 +1,4 @@
-package main
+package history
 
 import (
 	"encoding/json"
@@ -21,20 +21,7 @@ type HistoryRecord struct {
 	Lock      bool      `json:"lock,omitempty"`
 }
 
-const (
-	historyTypeCommands = iota
-	historyTypeFolders
-	historyTypeViewEdit
-	historyTypeCount
-)
-
-const (
-	historyShowDateTime = iota
-	historyShowDate
-	historyShowNone
-)
-
-func (r HistoryRecord) directory() string {
+func (r HistoryRecord) Directory() string {
 	if r.Dir != "" {
 		return r.Dir
 	}
@@ -46,7 +33,7 @@ func (r HistoryRecord) DisplayText() string {
 	if !r.Timestamp.IsZero() {
 		res += r.Timestamp.Format("15:04:05 ")
 	}
-	if extra := r.directory(); extra != "" {
+	if extra := r.Directory(); extra != "" {
 		if len(extra) > 15 {
 			extra = "..." + extra[len(extra)-12:]
 		}
@@ -60,6 +47,12 @@ func (r HistoryRecord) DisplayText() string {
 	return res
 }
 
+// SamePath reports whether two stored paths denote the same folder. The
+// composition root installs the real comparison; the default is exact equality,
+// which is right for a plain filesystem path and blind to two spellings of one
+// URI. Same shape, and same reason, as action.Localize.
+var SamePath = func(a, b string) bool { return a != "" && a == b }
+
 type F4HistoryProvider struct {
 	mu   sync.Mutex
 	path string
@@ -67,15 +60,24 @@ type F4HistoryProvider struct {
 	rich map[string][]HistoryRecord
 }
 
-func NewF4HistoryProvider() *F4HistoryProvider {
-	p := filepath.Join(GetF4ConfigDir(), "history.json")
+// NewProviderAtPath opens the history stored in one named file, creating an
+// empty one in memory when it does not exist yet. Tests use it to keep their
+// history in a temporary directory.
+func NewProviderAtPath(path string) *F4HistoryProvider {
 	hp := &F4HistoryProvider{
-		path: p,
+		path: path,
 		data: make(map[string][]string),
 		rich: make(map[string][]HistoryRecord),
 	}
 	hp.load()
 	return hp
+}
+
+// NewF4HistoryProvider reads the history stored under configDir. The Directory
+// is passed in rather than looked up: this package is a leaf and asking the
+// configuration for it would be the one import that stops it being one.
+func NewF4HistoryProvider(configDir string) *F4HistoryProvider {
+	return NewProviderAtPath(filepath.Join(configDir, "history.json"))
 }
 
 func (hp *F4HistoryProvider) load() {
@@ -115,12 +117,12 @@ func (hp *F4HistoryProvider) load() {
 			continue
 		}
 		if names, ok := hp.data[id]; ok {
-			hp.rich[id] = recordsFromNames(names)
+			hp.rich[id] = RecordsFromNames(names)
 		}
 	}
 	for id, records := range hp.rich {
 		if _, ok := hp.data[id]; !ok && (id == "cmdline" || id == "folders") {
-			hp.data[id] = extractHistoryNames(records)
+			hp.data[id] = ExtractHistoryNames(records)
 		}
 	}
 }
@@ -170,7 +172,7 @@ func (hp *F4HistoryProvider) SaveHistory(id string, history []string) {
 		if hp.rich == nil {
 			hp.rich = make(map[string][]HistoryRecord)
 		}
-		hp.rich[id] = mergeHistoryNames(hp.rich[id], history)
+		hp.rich[id] = MergeHistoryNames(hp.rich[id], history)
 	}
 	hp.mu.Unlock()
 	hp.save()
@@ -196,13 +198,13 @@ func (hp *F4HistoryProvider) SaveRichHistory(id string, history []HistoryRecord)
 		hp.data = make(map[string][]string)
 	}
 	if id == "cmdline" || id == "folders" {
-		hp.data[id] = extractHistoryNames(history)
+		hp.data[id] = ExtractHistoryNames(history)
 	}
 	hp.mu.Unlock()
 	hp.save()
 }
 
-func recordsFromNames(names []string) []HistoryRecord {
+func RecordsFromNames(names []string) []HistoryRecord {
 	if len(names) == 0 {
 		return nil
 	}
@@ -213,7 +215,7 @@ func recordsFromNames(names []string) []HistoryRecord {
 	return records
 }
 
-func extractHistoryNames(records []HistoryRecord) []string {
+func ExtractHistoryNames(records []HistoryRecord) []string {
 	if len(records) == 0 {
 		return nil
 	}
@@ -224,11 +226,11 @@ func extractHistoryNames(records []HistoryRecord) []string {
 	return names
 }
 
-// mergeHistoryNames updates the string-compatible view without throwing away
+// MergeHistoryNames updates the string-compatible view without throwing away
 // metadata that belongs to an entry which is still present. This is needed
 // because vtui.Edit can save a plain []string history after rich history has
 // already been loaded.
-func mergeHistoryNames(old []HistoryRecord, names []string) []HistoryRecord {
+func MergeHistoryNames(old []HistoryRecord, names []string) []HistoryRecord {
 	if len(names) == 0 {
 		return nil
 	}
@@ -247,7 +249,7 @@ func mergeHistoryNames(old []HistoryRecord, names []string) []HistoryRecord {
 	return merged
 }
 
-func limitRichHistory(history []HistoryRecord, limit int) []HistoryRecord {
+func LimitRichHistory(history []HistoryRecord, limit int) []HistoryRecord {
 	if limit <= 0 || len(history) <= limit {
 		return history
 	}
@@ -275,7 +277,7 @@ func limitRichHistory(history []HistoryRecord, limit int) []HistoryRecord {
 	return kept
 }
 
-func loadFolderHistoryRecords(provider vtui.HistoryProvider) ([]HistoryRecord, *F4HistoryProvider) {
+func LoadFolderHistoryRecords(provider vtui.HistoryProvider) ([]HistoryRecord, *F4HistoryProvider) {
 	hp, _ := provider.(*F4HistoryProvider)
 	plain := provider.LoadHistory("folders")
 	if hp == nil {
@@ -287,13 +289,13 @@ func loadFolderHistoryRecords(provider vtui.HistoryProvider) ([]HistoryRecord, *
 	}
 	rich := hp.LoadRichHistory("folders")
 	if len(rich) == 0 && len(plain) > 0 {
-		rich = recordsFromNames(plain)
+		rich = RecordsFromNames(plain)
 	}
 	records := make([]HistoryRecord, 0, len(plain))
 	for _, path := range plain {
 		var record HistoryRecord
 		for _, candidate := range rich {
-			if sameFolderHistoryPath(candidate.Name, path) {
+			if SamePath(candidate.Name, path) {
 				record = candidate
 				break
 			}
@@ -307,37 +309,37 @@ func loadFolderHistoryRecords(provider vtui.HistoryProvider) ([]HistoryRecord, *
 	return records, hp
 }
 
-func saveFolderHistoryRecords(hp *F4HistoryProvider, records []HistoryRecord) {
+func SaveFolderHistoryRecords(hp *F4HistoryProvider, records []HistoryRecord) {
 	if hp == nil {
 		return
 	}
 	hp.SaveRichHistory("folders", records)
-	hp.SaveHistory("folders", extractNames(records))
+	hp.SaveHistory("folders", ExtractNames(records))
 }
 
 func AddFolderHistory(path string) {
 	if path == "" || path == "." || vtui.GlobalHistoryProvider == nil {
 		return
 	}
-	if records, hp := loadFolderHistoryRecords(vtui.GlobalHistoryProvider); hp != nil {
+	if records, hp := LoadFolderHistoryRecords(vtui.GlobalHistoryProvider); hp != nil {
 		current := HistoryRecord{Name: path, Timestamp: time.Now()}
 		newHistory := []HistoryRecord{current}
 		for _, record := range records {
-			if sameFolderHistoryPath(record.Name, path) {
+			if SamePath(record.Name, path) {
 				newHistory[0].Lock = record.Lock
 				continue
 			}
 			newHistory = append(newHistory, record)
 		}
-		newHistory = limitRichHistory(newHistory, 100)
-		saveFolderHistoryRecords(hp, newHistory)
+		newHistory = LimitRichHistory(newHistory, 100)
+		SaveFolderHistoryRecords(hp, newHistory)
 		return
 	}
 	h := vtui.GlobalHistoryProvider.LoadHistory("folders")
 	// Deduplicate and move to top
 	newHist := []string{path}
 	for _, item := range h {
-		if !sameFolderHistoryPath(item, path) {
+		if !SamePath(item, path) {
 			newHist = append(newHist, item)
 		}
 	}

@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -324,7 +325,7 @@ func (s *userMenuState) saveRoot() bool {
 
 func (s *userMenuState) pushLevel(items []UserMenuItem, title string, initialSelect int) {
 	menu := vtui.NewVMenu(" " + title + " ")
-	markUserMenu(menu)
+	history.MarkUserMenu(menu)
 
 	// Map F1..F24 hotkeys to item indices for fast lookup in OnKeyDown.
 	// vtui already handles single-char (&-prefixed) hotkeys natively.

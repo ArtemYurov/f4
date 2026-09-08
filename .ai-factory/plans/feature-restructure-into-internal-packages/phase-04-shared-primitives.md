@@ -317,10 +317,10 @@ have no dependency on each other.
 
 **`internal/history`:**
 
-5. `git mv` five files into `internal/history/`, package `history`, renamed to the
-   package's topic convention (topic inside the package, never the package name):
+5. `git mv` **four** files into `internal/history/`, package `history`, renamed to
+   the package's topic convention (topic inside the package, never the package
+   name):
    - `history_provider.go` → `provider.go` (`HistoryRecord`, `F4HistoryProvider`)
-   - `history_dialog.go` → `dialog.go`
    - `command_history_paths.go` → `paths.go`
    - `search_history.go` → `edit.go` (`attachHistory`, `attachHistoryUseLast`,
      `commitHistory`, `inputBoxEdit` — all `vtui.Edit` glue)
@@ -340,6 +340,33 @@ have no dependency on each other.
    to `internal/dialog` in Task 25.
 9. Export what leaves and update the call sites — `attachHistory` has 7 caller
    files, `commitHistory` 6.
+
+10. **`history_dialog.go` does not move here.** The gate this phase applies —
+    no `Msg`, no `AppConfig`, no `showToast`, no view type — passes on it, and it
+    is still not a leaf: `actions.go` and `viewer_editor_history.go` construct
+    `historySearch` and assign its unexported fields (`pinSlotOf`, `onCtrlF10`,
+    `onDetails`) and read `search.all`. Moving it would mean exporting that whole
+    surface, which is API design and not a move. It goes to `internal/dialog` in
+    Task 25, beside the three `confirmAnd*History` functions that drive it, and
+    the `historyType*` / `historyShow*` constants go with it — `config.go` is
+    their other consumer and both stay in `cmd/f4` until then.
+
+11. Four symbols the file-level gate did not see, each resolved where it belongs:
+    - `GetF4ConfigDir` — `NewF4HistoryProvider` takes the directory as an
+      argument instead of asking the configuration for it. `NewProviderAtPath`
+      is the same thing for one named file, and is what the tests use.
+    - `LoadIni` — `ImportFar2lHistory` takes an already-opened reader
+      (`Far2lHistoryFile`, one `GetString` method) rather than opening the file.
+    - `sameFolderHistoryPath` — a `history.SamePath` seam, set by the
+      composition root, exactly as `action.Localize` is. The real comparison
+      normalises URIs and lives above this layer.
+    - `len(BookmarkSet{})` — the pin-slot count is the history dialog's, so
+      `history.PinSlots` is the constant and `BookmarkSet` is sized from it.
+      One number, one place.
+    And one that does not belong here at all: `actionSelectLastMenuItem` calls
+    `activateMainMenuAt` in `framework_actions.go`, which is layer 4. It is an
+    action rather than history machinery, so it stays in `cmd/f4` as
+    `menu_history_action.go` and travels to `internal/app`.
 
 ### Required Interfaces and Contracts
 
@@ -410,7 +437,7 @@ go test ./internal/toast/... ./internal/history/... ./cmd/f4/...
   returns nothing.
 - `grep -rn 'func showToast' cmd/f4/` returns nothing.
 - `ls cmd/f4/history_provider.go cmd/f4/search_history.go cmd/f4/menu_history.go`
-  all fail.
+  all fail; `ls cmd/f4/history_dialog.go` still succeeds, per step 10.
 - `ls cmd/f4/viewer_editor_history.go` still succeeds.
 - The suite matches the Task 1 baseline.
 

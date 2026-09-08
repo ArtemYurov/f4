@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -591,15 +592,15 @@ func setupProcessEnvironmentFailureUI(t *testing.T) {
 	previousDuration := processEnvironmentFailureToastDuration
 	processEnvironmentFailureToastDuration = 20 * time.Millisecond
 	t.Cleanup(func() { processEnvironmentFailureToastDuration = previousDuration })
-	previousToastOverride := toastDurationOverride
-	toastDurationOverride = func(duration time.Duration) time.Duration {
+	previousToastOverride := toast.DurationOverride
+	toast.DurationOverride = func(duration time.Duration) time.Duration {
 		const minimumObservableToastDuration = 100 * time.Millisecond
 		if duration < minimumObservableToastDuration {
 			return minimumObservableToastDuration
 		}
 		return duration
 	}
-	t.Cleanup(func() { toastDurationOverride = previousToastOverride })
+	t.Cleanup(func() { toast.DurationOverride = previousToastOverride })
 	runProcessEnvironmentUIInline(t)
 }
 

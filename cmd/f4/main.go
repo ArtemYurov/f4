@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/fusefs"
+	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -768,7 +769,8 @@ func SetupUI() {
 		AppConfig.ColorStyle = "Modern"
 		_ = ApplyColorStyle(AppConfig.ColorStyle)
 	}
-	vtui.GlobalHistoryProvider = NewF4HistoryProvider()
+	vtui.GlobalHistoryProvider = history.NewF4HistoryProvider(GetF4ConfigDir())
+	history.SamePath = sameFolderHistoryPath
 	GlobalFileState = NewF4FileStateProvider()
 	StartQueueWorker()
 	vtinput.Logger = vtui.DebugLog // Pipe vtinput logs to vtui's debug logger
@@ -886,7 +888,7 @@ func SetupUI() {
 		if handleForcedMouseSelectionEvent(e) {
 			return true
 		}
-		if handleMenuHistoryEvent(e) {
+		if history.HandleMenuHistoryEvent(e) {
 			return true
 		}
 		if handlePanelPathEditHotkey(e) {

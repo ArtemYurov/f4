@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/unxed/f4/internal/history"
+	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"os"
 	"os/exec"
@@ -71,7 +73,7 @@ func (pf *PanelsFrame) SetPendingSelection(name string) {
 
 func (pf *PanelsFrame) addCommandHistory(cmd string) {
 	pf.cmdLine.Edit.AddHistory(cmd)
-	hp, isF4 := vtui.GlobalHistoryProvider.(*F4HistoryProvider)
+	hp, isF4 := vtui.GlobalHistoryProvider.(*history.F4HistoryProvider)
 	if !isF4 {
 		if vtui.GlobalHistoryProvider != nil {
 			vtui.GlobalHistoryProvider.SaveHistory("cmdline", pf.cmdLine.Edit.History)
@@ -81,15 +83,15 @@ func (pf *PanelsFrame) addCommandHistory(cmd string) {
 
 	rich := hp.LoadRichHistory("cmdline")
 	if len(rich) == 0 {
-		rich = recordsFromNames(pf.cmdLine.Edit.History)
+		rich = history.RecordsFromNames(pf.cmdLine.Edit.History)
 	}
-	var newRich []HistoryRecord
+	var newRich []history.HistoryRecord
 	curDir := ""
 	if fsp := pf.getActivePanel(); fsp != nil {
 		curDir = fsp.vfs.GetPath()
 	}
 
-	newRich = append(newRich, HistoryRecord{
+	newRich = append(newRich, history.HistoryRecord{
 		Name:      cmd,
 		Dir:       curDir,
 		Timestamp: time.Now(),
@@ -107,7 +109,7 @@ func (pf *PanelsFrame) addCommandHistory(cmd string) {
 	if limit <= 0 {
 		limit = 100
 	}
-	newRich = limitRichHistory(newRich, limit)
+	newRich = history.LimitRichHistory(newRich, limit)
 	hp.SaveRichHistory("cmdline", newRich)
 
 	var strHist []string
@@ -1249,7 +1251,7 @@ func (pf *PanelsFrame) reportLocalPTYFailure(err error) {
 		return
 	}
 	vtui.FrameManager.PostTask(func() {
-		showToast(localPTYFailureMessage(err), 8*time.Second)
+		toast.Show(localPTYFailureMessage(err), 8*time.Second)
 	})
 }
 
@@ -3989,7 +3991,7 @@ func (pf *PanelsFrame) ExecuteDummyOp(mode int) {
 			Desc: desc,
 			Run:  runFunc,
 			OnComplete: func() {
-				showToast("Dummy operation finished successfully", 3*time.Second)
+				toast.Show("Dummy operation finished successfully", 3*time.Second)
 			},
 		})
 	} else {
@@ -4554,7 +4556,7 @@ func executeCapturedCommand(pf *PanelsFrame, action string, cmdStr string) {
 					return
 				}
 				setF4Clipboard(string(out))
-				showToast("Command output copied to clipboard", 3*time.Second)
+				toast.Show("Command output copied to clipboard", 3*time.Second)
 				pf.RefreshAll()
 			})
 		})

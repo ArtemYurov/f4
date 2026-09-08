@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -246,13 +247,10 @@ func TestFolderHistoryBackUsesPendingVisualTargetInsteadOfSourceVFS(t *testing.T
 	}
 	t.Cleanup(func() { vfs.UnregisterURIProvider(provider.scheme) })
 
-	history := &F4HistoryProvider{
-		path: filepath.Join(root, "history.json"),
-		data: map[string][]string{"folders": {target, sourcePath, olderPath}},
-		rich: make(map[string][]HistoryRecord),
-	}
+	folders := history.NewProviderAtPath(filepath.Join(root, "history.json"))
+	folders.SaveHistory("folders", []string{target, sourcePath, olderPath})
 	oldHistory := vtui.GlobalHistoryProvider
-	vtui.GlobalHistoryProvider = history
+	vtui.GlobalHistoryProvider = folders
 	t.Cleanup(func() { vtui.GlobalHistoryProvider = oldHistory })
 
 	fsp := NewFileSystemPanel(0, 0, 40, 20, vfs.NewOSVFS(sourcePath))
@@ -301,7 +299,7 @@ func TestFolderHistoryBackUsesPendingVisualTargetInsteadOfSourceVFS(t *testing.T
 	if got := pf.folderHistoryPos[0]; got != 1 {
 		t.Fatalf("history position = %d, want source index 1", got)
 	}
-	if got := history.LoadHistory("folders"); !reflect.DeepEqual(got, []string{target, sourcePath, olderPath}) {
+	if got := folders.LoadHistory("folders"); !reflect.DeepEqual(got, []string{target, sourcePath, olderPath}) {
 		t.Fatalf("Alt+Left reordered history: %#v", got)
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/toast"
 	"strings"
 
 	"github.com/unxed/f4/internal/piecetable"
@@ -1984,7 +1985,7 @@ func (tv *TerminalView) ProcessFar2lInteract(data []byte) {
 		text := stk.PopString()
 		title := stk.PopString()
 		vtui.FrameManager.PostTask(func() {
-			showToast(title+": "+text, 3*time.Second)
+			toast.Show(title+": "+text, 3*time.Second)
 		})
 	case 'f': // FKey titles
 		for i := 0; i < 12; i++ {

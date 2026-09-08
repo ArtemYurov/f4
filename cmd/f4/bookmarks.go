@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/history"
 )
 
 // Folder bookmarks: ten numbered slots, each remembering one directory,
@@ -29,7 +30,7 @@ func (b Bookmark) IsEmpty() bool { return b.Path == "" && b.Plugin == "" }
 
 // BookmarkSet is the full 10-slot table. Indices map directly to the digit
 // hotkey: BookmarkSet[3] is what RightCtrl+3 jumps to.
-type BookmarkSet [10]Bookmark
+type BookmarkSet [history.PinSlots]Bookmark
 
 // BookmarksFilePath returns the user-config location of the bookmark table.
 // The filename matches far2l so the same file can be shared between

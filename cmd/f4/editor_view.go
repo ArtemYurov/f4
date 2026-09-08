@@ -23,9 +23,11 @@ import (
 
 	"github.com/charlievieth/strcase"
 	"github.com/coregx/coregex"
+	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/textlayout"
+	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -3923,7 +3925,7 @@ func (ev *EditorView) showSearchDialog() {
 
 	lblPrompt := vtui.NewLabel(0, 0, Msg("Search.Prompt"), nil)
 	editPattern := vtui.NewEdit(0, 0, 40, LastEditorSearch)
-	attachHistoryUseLast(editPattern, searchTextHistoryID)
+	history.AttachHistoryUseLast(editPattern, history.SearchTextHistoryID)
 	editPattern.SelectAll()
 	lblPrompt.FocusLink = editPattern
 	dlg.SetFocusedItem(editPattern)
@@ -3996,7 +3998,7 @@ func (ev *EditorView) showSearchDialog() {
 
 	saveSearchParams := func() {
 		LastEditorSearch = editPattern.GetText()
-		commitHistory(editPattern, LastEditorSearch)
+		history.CommitHistory(editPattern, LastEditorSearch)
 		LastEditorSearchCase = chkCase.State == 1
 		LastEditorSearchReverse = chkReverse.State == 1
 		LastEditorSearchRegexp = chkRegexp.State == 1
@@ -4522,7 +4524,7 @@ func (ev *EditorView) showReplaceDialog() {
 
 	lblPrompt := vtui.NewLabel(0, 0, Msg("Search.Prompt"), nil)
 	editPattern := vtui.NewEdit(0, 0, 40, LastEditorSearch)
-	attachHistoryUseLast(editPattern, searchTextHistoryID)
+	history.AttachHistoryUseLast(editPattern, history.SearchTextHistoryID)
 	editPattern.SelectAll()
 	lblPrompt.FocusLink = editPattern
 	dlg.SetFocusedItem(editPattern)
@@ -4531,7 +4533,7 @@ func (ev *EditorView) showReplaceDialog() {
 	editReplace := vtui.NewEdit(0, 0, 40, LastEditorReplace)
 	// Plain DIF_HISTORY here, no DIF_USELASTHISTORY: silently pre-filling a
 	// replacement makes it far too easy to overwrite text with a stale string.
-	attachHistory(editReplace, replaceTextHistoryID)
+	history.AttachHistory(editReplace, history.ReplaceTextHistoryID)
 	editReplace.SelectAll()
 
 	chkCase := vtui.NewCheckbox(0, 0, Msg("Search.CaseSensitive"), false)
@@ -4611,8 +4613,8 @@ func (ev *EditorView) showReplaceDialog() {
 	doReplace := func(all bool) {
 		LastEditorSearch = editPattern.GetText()
 		LastEditorReplace = editReplace.GetText()
-		commitHistory(editPattern, LastEditorSearch)
-		commitHistory(editReplace, LastEditorReplace)
+		history.CommitHistory(editPattern, LastEditorSearch)
+		history.CommitHistory(editReplace, LastEditorReplace)
 		LastEditorSearchCase = chkCase.State == 1
 		LastEditorSearchReverse = chkReverse.State == 1
 		LastEditorSearchRegexp = chkRegexp.State == 1
@@ -4756,7 +4758,7 @@ func (ev *EditorView) showConvertCodepageDialog() {
 				ev.codepageRaw = nil
 				ev.Codepage = cpID
 				ev.modified = true
-				showToast(fmt.Sprintf("Will be saved as: %s", vfs.DisplayCodepageName(cpID)), 2*time.Second)
+				toast.Show(fmt.Sprintf("Will be saved as: %s", vfs.DisplayCodepageName(cpID)), 2*time.Second)
 				ev.updateDesiredVisualCol()
 				ev.ensureCursorVisible()
 				vtui.FrameManager.Redraw()

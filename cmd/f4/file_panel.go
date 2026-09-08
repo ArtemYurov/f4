@@ -15,6 +15,7 @@ import (
 	"unicode"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/history"
 	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
 
@@ -2205,7 +2206,7 @@ func (fp *FileSystemPanel) readDirectoryEx(keepEntries bool) {
 		// Record accepted navigation in UI order, not in backend completion
 		// order. Otherwise an older slow cloud ReadDir can finish after a newer
 		// visit and move its path to the front of the global MRU history.
-		AddFolderHistory(path)
+		history.AddFolderHistory(path)
 	}
 
 	if fp.pendingSelection == "" {

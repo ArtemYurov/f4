@@ -1,4 +1,4 @@
-package main
+package history
 
 import (
 	"fmt"
@@ -9,10 +9,10 @@ import (
 	"github.com/unxed/vtui"
 )
 
-// menuHistoryItemKey is attached to generated menu items so a checkmark,
+// MenuHistoryItemKey is attached to generated menu items so a checkmark,
 // localization change, or a hidden item cannot make the remembered position
 // drift to a different command the next time the menu is built.
-type menuHistoryItemKey string
+type MenuHistoryItemKey string
 
 var menuHistory = struct {
 	sync.Mutex
@@ -26,10 +26,10 @@ var menuHistory = struct {
 	userMenus:   make(map[*vtui.VMenu]bool),
 }
 
-// markUserMenu excludes Far-style user menus from this feature. Their
+// MarkUserMenu excludes Far-style user menus from this feature. Their
 // Shift+F10 behavior is intentionally different: it closes the whole menu
 // chain, including nested submenus.
-func markUserMenu(menu *vtui.VMenu) {
+func MarkUserMenu(menu *vtui.VMenu) {
 	if menu == nil {
 		return
 	}
@@ -38,7 +38,7 @@ func markUserMenu(menu *vtui.VMenu) {
 	menuHistory.Unlock()
 }
 
-func isUserMenu(menu *vtui.VMenu) bool {
+func IsUserMenu(menu *vtui.VMenu) bool {
 	if menu == nil {
 		return false
 	}
@@ -55,7 +55,7 @@ func menuHistoryTitleKey(title string) string {
 }
 
 func menuItemHistoryKey(item vtui.MenuItem) string {
-	if key, ok := item.UserData.(menuHistoryItemKey); ok {
+	if key, ok := item.UserData.(MenuHistoryItemKey); ok {
 		return string(key)
 	}
 	if item.Command != 0 {
@@ -72,8 +72,8 @@ func menuItemHistoryKey(item vtui.MenuItem) string {
 	return "text:" + strings.TrimSpace(text)
 }
 
-func recordMenuHistory(menu *vtui.VMenu, index int) {
-	if menu == nil || isUserMenu(menu) || index < 0 || index >= len(menu.Items) {
+func RecordMenuHistory(menu *vtui.VMenu, index int) {
+	if menu == nil || IsUserMenu(menu) || index < 0 || index >= len(menu.Items) {
 		return
 	}
 	item := menu.Items[index]
@@ -88,12 +88,12 @@ func recordMenuHistory(menu *vtui.VMenu, index int) {
 	menuHistory.Unlock()
 }
 
-// hookMenuHistory installs a small OnAction wrapper. VMenu is supplied by
+// HookMenuHistory installs a small OnAction wrapper. VMenu is supplied by
 // vtui, and the main menu creates its VMenu internally, so the wrapper is
 // installed lazily by the application's event filter when a menu reaches the
 // top of the frame stack.
-func hookMenuHistory(menu *vtui.VMenu) {
-	if menu == nil || isUserMenu(menu) {
+func HookMenuHistory(menu *vtui.VMenu) {
+	if menu == nil || IsUserMenu(menu) {
 		return
 	}
 
@@ -105,7 +105,7 @@ func hookMenuHistory(menu *vtui.VMenu) {
 	menuHistory.hooked[menu] = true
 	previous := menu.OnAction
 	menu.OnAction = func(index int) {
-		recordMenuHistory(menu, index)
+		RecordMenuHistory(menu, index)
 		if previous != nil {
 			previous(index)
 		}
@@ -113,8 +113,8 @@ func hookMenuHistory(menu *vtui.VMenu) {
 	menuHistory.Unlock()
 }
 
-func selectLastMenuItem(menu *vtui.VMenu) bool {
-	if menu == nil || isUserMenu(menu) {
+func SelectLastMenuItem(menu *vtui.VMenu) bool {
+	if menu == nil || IsUserMenu(menu) {
 		return false
 	}
 
@@ -135,7 +135,7 @@ func selectLastMenuItem(menu *vtui.VMenu) bool {
 	return true
 }
 
-func lastMainMenuPosition(menu *vtui.MenuBar) int {
+func LastMainMenuPosition(menu *vtui.MenuBar) int {
 	if menu == nil {
 		return -1
 	}
@@ -155,46 +155,23 @@ func lastMainMenuPosition(menu *vtui.MenuBar) int {
 	return -1
 }
 
-// actionSelectLastMenuItem is the configurable Shift+F10 action. It is kept
-// separate from the observer below so an explicit user unbind really silences
-// the key instead of being bypassed by a physical-key fallback.
-func actionSelectLastMenuItem() bool {
-	if vtui.FrameManager == nil {
-		return false
-	}
-	if menu, ok := vtui.FrameManager.GetTopFrame().(*vtui.VMenu); ok {
-		hookMenuHistory(menu)
-		return selectLastMenuItem(menu)
-	}
-
-	menuBar := vtui.FrameManager.GetActiveMenuBar()
-	if !activateMainMenuAt(lastMainMenuPosition(menuBar)) {
-		return false
-	}
-	if menu, ok := vtui.FrameManager.GetTopFrame().(*vtui.VMenu); ok {
-		hookMenuHistory(menu)
-		selectLastMenuItem(menu)
-	}
-	return true
-}
-
-// handleMenuHistoryEvent is installed in FrameManager.EventFilter to observe
+// HandleMenuHistoryEvent is installed in FrameManager.EventFilter to observe
 // ordinary menu activations. Shift+F10 itself is dispatched through the
 // configurable action registry, so an explicit user unbind is respected.
-func handleMenuHistoryEvent(e *vtinput.InputEvent) bool {
+func HandleMenuHistoryEvent(e *vtinput.InputEvent) bool {
 	if vtui.FrameManager == nil {
 		return false
 	}
 	menu, ok := vtui.FrameManager.GetTopFrame().(*vtui.VMenu)
 	if ok && menu != nil {
-		hookMenuHistory(menu)
+		HookMenuHistory(menu)
 	}
 	return false
 }
 
-// clearMenuHistory is kept small and package-local so tests can isolate the
+// ClearMenuHistory is kept small and package-local so tests can isolate the
 // process-global menu history without reaching into the implementation.
-func clearMenuHistory() {
+func ClearMenuHistory() {
 	menuHistory.Lock()
 	menuHistory.lastByTitle = make(map[string]string)
 	menuHistory.lastMenu = ""

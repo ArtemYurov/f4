@@ -3,8 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -15,7 +13,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/piecetable"
+	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -64,14 +64,6 @@ var (
 	LastShowRight  = true
 )
 
-func extractNames(recs []HistoryRecord) []string {
-	var res []string
-	for _, r := range recs {
-		res = append(res, r.Name)
-	}
-	return res
-}
-
 func choiceText(choices []string, selected int) string {
 	for i, choice := range choices {
 		if i == selected {
@@ -85,7 +77,7 @@ func actionFoldersHistory(pf *PanelsFrame) {
 	if vtui.GlobalHistoryProvider == nil {
 		return
 	}
-	richFolders, folderHP := loadFolderHistoryRecords(vtui.GlobalHistoryProvider)
+	richFolders, folderHP := history.LoadFolderHistoryRecords(vtui.GlobalHistoryProvider)
 	// Folder bookmarks and folder history are one list now (#407). Fold the
 	// bookmark table in before the emptiness check, so a profile whose only
 	// saved folders are bookmarks still opens the dialog, and hand the marks
@@ -100,7 +92,7 @@ func actionFoldersHistory(pf *PanelsFrame) {
 			}
 		}
 	}
-	h := extractNames(richFolders)
+	h := history.ExtractNames(richFolders)
 	if len(richFolders) == 0 {
 		vtui.ShowMessage(Msg("History.Title"), Msg("History.EmptyFolders"), []string{Msg("vtui.Ok")})
 		return
@@ -114,7 +106,7 @@ func actionFoldersHistory(pf *PanelsFrame) {
 	search.showTimes = true
 	search.timeMode = AppConfig.HistoryShowTimes[historyTypeFolders]
 	if pins != nil {
-		search.pinSlotOf = func(rec HistoryRecord) int { return pins.slotOf(rec.Name) }
+		search.pinSlotOf = func(rec history.HistoryRecord) int { return pins.slotOf(rec.Name) }
 	}
 	search.onTimesChanged = func(mode int) {
 		AppConfig.HistoryShowTimes[historyTypeFolders] = mode
@@ -124,10 +116,10 @@ func actionFoldersHistory(pf *PanelsFrame) {
 	// persist writes the folder list back and keeps the bookmark table in
 	// step with it: pinning an entry claims a digit, unpinning gives it back.
 	persist := func() {
-		richFolders = append([]HistoryRecord(nil), search.all...)
-		h = extractNames(richFolders)
+		richFolders = append([]history.HistoryRecord(nil), search.all...)
+		h = history.ExtractNames(richFolders)
 		if folderHP != nil {
-			saveFolderHistoryRecords(folderHP, richFolders)
+			history.SaveFolderHistoryRecords(folderHP, richFolders)
 		} else if vtui.GlobalHistoryProvider != nil {
 			vtui.GlobalHistoryProvider.SaveHistory("folders", h)
 		}
@@ -244,7 +236,7 @@ func actionFoldersHistory(pf *PanelsFrame) {
 		if e.VirtualKeyCode == vtinput.VK_DELETE && !ctrl && !alt && !shift {
 			if folderHP != nil {
 				confirmAndClearRichHistory(Msg("History.FoldersTitle"), "folders", &richFolders, func() {
-					h = extractNames(richFolders)
+					h = history.ExtractNames(richFolders)
 					folderHP.SaveHistory("folders", h)
 					pf.cmdLine.Edit.HistoryPos = -1
 				}, search, menu)
@@ -274,24 +266,24 @@ func actionCommandHistory(pf *PanelsFrame) {
 		return
 	}
 
-	var richCmds []HistoryRecord
-	hp, isF4 := vtui.GlobalHistoryProvider.(*F4HistoryProvider)
+	var richCmds []history.HistoryRecord
+	hp, isF4 := vtui.GlobalHistoryProvider.(*history.F4HistoryProvider)
 	if isF4 {
 		richCmds = hp.LoadRichHistory("cmdline")
 	} else {
 		for _, c := range h {
-			richCmds = append(richCmds, HistoryRecord{Name: c})
+			richCmds = append(richCmds, history.HistoryRecord{Name: c})
 		}
 	}
 	if len(richCmds) == 0 && len(h) > 0 {
-		richCmds = recordsFromNames(h)
+		richCmds = history.RecordsFromNames(h)
 	}
 	// The tab/workspace branch originally stored command directories in a
 	// parallel history. Fold those records into upstream's richer history
 	// model so existing sessions retain their paths after the merge.
-	legacyPaths := loadCommandHistoryPaths(h)
+	legacyPaths := history.LoadCommandHistoryPaths(h)
 	for i := range richCmds {
-		if richCmds[i].directory() == "" && i < len(legacyPaths) {
+		if richCmds[i].Directory() == "" && i < len(legacyPaths) {
 			richCmds[i].Dir = legacyPaths[i]
 		}
 	}
@@ -322,8 +314,8 @@ func actionCommandHistory(pf *PanelsFrame) {
 			hp.SaveRichHistory("cmdline", search.all)
 		}
 	}
-	search.onCtrlF10 = func(rec HistoryRecord) {
-		if dir := rec.directory(); dir != "" {
+	search.onCtrlF10 = func(rec history.HistoryRecord) {
+		if dir := rec.Directory(); dir != "" {
 			search.cleanup()
 			menu.Close()
 			if targetPanel := pf.getActivePanel(); targetPanel != nil {
@@ -331,14 +323,14 @@ func actionCommandHistory(pf *PanelsFrame) {
 			}
 		}
 	}
-	search.onDetails = func(rec HistoryRecord) {
+	search.onDetails = func(rec history.HistoryRecord) {
 		showCommandHistoryDetails(pf, rec, search, menu)
 	}
 
 	// Shared "paste selected command" path used by Enter and mouse click.
 	// The record is passed in because VMenu.Close restores its initial
 	// selection, which would otherwise make Enter paste a different row.
-	pasteRecord := func(rec HistoryRecord) {
+	pasteRecord := func(rec history.HistoryRecord) {
 		search.cleanup()
 		pf.cmdLine.Edit.SetText(rec.Name)
 		pf.cmdLine.Edit.HistoryPos = -1
@@ -401,7 +393,7 @@ func actionCommandHistory(pf *PanelsFrame) {
 				if isF4 {
 					hp.SaveRichHistory("cmdline", search.all)
 				}
-				h = extractNames(search.all)
+				h = history.ExtractNames(search.all)
 				pf.cmdLine.Edit.History = h
 				if !isF4 && vtui.GlobalHistoryProvider != nil {
 					vtui.GlobalHistoryProvider.SaveHistory("cmdline", h)
@@ -417,7 +409,7 @@ func actionCommandHistory(pf *PanelsFrame) {
 		// Del (no modifiers): clear the whole history with a confirmation.
 		if e.VirtualKeyCode == vtinput.VK_DELETE && !ctrl && !alt && !shift {
 			confirmAndClearRichHistory(Msg("History.CommandsTitle"), "cmdline", &richCmds, func() {
-				h = extractNames(richCmds)
+				h = history.ExtractNames(richCmds)
 				pf.cmdLine.Edit.History = h
 				pf.cmdLine.Edit.HistoryPos = -1
 				if !isF4 && vtui.GlobalHistoryProvider != nil {
@@ -438,14 +430,14 @@ func actionCommandHistory(pf *PanelsFrame) {
 	vtui.FrameManager.Push(menu)
 }
 
-func showCommandHistoryDetails(pf *PanelsFrame, rec HistoryRecord, search *historySearch, menu *vtui.VMenu) {
+func showCommandHistoryDetails(pf *PanelsFrame, rec history.HistoryRecord, search *historySearch, menu *vtui.VMenu) {
 	dateText := "None"
 	timeText := "None"
 	if !rec.Timestamp.IsZero() {
 		dateText = rec.Timestamp.Format("2006-01-02")
 		timeText = rec.Timestamp.Format("15:04:05")
 	}
-	dir := rec.directory()
+	dir := rec.Directory()
 	message := fmt.Sprintf("Command: %s\nDirectory: %s\nDate: %s\nTime: %s", rec.Name, dir, dateText, timeText)
 	buttons := []string{"&Close"}
 	if dir != "" {
@@ -497,14 +489,14 @@ func confirmAndClearHistory(title, providerName string, h *[]string, localReset 
 
 // confirmAndClearRichHistory clears every unpinned record while preserving
 // entries explicitly pinned with Insert.
-func confirmAndClearRichHistory(title, providerName string, h *[]HistoryRecord, localReset func(), search *historySearch, menu *vtui.VMenu) {
+func confirmAndClearRichHistory(title, providerName string, h *[]history.HistoryRecord, localReset func(), search *historySearch, menu *vtui.VMenu) {
 	buttons := []string{Msg("vtui.Ok"), Msg("vtui.Cancel")}
 	dlg := vtui.ShowMessage(title, Msg("History.ConfirmClearAll"), buttons)
 	dlg.OnResult = func(code int) {
 		if code != 0 {
 			return
 		}
-		kept := make([]HistoryRecord, 0)
+		kept := make([]history.HistoryRecord, 0)
 		for _, r := range *h {
 			if r.Lock {
 				kept = append(kept, r)
@@ -514,7 +506,7 @@ func confirmAndClearRichHistory(title, providerName string, h *[]HistoryRecord, 
 		if localReset != nil {
 			localReset()
 		}
-		if hp, ok := vtui.GlobalHistoryProvider.(*F4HistoryProvider); ok {
+		if hp, ok := vtui.GlobalHistoryProvider.(*history.F4HistoryProvider); ok {
 			hp.SaveRichHistory(providerName, kept)
 		}
 		search.setItems(kept)
@@ -524,14 +516,14 @@ func confirmAndClearRichHistory(title, providerName string, h *[]HistoryRecord, 
 		}
 	}
 }
-func confirmAndPruneMissingFolderHistory(h *[]string, rich *[]HistoryRecord, hp *F4HistoryProvider, search *historySearch, menu *vtui.VMenu) {
+func confirmAndPruneMissingFolderHistory(h *[]string, rich *[]history.HistoryRecord, hp *history.F4HistoryProvider, search *historySearch, menu *vtui.VMenu) {
 	buttons := []string{Msg("vtui.Ok"), Msg("vtui.Cancel")}
 	dlg := vtui.ShowMessage(Msg("History.FoldersTitle"), Msg("History.ConfirmPruneMissing"), buttons)
 	dlg.OnResult = func(code int) {
 		if code != 0 {
 			return
 		}
-		kept := make([]HistoryRecord, 0, len(*rich))
+		kept := make([]history.HistoryRecord, 0, len(*rich))
 		for _, record := range *rich {
 			p := record.Name
 			if record.Lock {
@@ -550,9 +542,9 @@ func confirmAndPruneMissingFolderHistory(h *[]string, rich *[]HistoryRecord, hp 
 			return
 		}
 		*rich = kept
-		*h = extractNames(kept)
+		*h = history.ExtractNames(kept)
 		if hp != nil {
-			saveFolderHistoryRecords(hp, kept)
+			history.SaveFolderHistoryRecords(hp, kept)
 		} else if vtui.GlobalHistoryProvider != nil {
 			vtui.GlobalHistoryProvider.SaveHistory("folders", *h)
 		}
@@ -1637,7 +1629,7 @@ func actionViewerSearchDirection(vv *ViewerView, reverse bool) {
 
 	lblPrompt := vtui.NewLabel(0, 0, Msg("Search.Prompt"), nil)
 	editPattern := vtui.NewEdit(0, 0, 40, vv.lastSearch)
-	attachHistoryUseLast(editPattern, searchTextHistoryID)
+	history.AttachHistoryUseLast(editPattern, history.SearchTextHistoryID)
 	editPattern.SelectAll()
 	lblPrompt.FocusLink = editPattern
 	dlg.SetFocusedItem(editPattern)
@@ -1714,7 +1706,7 @@ func actionViewerSearchDirection(vv *ViewerView, reverse bool) {
 		if optionsChanged {
 			vv.lastSearchFound = false
 		}
-		commitHistory(editPattern, pattern)
+		history.CommitHistory(editPattern, pattern)
 		vv.lastSearch = pattern
 		vv.lastSearchCase = caseSensitive
 		vv.lastSearchReverse = searchReverse
@@ -2150,7 +2142,7 @@ func actionNewFile(pf *PanelsFrame) {
 		dlg := vtui.InputBox(Msg("Edit.NewFileTitle"), Msg("Edit.NewFilePrompt"), "", func(name string) {
 			// Record what was actually typed, before the fallback below
 			// turns an empty prompt into a placeholder name.
-			commitHistory(nameEdit, name)
+			history.CommitHistory(nameEdit, name)
 			if name == "" {
 				name = "newfile.txt"
 			}
@@ -2167,10 +2159,10 @@ func actionNewFile(pf *PanelsFrame) {
 			}
 			actionOpenEditor(pf, activeVfs, path)
 		})
-		inputBoxEdit(dlg).PathHintsEnabled = true
+		history.InputBoxEdit(dlg).PathHintsEnabled = true
 		// Plain DIF_HISTORY, as in far2l's dlgOpenEditor: the prompt opens
 		// empty rather than on the last file that was created this way.
-		nameEdit = attachHistory(inputBoxEdit(dlg), newEditHistoryID)
+		nameEdit = history.AttachHistory(history.InputBoxEdit(dlg), history.NewEditHistoryID)
 	}
 }
 
@@ -2419,7 +2411,7 @@ func actionCopyMove(pf *PanelsFrame, isMove bool) {
 
 	editDest := vtui.NewEdit(0, 0, 10, initialDest)
 	editDest.PathHintsEnabled = true
-	attachHistoryUseLast(editDest, copyDestHistoryID)
+	history.AttachHistoryUseLast(editDest, history.CopyDestHistoryID)
 	dlg.AddItem(editDest)
 
 	modes := []string{Msg("Op.Queue"), Msg("Op.Background"), Msg("Op.Foreground")}
@@ -2443,7 +2435,7 @@ func actionCopyMove(pf *PanelsFrame, isMove bool) {
 		mode := comboMode.Menu.SelectPos
 		dlg.Close()
 		if dest != "" {
-			commitHistory(editDest, dest)
+			history.CommitHistory(editDest, dest)
 			go ExecuteFileOpAt(pf, srcVfs, dstVfs, srcBasePath, names, dest, isMove, mode, onCompleteWithClear)
 		}
 	}
@@ -2862,7 +2854,7 @@ func actionEditorSettings(pf *PanelsFrame) {
 
 	editExtCmdConsole := vtui.NewEdit(0, 0, extCmdWidth, AppConfig.ExternalEditorConsole)
 	editExtCmdConsole.PathHintsEnabled = true
-	attachHistory(editExtCmdConsole, externalEditorHistoryID)
+	history.AttachHistory(editExtCmdConsole, history.ExternalEditorHistoryID)
 	lblExtCmdConsole := vtui.NewLabel(0, 0, Msg("EditorSettings.ExternalCommandConsole"), editExtCmdConsole)
 	editExtCmdGUI := vtui.NewEdit(0, 0, func() int {
 		if stackExternalRows {
@@ -2871,7 +2863,7 @@ func actionEditorSettings(pf *PanelsFrame) {
 		return extGUICmdWidth
 	}(), AppConfig.ExternalEditorGUI)
 	editExtCmdGUI.PathHintsEnabled = true
-	attachHistory(editExtCmdGUI, externalEditorHistoryID)
+	history.AttachHistory(editExtCmdGUI, history.ExternalEditorHistoryID)
 	lblExtCmdGUI := vtui.NewLabel(0, 0, Msg("EditorSettings.ExternalCommandGUI"), editExtCmdGUI)
 
 	btnOk := vtui.NewButton(0, 0, Msg("vtui.Ok"))
@@ -3030,8 +3022,8 @@ func actionEditorSettings(pf *PanelsFrame) {
 		AppConfig.ExternalEditorGUI = editExtCmdGUI.GetText()
 		// Keep the legacy key useful for older f4 versions.
 		AppConfig.ExternalEditorCommand = AppConfig.ExternalEditorConsole
-		commitHistory(editExtCmdConsole, AppConfig.ExternalEditorConsole)
-		commitHistory(editExtCmdGUI, AppConfig.ExternalEditorGUI)
+		history.CommitHistory(editExtCmdConsole, AppConfig.ExternalEditorConsole)
+		history.CommitHistory(editExtCmdGUI, AppConfig.ExternalEditorGUI)
 		SaveConfig()
 		dlg.Close()
 	}
@@ -3217,7 +3209,7 @@ func actionMkDir(pf *PanelsFrame) {
 
 	editName := vtui.NewEdit(0, 0, 10, "")
 	editName.PathHintsEnabled = true
-	attachHistoryUseLast(editName, newFolderHistoryID)
+	history.AttachHistoryUseLast(editName, history.NewFolderHistoryID)
 	lblPrompt := vtui.NewLabel(0, 0, Msg("MakeFolder.Prompt"), editName)
 	dlg.AddItem(lblPrompt)
 	dlg.AddItem(editName)
@@ -3262,7 +3254,7 @@ func actionMkDir(pf *PanelsFrame) {
 		if name == "" {
 			return
 		}
-		commitHistory(editName, name)
+		history.CommitHistory(editName, name)
 		fullPath := activeVfs.Join(activeVfs.GetPath(), name)
 
 		desc := fmt.Sprintf("Create folder %s", name)
@@ -3481,13 +3473,13 @@ func actionFindFile(pf *PanelsFrame) {
 
 	lblMask := vtui.NewLabel(0, 0, Msg("FindFile.MaskPrompt"), nil)
 	editMask := vtui.NewEdit(0, 0, 20, LastFindFileMask)
-	attachHistory(editMask, fileMasksHistoryID)
+	history.AttachHistory(editMask, history.FileMasksHistoryID)
 	lblMask.FocusLink = editMask
 	dlg.SetFocusedItem(editMask)
 
 	lblText := vtui.NewLabel(0, 0, Msg("FindFile.TextPrompt"), nil)
 	editText := vtui.NewEdit(0, 0, 20, LastFindFileText)
-	attachHistory(editText, searchTextHistoryID)
+	history.AttachHistory(editText, history.SearchTextHistoryID)
 	lblText.FocusLink = editText
 
 	chkCase := vtui.NewCheckbox(0, 0, Msg("FindFile.CaseSensitive"), false)
@@ -3558,8 +3550,8 @@ func actionFindFile(pf *PanelsFrame) {
 	btnFind.OnClick = func() {
 		LastFindFileMask = editMask.GetText()
 		LastFindFileText = editText.GetText()
-		commitHistory(editMask, LastFindFileMask)
-		commitHistory(editText, LastFindFileText)
+		history.CommitHistory(editMask, LastFindFileMask)
+		history.CommitHistory(editText, LastFindFileText)
 		LastFindFileCaseSensitive = chkCase.State == 1
 		LastFindFileWholeWords = chkWhole.State == 1
 		LastFindFileRegexp = chkRegexp.State == 1
@@ -3623,7 +3615,7 @@ func actionSaveSettings(pf *PanelsFrame) {
 	btnSave.OnClick = func() {
 		saveSettingsGroups(chkGeneral.State == 1, chkPanel.State == 1, chkWindow.State == 1)
 		dlg.Close()
-		showToast(Msg("SaveSettings.Done"), 2*time.Second)
+		toast.Show(Msg("SaveSettings.Done"), 2*time.Second)
 	}
 
 	vtui.FrameManager.PushToFrameScreen(pf, dlg)
@@ -4425,76 +4417,6 @@ func actionUpdateSettings(pf *PanelsFrame) {
 	vtui.FrameManager.Push(dlg)
 }
 
-func decodeFar2lTime(hexStr string) (time.Time, error) {
-	if len(hexStr) != 16 {
-		return time.Time{}, fmt.Errorf("invalid time length")
-	}
-	b, err := hex.DecodeString(hexStr)
-	if err != nil {
-		return time.Time{}, err
-	}
-	val := binary.LittleEndian.Uint64(b)
-	// FILETIME's maximum uint64 value becomes at most 1.85e12 seconds
-	// after division, far below int64's limit.
-	// #nosec G115 -- division by 10,000,000 bounds the result to int64.
-	sec := int64(val / 10000000)
-	nsec := int64(val%10000000) * 100
-	sec -= 11644473600
-	return time.Unix(sec, nsec), nil
-}
-
-func unescapeFar2lString(s string) string {
-	if len(s) >= 2 && s[0] == '"' && s[len(s)-1] == '"' {
-		s = s[1 : len(s)-1]
-	}
-	s = strings.ReplaceAll(s, "\\n", "\n")
-	s = strings.ReplaceAll(s, "\\r", "\r")
-	s = strings.ReplaceAll(s, "\\\"", "\"")
-	s = strings.ReplaceAll(s, "\\\\", "\\")
-	return s
-}
-
-func importFar2lHistory(path string) ([]HistoryRecord, error) {
-	ini := LoadIni(path)
-	linesStr := ini.GetString("SavedHistory", "Lines", "")
-	extrasStr := ini.GetString("SavedHistory", "Extras", "")
-	locksStr := ini.GetString("SavedHistory", "Locks", "")
-	timesStr := ini.GetString("SavedHistory", "Times", "")
-
-	if linesStr == "" {
-		return nil, fmt.Errorf("no Lines found in %s", path)
-	}
-
-	linesStr = unescapeFar2lString(linesStr)
-	extrasStr = unescapeFar2lString(extrasStr)
-
-	lines := strings.Split(linesStr, "\n")
-	var extras []string
-	if extrasStr != "" {
-		extras = strings.Split(extrasStr, "\n")
-	}
-	times := strings.Fields(timesStr)
-
-	var res []HistoryRecord
-	for i, name := range lines {
-		rec := HistoryRecord{Name: name}
-		if i < len(extras) {
-			rec.Extra = extras[i]
-		}
-		if i < len(locksStr) && locksStr[i] != '0' {
-			rec.Lock = true
-		}
-		if i < len(times) {
-			if t, err := decodeFar2lTime(times[i]); err == nil {
-				rec.Timestamp = t
-			}
-		}
-		res = append(res, rec)
-	}
-
-	return res, nil
-}
-
 func actionImportFar2lHistory(pf *PanelsFrame) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -4513,14 +4435,14 @@ func actionImportFar2lHistory(pf *PanelsFrame) {
 			return
 		}
 		vtui.RunAsync(func(ctx *vtui.TaskContext) {
-			recs, err := importFar2lHistory(far2lConfig)
+			recs, err := history.ImportFar2lHistory(LoadIni(far2lConfig), far2lConfig)
 			ctx.RunOnUI(func() {
 				if err != nil {
 					vtui.ShowMessage(" Error ", fmt.Sprintf("Failed to import history:\n%v", err), []string{"&Ok"})
 					return
 				}
 
-				hp, isF4 := vtui.GlobalHistoryProvider.(*F4HistoryProvider)
+				hp, isF4 := vtui.GlobalHistoryProvider.(*history.F4HistoryProvider)
 				if !isF4 {
 					vtui.ShowMessage(" Error ", "Incompatible history provider.", []string{"&Ok"})
 					return
@@ -4528,7 +4450,7 @@ func actionImportFar2lHistory(pf *PanelsFrame) {
 
 				current := hp.LoadRichHistory("cmdline")
 				seen := make(map[string]bool)
-				var merged []HistoryRecord
+				var merged []history.HistoryRecord
 
 				for _, r := range current {
 					if !seen[r.Name] {
@@ -4554,10 +4476,10 @@ func actionImportFar2lHistory(pf *PanelsFrame) {
 
 				hp.SaveRichHistory("cmdline", merged)
 
-				h := extractNames(merged)
+				h := history.ExtractNames(merged)
 				pf.cmdLine.Edit.History = h
 
-				showToast(fmt.Sprintf("Imported %d new commands from far2l.", len(merged)-len(current)), 3*time.Second)
+				toast.Show(fmt.Sprintf("Imported %d new commands from far2l.", len(merged)-len(current)), 3*time.Second)
 			})
 		})
 	}

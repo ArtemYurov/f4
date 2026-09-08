@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -535,7 +536,7 @@ func (ip *InfoPanel) copyCurrent() {
 			return
 		}
 		setF4Clipboard(r.value)
-		showToast(fmt.Sprintf("%s: %s", Msg("InfoPanel.Copied"), r.value), 2*time.Second)
+		toast.Show(fmt.Sprintf("%s: %s", Msg("InfoPanel.Copied"), r.value), 2*time.Second)
 		return
 	}
 	var lines []string
@@ -544,7 +545,7 @@ func (ip *InfoPanel) copyCurrent() {
 	}
 	joined := strings.Join(lines, "\n")
 	setF4Clipboard(joined)
-	showToast(fmt.Sprintf("%s: %d", Msg("InfoPanel.CopiedRows"), len(selRows)), 2*time.Second)
+	toast.Show(fmt.Sprintf("%s: %d", Msg("InfoPanel.CopiedRows"), len(selRows)), 2*time.Second)
 }
 
 func (ip *InfoPanel) Show(scr *vtui.ScreenBuf) {

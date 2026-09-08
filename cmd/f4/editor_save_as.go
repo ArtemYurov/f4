@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -169,7 +170,7 @@ func (ev *EditorView) showSaveAsDialog() {
 	dlg.ShowClose = true
 
 	editPath := vtui.NewEdit(0, 0, dlgW-4, ev.filePath)
-	attachHistory(editPath, newEditHistoryID)
+	history.AttachHistory(editPath, history.NewEditHistoryID)
 	editPath.SelectAll()
 	lblPath := vtui.NewLabel(0, 0, Msg("SaveAs.Path"), editPath)
 	dlg.SetFocusedItem(editPath)
@@ -258,7 +259,7 @@ func (ev *EditorView) showSaveAsDialog() {
 			vtui.ShowMessage(Msg("SaveAs.Title"), Msg("SaveAs.EmptyPath"), []string{Msg("vtui.Ok")})
 			return
 		}
-		commitHistory(editPath, editPath.GetText())
+		history.CommitHistory(editPath, editPath.GetText())
 		cp := selectedCP()
 		bom := chkBOM.State == 1 && isUnicodeCodepage(cp)
 		eol := saveAsEOL(eolGroup.Selected)

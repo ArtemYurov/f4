@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/netproxy"
+	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/vtui"
 	"gopkg.in/yaml.v3"
 )
@@ -149,7 +150,7 @@ func CheckForPluginUpdates() {
 
 		if updateCount > 0 {
 			frames.PostTask(func() {
-				showToast(fmt.Sprintf("PlugRing: %d plugin update(s) available!", updateCount), 5*time.Second)
+				toast.Show(fmt.Sprintf("PlugRing: %d plugin update(s) available!", updateCount), 5*time.Second)
 			})
 		}
 	}()

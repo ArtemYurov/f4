@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -95,10 +96,7 @@ func TestFolderHistoryNavigationAndMenuDoNotReorderHistory(t *testing.T) {
 	defer pf.Close()
 	waitForLoad(t, panel)
 
-	provider := &F4HistoryProvider{
-		path: filepath.Join(root, "history.json"),
-		data: make(map[string][]string),
-	}
+	provider := history.NewProviderAtPath(filepath.Join(root, "history.json"))
 	original := []string{newest, missing, middle, oldest}
 	provider.SaveHistory("folders", original)
 	oldProvider := vtui.GlobalHistoryProvider

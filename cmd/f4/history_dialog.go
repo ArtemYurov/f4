@@ -1,26 +1,40 @@
 package main
 
 import (
+	"fmt"
 	"sort"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
+)
+
+const (
+	historyTypeCommands = iota
+	historyTypeFolders
+	historyTypeViewEdit
+	historyTypeCount
+)
+
+const (
+	historyShowDateTime = iota
+	historyShowDate
+	historyShowNone
 )
 
 // historySearch adds incremental filtering to a VMenu while keeping the menu
 // itself as the frame. Keeping the original item index in UserData lets callers
 // delete the right history entry even when only a filtered subset is visible.
-import "fmt"
-import "time"
 
 type historySearch struct {
 	menu          *vtui.VMenu
 	title         string
 	hint          string
-	all           []HistoryRecord
+	all           []history.HistoryRecord
 	secondary     []string
 	query         []rune
 	prefixOnly    bool
@@ -37,12 +51,12 @@ type historySearch struct {
 	// bookmark slot they own instead of the plain lock star. It reports -1
 	// for a record with no slot. Folder history sets it; the command and
 	// view/edit histories leave it nil and keep their flat list.
-	pinSlotOf       func(HistoryRecord) int
+	pinSlotOf       func(history.HistoryRecord) int
 	onLockToggled   func()
 	onTimesChanged  func(int)
 	onPrefixChanged func(int)
-	onDetails       func(HistoryRecord)
-	onCtrlF10       func(HistoryRecord)
+	onDetails       func(history.HistoryRecord)
+	onCtrlF10       func(history.HistoryRecord)
 }
 
 var (
@@ -54,7 +68,7 @@ type historySearchEntry struct {
 	index int
 }
 
-func newHistorySearch(menu *vtui.VMenu, items []HistoryRecord, hint string) *historySearch {
+func newHistorySearch(menu *vtui.VMenu, items []history.HistoryRecord, hint string) *historySearch {
 	menu.ColorTextIdx = vtui.ColDialogText
 	menu.ColorSelectedTextIdx = vtui.ColDialogSelectedButton
 	menu.ColorHighlightIdx = vtui.ColDialogHighlightText
@@ -68,7 +82,7 @@ func newHistorySearch(menu *vtui.VMenu, items []HistoryRecord, hint string) *his
 		menu:  menu,
 		title: menu.GetTitle(),
 		hint:  hint,
-		all:   append([]HistoryRecord(nil), items...),
+		all:   append([]history.HistoryRecord(nil), items...),
 	}
 	s.applyFilter()
 	s.installRenderer()
@@ -144,7 +158,7 @@ func (s *historySearch) isPinned(index int) bool {
 // pinRank orders the pinned area: slot digit first, everything past the tenth
 // pin last, in the chronological order applyFilter produced it in.
 func (s *historySearch) pinRank(item vtui.MenuItem) int {
-	unslotted := len(BookmarkSet{})
+	unslotted := history.PinSlots
 	entry, ok := item.UserData.(historySearchEntry)
 	if !ok || s.pinSlotOf == nil || entry.index < 0 || entry.index >= len(s.all) {
 		return unslotted
@@ -198,7 +212,7 @@ func (s *historySearch) defaultMenuText(text string) string {
 	return runewidth.Truncate(text, maxWidth, "…")
 }
 
-func (s *historySearch) displayText(record HistoryRecord) string {
+func (s *historySearch) displayText(record history.HistoryRecord) string {
 	if !s.showTimes && !s.showDirPrefix {
 		return record.DisplayText()
 	}
@@ -208,7 +222,7 @@ func (s *historySearch) displayText(record HistoryRecord) string {
 		result.WriteString(historyTimeColumn(record.Timestamp, s.timeMode))
 	}
 	if s.showDirPrefix {
-		result.WriteString(historyDirectoryPrefix(record.directory(), s.dirPrefixLen))
+		result.WriteString(historyDirectoryPrefix(record.Directory(), s.dirPrefixLen))
 	}
 	result.WriteString(record.Name)
 	return result.String()
@@ -288,14 +302,14 @@ func (s *historySearch) resize() {
 	s.menu.SetPosition(x1, y1, x1+width-1, y1+height-1)
 }
 
-func (s *historySearch) selected() (int, HistoryRecord, bool) {
+func (s *historySearch) selected() (int, history.HistoryRecord, bool) {
 	idx := s.menu.SelectPos
 	if idx < 0 || idx >= len(s.menu.Items) {
-		return 0, HistoryRecord{}, false
+		return 0, history.HistoryRecord{}, false
 	}
 	entry, ok := s.menu.Items[idx].UserData.(historySearchEntry)
 	if !ok || entry.index < 0 || entry.index >= len(s.all) {
-		return 0, HistoryRecord{}, false
+		return 0, history.HistoryRecord{}, false
 	}
 	return entry.index, s.all[entry.index], true
 }
@@ -308,7 +322,7 @@ func (s *historySearch) selectedSecondary() string {
 	if idx >= 0 && idx < len(s.secondary) && s.secondary[idx] != "" {
 		return s.secondary[idx]
 	}
-	return rec.directory()
+	return rec.Directory()
 }
 
 func (s *historySearch) setSecondaryWidth(items []string, visible bool, width int) {
@@ -326,7 +340,7 @@ func (s *historySearch) hasSecondary() bool {
 		}
 	}
 	for _, rec := range s.all {
-		if rec.directory() != "" {
+		if rec.Directory() != "" {
 			return true
 		}
 	}
@@ -340,7 +354,7 @@ func (s *historySearch) secondaryAt(index int) string {
 	if index < len(s.secondary) && s.secondary[index] != "" {
 		return s.secondary[index]
 	}
-	return s.all[index].directory()
+	return s.all[index].Directory()
 }
 
 func (s *historySearch) selectOriginalIndex(originalIndex int) bool {
@@ -369,8 +383,8 @@ func (s *historySearch) deleteSelected() bool {
 
 // setItems replaces the full item list (used by the "clear all" and
 // "remove missing paths" hotkeys) and re-applies the active filter.
-func (s *historySearch) setItems(items []HistoryRecord) {
-	s.all = append([]HistoryRecord(nil), items...)
+func (s *historySearch) setItems(items []history.HistoryRecord) {
+	s.all = append([]history.HistoryRecord(nil), items...)
 	s.applyFilter()
 }
 
@@ -392,7 +406,7 @@ func (s *historySearch) processKey(e *vtinput.InputEvent) bool {
 				if !rec.Timestamp.IsZero() {
 					tStr = rec.Timestamp.Format(time.RFC1123)
 				}
-				msg := fmt.Sprintf("Command: %s\nDirectory: %s\nTime: %s", rec.Name, rec.directory(), tStr)
+				msg := fmt.Sprintf("Command: %s\nDirectory: %s\nTime: %s", rec.Name, rec.Directory(), tStr)
 				vtui.ShowMessage(" Details ", msg, []string{"&Ok"})
 			}
 		}

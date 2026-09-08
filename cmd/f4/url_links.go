@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -175,7 +176,7 @@ func launchExternalURLDefault(raw string) error {
 func openExternalURLAsync(raw string) {
 	go func() {
 		if err := openExternalURL(raw); err != nil {
-			showToast(fmt.Sprintf("Cannot open URL: %v", err), 3*time.Second)
+			toast.Show(fmt.Sprintf("Cannot open URL: %v", err), 3*time.Second)
 		}
 	}()
 }

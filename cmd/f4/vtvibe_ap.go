@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/internal/vtvibe"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -245,7 +246,7 @@ func aiAttachFailureReport(reportPath string) {
 		aiShowError(err)
 		return
 	}
-	showToast(Msg("AI.PatchReportAttached"), 3*time.Second)
+	toast.Show(Msg("AI.PatchReportAttached"), 3*time.Second)
 	if pf := findPanelsFrameAnyScreen(); pf != nil {
 		pf.RefreshAll()
 	}

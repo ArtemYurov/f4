@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -53,7 +54,7 @@ func TestIssue821CommandHistoryKeepsLongEntryInsideDialog(t *testing.T) {
 	SetDefaultF4Palette()
 
 	menu := vtui.NewVMenu("History")
-	search := newHistorySearch(menu, []HistoryRecord{{Name: strings.Repeat("x", 200)}}, "")
+	search := newHistorySearch(menu, []history.HistoryRecord{{Name: strings.Repeat("x", 200)}}, "")
 	t.Cleanup(search.cleanup)
 	const sentinel = '~'
 	scr.FillRect(0, 0, screenWidth-1, screenHeight-1, sentinel, 0)
