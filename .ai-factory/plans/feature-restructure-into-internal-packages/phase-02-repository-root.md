@@ -241,7 +241,8 @@ every file in the directory is a solution review.
 
 ### Implementation Steps
 
-1. For each of the 40 files that still end in `_SOLUTION_REVIEW.md`, read the
+1. For each of the 42 files that still end in `_SOLUTION_REVIEW.md` or carry a
+   root-era name, read the
    document and derive a SCREAMING_SNAKE slug from its actual subject —
    `ISSUE_165_SORT_GROUPS.md`, `ISSUE_546_CONPTY_FOLLOWUP.md`. The slug replaces
    the constant tail; the number stays first so numeric ordering survives.
@@ -277,8 +278,8 @@ No new tests. The link sweep in step 5 is the check.
 ### Acceptance Criteria
 
 - `ls docs/ISSUES/ | grep -c SOLUTION_REVIEW` returns `0`.
-- `ls docs/ISSUES/ | wc -l` returns `41` (or `42`/`43` if Task 12 moved a root
-  file in) — no document is lost.
+- `ls docs/ISSUES/ | wc -l` returns `43` — the 41 the directory held, plus the two
+  upstream moved in from the root. No document is lost and none is merged.
 - The step-4 grep returns nothing.
 
 ### Verification
