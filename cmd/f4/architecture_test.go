@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os/exec"
 	"sort"
 	"strings"
@@ -165,6 +166,32 @@ func TestArchitectureModuleBoundaries(t *testing.T) {
 		reportEdges(t, "internal/sysinfo imports a package of ours", offenders)
 	})
 
+	// Rule 6: nothing imports upward. A package at layer N may import layers
+	// N and below and nothing above, which is what the layer numbers above
+	// have always meant and what nothing checked until now: rule 4 stays
+	// quiet about `internal/config` -> `internal/panel`, because one edge is
+	// not a cycle. It is what makes `config.App` safe as a global — the
+	// package can only ever reach layer 0.
+	t.Run("NothingImportsUpward", func(t *testing.T) {
+		var offenders []string
+		for importer, imports := range graph {
+			from, known := architectureLayerOf(importer)
+			if !known {
+				continue
+			}
+			for _, imported := range imports {
+				to, known := architectureLayerOf(imported)
+				if !known || from >= to {
+					continue
+				}
+				offenders = append(offenders,
+					fmt.Sprintf("%s (layer %d) -> %s (layer %d)", importer, from, imported, to))
+			}
+		}
+		sort.Strings(offenders)
+		reportEdges(t, "a package imports one from a higher layer", offenders)
+	})
+
 	// Rule 4: the module's own import graph is acyclic. The compiler refuses
 	// a cycle before this test ever runs, so this is a second pair of eyes
 	// whose value is the message: it names the path, which a build error on
@@ -185,6 +212,40 @@ func TestArchitectureLayerMapMatchesTheTree(t *testing.T) {
 		if _, ok := graph[architectureModule+"/"+suffix]; !ok {
 			t.Errorf("architectureLayers names %q, which is not a package in this module", suffix)
 		}
+	}
+}
+
+// architectureLayerOf places one import path, and reports whether the map knows
+// it. Anything outside this module — and `cmd/f4`, which is the root rather
+// than a layer — is not placed.
+func architectureLayerOf(importPath string) (int, bool) {
+	suffix, found := strings.CutPrefix(importPath, architectureModule+"/")
+	if !found {
+		return 0, false
+	}
+	layer, known := architectureLayers[suffix]
+	return layer, known
+}
+
+// TestArchitectureLayerMapCoversEveryInternalPackage is the other half of rule
+// 6: an unplaced package is not an exempt package, it is an unchecked one, and
+// the map is edited by hand once per extraction.
+func TestArchitectureLayerMapCoversEveryInternalPackage(t *testing.T) {
+	graph := architectureImportGraph(t)
+	var missing []string
+	for importPath := range graph {
+		suffix, found := strings.CutPrefix(importPath, architectureModule+"/internal/")
+		if !found {
+			continue
+		}
+		if _, known := architectureLayers["internal/"+suffix]; !known {
+			missing = append(missing, "internal/"+suffix)
+		}
+	}
+	sort.Strings(missing)
+	if len(missing) > 0 {
+		t.Errorf("these packages have no layer and are therefore checked by nothing:\n\t%s",
+			strings.Join(missing, "\n\t"))
 	}
 }
 

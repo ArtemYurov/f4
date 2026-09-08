@@ -314,11 +314,9 @@ Rules:
 - ✅ `plugins/*` → `vfs`, `sdk`, `internal/*` helper packages. Nothing imports a
   plugin back: they are leaves, wired in through `internal/plughost`.
 - ✅ Any module → `internal/config`, `internal/i18n`, `internal/theme`,
-  `internal/keymap`, `internal/sysinfo`, `vfs`. These are leaves: they import no
-  other `internal/*` package **except one that imports nothing itself** —
-  `internal/numeric`, `internal/inifile`, `internal/unpack` — which is what lets
-  `config.App` stay a package-level global without creating a cycle. A package
-  with no imports of ours cannot be in one.
+  `internal/keymap`, `internal/sysinfo`, `vfs`. A layer-0 package imports layer-0
+  packages and nothing else, which is what lets `config.App` stay a package-level
+  global without creating a cycle: the package can only ever reach layer 0.
 - ✅ Higher-layer modules talk to lower ones by calling exported constructors and
   methods; lower ones call back through interfaces they define themselves.
 - ❌ `vfs` / `sdk` → any `internal/*` package. They are the public contract: an
@@ -328,8 +326,12 @@ Rules:
   subsystems stay leaf nodes; that is what makes them testable in isolation.
 - ❌ Any package → `cmd/f4`. It is `package main`; nothing can import it, and
   nothing should want to.
-- ❌ Layer 0-3 modules → `internal/app`. Shared state flows down through
-  constructor arguments, never up through an import.
+- ❌ Any package → a higher layer. A package at layer N imports layers N and
+  below; `internal/app` at layer 4 is the case that matters most, but the rule is
+  general and `architecture_test.go` checks every edge, not just that one. Shared
+  state flows down through constructor arguments, never up through an import;
+  where a lower layer needs something that lives above it, it declares the seam
+  and the composition root fills it in.
 - ❌ Import cycles between subsystem packages. If two need each other, the shared
   type belongs in a lower layer, or one of them defines an interface the other
   satisfies.
@@ -457,7 +459,9 @@ are what keeps it split.
   dragging the file into the type's package.
 - **The compiler is the reviewer.** `cmd/f4/architecture_test.go` asserts the
   layer rules — no `sdk`/`vfs` import of `internal/`, nothing importing the main
-  package, nothing below layer 4 importing `internal/app`, no cycles. A change
+  package, no import of a higher layer, no cycles, and every `internal/*` package
+  placed in the layer map, because an unplaced one is unchecked rather than
+  exempt. A change
   that needs an exemption there is a change to this document first, not a test
   edit.
 

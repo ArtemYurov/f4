@@ -401,11 +401,19 @@ nothing of ours, which is what makes them shareable by the layer-0 leaves.
   callers — the updater, the plugin catalogue, the colorer downloader — and
   `SanitizePath` is the zip-slip guard for all three.
 
-`ARCHITECTURE.md`'s tree, layer list and leaf rule now name both. The leaf rule
-reads "no other `internal/*` **except one that imports nothing itself**", which
-is the invariant the original wording was reaching for: a package with no
-imports of ours cannot be in a cycle. `internal/keymap` → `internal/numeric`,
-which the plan already sanctioned, is the same exception.
+`ARCHITECTURE.md`'s tree and layer list now name both, and the leaf rule is
+stated through the layers instead of through an exception: a layer-0 package
+imports layer-0 packages and nothing else. `config` → `inifile` is legal as
+0 → 0, and so is `keymap` → `numeric`, which the plan already sanctioned.
+
+That wording is what it is because the auditor now checks it. `architectureLayers`
+carried a layer number for every package and nothing read the numbers — only the
+names, to catch a stale line. So `internal/config` importing `internal/panel`
+would have passed every rule: it is not a cycle, and rule 3 names only
+`internal/app`. Rule 6 rejects any edge from a lower layer to a higher one, and a
+second test requires every `internal/*` package to appear in the map, because an
+unplaced package is unchecked rather than exempt. Verified to fire by moving
+`internal/unpack` to layer 2 and watching `internal/update` fail.
 
 ### `internal/config` needs an `Executable` seam in Task 24
 
