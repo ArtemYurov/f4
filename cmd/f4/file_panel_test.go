@@ -4807,6 +4807,47 @@ func TestFileEntry_SymlinkDisplayNameAndStatus(t *testing.T) {
 	}
 }
 
+func TestFileSystemPanel_SymlinkTargetReplacesStatusSize(t *testing.T) {
+	oldCfg := AppConfig
+	defer func() { AppConfig = oldCfg }()
+	AppConfig.ShowPanelFileInfo = true
+
+	vtui.SetDefaultPalette()
+	SetDefaultF4Palette()
+	scr := vtui.NewSilentScreenBuf()
+	scr.AllocBuf(100, 25)
+	vtui.FrameManager.Init(scr)
+
+	tmp := t.TempDir()
+	target := filepath.Join(tmp, "target.txt")
+	link := filepath.Join(tmp, "link.txt")
+	if err := os.WriteFile(target, []byte("target"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("target.txt", link); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+
+	fp := NewFileSystemPanel(0, 0, 90, 20, vfs.NewOSVFS(tmp))
+	waitForLoad(t, fp)
+	fp.entries = []*fileEntry{{VFSItem: vfs.VFSItem{Name: "link.txt", IsSymlink: true}}}
+	fp.isLoading = false
+	if fp.loadingTimer != nil {
+		fp.loadingTimer.Stop()
+	}
+	fp.Refresh()
+	fp.SetCursorIndex(0)
+	fp.Show(scr)
+
+	status := ScreenRow(scr, fp.Y2-1, fp.X1, fp.X2)
+	if !strings.Contains(status, "→ target.txt") {
+		t.Fatalf("symlink status = %q, want target in place of the link marker", status)
+	}
+	if strings.Contains(status, "<LNK") {
+		t.Fatalf("symlink status still contains a link-size placeholder: %q", status)
+	}
+}
+
 func TestFileSystemPanel_BottomFrameShowsCursorEntry(t *testing.T) {
 	vtui.SetDefaultPalette()
 	scr := vtui.NewSilentScreenBuf()
