@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/vfs"
@@ -67,8 +68,8 @@ func (u *userMenuFrame) Show(scr *vtui.ScreenBuf) {
 func MainMenuFilePath() string {
 	// In portable mode (UseSystemProfiles=0) write under <exeDir>/Profile;
 	// otherwise use the system %AppData%/f4/settings path as before, matching
-	// the other config INIs that resolve through GetF4ConfigDir.
-	return filepath.Join(GetF4ConfigDir(), "settings", "user_menu.ini")
+	// the other config INIs that resolve through config.GetF4ConfigDir.
+	return filepath.Join(config.GetF4ConfigDir(), "settings", "user_menu.ini")
 }
 
 // findLocalFarMenu walks startDir upward looking for FarMenu.ini.
@@ -121,7 +122,7 @@ func saveFarMenuFile(path string, items []UserMenuItem) error {
 	if err := WriteFarMenu(&buf, items); err != nil {
 		return err
 	}
-	return writeFileAtomically(path, buf.Bytes(), 0o600)
+	return config.WriteUserFileAtomically(path, buf.Bytes(), 0o600)
 }
 
 // loadRootForMode reads the current root menu from disk based on the

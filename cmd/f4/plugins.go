@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/unxed/f4/internal/config"
 	androidfs "github.com/unxed/f4/plugins/android"
 	"github.com/unxed/f4/plugins/archive"
 	"github.com/unxed/f4/plugins/chroma"
@@ -94,7 +95,7 @@ func (pm *PluginManager) LoadExternal() {
 			pm.externalLoader()
 			return
 		}
-		for _, path := range AppConfig.RegisteredPlugins {
+		for _, path := range config.App.RegisteredPlugins {
 			pm.LoadExternalPlugin(path)
 		}
 		pm.loadPlugRing()
@@ -142,7 +143,7 @@ func (pm *PluginManager) LoadExternalPlugin(path string) {
 }
 func (pm *PluginManager) loadPlugRing() {
 	installed := GetInstalledPlugRingItems()
-	plugringDir := filepath.Join(GetF4ConfigDir(), "plugring")
+	plugringDir := filepath.Join(config.GetF4ConfigDir(), "plugring")
 	for id, item := range installed {
 		if item.Entrypoint != "" {
 			// We build a pseudo-path that NewRPCPlugin will handle specifically later if needed,
@@ -163,7 +164,7 @@ func (pm *PluginManager) loadSinglePlugRingItem(item PlugRingItem) {
 	if item.Entrypoint == "" {
 		return
 	}
-	plugringDir := filepath.Join(GetF4ConfigDir(), "plugring")
+	plugringDir := filepath.Join(config.GetF4ConfigDir(), "plugring")
 	pluginDir := filepath.Join(plugringDir, item.ID)
 
 	p := newPluginForPlugRingItem(pluginDir, item)
@@ -184,14 +185,14 @@ func (pm *PluginManager) loadInternal() {
 		androidfs.NewPlugin(),
 		iosfs.NewPlugin(),
 		cloudfox.NewPlugin(cloudfox.Options{
-			ConfigDir: GetF4ConfigDir(),
-			Portable:  IsPortableProfile(),
+			ConfigDir: config.GetF4ConfigDir(),
+			Portable:  config.IsPortableProfile(),
 		}),
 		&netfox.NetFoxPlugin{},
 		&visren.Plugin{},
 		&id3editor.ID3EditorPlugin{},
-		envman.NewPlugin(GetF4ConfigDir()),
-		mediainfo.NewPlugin(GetF4ConfigDir()),
+		envman.NewPlugin(config.GetF4ConfigDir()),
+		mediainfo.NewPlugin(config.GetF4ConfigDir()),
 		sqliteplugin.NewPlugin(),
 	}
 

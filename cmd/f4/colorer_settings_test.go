@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/config"
 	"os"
 	"path/filepath"
 	"testing"
@@ -10,13 +11,13 @@ import (
 func useColorerCross(t *testing.T, mode int, crosshair bool) {
 	t.Helper()
 
-	oldMode, oldCrosshair := AppConfig.EditorCrossMode, AppConfig.EditorCrosshair
-	AppConfig.EditorCrossMode = mode
-	AppConfig.EditorCrosshair = crosshair
+	oldMode, oldCrosshair := config.App.EditorCrossMode, config.App.EditorCrosshair
+	config.App.EditorCrossMode = mode
+	config.App.EditorCrosshair = crosshair
 
 	t.Cleanup(func() {
-		AppConfig.EditorCrossMode = oldMode
-		AppConfig.EditorCrosshair = oldCrosshair
+		config.App.EditorCrossMode = oldMode
+		config.App.EditorCrosshair = oldCrosshair
 	})
 }
 
@@ -26,10 +27,10 @@ func TestColorerCross_ModeAxes(t *testing.T) {
 		horz bool
 		vert bool
 	}{
-		{ColorerCrossOff, false, false},
-		{ColorerCrossVertical, false, true},
-		{ColorerCrossHorizontal, true, false},
-		{ColorerCrossBoth, true, true},
+		{config.ColorerCrossOff, false, false},
+		{config.ColorerCrossVertical, false, true},
+		{config.ColorerCrossHorizontal, true, false},
+		{config.ColorerCrossBoth, true, true},
 	}
 	for _, tc := range cases {
 		horz, vert := crossModeAxes(tc.mode)
@@ -40,7 +41,7 @@ func TestColorerCross_ModeAxes(t *testing.T) {
 }
 
 func TestColorerCross_DisabledByTheCrosshairSwitch(t *testing.T) {
-	useColorerCross(t, ColorerCrossBoth, false)
+	useColorerCross(t, config.ColorerCrossBoth, false)
 
 	if horz, vert, _, _ := EditorCrossAttrs(); horz || vert {
 		t.Errorf("Expected no cross with the crosshair off, got horz=%v vert=%v", horz, vert)
@@ -49,25 +50,25 @@ func TestColorerCross_DisabledByTheCrosshairSwitch(t *testing.T) {
 
 func TestColorerConfigsDir_HonorsTheConfiguredCatalog(t *testing.T) {
 	custom := t.TempDir()
-	old := AppConfig.EditorColorerCatalog
-	t.Cleanup(func() { AppConfig.EditorColorerCatalog = old })
+	old := config.App.EditorColorerCatalog
+	t.Cleanup(func() { config.App.EditorColorerCatalog = old })
 
-	AppConfig.EditorColorerCatalog = "  " + custom + "  "
+	config.App.EditorColorerCatalog = "  " + custom + "  "
 	if got := ColorerConfigsDir(); got != custom {
 		t.Errorf("Expected the configured folder %q, got %q", custom, got)
 	}
 
-	AppConfig.EditorColorerCatalog = ""
-	if got := ColorerConfigsDir(); got != filepath.Join(GetF4ConfigDir(), "colorer", "configs") {
+	config.App.EditorColorerCatalog = ""
+	if got := ColorerConfigsDir(); got != filepath.Join(config.GetF4ConfigDir(), "colorer", "configs") {
 		t.Errorf("Expected the default folder, got %q", got)
 	}
 }
 
 func TestColorerSchemasExist_FollowsTheConfiguredCatalog(t *testing.T) {
 	custom := t.TempDir()
-	old := AppConfig.EditorColorerCatalog
-	AppConfig.EditorColorerCatalog = custom
-	t.Cleanup(func() { AppConfig.EditorColorerCatalog = old })
+	old := config.App.EditorColorerCatalog
+	config.App.EditorColorerCatalog = custom
+	t.Cleanup(func() { config.App.EditorColorerCatalog = old })
 
 	if SchemasExist() {
 		t.Fatal("Expected no schemas in an empty folder")
@@ -87,42 +88,42 @@ func TestConfig_ColorerSettingsRoundTrip(t *testing.T) {
 	tmpDir := t.TempDir()
 	userIniPath := filepath.Join(tmpDir, "settings.ini")
 
-	origUserPathFunc := getUserConfigIniPath
-	getUserConfigIniPath = func() string { return userIniPath }
-	origPathsFunc := getConfigIniPaths
-	getConfigIniPaths = func() []string { return []string{userIniPath} }
+	origUserPathFunc := config.GetUserConfigIniPath
+	config.GetUserConfigIniPath = func() string { return userIniPath }
+	origPathsFunc := config.GetConfigIniPaths
+	config.GetConfigIniPaths = func() []string { return []string{userIniPath} }
 
-	oldCfg := AppConfig
+	oldCfg := config.App
 	t.Cleanup(func() {
-		getUserConfigIniPath = origUserPathFunc
-		getConfigIniPaths = origPathsFunc
-		AppConfig = oldCfg
+		config.GetUserConfigIniPath = origUserPathFunc
+		config.GetConfigIniPaths = origPathsFunc
+		config.App = oldCfg
 	})
 
 	catalog := filepath.Join(tmpDir, "configs")
-	AppConfig.EditorColorerSyntax = false
-	AppConfig.EditorSyntaxAnimation = true
-	AppConfig.EditorColorerCatalog = catalog
-	AppConfig.EditorCrossMode = ColorerCrossVertical
-	SaveConfig()
+	config.App.EditorColorerSyntax = false
+	config.App.EditorSyntaxAnimation = true
+	config.App.EditorColorerCatalog = catalog
+	config.App.EditorCrossMode = config.ColorerCrossVertical
+	config.SaveConfig()
 
-	AppConfig.EditorColorerSyntax = true
-	AppConfig.EditorSyntaxAnimation = false
-	AppConfig.EditorColorerCatalog = ""
-	AppConfig.EditorCrossMode = ColorerCrossBoth
+	config.App.EditorColorerSyntax = true
+	config.App.EditorSyntaxAnimation = false
+	config.App.EditorColorerCatalog = ""
+	config.App.EditorCrossMode = config.ColorerCrossBoth
 
-	LoadConfig()
+	config.LoadConfig()
 
-	if AppConfig.EditorColorerSyntax {
-		t.Error("LoadConfig failed to restore EditorColorerSyntax")
+	if config.App.EditorColorerSyntax {
+		t.Error("config.LoadConfig failed to restore EditorColorerSyntax")
 	}
-	if !AppConfig.EditorSyntaxAnimation {
-		t.Error("LoadConfig failed to restore EditorSyntaxAnimation")
+	if !config.App.EditorSyntaxAnimation {
+		t.Error("config.LoadConfig failed to restore EditorSyntaxAnimation")
 	}
-	if AppConfig.EditorColorerCatalog != catalog {
-		t.Errorf("LoadConfig failed to restore EditorColorerCatalog: %q", AppConfig.EditorColorerCatalog)
+	if config.App.EditorColorerCatalog != catalog {
+		t.Errorf("config.LoadConfig failed to restore EditorColorerCatalog: %q", config.App.EditorColorerCatalog)
 	}
-	if AppConfig.EditorCrossMode != ColorerCrossVertical {
-		t.Errorf("LoadConfig failed to restore EditorCrossMode: %d", AppConfig.EditorCrossMode)
+	if config.App.EditorCrossMode != config.ColorerCrossVertical {
+		t.Errorf("config.LoadConfig failed to restore EditorCrossMode: %d", config.App.EditorCrossMode)
 	}
 }

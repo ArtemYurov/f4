@@ -30,6 +30,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ttyx"
 	"github.com/unxed/vtui"
 )
@@ -136,10 +137,10 @@ type ttyxKeyboard struct {
 // not possible: this is an improvement on a terminal that cannot do better,
 // never a requirement.
 func startTTYXKeyboard() *ttyxKeyboard {
-	if !AppConfig.TTYXKeys {
+	if !config.App.TTYXKeys {
 		return nil
 	}
-	combos, bad := parseTTYXCombos(AppConfig.TTYXKeyList)
+	combos, bad := parseTTYXCombos(config.App.TTYXKeyList)
 	if len(bad) > 0 {
 		vtui.DebugLog("TTYX_KEYS: these could not be read and were skipped: %v", bad)
 	}
@@ -214,11 +215,3 @@ func (k *ttyxKeyboard) Close() {
 		k.sess.UngrabKeys()
 	})
 }
-
-// defaultTTYXKeyList is what is asked for when the feature is switched on and
-// nothing else is said. Every entry is a combination f4 binds and a plain TTY
-// cannot distinguish from a simpler one, and nothing here is a combination a
-// desktop is likely to want for itself.
-const defaultTTYXKeyList = "Ctrl+Shift+Up, Ctrl+Shift+Down, Ctrl+Shift+Left, Ctrl+Shift+Right, " +
-	"Ctrl+Enter, Shift+Enter, Ctrl+Shift+Enter, Ctrl+Tab, Ctrl+Shift+Tab, " +
-	"Alt+Shift+F3, Alt+Shift+F4"

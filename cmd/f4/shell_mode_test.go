@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/config"
 	"testing"
 )
 
@@ -150,10 +151,10 @@ func TestConsoleViewStyleOf(t *testing.T) {
 // Without a PTY the "own terminal" choice cannot be honoured, and leaving it in
 // place is what used to give users a blank screen on Ctrl+O.
 func TestConsoleViewStyleFor_OwnDegradesWithoutPTY(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.ConsoleMode = ConsoleViewOwn
-	AppConfig.ConsoleOverlayUI = false
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.ConsoleMode = ConsoleViewOwn
+	config.App.ConsoleOverlayUI = false
 
 	if got := consoleViewStyleFor(ShellModeSimpleInline); got != ConsoleViewFar {
 		t.Errorf("consoleViewStyleFor(SimpleInline) = %q, want %q", got, ConsoleViewFar)

@@ -10,6 +10,7 @@ import (
 	"sync"
 	"unicode"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/vtui"
 )
@@ -202,7 +203,7 @@ func currentWindowTitle() string {
 		state = stableWorkspaceTitle(vtui.FrameManager.Screens[active])
 	}
 
-	template := AppConfig.ConsoleTitleTemplate
+	template := config.App.ConsoleTitleTemplate
 	if template == "" {
 		template = "f4 - %State"
 	}

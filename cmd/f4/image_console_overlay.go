@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/wincon"
 	"github.com/unxed/vtui"
 )
@@ -53,7 +54,7 @@ var (
 // one asks whether the screen supports graphics before it tries, and the
 // answer has to be right by then.
 func InstallConsoleOverlay() {
-	if !AppConfig.ImageOverlay {
+	if !config.App.ImageOverlay {
 		return
 	}
 	scr := vtui.FrameManager.Screen()

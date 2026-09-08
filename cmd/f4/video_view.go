@@ -12,6 +12,7 @@ package main
 import (
 	"path/filepath"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ttyx"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -135,7 +136,7 @@ func (vv *VideoView) Show(scr *vtui.ScreenBuf) {
 	}
 	// The focus rule: playback carries on while the terminal is not on
 	// top, unless the reader asked otherwise.
-	if AppConfig.VideoPauseOnFocusLoss && !vv.paused {
+	if config.App.VideoPauseOnFocusLoss && !vv.paused {
 		if sess := sharedTTYXSession(); sess != nil {
 			vv.player.SetPaused(!sess.Focused())
 		}

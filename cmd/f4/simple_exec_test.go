@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"strings"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -94,9 +95,9 @@ func TestSimpleInline_ToggleAndAnyKeyReturn(t *testing.T) {
 	vtui.FrameManager.Init(scr)
 	SetDefaultF4Palette()
 
-	oldCfg := AppConfig
-	t.Cleanup(func() { AppConfig = oldCfg })
-	AppConfig.ConsoleMode = ConsoleViewMc
+	oldCfg := config.App
+	t.Cleanup(func() { config.App = oldCfg })
+	config.App.ConsoleMode = ConsoleViewMc
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -134,9 +135,9 @@ func TestSimpleInline_CtrlOKeyUpDoesNotRestorePanels(t *testing.T) {
 	vtui.FrameManager.Init(scr)
 	SetDefaultF4Palette()
 
-	oldCfg := AppConfig
-	t.Cleanup(func() { AppConfig = oldCfg })
-	AppConfig.ConsoleMode = ConsoleViewMc
+	oldCfg := config.App
+	t.Cleanup(func() { config.App = oldCfg })
+	config.App.ConsoleMode = ConsoleViewMc
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -227,9 +228,9 @@ func TestSimpleInline_FarStyleKeepsConsoleAndTypes(t *testing.T) {
 	vtui.FrameManager.Init(scr)
 	SetDefaultF4Palette()
 
-	oldCfg := AppConfig
-	t.Cleanup(func() { AppConfig = oldCfg })
-	AppConfig.ConsoleMode = ConsoleViewFar
+	oldCfg := config.App
+	t.Cleanup(func() { config.App = oldCfg })
+	config.App.ConsoleMode = ConsoleViewFar
 	oldGetTerminalSize := vtui.GetTerminalSize
 	vtui.GetTerminalSize = func() (int, int, error) { return 80, 25, nil }
 	t.Cleanup(func() { vtui.GetTerminalSize = oldGetTerminalSize })

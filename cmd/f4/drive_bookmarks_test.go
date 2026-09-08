@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtinput"
 )
 
@@ -55,7 +56,7 @@ Hotkey=Ф
 [12]
 Path=/missing-name
 `
-	if err := writeFileAtomically(path, []byte(content), 0o600); err != nil {
+	if err := config.WriteUserFileAtomically(path, []byte(content), 0o600); err != nil {
 		t.Fatal(err)
 	}
 

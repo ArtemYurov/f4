@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
 
@@ -47,20 +48,20 @@ func TestEmbeddedCurrentLanguageContainsNewCommandStrings(t *testing.T) {
 }
 
 func TestInitLangUsesEmbeddedCurrentLanguageAndResetsFallback(t *testing.T) {
-	previous := AppConfig
+	previous := config.App
 	t.Cleanup(func() {
-		AppConfig = previous
+		config.App = previous
 		InitLang()
 	})
 
-	AppConfig.Language = "ru"
-	AppConfig.FallbackLanguage = ""
+	config.App.Language = "ru"
+	config.App.FallbackLanguage = ""
 	InitLang()
 	if got := Msg("Action.Workspace.Close"); !strings.Contains(got, "Закрыть") {
 		t.Fatalf("Russian current-language label = %q", got)
 	}
 
-	AppConfig.Language = "de"
+	config.App.Language = "de"
 	InitLang()
 	if got := Msg("Action.Workspace.Close"); action.PlainLabel(got) != "Close workspace" {
 		t.Fatalf("missing German translation inherited a stale language: %q", got)
@@ -68,7 +69,7 @@ func TestInitLangUsesEmbeddedCurrentLanguageAndResetsFallback(t *testing.T) {
 }
 
 func TestInitLangPreservesRuntimePluginStrings(t *testing.T) {
-	previousConfig := AppConfig
+	previousConfig := config.App
 	previousStrings := vtui.SnapshotStrings()
 	languageState.Lock()
 	previousCore := make(map[string]string, len(languageState.core))
@@ -77,7 +78,7 @@ func TestInitLangPreservesRuntimePluginStrings(t *testing.T) {
 	}
 	languageState.Unlock()
 	t.Cleanup(func() {
-		AppConfig = previousConfig
+		config.App = previousConfig
 		languageState.Lock()
 		languageState.core = previousCore
 		vtui.ReplaceStrings(previousStrings)
@@ -86,8 +87,8 @@ func TestInitLangPreservesRuntimePluginStrings(t *testing.T) {
 
 	const key = "Test.Plugin.RuntimeTranslation"
 	vtui.AddStrings(map[string]string{key: "runtime plugin text"})
-	AppConfig.Language = "ru"
-	AppConfig.FallbackLanguage = ""
+	config.App.Language = "ru"
+	config.App.FallbackLanguage = ""
 	InitLang()
 	if got := Msg(key); got != "runtime plugin text" {
 		t.Fatalf("runtime plugin string after language switch = %q", got)

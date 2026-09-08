@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -212,10 +213,10 @@ func actionViewerEditorHistory(pf *PanelsFrame) {
 	// own Ctrl+T mode remembered separately — far2l keeps one setting per
 	// history type too.
 	search.showTimes = true
-	search.timeMode = AppConfig.HistoryShowTimes[historyTypeViewEdit]
+	search.timeMode = config.App.HistoryShowTimes[config.HistoryTypeViewEdit]
 	search.onTimesChanged = func(mode int) {
-		AppConfig.HistoryShowTimes[historyTypeViewEdit] = mode
-		SaveConfig()
+		config.App.HistoryShowTimes[config.HistoryTypeViewEdit] = mode
+		config.SaveConfig()
 	}
 	search.onLockToggled = func() {
 		for i := range entries {

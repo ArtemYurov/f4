@@ -5,52 +5,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/vtui"
 )
-
-// These flags mirror the useful part of Far's Change Drive Menu Options.
-// They are intentionally kept as one persisted bit field so old profiles can
-// carry the setting without another configuration section.
-const (
-	driveMenuShowType uint32 = 1 << iota
-	driveMenuShowLabel
-	driveMenuUseShellName
-	driveMenuShowFilesystem
-	driveMenuShowSize
-	driveMenuShowSizeFloat
-	driveMenuShowNetworkName
-	driveMenuShowPlugins
-	driveMenuSortPluginsByHotkey
-	driveMenuShowRemovable
-	driveMenuShowCD
-	driveMenuShowRemote
-	driveMenuDetectVirtual
-	driveMenuShowBookmarks
-)
-
-const defaultDriveMenuOptions = driveMenuShowType |
-	driveMenuShowLabel |
-	driveMenuShowFilesystem |
-	driveMenuShowSize |
-	driveMenuShowSizeFloat |
-	driveMenuShowPlugins |
-	driveMenuShowRemovable |
-	driveMenuShowCD |
-	driveMenuShowRemote |
-	driveMenuDetectVirtual |
-	driveMenuShowBookmarks
-
-func parseDriveMenuOptions(value string) uint32 {
-	if strings.TrimSpace(value) == "" {
-		return defaultDriveMenuOptions
-	}
-	var options uint32
-	if _, err := fmt.Sscanf(value, "%d", &options); err != nil {
-		return defaultDriveMenuOptions
-	}
-	return options
-}
 
 type driveMenuKind uint8
 
@@ -70,20 +28,20 @@ type driveMenuOptionSpec struct {
 }
 
 var driveMenuOptionSpecs = []driveMenuOptionSpec{
-	{driveMenuShowType, "Drive.ShowType"},
-	{driveMenuShowLabel, "Drive.ShowLabel"},
-	{driveMenuUseShellName, "Drive.UseShellName"},
-	{driveMenuShowFilesystem, "Drive.ShowFilesystem"},
-	{driveMenuShowSize, "Drive.ShowSize"},
-	{driveMenuShowSizeFloat, "Drive.ShowSizeFloat"},
-	{driveMenuShowNetworkName, "Drive.ShowNetworkName"},
-	{driveMenuShowPlugins, "Drive.ShowPlugins"},
-	{driveMenuSortPluginsByHotkey, "Drive.SortPluginsByHotkey"},
-	{driveMenuShowRemovable, "Drive.ShowRemovable"},
-	{driveMenuShowCD, "Drive.ShowCD"},
-	{driveMenuShowRemote, "Drive.ShowRemote"},
-	{driveMenuDetectVirtual, "Drive.DetectVirtual"},
-	{driveMenuShowBookmarks, "Drive.ShowBookmarks"},
+	{config.DriveMenuShowType, "Drive.ShowType"},
+	{config.DriveMenuShowLabel, "Drive.ShowLabel"},
+	{config.DriveMenuUseShellName, "Drive.UseShellName"},
+	{config.DriveMenuShowFilesystem, "Drive.ShowFilesystem"},
+	{config.DriveMenuShowSize, "Drive.ShowSize"},
+	{config.DriveMenuShowSizeFloat, "Drive.ShowSizeFloat"},
+	{config.DriveMenuShowNetworkName, "Drive.ShowNetworkName"},
+	{config.DriveMenuShowPlugins, "Drive.ShowPlugins"},
+	{config.DriveMenuSortPluginsByHotkey, "Drive.SortPluginsByHotkey"},
+	{config.DriveMenuShowRemovable, "Drive.ShowRemovable"},
+	{config.DriveMenuShowCD, "Drive.ShowCD"},
+	{config.DriveMenuShowRemote, "Drive.ShowRemote"},
+	{config.DriveMenuDetectVirtual, "Drive.DetectVirtual"},
+	{config.DriveMenuShowBookmarks, "Drive.ShowBookmarks"},
 }
 
 func driveMenuOptionEnabled(options, flag uint32) bool { return options&flag != 0 }
@@ -186,7 +144,7 @@ func driveMenuPlatformRowFor(drv sysinfo.DriveEntry, options uint32) driveMenuPl
 	path := driveMenuInfoPath(drv.Name)
 	kind := driveMenuKindFor(drv.Name, path)
 
-	if driveMenuOptionEnabled(options, driveMenuShowType) {
+	if driveMenuOptionEnabled(options, config.DriveMenuShowType) {
 		row.kind = driveMenuKindLabel(kind)
 	}
 
@@ -195,18 +153,18 @@ func driveMenuPlatformRowFor(drv sysinfo.DriveEntry, options uint32) driveMenuPl
 		info, infoOK = sysinfo.FS(path)
 	}
 	if infoOK {
-		if driveMenuOptionEnabled(options, driveMenuShowLabel) && info.Label != "" {
+		if driveMenuOptionEnabled(options, config.DriveMenuShowLabel) && info.Label != "" {
 			row.label = info.Label
 		}
-		if driveMenuOptionEnabled(options, driveMenuShowFilesystem) && info.Type != "" {
+		if driveMenuOptionEnabled(options, config.DriveMenuShowFilesystem) && info.Type != "" {
 			row.filesystem = info.Type
 		}
-		if driveMenuOptionEnabled(options, driveMenuShowSize) {
-			decimal := driveMenuOptionEnabled(options, driveMenuShowSizeFloat)
+		if driveMenuOptionEnabled(options, config.DriveMenuShowSize) {
+			decimal := driveMenuOptionEnabled(options, config.DriveMenuShowSizeFloat)
 			row.total = driveMenuSize(info.Total, decimal)
 			row.free = driveMenuSize(info.Free, decimal)
 		}
-		if driveMenuOptionEnabled(options, driveMenuShowNetworkName) && info.Mount != "" && info.Mount != path {
+		if driveMenuOptionEnabled(options, config.DriveMenuShowNetworkName) && info.Mount != "" && info.Mount != path {
 			row.network = info.Mount
 		}
 	}
@@ -215,21 +173,21 @@ func driveMenuPlatformRowFor(drv sysinfo.DriveEntry, options uint32) driveMenuPl
 
 func (row driveMenuPlatformRow) columns(options uint32) []driveMenuPlatformColumn {
 	columns := make([]driveMenuPlatformColumn, 0, 7)
-	if driveMenuOptionEnabled(options, driveMenuShowType) {
+	if driveMenuOptionEnabled(options, config.DriveMenuShowType) {
 		columns = append(columns, driveMenuPlatformColumn{text: row.kind})
 	}
-	if driveMenuOptionEnabled(options, driveMenuShowLabel) {
+	if driveMenuOptionEnabled(options, config.DriveMenuShowLabel) {
 		columns = append(columns, driveMenuPlatformColumn{text: row.label})
 	}
-	if driveMenuOptionEnabled(options, driveMenuShowFilesystem) {
+	if driveMenuOptionEnabled(options, config.DriveMenuShowFilesystem) {
 		columns = append(columns, driveMenuPlatformColumn{text: row.filesystem})
 	}
-	if driveMenuOptionEnabled(options, driveMenuShowSize) {
+	if driveMenuOptionEnabled(options, config.DriveMenuShowSize) {
 		columns = append(columns,
 			driveMenuPlatformColumn{text: row.total, rightAlign: true},
 			driveMenuPlatformColumn{text: row.free, rightAlign: true})
 	}
-	if driveMenuOptionEnabled(options, driveMenuShowNetworkName) {
+	if driveMenuOptionEnabled(options, config.DriveMenuShowNetworkName) {
 		columns = append(columns, driveMenuPlatformColumn{text: row.network})
 	}
 	return columns
@@ -326,11 +284,11 @@ func driveMenuPlatformItemVisible(drv sysinfo.DriveEntry, options uint32) bool {
 	kind := driveMenuKindFor(drv.Name, driveMenuInfoPath(drv.Name))
 	switch kind {
 	case driveMenuKindRemovable:
-		return driveMenuOptionEnabled(options, driveMenuShowRemovable)
+		return driveMenuOptionEnabled(options, config.DriveMenuShowRemovable)
 	case driveMenuKindCD:
-		return driveMenuOptionEnabled(options, driveMenuShowCD)
+		return driveMenuOptionEnabled(options, config.DriveMenuShowCD)
 	case driveMenuKindRemote:
-		return driveMenuOptionEnabled(options, driveMenuShowRemote)
+		return driveMenuOptionEnabled(options, config.DriveMenuShowRemote)
 	default:
 		return true
 	}
@@ -341,7 +299,7 @@ func (pf *PanelsFrame) openDriveMenuOptions(panelIdx int, menu *vtui.VMenu) {
 	dlg := vtui.NewCenteredDialog(width, height, Msg("Drive.OptionsTitle"))
 	dlg.ShowClose = true
 
-	options := AppConfig.DriveMenuOptions
+	options := config.App.DriveMenuOptions
 	checks := make([]*vtui.Checkbox, 0, len(driveMenuOptionSpecs))
 	for _, spec := range driveMenuOptionSpecs {
 		check := vtui.NewCheckbox(0, 0, Msg(spec.label), false)
@@ -379,8 +337,8 @@ func (pf *PanelsFrame) openDriveMenuOptions(panelIdx int, menu *vtui.VMenu) {
 				updated |= driveMenuOptionSpecs[i].flag
 			}
 		}
-		AppConfig.DriveMenuOptions = updated
-		SaveConfig()
+		config.App.DriveMenuOptions = updated
+		config.SaveConfig()
 		pos := menu.SelectPos
 		dlg.Close()
 		menu.Close()

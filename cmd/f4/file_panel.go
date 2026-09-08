@@ -20,6 +20,7 @@ import (
 	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -134,7 +135,7 @@ func (f *fileEntry) displayName(name string) string {
 		return ".."
 	}
 	marker := ""
-	if AppConfig.ShowHighlightMarks {
+	if config.App.ShowHighlightMarks {
 		marker = GlobalFileHighlighter.GetMarker(&f.VFSItem)
 	}
 	if marker == "" && f.IsSymlink {
@@ -142,7 +143,7 @@ func (f *fileEntry) displayName(name string) string {
 	}
 	prefix := ""
 	if f.IsDir {
-		if AppConfig.ShowDirPrefix {
+		if config.App.ShowDirPrefix {
 			if marker == "/" {
 				marker = ""
 			}
@@ -168,7 +169,7 @@ func splitFileExtension(name string) (string, string) {
 }
 
 func shouldSeparatePanelExtension(entry *fileEntry) bool {
-	return AppConfig.SeparateFileExtensions && !entry.IsDir && !entry.NoExtension && entry.Name != ".."
+	return config.App.SeparateFileExtensions && !entry.IsDir && !entry.NoExtension && entry.Name != ".."
 }
 
 func formatPanelFileName(entry *fileEntry, width int) string {
@@ -735,7 +736,7 @@ func nativeVisualCachePath(value string) string {
 // the panel's provider-open guard prevents actions from being dispatched
 // against the old filesystem meanwhile.
 func (fp *FileSystemPanel) showCachedStandalonePath(target string) bool {
-	if fp == nil || target == "" || fp.dirCache == nil || AppConfig.SyncPanelLoad {
+	if fp == nil || target == "" || fp.dirCache == nil || config.App.SyncPanelLoad {
 		return false
 	}
 	want := nativeVisualCachePath(target)
@@ -759,7 +760,7 @@ func (fp *FileSystemPanel) showCachedStandalonePath(target string) bool {
 		fp.entries = append(fp.entries, &fileEntry{VFSItem: vfs.VFSItem{Name: "..", IsDir: true}, IsCached: true})
 	}
 	for _, item := range cached.items {
-		if !AppConfig.ShowHiddenFiles && item.Name != ".." && item.IsHidden {
+		if !config.App.ShowHiddenFiles && item.Name != ".." && item.IsHidden {
 			continue
 		}
 		fp.entries = append(fp.entries, &fileEntry{VFSItem: item, IsCached: true})
@@ -1371,7 +1372,7 @@ func (fp *FileSystemPanel) initScrollBar() {
 }
 
 func (fp *FileSystemPanel) syncScrollBar() bool {
-	if fp.scrollBar == nil || AppConfig.PanelScrollbarMode == PanelScrollbarOff {
+	if fp.scrollBar == nil || config.App.PanelScrollbarMode == config.PanelScrollbarOff {
 		return false
 	}
 	height, _, maxTop, virtualMax, virtualValue := fp.panelScrollMetrics()
@@ -1423,7 +1424,7 @@ func (fp *FileSystemPanel) drawScrollBar(scr *vtui.ScreenBuf) {
 		return
 	}
 	height := fp.scrollBar.Y2 - fp.scrollBar.Y1 + 1
-	if AppConfig.PanelScrollbarMode == PanelScrollbarMinimal {
+	if config.App.PanelScrollbarMode == config.PanelScrollbarMinimal {
 		caretPos, caretLength := minimalPanelScrollThumb(height, fp.scrollBar.Value, fp.scrollBar.Max)
 		attr := vtui.Palette[ColPanelMinimalScrollbar]
 		for offset := 0; offset < caretLength; offset++ {
@@ -1619,12 +1620,12 @@ func (fp *FileSystemPanel) drawNameScrollBrackets(scr *vtui.ScreenBuf) {
 }
 
 func (fp *FileSystemPanel) processScrollBarMouse(e *vtinput.InputEvent) bool {
-	if fp.scrollBar == nil || AppConfig.PanelScrollbarMode == PanelScrollbarOff {
+	if fp.scrollBar == nil || config.App.PanelScrollbarMode == config.PanelScrollbarOff {
 		return false
 	}
 	// Releases must reach ScrollBar so it can stop dragging and auto-repeat.
 	if e.ButtonState == 0 {
-		if AppConfig.PanelScrollbarMode == PanelScrollbarFull {
+		if config.App.PanelScrollbarMode == config.PanelScrollbarFull {
 			fp.scrollBar.ProcessMouse(e)
 		}
 		fp.scrollMouseActive = false
@@ -1635,7 +1636,7 @@ func (fp *FileSystemPanel) processScrollBarMouse(e *vtinput.InputEvent) bool {
 	if e.ButtonState&vtinput.FromLeft1stButtonPressed == 0 {
 		return false
 	}
-	if AppConfig.PanelScrollbarMode == PanelScrollbarMinimal {
+	if config.App.PanelScrollbarMode == config.PanelScrollbarMinimal {
 		if fp.scrollMouseActive {
 			height := fp.scrollBar.Y2 - fp.scrollBar.Y1 + 1
 			_, caretLength := minimalPanelScrollThumb(height, fp.scrollBar.Value, fp.scrollBar.Max)
@@ -1913,7 +1914,7 @@ func (fp *FileSystemPanel) enqueueDirectoryLoad(load func()) {
 	fp.loadWorkerActive = true
 	fp.loadWorkerWG.Add(1)
 	// Every worker is also counted process-wide. A worker reads globals while
-	// it runs -- AppConfig and vtui.FrameManager, and the frame manager's task
+	// it runs -- config.App and vtui.FrameManager, and the frame manager's task
 	// queue when it posts back -- so anything that replaces one of those has to
 	// know whether a worker is still out there. Panels are created deep inside
 	// PanelsFrame.ResizeConsole as well as directly, so a per-panel WaitGroup
@@ -2224,7 +2225,7 @@ func (fp *FileSystemPanel) readDirectoryEx(keepEntries bool) {
 		if fp.dirCache == nil {
 			fp.dirCache = make(map[dirCacheKey]dirCacheEntry)
 		}
-		if cached, ok := fp.dirCache[cacheKey]; ok && !AppConfig.SyncPanelLoad {
+		if cached, ok := fp.dirCache[cacheKey]; ok && !config.App.SyncPanelLoad {
 			hasCache = true
 			vtui.DebugLog("PANEL: Using cached entries for %s", path)
 			fp.entries = nil
@@ -2234,7 +2235,7 @@ func (fp *FileSystemPanel) readDirectoryEx(keepEntries bool) {
 			}
 
 			for _, item := range cached.items {
-				if !AppConfig.ShowHiddenFiles && item.Name != ".." && item.IsHidden {
+				if !config.App.ShowHiddenFiles && item.Name != ".." && item.IsHidden {
 					continue
 				}
 				entry := &fileEntry{VFSItem: item, IsCached: true}
@@ -2273,15 +2274,15 @@ func (fp *FileSystemPanel) readDirectoryEx(keepEntries bool) {
 	}
 
 	// The worker below runs after this function has returned, so it must not
-	// reach for process-wide state as it goes. AppConfig and vtui.FrameManager
+	// reach for process-wide state as it goes. config.App and vtui.FrameManager
 	// can both be replaced while it is still running -- tests do exactly that,
 	// and the race detector reports it against whichever test did the
 	// replacing rather than against the load that was left behind. Taking the
 	// values here also makes each load self-consistent: it renders under the
 	// settings that were in force when it was asked for, instead of switching
 	// halfway through if something toggles them.
-	loadSyncPanel := AppConfig.SyncPanelLoad
-	loadShowHidden := AppConfig.ShowHiddenFiles
+	loadSyncPanel := config.App.SyncPanelLoad
+	loadShowHidden := config.App.ShowHiddenFiles
 	loadFrames := vtui.FrameManager
 
 	fp.enqueueDirectoryLoad(func() {
@@ -2695,7 +2696,7 @@ func (fp *FileSystemPanel) Show(scr *vtui.ScreenBuf) {
 		}
 	}
 
-	if AppConfig.ShowPanelFileInfo && fp.Y2-fp.Y1+1 > 6 {
+	if config.App.ShowPanelFileInfo && fp.Y2-fp.Y1+1 > 6 {
 		p := vtui.NewPainter(scr)
 		attrBox := vtui.Palette[ColPanelBox]
 		// far2l paints the per-file status line with COL_PANELTEXT;
@@ -2795,7 +2796,7 @@ func (fp *FileSystemPanel) Show(scr *vtui.ScreenBuf) {
 	// separator above the status line, and the panel total stays on the
 	// bottom border underneath it. Only with the status line off do they
 	// share the bottom border, where the selection summary wins (#394).
-	fileInfoShown := AppConfig.ShowPanelFileInfo && fp.Y2-fp.Y1+1 > 6
+	fileInfoShown := config.App.ShowPanelFileInfo && fp.Y2-fp.Y1+1 > 6
 	availBottom := fp.X2 - fp.X1 - 1
 
 	selStr := ""
@@ -2837,7 +2838,7 @@ func (fp *FileSystemPanel) Show(scr *vtui.ScreenBuf) {
 	// the selected-files line. Directories say <DIR>/UP-DIR instead. When
 	// the far2l status line is switched on it already states all of this
 	// right above, so the marker steps aside.
-	if !AppConfig.ShowPanelFileInfo && fp.gridColumnCount() > 1 {
+	if !config.App.ShowPanelFileInfo && fp.gridColumnCount() > 1 {
 		if idx := fp.GetCursorIndex(); idx >= 0 && idx < len(fp.entries) {
 			e := fp.entries[idx]
 			curStr := formatIntWithSpaces(e.Size)
@@ -3004,7 +3005,7 @@ func (fp *FileSystemPanel) SetPosition(x1, y1, x2, y2 int) {
 	fp.ScreenObject.SetPosition(x1, y1, x2, y2)
 	fp.frame.SetPosition(x1, y1, x2, y2)
 	// Table stays inside the frame, reserving space for status info only when enabled.
-	if AppConfig.ShowPanelFileInfo && y2-y1+1 > 6 {
+	if config.App.ShowPanelFileInfo && y2-y1+1 > 6 {
 		fp.table.SetPosition(x1+1, y1+1, x2-1, y2-3)
 	} else {
 		fp.table.SetPosition(x1+1, y1+1, x2-1, y2-1)
@@ -3118,7 +3119,7 @@ func (fp *FileSystemPanel) ProcessKey(e *vtinput.InputEvent) bool {
 	// Detailed view has no horizontal cell navigation. Outside Vim mode,
 	// reuse plain Left/Right as Page Up/Page Down while preserving the rest
 	// of the event (notably Shift selection).
-	if fp.viewMode == ViewModeDetailed && AppConfig.NavigationMode != NavigationVim && !ctrl && !alt &&
+	if fp.viewMode == ViewModeDetailed && config.App.NavigationMode != config.NavigationVim && !ctrl && !alt &&
 		(e.VirtualKeyCode == vtinput.VK_LEFT || e.VirtualKeyCode == vtinput.VK_RIGHT) {
 		mapped := *e
 		if e.VirtualKeyCode == vtinput.VK_LEFT {
@@ -3220,7 +3221,7 @@ func (fp *FileSystemPanel) ProcessKey(e *vtinput.InputEvent) bool {
 			return true
 		}
 	} else {
-		searchFirstInput := AppConfig.NavigationMode == NavigationSearchFirst && fp.IsFocused() && !alt
+		searchFirstInput := config.App.NavigationMode == config.NavigationSearchFirst && fp.IsFocused() && !alt
 		if e.Char != 0 && (alt || searchFirstInput) && !ctrl && unicode.IsPrint(e.Char) {
 			fp.fastFindMode = true
 			fp.fastFindStr = string(unicode.ToLower(e.Char))
@@ -3504,12 +3505,12 @@ func (fp *FileSystemPanel) ProcessMouse(e *vtinput.InputEvent) bool {
 	if e.WheelDirection != 0 {
 		// Determine direction: up is -1, down is 1
 		direction := 1
-		speed := AppConfig.WheelPanelDown
+		speed := config.App.WheelPanelDown
 		if e.WheelDirection > 0 {
 			direction = -1
-			speed = AppConfig.WheelPanelUp
+			speed = config.App.WheelPanelUp
 		}
-		step := direction * wheelScrollLines(speed)
+		step := direction * config.WheelScrollLines(speed)
 
 		H := fp.table.ViewHeight
 		if H <= 0 {

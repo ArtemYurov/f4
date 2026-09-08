@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -17,8 +18,8 @@ func (*issue561ViewportRenderer) SetWindowTitle(string)                         
 func (*issue561ViewportRenderer) Flush()                                                  {}
 
 func TestIssue561PanelSettingsRequestsViewportLargeEnoughForDialog(t *testing.T) {
-	oldConfig := AppConfig
-	t.Cleanup(func() { AppConfig = oldConfig })
+	oldConfig := config.App
+	t.Cleanup(func() { config.App = oldConfig })
 	t.Cleanup(swapFrameManager(t))
 
 	scr := vtui.NewSilentScreenBuf()

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
@@ -107,9 +108,9 @@ func TestEditorHexRenderSkipsTextLayout(t *testing.T) {
 }
 
 func TestBinaryEditorSkipsColorer(t *testing.T) {
-	oldHighlighter := AppConfig.EditorHighlighter
-	AppConfig.EditorHighlighter = "Colorer"
-	t.Cleanup(func() { AppConfig.EditorHighlighter = oldHighlighter })
+	oldHighlighter := config.App.EditorHighlighter
+	config.App.EditorHighlighter = "Colorer"
+	t.Cleanup(func() { config.App.EditorHighlighter = oldHighlighter })
 
 	ev := newEditorView(piecetable.New([]byte{0, 1, 2, 3}), nil, "sample.bin", false, true)
 	defer ev.Close()

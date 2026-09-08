@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/vtui"
 )
@@ -86,7 +87,7 @@ func buildCommandPaletteTranslationIndex(packs []vtui.LanguagePack) map[string][
 func loadInstalledCommandPaletteLanguagePacks() []vtui.LanguagePack {
 	exeDir := filepath.Dir(os.Args[0])
 	directories := []string{
-		filepath.Join(GetF4ConfigDir(), "lang"),
+		filepath.Join(config.GetF4ConfigDir(), "lang"),
 		filepath.Join(exeDir, "lang"),
 		"lang",
 	}

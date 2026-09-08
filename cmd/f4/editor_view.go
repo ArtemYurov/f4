@@ -23,6 +23,7 @@ import (
 
 	"github.com/charlievieth/strcase"
 	"github.com/coregx/coregex"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/piecetable"
@@ -448,11 +449,11 @@ func newEditorView(pt *piecetable.PieceTable, v vfs.VFS, path string, useEditorC
 		targetPos:       -1,
 		targetTopRow:    -1,
 		targetLeft:      -1,
-		TabSize:         AppConfig.EditorTabSize,
-		ExpandTabs:      AppConfig.EditorExpandTabs,
-		AutoIndent:      AppConfig.EditorAutoIndent,
-		CursorBeyondEOL: AppConfig.EditorCursorBeyondEOL,
-		UseEditorConfig: useEditorConfig && AppConfig.EditorUseEditorConfig,
+		TabSize:         config.App.EditorTabSize,
+		ExpandTabs:      config.App.EditorExpandTabs,
+		AutoIndent:      config.App.EditorAutoIndent,
+		CursorBeyondEOL: config.App.EditorCursorBeyondEOL,
+		UseEditorConfig: useEditorConfig && config.App.EditorUseEditorConfig,
 		Codepage:        65001,
 		binaryFile:      editorBufferHasNUL(pt),
 	}
@@ -463,8 +464,8 @@ func newEditorView(pt *piecetable.PieceTable, v vfs.VFS, path string, useEditorC
 	ev.ApplyEditorConfig()
 	// Determine if AC should be enabled for this file
 	ev.acEnabled = false
-	if AppConfig.EditorAutoComplete && path != "" {
-		masks := strings.Split(AppConfig.EditorAutoCompleteMask, ";")
+	if config.App.EditorAutoComplete && path != "" {
+		masks := strings.Split(config.App.EditorAutoCompleteMask, ";")
 		fileName := strings.ToLower(filepath.Base(path))
 		for _, mask := range masks {
 			mask = strings.TrimSpace(mask)
@@ -479,13 +480,13 @@ func newEditorView(pt *piecetable.PieceTable, v vfs.VFS, path string, useEditorC
 		}
 	}
 	switch {
-	case strings.EqualFold(AppConfig.EditorHighlighter, "None"):
+	case strings.EqualFold(config.App.EditorHighlighter, "None"):
 		ev.highlighter = nil
-	case strings.EqualFold(AppConfig.EditorHighlighter, "Colorer") && ev.binaryFile:
+	case strings.EqualFold(config.App.EditorHighlighter, "Colorer") && ev.binaryFile:
 		// A binary remains editable in text mode, but feeding its bytes to a
 		// syntax parser can turn one long line into an unbounded CPU task.
 		ev.highlighter = nil
-	case strings.EqualFold(AppConfig.EditorHighlighter, "Colorer") && SchemasExist():
+	case strings.EqualFold(config.App.EditorHighlighter, "Colorer") && SchemasExist():
 		firstLine := ""
 		if probeLen := pt.Size(); probeLen > 0 {
 			if probeLen > 1024 {
@@ -3147,13 +3148,13 @@ func (ev *EditorView) ProcessMouse(e *vtinput.InputEvent) bool {
 	}
 
 	if e.WheelDirection != 0 {
-		speed := AppConfig.WheelEditorDown
+		speed := config.App.WheelEditorDown
 		vk := uint16(vtinput.VK_DOWN)
 		if e.WheelDirection > 0 {
-			speed = AppConfig.WheelEditorUp
+			speed = config.App.WheelEditorUp
 			vk = vtinput.VK_UP
 		}
-		for i := 0; i < wheelScrollLines(speed); i++ {
+		for i := 0; i < config.WheelScrollLines(speed); i++ {
 			ev.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vk})
 		}
 		return true
@@ -4712,7 +4713,7 @@ func (ev *EditorView) ReloadWithAutoDetect() {
 
 	// The user asked for this file to be detected, so detect it -- the
 	// global switch decides what happens at open, not here (#875).
-	cpID := vfs.DetectEncoding(header, true, AppConfig.EditorDefaultCodePage)
+	cpID := vfs.DetectEncoding(header, true, config.App.EditorDefaultCodePage)
 	saveCodepageOverride(ev.vfs, ev.filePath, 0)
 	ev.ReloadWithCodepage(cpID)
 }
@@ -4863,7 +4864,7 @@ const (
 // The returned bytes alias the piece table's own buffer for the duration of
 // one paint, which is why nothing here keeps them.
 func (ev *EditorView) occurrenceNeedle() []byte {
-	if !AppConfig.EditorMarkOccurrences {
+	if !config.App.EditorMarkOccurrences {
 		return nil
 	}
 	if !ev.selActive || ev.rectSelActive || ev.HexMode || ev.DecodeMode {
@@ -5409,7 +5410,7 @@ func (ev *EditorView) saveToFile(afterSave func(), fullWrite bool) {
 				// as mappable as the one that was opened, and dropping to the
 				// chunk buffer here would quietly cost every later search the
 				// copy that mapping avoids.
-				if ev.mapped != nil && AppConfig.EditorMemoryMap {
+				if ev.mapped != nil && config.App.EditorMemoryMap {
 					mapOffset := int64(0)
 					if newUTF8BOM {
 						mapOffset = vfs.UTF8BOMSize

@@ -3,6 +3,7 @@ package main
 import (
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
 
@@ -21,7 +22,7 @@ const syntaxFadeDuration = 400 * time.Millisecond
 // Indexed colours are left alone: there is nothing meaningful between palette
 // slot 3 and slot 7, so those simply appear.
 func (ev *EditorView) fadeSyntax(syntax []uint64, base uint64) []uint64 {
-	if len(syntax) == 0 || !AppConfig.EditorSyntaxAnimation {
+	if len(syntax) == 0 || !config.App.EditorSyntaxAnimation {
 		return syntax
 	}
 	if ev.syntaxFadeStart.IsZero() {

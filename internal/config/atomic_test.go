@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"os"
@@ -16,7 +16,7 @@ func TestWriteFileAtomicallyPublishesCompleteData(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []byte(strings.Repeat("new\n", 1000))
-	if err := writeFileAtomically(path, want, 0o600); err != nil {
+	if err := WriteUserFileAtomically(path, want, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	got, err := os.ReadFile(path)
@@ -50,7 +50,7 @@ func TestWriteFileAtomicallyConcurrentWritersNeverPublishPartialData(t *testing.
 			defer wg.Done()
 			letters := "ABCDEFGHIJKLMNOP"
 			data := []byte(strings.Repeat(string(letters[i]), 4096))
-			if err := writeFileAtomically(path, data, 0o600); err != nil {
+			if err := WriteUserFileAtomically(path, data, 0o600); err != nil {
 				t.Errorf("writer %d: %v", i, err)
 			}
 		}(i)

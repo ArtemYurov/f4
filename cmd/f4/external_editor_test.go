@@ -1,22 +1,23 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/config"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
 func TestConfiguredExternalEditorCommand(t *testing.T) {
-	oldConfig := AppConfig
+	oldConfig := config.App
 	oldRunningGUI := runningGUI
 	t.Cleanup(func() {
-		AppConfig = oldConfig
+		config.App = oldConfig
 		runningGUI = oldRunningGUI
 	})
 
-	AppConfig.ExternalEditorCommand = "legacy-editor"
-	AppConfig.ExternalEditorConsole = "micro"
-	AppConfig.ExternalEditorGUI = "gedit"
+	config.App.ExternalEditorCommand = "legacy-editor"
+	config.App.ExternalEditorConsole = "micro"
+	config.App.ExternalEditorGUI = "gedit"
 
 	runningGUI = false
 	if got := configuredExternalEditorCommand(); got != "micro" {
@@ -28,13 +29,13 @@ func TestConfiguredExternalEditorCommand(t *testing.T) {
 		t.Fatalf("GUI editor = %q, want gedit", got)
 	}
 
-	AppConfig.ExternalEditorGUI = ""
+	config.App.ExternalEditorGUI = ""
 	if got := configuredExternalEditorCommand(); got != "legacy-editor" {
 		t.Fatalf("GUI legacy fallback = %q, want legacy-editor", got)
 	}
 
-	AppConfig.ExternalEditorCommand = ""
-	AppConfig.ExternalEditorConsole = ""
+	config.App.ExternalEditorCommand = ""
+	config.App.ExternalEditorConsole = ""
 	runningGUI = false
 	if got := configuredExternalEditorCommand(); got != "" {
 		t.Fatalf("empty editor configuration = %q, want empty", got)
@@ -42,17 +43,17 @@ func TestConfiguredExternalEditorCommand(t *testing.T) {
 }
 
 func TestConfiguredExternalEditorCommandIgnoresDisplayBackendInTTY(t *testing.T) {
-	oldConfig := AppConfig
+	oldConfig := config.App
 	oldRunningGUI := runningGUI
 	oldProbe := probeGUIBackend
 	t.Cleanup(func() {
-		AppConfig = oldConfig
+		config.App = oldConfig
 		runningGUI = oldRunningGUI
 		probeGUIBackend = oldProbe
 	})
 
-	AppConfig.ExternalEditorConsole = "micro"
-	AppConfig.ExternalEditorGUI = "gedit"
+	config.App.ExternalEditorConsole = "micro"
+	config.App.ExternalEditorGUI = "gedit"
 	runningGUI = false
 	probeGUIBackend = func() string { return "x11" }
 
@@ -64,35 +65,35 @@ func TestConfiguredExternalEditorCommandIgnoresDisplayBackendInTTY(t *testing.T)
 func TestConfig_ExternalEditorCommandsRoundTripAndLegacyFallback(t *testing.T) {
 	tmpDir := t.TempDir()
 	iniPath := filepath.Join(tmpDir, "settings.ini")
-	oldConfig := AppConfig
-	oldUserPath := getUserConfigIniPath
-	oldConfigPaths := getConfigIniPaths
+	oldConfig := config.App
+	oldUserPath := config.GetUserConfigIniPath
+	oldConfigPaths := config.GetConfigIniPaths
 	t.Cleanup(func() {
-		AppConfig = oldConfig
-		getUserConfigIniPath = oldUserPath
-		getConfigIniPaths = oldConfigPaths
+		config.App = oldConfig
+		config.GetUserConfigIniPath = oldUserPath
+		config.GetConfigIniPaths = oldConfigPaths
 	})
-	getUserConfigIniPath = func() string { return iniPath }
-	getConfigIniPaths = func() []string { return []string{iniPath} }
+	config.GetUserConfigIniPath = func() string { return iniPath }
+	config.GetConfigIniPaths = func() []string { return []string{iniPath} }
 
-	AppConfig.ExternalEditorCommand = "legacy-editor"
-	AppConfig.ExternalEditorConsole = "micro"
-	AppConfig.ExternalEditorGUI = "gedit"
-	SaveConfig()
+	config.App.ExternalEditorCommand = "legacy-editor"
+	config.App.ExternalEditorConsole = "micro"
+	config.App.ExternalEditorGUI = "gedit"
+	config.SaveConfig()
 
-	AppConfig.ExternalEditorCommand = ""
-	AppConfig.ExternalEditorConsole = ""
-	AppConfig.ExternalEditorGUI = ""
-	LoadConfig()
-	if AppConfig.ExternalEditorConsole != "micro" || AppConfig.ExternalEditorGUI != "gedit" {
-		t.Fatalf("split editor commands after round trip: console=%q GUI=%q", AppConfig.ExternalEditorConsole, AppConfig.ExternalEditorGUI)
+	config.App.ExternalEditorCommand = ""
+	config.App.ExternalEditorConsole = ""
+	config.App.ExternalEditorGUI = ""
+	config.LoadConfig()
+	if config.App.ExternalEditorConsole != "micro" || config.App.ExternalEditorGUI != "gedit" {
+		t.Fatalf("split editor commands after round trip: console=%q GUI=%q", config.App.ExternalEditorConsole, config.App.ExternalEditorGUI)
 	}
 
 	if err := os.WriteFile(iniPath, []byte("[Editor]\nExternalEditorCommand = old-editor\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	LoadConfig()
-	if AppConfig.ExternalEditorConsole != "old-editor" || AppConfig.ExternalEditorGUI != "old-editor" {
-		t.Fatalf("legacy editor command migration: console=%q GUI=%q", AppConfig.ExternalEditorConsole, AppConfig.ExternalEditorGUI)
+	config.LoadConfig()
+	if config.App.ExternalEditorConsole != "old-editor" || config.App.ExternalEditorGUI != "old-editor" {
+		t.Fatalf("legacy editor command migration: console=%q GUI=%q", config.App.ExternalEditorConsole, config.App.ExternalEditorGUI)
 	}
 }

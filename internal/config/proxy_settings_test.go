@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"os"
@@ -12,24 +12,24 @@ import (
 
 func TestProxySettings_SurviveSaveAndLoad(t *testing.T) {
 	userIniPath := filepath.Join(t.TempDir(), "settings.ini")
-	origUserPathFunc := getUserConfigIniPath
-	origPathsFunc := getConfigIniPaths
-	getUserConfigIniPath = func() string { return userIniPath }
-	getConfigIniPaths = func() []string { return []string{userIniPath} }
-	oldCfg := AppConfig
+	origUserPathFunc := GetUserConfigIniPath
+	origPathsFunc := GetConfigIniPaths
+	GetUserConfigIniPath = func() string { return userIniPath }
+	GetConfigIniPaths = func() []string { return []string{userIniPath} }
+	oldCfg := App
 	oldProxy := netproxy.Global()
 	t.Cleanup(func() {
-		getUserConfigIniPath = origUserPathFunc
-		getConfigIniPaths = origPathsFunc
-		AppConfig = oldCfg
+		GetUserConfigIniPath = origUserPathFunc
+		GetConfigIniPaths = origPathsFunc
+		App = oldCfg
 		netproxy.SetGlobal(oldProxy)
 	})
 
-	AppConfig.ProxyMode = netproxy.ModeHTTP
-	AppConfig.ProxyHost = "gateway.local"
-	AppConfig.ProxyPort = "8080"
-	AppConfig.ProxyUser = "bob"
-	AppConfig.ProxyPass = "s3cret"
+	App.ProxyMode = netproxy.ModeHTTP
+	App.ProxyHost = "gateway.local"
+	App.ProxyPort = "8080"
+	App.ProxyUser = "bob"
+	App.ProxyPass = "s3cret"
 	SaveConfig()
 
 	// Saving publishes the settings, so a download started right after the
@@ -50,13 +50,13 @@ func TestProxySettings_SurviveSaveAndLoad(t *testing.T) {
 		t.Error("the proxy password was written in the clear")
 	}
 
-	AppConfig.ProxyMode = netproxy.ModeSystem
-	AppConfig.ProxyHost, AppConfig.ProxyPort, AppConfig.ProxyUser, AppConfig.ProxyPass = "", "", "", ""
+	App.ProxyMode = netproxy.ModeSystem
+	App.ProxyHost, App.ProxyPort, App.ProxyUser, App.ProxyPass = "", "", "", ""
 	LoadConfig()
 
-	if AppConfig.ProxyMode != netproxy.ModeHTTP || AppConfig.ProxyHost != "gateway.local" ||
-		AppConfig.ProxyPort != "8080" || AppConfig.ProxyUser != "bob" || AppConfig.ProxyPass != "s3cret" {
-		t.Errorf("proxy settings did not survive the round trip: %+v", AppConfig.ProxyMode)
+	if App.ProxyMode != netproxy.ModeHTTP || App.ProxyHost != "gateway.local" ||
+		App.ProxyPort != "8080" || App.ProxyUser != "bob" || App.ProxyPass != "s3cret" {
+		t.Errorf("proxy settings did not survive the round trip: %+v", App.ProxyMode)
 	}
 	if netproxy.Global().Host != "gateway.local" {
 		t.Errorf("LoadConfig did not publish the proxy: %+v", netproxy.Global())
@@ -71,23 +71,23 @@ func TestProxySettings_DefaultKeepsTheOldBehaviour(t *testing.T) {
 	if err := os.WriteFile(userIniPath, []byte("[Interface]\nColorStyle = Modern\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	origUserPathFunc := getUserConfigIniPath
-	origPathsFunc := getConfigIniPaths
-	getUserConfigIniPath = func() string { return userIniPath }
-	getConfigIniPaths = func() []string { return []string{userIniPath} }
-	oldCfg := AppConfig
+	origUserPathFunc := GetUserConfigIniPath
+	origPathsFunc := GetConfigIniPaths
+	GetUserConfigIniPath = func() string { return userIniPath }
+	GetConfigIniPaths = func() []string { return []string{userIniPath} }
+	oldCfg := App
 	oldProxy := netproxy.Global()
 	t.Cleanup(func() {
-		getUserConfigIniPath = origUserPathFunc
-		getConfigIniPaths = origPathsFunc
-		AppConfig = oldCfg
+		GetUserConfigIniPath = origUserPathFunc
+		GetConfigIniPaths = origPathsFunc
+		App = oldCfg
 		netproxy.SetGlobal(oldProxy)
 	})
 
-	AppConfig.ProxyMode = netproxy.ModeHTTP
+	App.ProxyMode = netproxy.ModeHTTP
 	LoadConfig()
-	if AppConfig.ProxyMode != netproxy.ModeSystem {
-		t.Errorf("proxy mode without a [Proxy] section is %d, want ModeSystem", AppConfig.ProxyMode)
+	if App.ProxyMode != netproxy.ModeSystem {
+		t.Errorf("proxy mode without a [Proxy] section is %d, want ModeSystem", App.ProxyMode)
 	}
 }
 

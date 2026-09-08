@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -59,9 +60,9 @@ func TestPanelsFrame_ExitResetsLocalShell(t *testing.T) {
 func TestPanelsFrame_ExitF4RequestsApplicationQuit(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldConfirm := AppConfig.ConfirmExit
-	AppConfig.ConfirmExit = true
-	t.Cleanup(func() { AppConfig.ConfirmExit = oldConfirm })
+	oldConfirm := config.App.ConfirmExit
+	config.App.ConfirmExit = true
+	t.Cleanup(func() { config.App.ConfirmExit = oldConfirm })
 
 	pf := setupMockPanelsFrame(t)
 	defer pf.Close()

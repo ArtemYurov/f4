@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/unxed/f4/internal/config"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -85,7 +86,7 @@ func SaveMainMenu(path string, items []UserMenuItem) error {
 	first := true
 	writeTree(&buf, items, mainMenuRoot, &first)
 
-	return writeFileAtomically(path, []byte(buf.String()), 0o600)
+	return config.WriteUserFileAtomically(path, []byte(buf.String()), 0o600)
 }
 
 func buildTree(sections map[string]map[string]string, prefix string) []UserMenuItem {

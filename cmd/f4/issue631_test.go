@@ -3,17 +3,18 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
 
 func TestIssue631TrashSettingIsInPanelSettings(t *testing.T) {
-	oldConfig := AppConfig
-	defer func() { AppConfig = oldConfig }()
+	oldConfig := config.App
+	defer func() { config.App = oldConfig }()
 
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	SetDefaultF4Palette()
 
-	AppConfig.UseTrash = true
+	config.App.UseTrash = true
 	pf := NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
@@ -34,7 +35,7 @@ func TestIssue631TrashSettingIsInPanelSettings(t *testing.T) {
 		t.Fatalf("trash setting %q is missing from Panel Settings", wantText)
 	}
 	if trashCheckbox.State != 1 {
-		t.Fatalf("trash setting state = %d, want enabled state from AppConfig", trashCheckbox.State)
+		t.Fatalf("trash setting state = %d, want enabled state from config.App", trashCheckbox.State)
 	}
 
 	panelFrame.SetExitCode(-1)

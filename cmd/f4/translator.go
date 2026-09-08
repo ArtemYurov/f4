@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -135,7 +136,7 @@ func translatorTargetAt(x, y int) vtui.UIElement {
 		if menu == nil || !menu.IsVisible() {
 			return false
 		}
-		return menu.Active || AppConfig.AlwaysShowMenuBar
+		return menu.Active || config.App.AlwaysShowMenuBar
 	}
 	if menu := fm.GetActiveMenuBar(); menuVisible(menu) && menu.HitTest(x, y) {
 		canUseMenu := !top.IsModal() || top.GetType() == vtui.TypeMenu || top.GetMenuBar() == menu

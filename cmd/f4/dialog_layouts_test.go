@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
@@ -35,13 +36,13 @@ func TestAllDialogs_LayoutValidation(t *testing.T) {
 	// 1. Temporary redirect of the config paths to prevent writing/reading from the user's home directory.
 	tmpDir := t.TempDir()
 
-	oldGetConfig := getUserConfigIniPath
-	oldConfig := AppConfig
+	oldGetConfig := config.GetUserConfigIniPath
+	oldConfig := config.App
 	defer func() {
-		getUserConfigIniPath = oldGetConfig
-		AppConfig = oldConfig
+		config.GetUserConfigIniPath = oldGetConfig
+		config.App = oldConfig
 	}()
-	getUserConfigIniPath = func() string {
+	config.GetUserConfigIniPath = func() string {
 		return filepath.Join(tmpDir, "settings.ini")
 	}
 

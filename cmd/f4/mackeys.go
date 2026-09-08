@@ -33,42 +33,18 @@ package main
 
 import (
 	"runtime"
-	"strings"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
 
-// Mac keyboard mode settings, as written to settings.ini.
-const (
-	// MacKeysAuto turns the mode on for macOS and leaves it off elsewhere.
-	MacKeysAuto = "auto"
-	// MacKeysOn asks for the Mac layout regardless of the platform, for an
-	// Apple keyboard plugged into something else.
-	MacKeysOn = "on"
-	// MacKeysOff keeps the Far layout on macOS too.
-	MacKeysOff = "off"
-)
-
-// ParseMacKeysMode normalizes a settings.ini value. Anything unrecognized is
-// "auto": a typo must not silently change the keyboard.
-func ParseMacKeysMode(value string) string {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case MacKeysOn, "1", "yes", "true":
-		return MacKeysOn
-	case MacKeysOff, "0", "no", "false":
-		return MacKeysOff
-	default:
-		return MacKeysAuto
-	}
-}
-
 // macKeysEnabled reports whether the user wants the Mac layout at all.
 func macKeysEnabled() bool {
-	switch ParseMacKeysMode(AppConfig.MacKeyboard) {
-	case MacKeysOn:
+	switch config.ParseMacKeysMode(config.App.MacKeyboard) {
+	case config.MacKeysOn:
 		return true
-	case MacKeysOff:
+	case config.MacKeysOff:
 		return false
 	default:
 		return runtime.GOOS == "darwin"

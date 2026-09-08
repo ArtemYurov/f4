@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
@@ -314,9 +315,9 @@ func TestInfoPanel_AuthoritativeProviderReplacesLocalHostStats(t *testing.T) {
 	ip := NewInfoPanel(fsp)
 	ip.SetPosition(0, 0, 49, 39)
 
-	oldBytes := AppConfig.InfoPanelBytes
-	defer func() { AppConfig.InfoPanelBytes = oldBytes }()
-	AppConfig.InfoPanelBytes = false
+	oldBytes := config.App.InfoPanelBytes
+	defer func() { config.App.InfoPanelBytes = oldBytes }()
+	config.App.InfoPanelBytes = false
 	ip.Show(scr)
 
 	if !infoPanelHasSection(ip, "Android device") {
@@ -343,7 +344,7 @@ func TestInfoPanel_AuthoritativeProviderReplacesLocalHostStats(t *testing.T) {
 		t.Fatal("remote current directory should remain visible")
 	}
 
-	AppConfig.InfoPanelBytes = true
+	config.App.InfoPanelBytes = true
 	ip.Show(scr)
 	if !infoPanelHasRow(ip, "Device memory", formatBytesCommas(4*1024*1024*1024)) {
 		t.Fatal("B units mode did not apply to provider byte fields")
@@ -746,9 +747,9 @@ func TestInfoPanel_RendersUsageAsTwoLineMeter(t *testing.T) {
 	ip.SetPosition(0, 0, 59, 19)
 	ip.SetFocus(true)
 
-	oldBytes := AppConfig.InfoPanelBytes
-	defer func() { AppConfig.InfoPanelBytes = oldBytes }()
-	AppConfig.InfoPanelBytes = false
+	oldBytes := config.App.InfoPanelBytes
+	defer func() { config.App.InfoPanelBytes = oldBytes }()
+	config.App.InfoPanelBytes = false
 	ip.Show(scr)
 
 	assertMeter := func(used, total string) {
@@ -800,7 +801,7 @@ func TestInfoPanel_RendersUsageAsTwoLineMeter(t *testing.T) {
 	}
 
 	assertMeter(formatBytes(500), formatBytes(1000))
-	AppConfig.InfoPanelBytes = true
+	config.App.InfoPanelBytes = true
 	ip.Show(scr)
 	assertMeter(formatBytesCommas(500), formatBytesCommas(1000))
 }
@@ -1002,7 +1003,7 @@ func TestInfoPanel_MissingCachedCursorRowFallsBackNearby(t *testing.T) {
 }
 
 // TestPanelsFrame_B_TogglesInfoPanelUnits verifies that `B` (plain,
-// no modifiers) flips AppConfig.InfoPanelBytes while an info panel is
+// no modifiers) flips config.App.InfoPanelBytes while an info panel is
 // visible, and falls through to fast-find otherwise.
 func TestPanelsFrame_B_TogglesInfoPanelUnits(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
@@ -1010,9 +1011,9 @@ func TestPanelsFrame_B_TogglesInfoPanelUnits(t *testing.T) {
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
-	oldBytes := AppConfig.InfoPanelBytes
-	defer func() { AppConfig.InfoPanelBytes = oldBytes }()
-	AppConfig.InfoPanelBytes = false
+	oldBytes := config.App.InfoPanelBytes
+	defer func() { config.App.InfoPanelBytes = oldBytes }()
+	config.App.InfoPanelBytes = false
 
 	send := func(vk uint16) bool {
 		return pressKey(pf, &vtinput.InputEvent{
@@ -1024,7 +1025,7 @@ func TestPanelsFrame_B_TogglesInfoPanelUnits(t *testing.T) {
 	// No info panel yet: `B` must NOT touch the config (fast-find
 	// path is expected to consume it).
 	send(vtinput.VK_B)
-	if AppConfig.InfoPanelBytes {
+	if config.App.InfoPanelBytes {
 		t.Errorf("without info panel: B must not flip units, got InfoPanelBytes=true")
 	}
 
@@ -1038,26 +1039,26 @@ func TestPanelsFrame_B_TogglesInfoPanelUnits(t *testing.T) {
 		t.Fatal("Ctrl+L should install info panel")
 	}
 	send(vtinput.VK_B)
-	if !AppConfig.InfoPanelBytes {
+	if !config.App.InfoPanelBytes {
 		t.Errorf("with info panel: B should flip units to bytes")
 	}
 	send(vtinput.VK_B)
-	if AppConfig.InfoPanelBytes {
+	if config.App.InfoPanelBytes {
 		t.Errorf("second B should flip back to human")
 	}
 }
 
 // TestFormatBytes_TogglesWithConfig verifies formatBytes routes to
-// commas or human based on AppConfig.InfoPanelBytes.
+// commas or human based on config.App.InfoPanelBytes.
 func TestFormatBytes_TogglesWithConfig(t *testing.T) {
-	old := AppConfig.InfoPanelBytes
-	defer func() { AppConfig.InfoPanelBytes = old }()
+	old := config.App.InfoPanelBytes
+	defer func() { config.App.InfoPanelBytes = old }()
 
-	AppConfig.InfoPanelBytes = true
+	config.App.InfoPanelBytes = true
 	if got := formatBytes(1024); got != formatBytesCommas(1024) {
 		t.Errorf("bytes-mode: got %q, want commas form", got)
 	}
-	AppConfig.InfoPanelBytes = false
+	config.App.InfoPanelBytes = false
 	if got := formatBytes(1024); got != formatBytesHuman(1024) {
 		t.Errorf("human-mode: got %q, want human form", got)
 	}
@@ -1368,7 +1369,7 @@ func TestInfoPanel_InsTogglesSelectionAndMoves(t *testing.T) {
 }
 
 // TestInfoPanel_CPUSectionRespectsOption checks that the CPU/GPU
-// section is opt-in — hidden when AppConfig.InfoPanelCPUGPU is off,
+// section is opt-in — hidden when config.App.InfoPanelCPUGPU is off,
 // present when it's on. Guards the maintainer's off-by-default ask.
 func TestInfoPanel_CPUSectionRespectsOption(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
@@ -1382,8 +1383,8 @@ func TestInfoPanel_CPUSectionRespectsOption(t *testing.T) {
 	fsp.entries = []*fileEntry{{VFSItem: vfs.VFSItem{Name: "..", IsDir: true}}}
 	fsp.Refresh()
 
-	old := AppConfig.InfoPanelCPUGPU
-	defer func() { AppConfig.InfoPanelCPUGPU = old }()
+	old := config.App.InfoPanelCPUGPU
+	defer func() { config.App.InfoPanelCPUGPU = old }()
 
 	ip := NewInfoPanel(fsp)
 	ip.SetPosition(0, 0, 59, 39)
@@ -1397,13 +1398,13 @@ func TestInfoPanel_CPUSectionRespectsOption(t *testing.T) {
 		return false
 	}
 
-	AppConfig.InfoPanelCPUGPU = false
+	config.App.InfoPanelCPUGPU = false
 	ip.Show(scr)
 	if hasLabelPrefix("Model") || hasLabelPrefix("Cores") {
 		t.Error("CPU rows must not render when InfoPanelCPUGPU is off")
 	}
 
-	AppConfig.InfoPanelCPUGPU = true
+	config.App.InfoPanelCPUGPU = true
 	ip.Show(scr)
 	// Cores is always populated (runtime.NumCPU seeds LogicalCores
 	// on every OS). Label depends on HT — plain "Cores / threads"

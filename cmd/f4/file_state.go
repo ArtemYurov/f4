@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/vfs"
 )
 
@@ -41,7 +42,7 @@ type F4FileStateProvider struct {
 }
 
 func NewF4FileStateProvider() *F4FileStateProvider {
-	p := filepath.Join(GetF4ConfigDir(), "file_states.json")
+	p := filepath.Join(config.GetF4ConfigDir(), "file_states.json")
 	fs := &F4FileStateProvider{
 		path:  p,
 		Limit: 1000,

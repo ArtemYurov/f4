@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
 
@@ -17,10 +18,10 @@ func TestApplyColorStyle_ExportedSchemeIsCustom(t *testing.T) {
 	getUserStylesDir = func() string { return filepath.Join(dir, "styles") }
 	t.Cleanup(func() { getUserStylesDir = oldStyles })
 
-	oldCfg := AppConfig
-	AppConfig.EnforceColorCorrection = false
-	AppConfig.ColorStyle = "Modern"
-	t.Cleanup(func() { AppConfig = oldCfg })
+	oldCfg := config.App
+	config.App.EnforceColorCorrection = false
+	config.App.ColorStyle = "Modern"
+	t.Cleanup(func() { config.App = oldCfg })
 
 	if err := ApplyColorStyle("Modern"); err != nil {
 		t.Fatalf("ApplyColorStyle(Modern): %v", err)

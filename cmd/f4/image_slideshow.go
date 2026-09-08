@@ -3,20 +3,17 @@ package main
 import (
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
-
-// defaultSlideShowDelay is how many seconds a picture stays on screen when
-// the configuration has nothing sensible to say about it.
-const defaultSlideShowDelay = 5
 
 // slideShowInterval is how long one picture is shown. A configured zero would
 // spin the terminal as fast as it can decode and a negative value would never
 // fire at all, so both fall back to the default.
 func slideShowInterval() time.Duration {
-	seconds := AppConfig.SlideShowDelay
+	seconds := config.App.SlideShowDelay
 	if seconds <= 0 {
-		seconds = defaultSlideShowDelay
+		seconds = config.DefaultSlideShowDelay
 	}
 	return time.Duration(seconds) * time.Second
 }

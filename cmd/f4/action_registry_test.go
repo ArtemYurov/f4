@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtui"
 )
@@ -120,21 +121,21 @@ func TestAction_PanelToggleHidden(t *testing.T) {
 	pf.ResizeConsole(80, 25)
 	vtui.FrameManager.Push(pf)
 
-	original := AppConfig.ShowHiddenFiles
-	defer func() { AppConfig.ShowHiddenFiles = original }()
+	original := config.App.ShowHiddenFiles
+	defer func() { config.App.ShowHiddenFiles = original }()
 
 	if !RunAction("Panel.ToggleHidden") {
 		t.Fatal("Panel.ToggleHidden did not run")
 	}
-	if AppConfig.ShowHiddenFiles == original {
-		t.Errorf("Panel.ToggleHidden did not flip ShowHiddenFiles (was %v, still %v)", original, AppConfig.ShowHiddenFiles)
+	if config.App.ShowHiddenFiles == original {
+		t.Errorf("Panel.ToggleHidden did not flip ShowHiddenFiles (was %v, still %v)", original, config.App.ShowHiddenFiles)
 	}
 
 	if !RunAction("Panel.ToggleHidden") {
 		t.Fatal("Panel.ToggleHidden did not run on second call")
 	}
-	if AppConfig.ShowHiddenFiles != original {
-		t.Errorf("Panel.ToggleHidden second call did not restore ShowHiddenFiles (want %v, got %v)", original, AppConfig.ShowHiddenFiles)
+	if config.App.ShowHiddenFiles != original {
+		t.Errorf("Panel.ToggleHidden second call did not restore ShowHiddenFiles (want %v, got %v)", original, config.App.ShowHiddenFiles)
 	}
 }
 

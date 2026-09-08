@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtinput"
 )
 
@@ -11,9 +12,9 @@ import (
 func withMacKeys(t *testing.T, commandIsDistinct bool) {
 	t.Helper()
 
-	previousMode := AppConfig.MacKeyboard
-	AppConfig.MacKeyboard = MacKeysOn
-	t.Cleanup(func() { AppConfig.MacKeyboard = previousMode })
+	previousMode := config.App.MacKeyboard
+	config.App.MacKeyboard = config.MacKeysOn
+	t.Cleanup(func() { config.App.MacKeyboard = previousMode })
 
 	// The real probe asks for darwin and for a backend that folds Command
 	// into the left Ctrl channel, neither of which the test binary has.
@@ -41,18 +42,18 @@ func macKeyEvent(mods vtinput.ControlKeyState, vk uint16) *vtinput.InputEvent {
 
 func TestParseMacKeysMode(t *testing.T) {
 	for value, want := range map[string]string{
-		"":         MacKeysAuto,
-		"auto":     MacKeysAuto,
-		" AUTO ":   MacKeysAuto,
-		"nonsense": MacKeysAuto,
-		"on":       MacKeysOn,
-		"1":        MacKeysOn,
-		"On":       MacKeysOn,
-		"off":      MacKeysOff,
-		"0":        MacKeysOff,
+		"":         config.MacKeysAuto,
+		"auto":     config.MacKeysAuto,
+		" AUTO ":   config.MacKeysAuto,
+		"nonsense": config.MacKeysAuto,
+		"on":       config.MacKeysOn,
+		"1":        config.MacKeysOn,
+		"On":       config.MacKeysOn,
+		"off":      config.MacKeysOff,
+		"0":        config.MacKeysOff,
 	} {
-		if got := ParseMacKeysMode(value); got != want {
-			t.Errorf("ParseMacKeysMode(%q) = %q, want %q", value, got, want)
+		if got := config.ParseMacKeysMode(value); got != want {
+			t.Errorf("config.ParseMacKeysMode(%q) = %q, want %q", value, got, want)
 		}
 	}
 }
@@ -144,7 +145,7 @@ func TestMacKeysLeavesThePanelsAlone(t *testing.T) {
 
 func TestMacKeysOffLeavesEverythingAlone(t *testing.T) {
 	withMacKeys(t, true)
-	AppConfig.MacKeyboard = MacKeysOff
+	config.App.MacKeyboard = config.MacKeysOff
 
 	e := macKeyEvent(vtinput.LeftCtrlPressed, vtinput.VK_LEFT)
 	if applyMacKeys("Editor", e) {

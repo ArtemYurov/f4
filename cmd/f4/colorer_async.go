@@ -5,6 +5,7 @@ import (
 	"time"
 
 	colorer "github.com/unxed/colorer4go"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
 
@@ -268,7 +269,7 @@ func (ch *ColorerHighlighter) queueLine(idx int, line string, baseAttr uint64) {
 		context:      contextLines,
 		reset:        reset,
 		baseAttr:     baseAttr,
-		syntax:       AppConfig.EditorColorerSyntax,
+		syntax:       config.App.EditorColorerSyntax,
 		total:        len(contextLines) + len(batch),
 	}
 	ch.forceReset = false

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/vfs"
 )
@@ -49,7 +50,7 @@ func compareMarkNames(marks map[string]bool) []string {
 	return names
 }
 
-func compareRunSides(t *testing.T, left, right string, opts compareOptions) *compareOutcome {
+func compareRunSides(t *testing.T, left, right string, opts config.CompareOptions) *compareOutcome {
 	t.Helper()
 	leftVFS := compareTestVFS(t, left)
 	rightVFS := compareTestVFS(t, right)
@@ -74,21 +75,21 @@ func TestCompareTimesEqualHonoursSlackAndZones(t *testing.T) {
 	cases := []struct {
 		name  string
 		other time.Time
-		opts  compareOptions
+		opts  config.CompareOptions
 		equal bool
 	}{
-		{"exact", base, compareOptions{}, true},
-		{"one second without slack", base.Add(time.Second), compareOptions{}, false},
-		{"one second with slack", base.Add(time.Second), compareOptions{TimeSlack: true}, true},
-		{"three seconds with slack", base.Add(3 * time.Second), compareOptions{TimeSlack: true}, false},
-		{"whole hour without the option", base.Add(time.Hour), compareOptions{TimeSlack: true}, false},
-		{"whole hour as a zone", base.Add(time.Hour), compareOptions{IgnoreZones: true}, true},
-		{"nepal offset as a zone", base.Add(5*time.Hour + 45*time.Minute), compareOptions{IgnoreZones: true}, true},
-		{"zone plus a second", base.Add(time.Hour + time.Second), compareOptions{IgnoreZones: true}, false},
-		{"zone plus a second with slack", base.Add(time.Hour + time.Second), compareOptions{IgnoreZones: true, TimeSlack: true}, true},
-		{"half a minute is not a zone", base.Add(30 * time.Second), compareOptions{IgnoreZones: true, TimeSlack: true}, false},
-		{"a year apart is not a zone", base.AddDate(1, 0, 0), compareOptions{IgnoreZones: true, TimeSlack: true}, false},
-		{"two days apart is not a zone", base.Add(48 * time.Hour), compareOptions{IgnoreZones: true, TimeSlack: true}, false},
+		{"exact", base, config.CompareOptions{}, true},
+		{"one second without slack", base.Add(time.Second), config.CompareOptions{}, false},
+		{"one second with slack", base.Add(time.Second), config.CompareOptions{TimeSlack: true}, true},
+		{"three seconds with slack", base.Add(3 * time.Second), config.CompareOptions{TimeSlack: true}, false},
+		{"whole hour without the option", base.Add(time.Hour), config.CompareOptions{TimeSlack: true}, false},
+		{"whole hour as a zone", base.Add(time.Hour), config.CompareOptions{IgnoreZones: true}, true},
+		{"nepal offset as a zone", base.Add(5*time.Hour + 45*time.Minute), config.CompareOptions{IgnoreZones: true}, true},
+		{"zone plus a second", base.Add(time.Hour + time.Second), config.CompareOptions{IgnoreZones: true}, false},
+		{"zone plus a second with slack", base.Add(time.Hour + time.Second), config.CompareOptions{IgnoreZones: true, TimeSlack: true}, true},
+		{"half a minute is not a zone", base.Add(30 * time.Second), config.CompareOptions{IgnoreZones: true, TimeSlack: true}, false},
+		{"a year apart is not a zone", base.AddDate(1, 0, 0), config.CompareOptions{IgnoreZones: true, TimeSlack: true}, false},
+		{"two days apart is not a zone", base.Add(48 * time.Hour), config.CompareOptions{IgnoreZones: true, TimeSlack: true}, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -105,7 +106,7 @@ func TestCompareTimesEqualHonoursSlackAndZones(t *testing.T) {
 func TestCompareMetadataReportsTheNewerSide(t *testing.T) {
 	older := vfs.VFSItem{Size: 10, MTime: time.Date(2024, 5, 4, 12, 0, 0, 0, time.UTC)}
 	newer := vfs.VFSItem{Size: 10, MTime: older.MTime.Add(time.Hour)}
-	opts := compareOptions{ByTime: true, BySize: true}
+	opts := config.CompareOptions{ByTime: true, BySize: true}
 
 	differs, timeOnly, side := compareMetadata(newer, older, opts)
 	if !differs || !timeOnly || side != 1 {
@@ -125,7 +126,7 @@ func TestCompareMetadataReportsTheNewerSide(t *testing.T) {
 	}
 
 	// A criterion that is switched off does not speak.
-	if differs, _, _ := compareMetadata(bigger, newer, compareOptions{ByTime: true}); differs {
+	if differs, _, _ := compareMetadata(bigger, newer, config.CompareOptions{ByTime: true}); differs {
 		t.Fatal("size difference reported while comparing by time only")
 	}
 }
@@ -143,7 +144,7 @@ func TestCompareSidesMarksMissingAndNewerFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	opts := defaultCompareOptions()
+	opts := config.DefaultCompareOptions()
 	opts.BySize = false // isolate the time rule from the size one
 	outcome := compareRunSides(t, left, right, opts)
 
@@ -163,7 +164,7 @@ func TestCompareSidesMarksTheTopLevelFolderOfADeepDifference(t *testing.T) {
 	compareWriteFile(t, left, filepath.Join("tree", "nested", "file.txt"), "one")
 	compareWriteFile(t, right, filepath.Join("tree", "nested", "file.txt"), "two")
 
-	opts := defaultCompareOptions()
+	opts := config.DefaultCompareOptions()
 	opts.ByTime, opts.BySize = false, false
 	opts.ByContent = true
 	outcome := compareRunSides(t, left, right, opts)
@@ -183,7 +184,7 @@ func TestCompareSidesWithoutRecursionIgnoresFolders(t *testing.T) {
 	compareWriteFile(t, left, "top.txt", "same")
 	compareWriteFile(t, right, "top.txt", "same")
 
-	opts := defaultCompareOptions()
+	opts := config.DefaultCompareOptions()
 	opts.Recursive = false
 	outcome := compareRunSides(t, left, right, opts)
 
@@ -198,7 +199,7 @@ func TestCompareSidesRespectsTheDepthLimit(t *testing.T) {
 	compareWriteFile(t, left, filepath.Join("a", "b", "deep.txt"), "one")
 	compareWriteFile(t, right, filepath.Join("a", "b", "deep.txt"), "two")
 
-	opts := defaultCompareOptions()
+	opts := config.DefaultCompareOptions()
 	opts.ByTime, opts.BySize = false, false
 	opts.ByContent = true
 	opts.LimitDepth, opts.MaxDepth = true, 1
@@ -219,7 +220,7 @@ func TestCompareSidesByContentIgnoringLineEndings(t *testing.T) {
 	compareWriteFile(t, left, "spaced.txt", "a b\tc")
 	compareWriteFile(t, right, "spaced.txt", "abc")
 
-	opts := defaultCompareOptions()
+	opts := config.DefaultCompareOptions()
 	opts.ByTime, opts.BySize = false, false
 	opts.ByContent = true
 
@@ -228,13 +229,13 @@ func TestCompareSidesByContentIgnoringLineEndings(t *testing.T) {
 		t.Fatalf("plain byte comparison marked %v, want %v", got, want)
 	}
 
-	opts.Ignore, opts.IgnoreMode = true, compareIgnoreEOL
+	opts.Ignore, opts.IgnoreMode = true, config.CompareIgnoreEOL
 	outcome = compareRunSides(t, left, right, opts)
 	if got, want := compareMarkNames(outcome.left), []string{"spaced.txt"}; !equalStrings(got, want) {
 		t.Fatalf("ignoring line endings marked %v, want %v", got, want)
 	}
 
-	opts.IgnoreMode = compareIgnoreSpaces
+	opts.IgnoreMode = config.CompareIgnoreSpaces
 	outcome = compareRunSides(t, left, right, opts)
 	if len(outcome.left) != 0 {
 		t.Fatalf("ignoring whitespace still marked %v", compareMarkNames(outcome.left))
@@ -255,8 +256,8 @@ func TestCompareStreamsCollapsesLineEndingsAcrossChunks(t *testing.T) {
 
 	ctx := context.Background()
 	equal, err := compareStreams(
-		newCompareStream(ctx, &vfs.MemoryReadAtCloser{Data: crlf}, compareIgnoreEOL),
-		newCompareStream(ctx, &vfs.MemoryReadAtCloser{Data: lf}, compareIgnoreEOL),
+		newCompareStream(ctx, &vfs.MemoryReadAtCloser{Data: crlf}, config.CompareIgnoreEOL),
+		newCompareStream(ctx, &vfs.MemoryReadAtCloser{Data: lf}, config.CompareIgnoreEOL),
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -293,7 +294,7 @@ func TestCollectCompareSideHonoursTheMarkedScope(t *testing.T) {
 	compareWriteFile(t, dir, filepath.Join("skipped-dir", "inner.txt"), "z")
 
 	items, err := collectCompareSide(context.Background(), compareTestVFS(t, dir), dir,
-		map[string]bool{"kept.txt": true, "kept-dir": true}, defaultCompareOptions(), nil)
+		map[string]bool{"kept.txt": true, "kept-dir": true}, config.DefaultCompareOptions(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -312,21 +313,21 @@ func TestCollectCompareSideHonoursTheMarkedScope(t *testing.T) {
 }
 
 func TestCompareOptionsDefaultsWhenTheSectionIsAbsent(t *testing.T) {
-	opts := loadCompareOptions(ini.New())
-	if opts != defaultCompareOptions() {
+	opts := config.LoadCompareOptions(ini.New())
+	if opts != config.DefaultCompareOptions() {
 		t.Fatalf("empty config gave %+v", opts)
 	}
-	if !opts.hasCriteria() {
+	if !opts.HasCriteria() {
 		t.Fatal("the default comparison has nothing to compare by")
 	}
 }
 
 func TestCompareOptionsNormalizeClampsHandEditedValues(t *testing.T) {
-	opts := compareOptions{MaxDepth: 0, IgnoreMode: 42}.normalize()
-	if opts.MaxDepth != 1 || opts.IgnoreMode != compareIgnoreEOL {
+	opts := config.CompareOptions{MaxDepth: 0, IgnoreMode: 42}.Normalize()
+	if opts.MaxDepth != 1 || opts.IgnoreMode != config.CompareIgnoreEOL {
 		t.Fatalf("normalize gave %+v", opts)
 	}
-	if opts := (compareOptions{MaxDepth: 1000}).normalize(); opts.MaxDepth != compareMaxDepthLimit {
+	if opts := (config.CompareOptions{MaxDepth: 1000}).Normalize(); opts.MaxDepth != config.CompareMaxDepthLimit {
 		t.Fatalf("depth was not clamped: %d", opts.MaxDepth)
 	}
 }

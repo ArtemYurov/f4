@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"errors"
+	"github.com/unxed/f4/internal/config"
 	"io"
 	"os"
 	"path/filepath"
@@ -114,10 +115,10 @@ func TestAddPathsWalksDirectoriesAndSkipsOthers(t *testing.T) {
 
 	pp := newTestPlayerPanel()
 	// Playlist saving writes to the config dir; point it at the temp dir.
-	oldCfg := cachedF4ConfigDir
-	cachedF4ConfigDir = dir
-	configDirOnce.Do(func() {})
-	defer func() { cachedF4ConfigDir = oldCfg }()
+	oldCfg := config.CachedF4ConfigDir
+	config.CachedF4ConfigDir = dir
+	config.ConfigDirOnce.Do(func() {})
+	defer func() { config.CachedF4ConfigDir = oldCfg }()
 
 	n := pp.AddPaths([]string{filepath.Join(dir, "album"), filepath.Join(dir, "loose.mp3"), filepath.Join(dir, "notes.txt")})
 	if n != 3 {

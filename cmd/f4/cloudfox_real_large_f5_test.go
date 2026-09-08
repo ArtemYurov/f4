@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/plugins/cloudfox"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -59,10 +60,10 @@ func TestRealSavedCloudLargeF5RoundTrip(t *testing.T) {
 
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	SetDefaultF4Palette()
-	originalConfig := AppConfig
-	t.Cleanup(func() { AppConfig = originalConfig })
-	AppConfig.ConfirmCopy = false
-	AppConfig.DefaultFileOpMode = 2
+	originalConfig := config.App
+	t.Cleanup(func() { config.App = originalConfig })
+	config.App.ConfirmCopy = false
+	config.App.DefaultFileOpMode = 2
 
 	prompt := cloudfox.MasterPasswordPromptFunc(func(ctx context.Context, _ bool) (string, error) {
 		if err := ctx.Err(); err != nil {

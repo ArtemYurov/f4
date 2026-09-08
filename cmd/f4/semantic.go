@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/sdk/extui"
@@ -535,8 +536,8 @@ func semanticHexLine(offset int64, data []byte) string {
 func semanticViewerLineLen(data []byte, width int, wrap bool) (lineLen int, textLen int) {
 	visualWidth := 0
 	tabSize := 8
-	if AppConfig.EditorTabSize > 0 {
-		tabSize = AppConfig.EditorTabSize
+	if config.App.EditorTabSize > 0 {
+		tabSize = config.App.EditorTabSize
 	}
 	for lineLen < len(data) {
 		r, size := utf8.DecodeRune(data[lineLen:])

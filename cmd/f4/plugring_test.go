@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 	"gopkg.in/yaml.v3"
 )
@@ -160,13 +161,13 @@ func TestFetchCatalog_Dependencies(t *testing.T) {
 }
 func TestGetInstalledPlugRingItems(t *testing.T) {
 	tmpDir := t.TempDir()
-	oldUserConfigDir := userConfigDir
-	userConfigDir = func() (string, error) { return tmpDir, nil }
-	t.Cleanup(func() { userConfigDir = oldUserConfigDir })
-	resetConfigDirForTest()
-	t.Cleanup(resetConfigDirForTest)
+	oldUserConfigDir := config.UserConfigDir
+	config.UserConfigDir = func() (string, error) { return tmpDir, nil }
+	t.Cleanup(func() { config.UserConfigDir = oldUserConfigDir })
+	config.ResetConfigDirForTest()
+	t.Cleanup(config.ResetConfigDirForTest)
 
-	cfgDir := GetF4ConfigDir()
+	cfgDir := config.GetF4ConfigDir()
 	plugringDir := filepath.Join(cfgDir, "plugring")
 	pluginPath := filepath.Join(plugringDir, "test-id")
 	if err := os.MkdirAll(pluginPath, 0700); err != nil {
@@ -191,13 +192,13 @@ func TestCheckForPluginUpdates(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
 	tmpDir := t.TempDir()
-	oldUserConfigDir := userConfigDir
-	userConfigDir = func() (string, error) { return tmpDir, nil }
-	t.Cleanup(func() { userConfigDir = oldUserConfigDir })
-	resetConfigDirForTest()
-	t.Cleanup(resetConfigDirForTest)
+	oldUserConfigDir := config.UserConfigDir
+	config.UserConfigDir = func() (string, error) { return tmpDir, nil }
+	t.Cleanup(func() { config.UserConfigDir = oldUserConfigDir })
+	config.ResetConfigDirForTest()
+	t.Cleanup(config.ResetConfigDirForTest)
 
-	cfgDir := GetF4ConfigDir()
+	cfgDir := config.GetF4ConfigDir()
 	plugringDir := filepath.Join(cfgDir, "plugring")
 	pluginPath := filepath.Join(plugringDir, "test-plugin")
 	if err := os.MkdirAll(pluginPath, 0700); err != nil {
@@ -291,7 +292,7 @@ func TestPlugRing_InstallAndRemove_EndToEnd(t *testing.T) {
 	tmpConfig := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", tmpConfig)
 	t.Setenv("APPDATA", tmpConfig)
-	resetConfigDirForTest()
+	config.ResetConfigDirForTest()
 
 	// 1. Setup mock single-file plugin
 	pluginContent := `#!/bin/sh
@@ -372,7 +373,7 @@ Loop:
 	}
 
 	// 3. Verify files on disk
-	pluginDir := filepath.Join(GetF4ConfigDir(), "plugring", "e2e-plugin")
+	pluginDir := filepath.Join(config.GetF4ConfigDir(), "plugring", "e2e-plugin")
 	if _, err := os.Stat(filepath.Join(pluginDir, "plugin.sh")); os.IsNotExist(err) {
 		t.Error("Plugin binary file was not saved to disk")
 	}

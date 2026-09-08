@@ -1,6 +1,10 @@
 package main
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/unxed/f4/internal/config"
+)
 
 func TestResolveGuiFont(t *testing.T) {
 	tests := []struct {
@@ -23,11 +27,11 @@ func TestResolveGuiFont(t *testing.T) {
 }
 
 func TestDefaultGuiFontSize(t *testing.T) {
-	if got := defaultGuiFontSize("darwin"); got != 17 {
+	if got := config.DefaultGuiFontSize("darwin"); got != 17 {
 		t.Fatalf("macOS default GUI font size = %d, want 17", got)
 	}
 	for _, goos := range []string{"windows", "linux", "freebsd"} {
-		if got := defaultGuiFontSize(goos); got != 16 {
+		if got := config.DefaultGuiFontSize(goos); got != 16 {
 			t.Fatalf("%s default GUI font size = %d, want 16", goos, got)
 		}
 	}

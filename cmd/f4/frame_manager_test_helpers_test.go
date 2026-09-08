@@ -10,7 +10,7 @@ import (
 // waitForDirectoryLoads blocks until no directory-load worker is running
 // anywhere in the process.
 //
-// The workers read vtui.FrameManager and AppConfig while they run, so a test
+// The workers read vtui.FrameManager and config.App while they run, so a test
 // that replaces either one has to know they are all finished first. Panels are
 // created deep inside PanelsFrame.ResizeConsole as well as directly, so the
 // caller usually has no panel to wait on and this asks the question globally

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
@@ -1369,9 +1370,9 @@ func init() {
 		DefaultKeys: []string{"AltF9"},
 		MenuPath:    "Options",
 		Handler: withPF(func(pf *PanelsFrame) {
-			targetCols, targetRows := AppConfig.GuiCols, AppConfig.GuiRows
-			if pf.lastW == AppConfig.GuiCols && pf.lastH == AppConfig.GuiRows {
-				targetCols, targetRows = AppConfig.GuiCols+40, AppConfig.GuiRows+15
+			targetCols, targetRows := config.App.GuiCols, config.App.GuiRows
+			if pf.lastW == config.App.GuiCols && pf.lastH == config.App.GuiRows {
+				targetCols, targetRows = config.App.GuiCols+40, config.App.GuiRows+15
 			}
 			// xterm resize sequence for console mode
 			// Terminal writes here are best effort: if stdout is gone there is
@@ -1413,11 +1414,11 @@ func init() {
 		Checked: macKeysEnabled,
 		Handler: func() bool {
 			if macKeysEnabled() {
-				AppConfig.MacKeyboard = MacKeysOff
+				config.App.MacKeyboard = config.MacKeysOff
 			} else {
-				AppConfig.MacKeyboard = MacKeysOn
+				config.App.MacKeyboard = config.MacKeysOn
 			}
-			RequestSaveConfig()
+			config.RequestSaveConfig()
 			return true
 		},
 	})
@@ -1575,8 +1576,8 @@ func init() {
 			next := pf.widthDecrement + 1
 			if maxWD := (pf.lastW / 2) - 10; maxWD > 0 && next <= maxWD && next >= -maxWD {
 				pf.widthDecrement = next
-				AppConfig.WidthDecrement = next
-				RequestSaveConfig()
+				config.App.WidthDecrement = next
+				config.RequestSaveConfig()
 				pf.ResizeConsole(pf.lastW, pf.lastH)
 				vtui.FrameManager.HardRefresh()
 			}
@@ -1593,8 +1594,8 @@ func init() {
 			next := pf.widthDecrement - 1
 			if maxWD := (pf.lastW / 2) - 10; maxWD > 0 && next <= maxWD && next >= -maxWD {
 				pf.widthDecrement = next
-				AppConfig.WidthDecrement = next
-				RequestSaveConfig()
+				config.App.WidthDecrement = next
+				config.RequestSaveConfig()
 				pf.ResizeConsole(pf.lastW, pf.lastH)
 				vtui.FrameManager.HardRefresh()
 			}
@@ -1614,9 +1615,9 @@ func init() {
 			if nextL >= 0 && nextR >= 0 && (maxHD <= 0 || (nextL <= maxHD && nextR <= maxHD)) {
 				pf.leftHeightDecrement = nextL
 				pf.rightHeightDecrement = nextR
-				AppConfig.LeftHeightDecrement = nextL
-				AppConfig.RightHeightDecrement = nextR
-				RequestSaveConfig()
+				config.App.LeftHeightDecrement = nextL
+				config.App.RightHeightDecrement = nextR
+				config.RequestSaveConfig()
 				pf.ResizeConsole(pf.lastW, pf.lastH)
 				vtui.FrameManager.HardRefresh()
 			}
@@ -1636,9 +1637,9 @@ func init() {
 			if nextL >= 0 && nextR >= 0 && (maxHD <= 0 || (nextL <= maxHD && nextR <= maxHD)) {
 				pf.leftHeightDecrement = nextL
 				pf.rightHeightDecrement = nextR
-				AppConfig.LeftHeightDecrement = nextL
-				AppConfig.RightHeightDecrement = nextR
-				RequestSaveConfig()
+				config.App.LeftHeightDecrement = nextL
+				config.App.RightHeightDecrement = nextR
+				config.RequestSaveConfig()
 				pf.ResizeConsole(pf.lastW, pf.lastH)
 				vtui.FrameManager.HardRefresh()
 			}
@@ -1653,17 +1654,17 @@ func init() {
 		DefaultKeys: []string{"CtrlShiftUp:EmptyCommandLine"},
 		Handler: withPF(func(pf *PanelsFrame) {
 			cur := &pf.rightHeightDecrement
-			cfg := &AppConfig.RightHeightDecrement
+			cfg := &config.App.RightHeightDecrement
 			if pf.activeIdx == 0 {
 				cur = &pf.leftHeightDecrement
-				cfg = &AppConfig.LeftHeightDecrement
+				cfg = &config.App.LeftHeightDecrement
 			}
 			next := *cur + 1
 			maxHD := pf.lastH - 7
 			if next >= 0 && (maxHD <= 0 || next <= maxHD) {
 				*cur = next
 				*cfg = next
-				RequestSaveConfig()
+				config.RequestSaveConfig()
 				pf.ResizeConsole(pf.lastW, pf.lastH)
 				vtui.FrameManager.HardRefresh()
 			}
@@ -1678,17 +1679,17 @@ func init() {
 		DefaultKeys: []string{"CtrlShiftDown:EmptyCommandLine"},
 		Handler: withPF(func(pf *PanelsFrame) {
 			cur := &pf.rightHeightDecrement
-			cfg := &AppConfig.RightHeightDecrement
+			cfg := &config.App.RightHeightDecrement
 			if pf.activeIdx == 0 {
 				cur = &pf.leftHeightDecrement
-				cfg = &AppConfig.LeftHeightDecrement
+				cfg = &config.App.LeftHeightDecrement
 			}
 			next := *cur - 1
 			maxHD := pf.lastH - 7
 			if next >= 0 && (maxHD <= 0 || next <= maxHD) {
 				*cur = next
 				*cfg = next
-				RequestSaveConfig()
+				config.RequestSaveConfig()
 				pf.ResizeConsole(pf.lastW, pf.lastH)
 				vtui.FrameManager.HardRefresh()
 			}
@@ -1706,10 +1707,10 @@ func init() {
 				pf.widthDecrement = 0
 				pf.leftHeightDecrement = 0
 				pf.rightHeightDecrement = 0
-				AppConfig.WidthDecrement = 0
-				AppConfig.LeftHeightDecrement = 0
-				AppConfig.RightHeightDecrement = 0
-				RequestSaveConfig()
+				config.App.WidthDecrement = 0
+				config.App.LeftHeightDecrement = 0
+				config.App.RightHeightDecrement = 0
+				config.RequestSaveConfig()
 				pf.ResizeConsole(pf.lastW, pf.lastH)
 				vtui.FrameManager.HardRefresh()
 			}
@@ -1732,8 +1733,8 @@ func init() {
 		DescKey:     "Action.Panel.ToggleInfoBytes.Desc",
 		DefaultKeys: []string{"B:AltPanelVisible"},
 		Handler: withPF(func(pf *PanelsFrame) {
-			AppConfig.InfoPanelBytes = !AppConfig.InfoPanelBytes
-			RequestSaveConfig()
+			config.App.InfoPanelBytes = !config.App.InfoPanelBytes
+			config.RequestSaveConfig()
 			vtui.FrameManager.HardRefresh()
 		}),
 	})
@@ -1745,9 +1746,9 @@ func init() {
 		Description: "Show or hide hidden and system files on both panels",
 		DescKey:     "Action.Panel.ToggleHidden.Desc",
 		DefaultKeys: []string{"CtrlH"},
-		Checked:     func() bool { return AppConfig.ShowHiddenFiles },
+		Checked:     func() bool { return config.App.ShowHiddenFiles },
 		Handler: withPF(func(pf *PanelsFrame) {
-			AppConfig.ShowHiddenFiles = !AppConfig.ShowHiddenFiles
+			config.App.ShowHiddenFiles = !config.App.ShowHiddenFiles
 			pf.RefreshAll()
 		}),
 	})

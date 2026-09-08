@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/sdk/f4rpc"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -221,13 +222,13 @@ func TestRPCPlugin_Progress_Cancellation(t *testing.T) {
 }
 func TestRPCPlugin_NativePermissionDenied(t *testing.T) {
 	tmpDir := t.TempDir()
-	_ = GetF4ConfigDir()
+	_ = config.GetF4ConfigDir()
 	_ = PluginPermissions()
-	oldConfigDir := cachedF4ConfigDir
+	oldConfigDir := config.CachedF4ConfigDir
 	oldPermissionStore := pluginPermissionStore
-	cachedF4ConfigDir = tmpDir
+	config.CachedF4ConfigDir = tmpDir
 	t.Cleanup(func() {
-		cachedF4ConfigDir = oldConfigDir
+		config.CachedF4ConfigDir = oldConfigDir
 		pluginPermissionStore = oldPermissionStore
 	})
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"github.com/unxed/f4/internal/config"
 	"os"
 	"path/filepath"
 	"sort"
@@ -23,10 +24,10 @@ type DriveBookmark struct {
 // menu links. It deliberately has its own file: bookmarks.ini is shared with
 // far2l and remains the storage for the ten numbered folder shortcuts.
 func DriveBookmarksFilePath() string {
-	if IsPortableProfile() {
-		return filepath.Join(GetF4ConfigDir(), "settings", "drive-bookmarks.ini")
+	if config.IsPortableProfile() {
+		return filepath.Join(config.GetF4ConfigDir(), "settings", "drive-bookmarks.ini")
 	}
-	configDir, _ := userConfigDir()
+	configDir, _ := config.UserConfigDir()
 	return filepath.Join(configDir, "f4", "settings", "drive-bookmarks.ini")
 }
 
@@ -136,7 +137,7 @@ func SaveDriveBookmarks(path string, bookmarks []DriveBookmark) error {
 		buf.WriteString(strings.TrimSpace(bookmark.Hotkey))
 		buf.WriteByte('\n')
 	}
-	return writeFileAtomically(path, []byte(buf.String()), 0o600)
+	return config.WriteUserFileAtomically(path, []byte(buf.String()), 0o600)
 }
 
 func driveBookmarkIsValid(bookmark DriveBookmark) bool {

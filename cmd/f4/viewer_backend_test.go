@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -119,12 +120,12 @@ func TestViewerView_NonUTF8OffsetsUseDecodedStream(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	oldAuto, oldDefault := AppConfig.ViewerAutodetectCodePage, AppConfig.ViewerDefaultCodePage
-	AppConfig.ViewerAutodetectCodePage = false
-	AppConfig.ViewerDefaultCodePage = 866
+	oldAuto, oldDefault := config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage
+	config.App.ViewerAutodetectCodePage = false
+	config.App.ViewerDefaultCodePage = 866
 	t.Cleanup(func() {
-		AppConfig.ViewerAutodetectCodePage = oldAuto
-		AppConfig.ViewerDefaultCodePage = oldDefault
+		config.App.ViewerAutodetectCodePage = oldAuto
+		config.App.ViewerDefaultCodePage = oldDefault
 	})
 
 	vv, err := NewViewerView(context.Background(), vfs.NewOSVFS(root), path)

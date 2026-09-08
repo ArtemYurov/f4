@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -66,10 +67,10 @@ func TestPathHintItems_FuzzyNeedle(t *testing.T) {
 	dir := setupPathHintDir(t)
 	v := vfs.NewOSVFS(dir)
 
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.PathHintFullPath = true
-	AppConfig.ShowHighlightMarks = false
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.PathHintFullPath = true
+	config.App.ShowHighlightMarks = false
 
 	dirPart := dir + string(filepath.Separator)
 
@@ -153,10 +154,10 @@ func TestPathHintItems_FinalElementOnly(t *testing.T) {
 	dir := setupPathHintDir(t)
 	v := vfs.NewOSVFS(dir)
 
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.PathHintFullPath = false
-	AppConfig.ShowHighlightMarks = false
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.PathHintFullPath = false
+	config.App.ShowHighlightMarks = false
 
 	dirPart := dir + string(filepath.Separator)
 	items := pathHintItems(v, dirPart+"alp", 0, 0)
@@ -173,7 +174,7 @@ func TestPathHintItems_FinalElementOnly(t *testing.T) {
 		t.Errorf("Needle span relative to display: got %d-%d, want 0-2", items[0].MatchStart, items[0].MatchEnd)
 	}
 
-	AppConfig.PathHintFullPath = true
+	config.App.PathHintFullPath = true
 	items = pathHintItems(v, dirPart+"alp", 0, 0)
 	if items[0].Display != dirPart+"alpha.txt" {
 		t.Errorf("FullPath display: %q", items[0].Display)
@@ -188,10 +189,10 @@ func TestPathHintItems_HighlightMarker(t *testing.T) {
 	dir := setupPathHintDir(t)
 	v := vfs.NewOSVFS(dir)
 
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.PathHintFullPath = false
-	AppConfig.ShowHighlightMarks = true
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.PathHintFullPath = false
+	config.App.ShowHighlightMarks = true
 
 	ini := ini.Parse(strings.NewReader("[Highlight_0]\nMask = *.exe\nMark = !\n"))
 	GlobalFileHighlighter.LoadFromIni(ini)
@@ -212,7 +213,7 @@ func TestPathHintItems_HighlightMarker(t *testing.T) {
 	}
 
 	// Same file without the panel marks setting: no marker
-	AppConfig.ShowHighlightMarks = false
+	config.App.ShowHighlightMarks = false
 	items = pathHintItems(v, dirPart+"bet", 0, 0)
 	if items[0].Display != "beta.exe" {
 		t.Errorf("Marker should follow the panel setting: %q", items[0].Display)
@@ -246,11 +247,11 @@ func TestPathHintProvider_BothPanels(t *testing.T) {
 	vtui.FrameManager.Push(pf)
 	defer vtui.FrameManager.Pop()
 
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.CommandLineAutoComplete = true
-	AppConfig.PathHintSource = PathHintSourceBoth
-	AppConfig.PathHintFullPath = false
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.CommandLineAutoComplete = true
+	config.App.PathHintSource = PathHintSourceBoth
+	config.App.PathHintFullPath = false
 
 	items := pathHintProvider(nil, "sub/", 0, 4)
 	// active group, separator, passive group
@@ -268,14 +269,14 @@ func TestPathHintProvider_BothPanels(t *testing.T) {
 	}
 
 	// Passive only
-	AppConfig.PathHintSource = PathHintSourcePassive
+	config.App.PathHintSource = PathHintSourcePassive
 	items = pathHintProvider(nil, "sub/", 0, 4)
 	if len(items) != 1 || !strings.HasSuffix(items[0].Display, "passive.txt") {
 		t.Fatalf("Passive-only source failed: %v", items)
 	}
 
 	// Active only (default)
-	AppConfig.PathHintSource = PathHintSourceActive
+	config.App.PathHintSource = PathHintSourceActive
 	items = pathHintProvider(nil, "sub/", 0, 4)
 	if len(items) != 1 || !strings.HasSuffix(items[0].Display, "active.txt") {
 		t.Fatalf("Active-only source failed: %v", items)
@@ -301,11 +302,11 @@ func TestPathHintProvider_DisabledWhenCommandLineAutoCompleteOff(t *testing.T) {
 	vtui.FrameManager.Push(pf)
 	defer vtui.FrameManager.Pop()
 
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.CommandLineAutoComplete = false
-	AppConfig.PathHintSource = PathHintSourceBoth
-	AppConfig.PathHintFullPath = false
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.CommandLineAutoComplete = false
+	config.App.PathHintSource = PathHintSourceBoth
+	config.App.PathHintFullPath = false
 
 	if items := pathHintProvider(nil, "sub/", 0, 4); items != nil {
 		t.Fatalf("Path hints should be disabled when command line autocompletion is off, got %d items", len(items))

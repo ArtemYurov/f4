@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/history"
 )
 
@@ -39,12 +40,12 @@ type BookmarkSet [history.PinSlots]Bookmark
 func BookmarksFilePath() string {
 	// In portable mode (UseSystemProfiles=0) write under <exeDir>/Profile;
 	// otherwise use the system %AppData%/f4/settings path as before. Read
-	// userConfigDir live in non-portable mode so tests overriding the seam
+	// config.UserConfigDir live in non-portable mode so tests overriding the seam
 	// keep working.
-	if IsPortableProfile() {
-		return filepath.Join(GetF4ConfigDir(), "settings", "bookmarks.ini")
+	if config.IsPortableProfile() {
+		return filepath.Join(config.GetF4ConfigDir(), "settings", "bookmarks.ini")
 	}
-	configDir, _ := userConfigDir()
+	configDir, _ := config.UserConfigDir()
 	return filepath.Join(configDir, "f4", "settings", "bookmarks.ini")
 }
 
@@ -148,7 +149,7 @@ func SaveBookmarks(path string, s BookmarkSet) error {
 		buf.WriteByte('\n')
 	}
 
-	return writeFileAtomically(path, []byte(buf.String()), 0o600)
+	return config.WriteUserFileAtomically(path, []byte(buf.String()), 0o600)
 }
 
 // truncPathLeft shortens path to at most width display cells by dropping

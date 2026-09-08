@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/vtui"
 )
@@ -22,7 +23,7 @@ type HotkeyManager struct {
 
 var conditionRegistry = map[string]func() bool{
 	"searchfirst": func() bool {
-		return AppConfig.NavigationMode == NavigationSearchFirst
+		return config.App.NavigationMode == config.NavigationSearchFirst
 	},
 	"emptycommandline": func() bool {
 		if pf := findPanelsFrameAnyScreen(); pf != nil {
@@ -37,7 +38,7 @@ var conditionRegistry = map[string]func() bool{
 		return false
 	},
 	"esctoggle": func() bool {
-		if !AppConfig.EscTogglePanels {
+		if !config.App.EscTogglePanels {
 			return false
 		}
 		if pf := findPanelsFrameAnyScreen(); pf != nil {
@@ -418,7 +419,7 @@ func nativeShortcutOwnedByCurrentContext(actionName, key string) bool {
 		if strings.EqualFold(key, "CtrlTab") || strings.EqualFold(key, "CtrlShiftTab") {
 			return false
 		}
-		if strings.EqualFold(key, "CtrlN") && AppConfig.TerminalCtrlNWorkspace {
+		if strings.EqualFold(key, "CtrlN") && config.App.TerminalCtrlNWorkspace {
 			return false
 		}
 		return true
@@ -453,7 +454,7 @@ func nativeShortcutConditionTrue(area, condition string) bool {
 	case "frameworknoterminalapp":
 		return !strings.EqualFold(area, "Terminal") || commandPaletteConditionTrue("NoTerminalApp")
 	case "terminalctrlnworkspace":
-		return !strings.EqualFold(area, "Terminal") || AppConfig.TerminalCtrlNWorkspace
+		return !strings.EqualFold(area, "Terminal") || config.App.TerminalCtrlNWorkspace
 	default:
 		return commandPaletteConditionTrue(condition)
 	}

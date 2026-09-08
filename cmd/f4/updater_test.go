@@ -13,43 +13,44 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/vtui"
 )
 
 func TestUpdater_ShouldCheck(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
 
 	now := time.Now().Unix()
 
-	AppConfig.UpdateInterval = 0
+	config.App.UpdateInterval = 0
 	if shouldCheck() {
 		t.Error("Should not check if interval is 0")
 	}
 
-	AppConfig.UpdateInterval = 1
-	AppConfig.LastUpdateCheck = now
+	config.App.UpdateInterval = 1
+	config.App.LastUpdateCheck = now
 	if !shouldCheck() {
 		t.Error("Should check every start")
 	}
 
-	AppConfig.UpdateInterval = 2
-	AppConfig.LastUpdateCheck = now
+	config.App.UpdateInterval = 2
+	config.App.LastUpdateCheck = now
 	if shouldCheck() {
 		t.Error("Should not check daily if just checked")
 	}
-	AppConfig.LastUpdateCheck = now - 25*3600
+	config.App.LastUpdateCheck = now - 25*3600
 	if !shouldCheck() {
 		t.Error("Should check daily if > 24h passed")
 	}
 
-	AppConfig.UpdateInterval = 3
-	AppConfig.LastUpdateCheck = now - 2*24*3600
+	config.App.UpdateInterval = 3
+	config.App.LastUpdateCheck = now - 2*24*3600
 	if shouldCheck() {
 		t.Error("Should not check weekly if < 7 days passed")
 	}
-	AppConfig.LastUpdateCheck = now - 8*24*3600
+	config.App.LastUpdateCheck = now - 8*24*3600
 	if !shouldCheck() {
 		t.Error("Should check weekly if > 7 days passed")
 	}
@@ -57,8 +58,8 @@ func TestUpdater_ShouldCheck(t *testing.T) {
 
 func TestUpdater_CheckForUpdates_API(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/repos/unxed/f4/releases/latest" {
@@ -90,8 +91,8 @@ func TestUpdater_CheckForUpdates_API(t *testing.T) {
 		update.CurrentArch = origArch
 	}()
 
-	AppConfig.UpdateChannel = 0
-	AppConfig.UpdateInterval = 0
+	config.App.UpdateChannel = 0
+	config.App.UpdateInterval = 0
 
 	CheckForUpdates(nil, true)
 
@@ -222,15 +223,15 @@ LoopJSON:
 
 // TestUpdater_UserDeclinesUpdate pins the fix for #374: declining an
 // update must NOT persist across sessions. Concretely:
-//   - AppConfig.LastUpdateVersion must stay untouched (that field is the
+//   - config.App.LastUpdateVersion must stay untouched (that field is the
 //     "we already installed this version" marker and would suppress the
 //     prompt on every subsequent restart, which is the reported bug).
 //   - sessionDismissedUpdateKey must be set, so a follow-up automatic
 //     check within the same run does not re-prompt for the same version.
 func TestUpdater_UserDeclinesUpdate(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
 	oldDismissed := sessionDismissedUpdateKey
 	defer func() { sessionDismissedUpdateKey = oldDismissed }()
 	// The stub release only carries linux/windows assets; without pinning
@@ -259,8 +260,8 @@ func TestUpdater_UserDeclinesUpdate(t *testing.T) {
 	update.APIURL = ts.URL + "/repos/unxed/f4/releases"
 	defer func() { update.APIURL = origAPIURL }()
 
-	AppConfig.UpdateChannel = 0 // Stable
-	AppConfig.LastUpdateVersion = ""
+	config.App.UpdateChannel = 0 // Stable
+	config.App.LastUpdateVersion = ""
 
 	CheckForUpdates(nil, true)
 
@@ -291,9 +292,9 @@ Loop:
 		t.Fatal("Update prompt dialog not found")
 	}
 
-	if AppConfig.LastUpdateVersion != "" {
+	if config.App.LastUpdateVersion != "" {
 		t.Errorf("declining the prompt must NOT persist across restarts (see #374); LastUpdateVersion=%q, want empty",
-			AppConfig.LastUpdateVersion)
+			config.App.LastUpdateVersion)
 	}
 	if sessionDismissedUpdateKey != "v100.0.0" {
 		t.Errorf("declining the prompt must arm the session-level dismiss; sessionDismissedUpdateKey=%q, want %q",
@@ -307,8 +308,8 @@ Loop:
 // The session-level dismissal only silences the automatic prompt.
 func TestUpdater_ManualCheckIgnoresSessionDismiss(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
 	oldDismissed := sessionDismissedUpdateKey
 	defer func() { sessionDismissedUpdateKey = oldDismissed }()
 	// The stub release only carries linux/windows assets; without pinning
@@ -338,8 +339,8 @@ func TestUpdater_ManualCheckIgnoresSessionDismiss(t *testing.T) {
 	update.APIURL = ts.URL + "/repos/unxed/f4/releases"
 	defer func() { update.APIURL = origAPIURL }()
 
-	AppConfig.UpdateChannel = 0
-	AppConfig.LastUpdateVersion = ""
+	config.App.UpdateChannel = 0
+	config.App.LastUpdateVersion = ""
 
 	CheckForUpdates(nil, true) // manual == true
 
@@ -366,8 +367,8 @@ func TestUpdater_ManualCheckIgnoresSessionDismiss(t *testing.T) {
 // #374 spam.
 func TestUpdater_AutoCheckSkipsSessionDismiss(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
 	oldDismissed := sessionDismissedUpdateKey
 	defer func() { sessionDismissedUpdateKey = oldDismissed }()
 	// The stub release only carries linux/windows assets; without pinning
@@ -396,11 +397,11 @@ func TestUpdater_AutoCheckSkipsSessionDismiss(t *testing.T) {
 	update.APIURL = ts.URL + "/repos/unxed/f4/releases"
 	defer func() { update.APIURL = origAPIURL }()
 
-	AppConfig.UpdateChannel = 0
-	AppConfig.LastUpdateVersion = ""
+	config.App.UpdateChannel = 0
+	config.App.LastUpdateVersion = ""
 	// Force shouldCheck() to allow the auto path to reach the dismiss guard.
-	AppConfig.UpdateInterval = 1
-	AppConfig.LastUpdateCheck = 0
+	config.App.UpdateInterval = 1
+	config.App.LastUpdateCheck = 0
 
 	CheckForUpdates(nil, false) // manual == false
 

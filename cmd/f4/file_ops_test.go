@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -1915,10 +1916,10 @@ func TestFileOps_PathDisplay(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	orig := AppConfig.FileOpPathDisplay
-	defer func() { AppConfig.FileOpPathDisplay = orig }()
+	orig := config.App.FileOpPathDisplay
+	defer func() { config.App.FileOpPathDisplay = orig }()
 
-	AppConfig.FileOpPathDisplay = 1
+	config.App.FileOpPathDisplay = 1
 	tracker1 := NewFileOpTracker(vfs.OpStats{Files: 1, Bytes: 4})
 	var capturedName1 string
 	state := &FileOpState{
@@ -1939,7 +1940,7 @@ func TestFileOps_PathDisplay(t *testing.T) {
 		t.Errorf("Expected currentName to be full source path, got %q", capturedName1)
 	}
 
-	AppConfig.FileOpPathDisplay = 2
+	config.App.FileOpPathDisplay = 2
 	tracker2 := NewFileOpTracker(vfs.OpStats{Files: 1, Bytes: 4})
 	var capturedName2 string
 	state2 := &FileOpState{

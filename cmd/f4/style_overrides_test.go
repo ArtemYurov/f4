@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
 
@@ -20,9 +21,9 @@ func withOverrides(t *testing.T, body string) {
 	userColorOverridesPath = func() string { return filepath.Join(dir, "farcolors.ini") }
 	t.Cleanup(func() { userColorOverridesPath = old })
 
-	oldCfg := AppConfig
-	AppConfig.EnforceColorCorrection = false
-	t.Cleanup(func() { AppConfig = oldCfg })
+	oldCfg := config.App
+	config.App.EnforceColorCorrection = false
+	t.Cleanup(func() { config.App = oldCfg })
 }
 
 // Switching styles at runtime must land on the same palette a restart would
@@ -61,7 +62,7 @@ func TestApplyColorStyle_WithoutOverrides(t *testing.T) {
 // run once over the finished palette rather than after each layer.
 func TestApplyColorStyle_OverridesWithContrastCorrection(t *testing.T) {
 	withOverrides(t, "[farcolors]\nKeybar.Text = foreground:#2E3436 | background:#06989A\n")
-	AppConfig.EnforceColorCorrection = true
+	config.App.EnforceColorCorrection = true
 
 	if err := ApplyColorStyle("Modern"); err != nil {
 		t.Fatalf("ApplyColorStyle: %v", err)

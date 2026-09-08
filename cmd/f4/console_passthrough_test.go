@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -66,10 +67,10 @@ func TestHostConsole_Transitions(t *testing.T) {
 }
 
 func TestHostConsole_OverlaySuppressesRegisteredKeyBar(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.ConsoleMode = "host"
-	AppConfig.ConsoleOverlayUI = true
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.ConsoleMode = "host"
+	config.App.ConsoleOverlayUI = true
 
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
@@ -105,9 +106,9 @@ func TestChildEnv_HostModeLeavesTERMUntouched(t *testing.T) {
 	probeHostTTY = func() bool { return true }
 	probePTYUsable = func() bool { return true }
 
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.ConsoleMode = "host"
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.ConsoleMode = "host"
 
 	t.Setenv("TERM", "xterm-256color")
 
@@ -205,21 +206,21 @@ func TestHostConsole_CloseLeavesHostConsole(t *testing.T) {
 	}
 }
 func TestHostConsole_OverlayLines(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
 
 	// 1. ConsoleOverlayUI disabled -> 0 lines
-	AppConfig.ConsoleMode = "host"
-	AppConfig.ConsoleOverlayUI = false
+	config.App.ConsoleMode = "host"
+	config.App.ConsoleOverlayUI = false
 	if got := pf.overlayLines(); got != 0 {
 		t.Errorf("overlayLines() with ConsoleOverlayUI=false = %d, want 0", got)
 	}
 
 	// 2. ConsoleOverlayUI enabled, showKeyBar = true -> 2 lines
-	AppConfig.ConsoleOverlayUI = true
+	config.App.ConsoleOverlayUI = true
 	pf.showKeyBar = true
 	if got := pf.overlayLines(); got != 2 {
 		t.Errorf("overlayLines() with showKeyBar=true = %d, want 2", got)
@@ -239,10 +240,10 @@ func TestHostConsole_FarStyleScrollRegion(t *testing.T) {
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
 
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.ConsoleMode = "host"
-	AppConfig.ConsoleOverlayUI = true
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.ConsoleMode = "host"
+	config.App.ConsoleOverlayUI = true
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -271,10 +272,10 @@ func TestHostConsole_FarStyleScrollRegion(t *testing.T) {
 }
 
 func TestHostConsole_FarStylePTYSizing(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.ConsoleMode = "host"
-	AppConfig.ConsoleOverlayUI = true
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.ConsoleMode = "host"
+	config.App.ConsoleOverlayUI = true
 
 	pf := setupMockPanelsFrame(t)
 	defer pf.Close()

@@ -12,6 +12,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/vfs"
@@ -368,7 +369,7 @@ func (q *QuickViewPanel) showCodepageDialog() {
 		if cpID == vfs.CodepageAutoDetect {
 			delete(q.codepages, q.cacheKey)
 			q.persistCodepage(0)
-			q.applyPreviewCodepage(vfs.DetectEncoding(q.cacheRaw, AppConfig.ViewerAutodetectCodePage, AppConfig.ViewerDefaultCodePage), true)
+			q.applyPreviewCodepage(vfs.DetectEncoding(q.cacheRaw, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage), true)
 			vtui.FrameManager.HardRefresh()
 			return
 		}
@@ -1163,8 +1164,8 @@ func loadDefaultQuickView(parent context.Context, filesystem vfs.VFS, path strin
 	}
 	buf = buf[:n]
 
-	autoDetect := AppConfig.ViewerAutodetectCodePage
-	cpID := vfs.DetectEncoding(buf, autoDetect, AppConfig.ViewerDefaultCodePage)
+	autoDetect := config.App.ViewerAutodetectCodePage
+	cpID := vfs.DetectEncoding(buf, autoDetect, config.App.ViewerDefaultCodePage)
 	decodedBuf := buf
 	if cpID != 65001 {
 		if decoded, decodeErr := vfs.DecodeBytes(buf, cpID); decodeErr == nil {

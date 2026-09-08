@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/vfs"
@@ -77,7 +78,7 @@ func NewViewerView(ctx context.Context, v vfs.VFS, path string) (*ViewerView, er
 		return nil, err
 	}
 
-	cpID := vfs.DetectEncoding(header, AppConfig.ViewerAutodetectCodePage, AppConfig.ViewerDefaultCodePage)
+	cpID := vfs.DetectEncoding(header, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage)
 	if remembered, ok := rememberedCodepage(v, path); ok {
 		cpID = remembered
 	}
@@ -570,8 +571,8 @@ func (vv *ViewerView) renderText(scr *vtui.ScreenBuf, width, contentHeight int) 
 		}
 
 		tabSize := 8
-		if AppConfig.EditorTabSize > 0 {
-			tabSize = AppConfig.EditorTabSize
+		if config.App.EditorTabSize > 0 {
+			tabSize = config.App.EditorTabSize
 		}
 		row := layoutViewerTextRow(data, width, tabSize, vv.WrapMode)
 
@@ -676,8 +677,8 @@ func (vv *ViewerView) ProcessKey(e *vtinput.InputEvent) bool {
 			data, err := vv.backend.ReadAt(vv.TopOffset, width*4)
 			if err == nil && len(data) > 0 {
 				tabSize := 8
-				if AppConfig.EditorTabSize > 0 {
-					tabSize = AppConfig.EditorTabSize
+				if config.App.EditorTabSize > 0 {
+					tabSize = config.App.EditorTabSize
 				}
 				row := layoutViewerTextRow(data, width, tabSize, vv.WrapMode)
 				if row.lineLen > 0 {
@@ -896,8 +897,8 @@ func (vv *ViewerView) jumpToEnd() {
 		currOff := startOff
 
 		tabSize := 8
-		if AppConfig.EditorTabSize > 0 {
-			tabSize = AppConfig.EditorTabSize
+		if config.App.EditorTabSize > 0 {
+			tabSize = config.App.EditorTabSize
 		}
 		for currOff < vv.backend.Size() {
 			if ctx.Err() != nil {
@@ -1100,7 +1101,7 @@ func (vv *ViewerView) ReloadWithAutoDetect() {
 
 	// The user asked for this file to be detected, so detect it -- the
 	// global switch decides what happens at open, not here (#875).
-	cpID := vfs.DetectEncoding(header, true, AppConfig.ViewerDefaultCodePage)
+	cpID := vfs.DetectEncoding(header, true, config.App.ViewerDefaultCodePage)
 	saveCodepageOverride(vv.vfs, vv.path, 0)
 	vv.ReloadWithCodepage(cpID)
 }
@@ -1153,13 +1154,13 @@ func (vv *ViewerView) ProcessMouse(e *vtinput.InputEvent) bool {
 	}
 	if e.WheelDirection != 0 {
 		vv.hoverURL = ""
-		speed := AppConfig.WheelViewerDown
+		speed := config.App.WheelViewerDown
 		vk := uint16(vtinput.VK_DOWN)
 		if e.WheelDirection > 0 {
-			speed = AppConfig.WheelViewerUp
+			speed = config.App.WheelViewerUp
 			vk = vtinput.VK_UP
 		}
-		for i := 0; i < wheelScrollLines(speed); i++ {
+		for i := 0; i < config.WheelScrollLines(speed); i++ {
 			vv.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vk})
 		}
 		return true

@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
 
@@ -152,14 +153,14 @@ func TestAppearanceSettingsFontComboRemainsEditable(t *testing.T) {
 
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	SetDefaultF4Palette()
-	oldConfig := AppConfig
-	oldPath := getUserConfigIniPath
-	AppConfig.GuiFont = "/custom/font.otf"
-	AppConfig.Language = "zh"
-	getUserConfigIniPath = func() string { return t.TempDir() + "/settings.ini" }
+	oldConfig := config.App
+	oldPath := config.GetUserConfigIniPath
+	config.App.GuiFont = "/custom/font.otf"
+	config.App.Language = "zh"
+	config.GetUserConfigIniPath = func() string { return t.TempDir() + "/settings.ini" }
 	t.Cleanup(func() {
-		AppConfig = oldConfig
-		getUserConfigIniPath = oldPath
+		config.App = oldConfig
+		config.GetUserConfigIniPath = oldPath
 	})
 
 	pf := NewPanelsFrame()
@@ -187,7 +188,7 @@ func TestAppearanceSettingsFontComboRemainsEditable(t *testing.T) {
 	}
 	fontCombo.Edit.SetText("/manually/entered/font.ttf")
 	clickDialogButton(t, top, "Ok")
-	if AppConfig.GuiFont != "/manually/entered/font.ttf" {
-		t.Fatalf("manual font path = %q", AppConfig.GuiFont)
+	if config.App.GuiFont != "/manually/entered/font.ttf" {
+		t.Fatalf("manual font path = %q", config.App.GuiFont)
 	}
 }

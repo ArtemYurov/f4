@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
@@ -852,7 +853,7 @@ func (ip *InfoPanel) Show(scr *vtui.ScreenBuf) {
 	// CPU + GPU — opt-in, off by default (maintainer's ask). Kept
 	// after Memory so a user who enables the section doesn't have
 	// what they see above shifted downward.
-	if !providerSnapshot.Authoritative && AppConfig.InfoPanelCPUGPU {
+	if !providerSnapshot.Authoritative && config.App.InfoPanelCPUGPU {
 		if cpu, ok := sysinfo.CPU(); ok {
 			blank()
 			sectionHeader(Msg("InfoPanel.CPUTitle"))
@@ -1122,10 +1123,10 @@ func formatBytesHuman(b uint64) string {
 }
 
 // formatBytes picks between the raw far2l-style form and the human
-// form based on AppConfig. Toggled at runtime by pressing `B` while
+// form based on config.App. Toggled at runtime by pressing `B` while
 // the info panel is visible.
 func formatBytes(b uint64) string {
-	if AppConfig.InfoPanelBytes {
+	if config.App.InfoPanelBytes {
 		return formatBytesCommas(b)
 	}
 	return formatBytesHuman(b)

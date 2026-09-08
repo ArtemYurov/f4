@@ -15,6 +15,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -103,10 +104,10 @@ var (
 
 func initializeProcessEnvironmentRuntime() error {
 	processEnvironmentRuntimeOnce.Do(func() {
-		root := filepath.Join(GetF4ConfigDir(), "plugins", ".envman-runtime")
+		root := filepath.Join(config.GetF4ConfigDir(), "plugins", ".envman-runtime")
 		// The session is created once and lives for the whole process, so the
 		// root it was created under has to be remembered rather than worked
-		// out again later. GetF4ConfigDir's answer is not a constant: the
+		// out again later. config.GetF4ConfigDir's answer is not a constant: the
 		// config directory is a package variable that tests swap for a
 		// temporary one, and shutdown recomputing the root would then compare
 		// the session against a directory it was never in, decide the path was

@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/vfs"
 )
 
@@ -125,11 +126,11 @@ func TestPluginCommandRegistrationClonesMetadata(t *testing.T) {
 }
 
 func TestPluginCommandOwnedLocalizationUsesCurrentAndFallbackLanguages(t *testing.T) {
-	oldLanguage := AppConfig.Language
-	oldFallbackLanguage := AppConfig.FallbackLanguage
+	oldLanguage := config.App.Language
+	oldFallbackLanguage := config.App.FallbackLanguage
 	t.Cleanup(func() {
-		AppConfig.Language = oldLanguage
-		AppConfig.FallbackLanguage = oldFallbackLanguage
+		config.App.Language = oldLanguage
+		config.App.FallbackLanguage = oldFallbackLanguage
 	})
 
 	command := vfs.PluginCommand{
@@ -140,8 +141,8 @@ func TestPluginCommandOwnedLocalizationUsesCurrentAndFallbackLanguages(t *testin
 		SearchTerms:           []string{"literal alias"},
 	}
 
-	AppConfig.Language = "fr_CA"
-	AppConfig.FallbackLanguage = "de"
+	config.App.Language = "fr_CA"
+	config.App.FallbackLanguage = "de"
 	if got := pluginCommandDisplayLabel(command); got != "Libelle francais" {
 		t.Fatalf("regional current-language label = %q", got)
 	}
@@ -149,7 +150,7 @@ func TestPluginCommandOwnedLocalizationUsesCurrentAndFallbackLanguages(t *testin
 		t.Fatalf("regional current-language description = %q", got)
 	}
 
-	AppConfig.Language = "it"
+	config.App.Language = "it"
 	if got := pluginCommandDisplayLabel(command); got != "Deutsche Beschriftung" {
 		t.Fatalf("fallback-language label = %q", got)
 	}
@@ -188,11 +189,11 @@ func TestPluginCommandExecutionRejectsClosedPanelsFrame(t *testing.T) {
 }
 
 func TestPluginCommandDisplayMetadataTracksActiveLanguage(t *testing.T) {
-	oldLanguage := AppConfig.Language
-	oldFallbackLanguage := AppConfig.FallbackLanguage
+	oldLanguage := config.App.Language
+	oldFallbackLanguage := config.App.FallbackLanguage
 	t.Cleanup(func() {
-		AppConfig.Language = oldLanguage
-		AppConfig.FallbackLanguage = oldFallbackLanguage
+		config.App.Language = oldLanguage
+		config.App.FallbackLanguage = oldFallbackLanguage
 		InitLang()
 	})
 
@@ -204,8 +205,8 @@ func TestPluginCommandDisplayMetadataTracksActiveLanguage(t *testing.T) {
 		SearchKeys:     []string{"Attributes.Archive", "Attributes.Archive", ""},
 	}
 
-	AppConfig.FallbackLanguage = ""
-	AppConfig.Language = "ru"
+	config.App.FallbackLanguage = ""
+	config.App.Language = "ru"
 	InitLang()
 	if got := pluginCommandDisplayLabel(command); got != "Извлечь файлы" {
 		t.Fatalf("Russian label = %q", got)
@@ -221,7 +222,7 @@ func TestPluginCommandDisplayMetadataTracksActiveLanguage(t *testing.T) {
 		t.Fatalf("translation keys = %#v", got)
 	}
 
-	AppConfig.Language = "en"
+	config.App.Language = "en"
 	InitLang()
 	if got := pluginCommandDisplayLabel(command); got != command.Label {
 		t.Fatalf("English label = %q, want %q", got, command.Label)

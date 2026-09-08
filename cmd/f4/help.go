@@ -13,6 +13,7 @@ import (
 	"github.com/mattn/go-runewidth"
 	embedded "github.com/unxed/f4"
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/vtui"
 )
@@ -122,7 +123,7 @@ func loadHelpLangStrings(code string) map[string]string {
 		return nil
 	}
 	exeDir := filepath.Dir(os.Args[0])
-	userDir := filepath.Join(GetF4ConfigDir(), "lang")
+	userDir := filepath.Join(config.GetF4ConfigDir(), "lang")
 	candidates := []string{
 		filepath.Join(userDir, code+".lng"),
 		filepath.Join(exeDir, "lang", code+".lng"),
@@ -143,7 +144,7 @@ func InitHelpSystem() {
 	versionedEnglishHelp := strings.ReplaceAll(defaultHelpData, "%Ver", getLongVersionInfo())
 	files["help.hlf"] = versionedEnglishHelp
 
-	lang := AppConfig.HelpLanguage
+	lang := config.App.HelpLanguage
 	if lang == "" {
 		lang = "en"
 	}
@@ -151,7 +152,7 @@ func InitHelpSystem() {
 	hasLocalHelp := false
 	if lang != "en" && lang != "eng" {
 		exeDir := filepath.Dir(os.Args[0])
-		userDir := filepath.Join(GetF4ConfigDir(), "help")
+		userDir := filepath.Join(config.GetF4ConfigDir(), "help")
 
 		candidates := []string{
 			filepath.Join(userDir, lang+".hlf"),

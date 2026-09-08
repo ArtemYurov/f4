@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ttyx"
 	"github.com/unxed/vtui"
 )
@@ -299,17 +300,17 @@ func TestHostScaleRefusesNonsense(t *testing.T) {
 // the padding a terminal keeps between its widget and its grid is reported
 // nowhere. Zero by default, so it changes nothing unless it is set.
 func TestOverlayOffsetIsAppliedAndDefaultsToNothing(t *testing.T) {
-	if AppConfig.ImageX11OffsetX != 0 || AppConfig.ImageX11OffsetY != 0 {
+	if config.App.ImageX11OffsetX != 0 || config.App.ImageX11OffsetY != 0 {
 		t.Errorf("the nudge must default to nothing: %d,%d",
-			AppConfig.ImageX11OffsetX, AppConfig.ImageX11OffsetY)
+			config.App.ImageX11OffsetX, config.App.ImageX11OffsetY)
 	}
 
-	saveX, saveY := AppConfig.ImageX11OffsetX, AppConfig.ImageX11OffsetY
-	defer func() { AppConfig.ImageX11OffsetX, AppConfig.ImageX11OffsetY = saveX, saveY }()
+	saveX, saveY := config.App.ImageX11OffsetX, config.App.ImageX11OffsetY
+	defer func() { config.App.ImageX11OffsetX, config.App.ImageX11OffsetY = saveX, saveY }()
 
 	// A nil overlay has no session to ask, so this exercises the arithmetic
 	// on its own: the grid moves by the nudge and by nothing else.
-	AppConfig.ImageX11OffsetX, AppConfig.ImageX11OffsetY = 3, -2
+	config.App.ImageX11OffsetX, config.App.ImageX11OffsetY = 3, -2
 	grid := ttyx.Rect{X: 100, Y: 200, W: 800, H: 600}
 	want := ttyx.Rect{X: 103, Y: 198, W: 800, H: 600}
 	if got := nudgeGrid(grid); got != want {

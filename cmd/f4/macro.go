@@ -9,6 +9,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -867,7 +868,7 @@ func (f *MacroAssignFrame) ProcessKey(e *vtinput.InputEvent) bool {
 
 	removedLua := false
 	if f.mgr.Lua != nil && f.mgr.Lua.Remove(area, key) {
-		scriptDir := filepath.Join(GetF4ConfigDir(), "Macros", "scripts")
+		scriptDir := filepath.Join(config.GetF4ConfigDir(), "Macros", "scripts")
 		scriptPath := filepath.Join(scriptDir, RecordedMacroFileName(area, key))
 		os.Remove(scriptPath)
 		removedLua = true
@@ -886,8 +887,8 @@ func (f *MacroAssignFrame) ProcessKey(e *vtinput.InputEvent) bool {
 		if removedIni {
 			f.mgr.Save()
 		}
-		if AppConfig.MacroRecordFormat == 1 {
-			scriptDir := filepath.Join(GetF4ConfigDir(), "Macros", "scripts")
+		if config.App.MacroRecordFormat == 1 {
+			scriptDir := filepath.Join(config.GetF4ConfigDir(), "Macros", "scripts")
 			err := f.mgr.SaveRecordedMacro(scriptDir, area, key, "", f.mgr.Buffer)
 			if err != nil {
 				msg = fmt.Sprintf("Failed to save Lua macro:\n%v", err)

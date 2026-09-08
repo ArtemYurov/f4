@@ -7,6 +7,7 @@ import (
 	"image/png"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
 
@@ -112,11 +113,11 @@ func TestImageDecoderPriorityAndOverride(t *testing.T) {
 }
 
 func TestParseImageDecoderPriorities(t *testing.T) {
-	got := ParseImageDecoderPriorities("go-std:5 | external:-10 ; nonsense ; bad:x")
+	got := config.ParseImageDecoderPriorities("go-std:5 | external:-10 ; nonsense ; bad:x")
 	if len(got) != 2 || got["go-std"] != 5 || got["external"] != -10 {
 		t.Fatalf("parsed %v", got)
 	}
-	if ParseImageDecoderPriorities("") != nil {
+	if config.ParseImageDecoderPriorities("") != nil {
 		t.Error("an empty setting must produce no overrides at all")
 	}
 }
@@ -125,7 +126,7 @@ func TestImageDecoderPrioritiesFromConfiguration(t *testing.T) {
 	saved := imageDecoders
 	t.Cleanup(func() {
 		imageDecoders = saved
-		SetImageDecoderPriorities(nil)
+		config.SetImageDecoderPriorities(nil)
 	})
 
 	RegisterImageDecoder(ImageDecoder{
@@ -138,11 +139,11 @@ func TestImageDecoderPrioritiesFromConfiguration(t *testing.T) {
 	if list := ImageDecodersFor("a.png"); list[0].Name != "go-std" {
 		t.Fatalf("without an override go-std wins, got %q", list[0].Name)
 	}
-	SetImageDecoderPriorities(map[string]int{"test-low": 99})
+	config.SetImageDecoderPriorities(map[string]int{"test-low": 99})
 	if list := ImageDecodersFor("a.png"); list[0].Name != "test-low" {
 		t.Fatalf("the override must reorder the decoders, got %q", list[0].Name)
 	}
-	SetImageDecoderPriorities(nil)
+	config.SetImageDecoderPriorities(nil)
 	if list := ImageDecodersFor("a.png"); list[0].Name != "go-std" {
 		t.Fatalf("clearing the overrides must restore the order, got %q", list[0].Name)
 	}

@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/vtui"
@@ -352,19 +353,19 @@ func TestNewEditPrompt_DoesNotStorePlaceholderName(t *testing.T) {
 
 func TestDialogAutoComplete_TogglePushedIntoVtui(t *testing.T) {
 	previous := vtui.AutoCompleteEnabled
-	oldConfig := AppConfig
+	oldConfig := config.App
 	t.Cleanup(func() {
 		vtui.AutoCompleteEnabled = previous
-		AppConfig = oldConfig
+		config.App = oldConfig
 	})
 
-	AppConfig.DialogAutoComplete = false
+	config.App.DialogAutoComplete = false
 	applyPathHintSettings()
 	if vtui.AutoCompleteEnabled {
 		t.Error("switching the setting off did not reach vtui")
 	}
 
-	AppConfig.DialogAutoComplete = true
+	config.App.DialogAutoComplete = true
 	applyPathHintSettings()
 	if !vtui.AutoCompleteEnabled {
 		t.Error("switching the setting on did not reach vtui")

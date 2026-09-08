@@ -8,22 +8,10 @@ import (
 	"unicode"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
-)
-
-const (
-	historyTypeCommands = iota
-	historyTypeFolders
-	historyTypeViewEdit
-	historyTypeCount
-)
-
-const (
-	historyShowDateTime = iota
-	historyShowDate
-	historyShowNone
 )
 
 // historySearch adds incremental filtering to a VMenu while keeping the menu
@@ -235,9 +223,9 @@ func (s *historySearch) displayText(record history.HistoryRecord) string {
 func historyTimeColumn(stamp time.Time, mode int) string {
 	layout := "2006-01-02 15:04:05 "
 	switch mode {
-	case historyShowDate:
+	case config.HistoryShowDate:
 		layout = "2006-01-02 "
-	case historyShowNone:
+	case config.HistoryShowNone:
 		return ""
 	}
 	if stamp.IsZero() {
@@ -420,7 +408,7 @@ func (s *historySearch) processKey(e *vtinput.InputEvent) bool {
 		s.applyFilter()
 		return true
 	}
-	if s.showDirPrefix && e.VirtualKeyCode == vtinput.VK_LEFT && ctrl && !shift && !alt && s.timeMode == historyShowDateTime {
+	if s.showDirPrefix && e.VirtualKeyCode == vtinput.VK_LEFT && ctrl && !shift && !alt && s.timeMode == config.HistoryShowDateTime {
 		if s.dirPrefixLen > 4 {
 			s.dirPrefixLen--
 			if s.onPrefixChanged != nil {
@@ -430,7 +418,7 @@ func (s *historySearch) processKey(e *vtinput.InputEvent) bool {
 		}
 		return true
 	}
-	if s.showDirPrefix && e.VirtualKeyCode == vtinput.VK_RIGHT && ctrl && !shift && !alt && s.timeMode == historyShowDateTime {
+	if s.showDirPrefix && e.VirtualKeyCode == vtinput.VK_RIGHT && ctrl && !shift && !alt && s.timeMode == config.HistoryShowDateTime {
 		s.dirPrefixLen++
 		if s.onPrefixChanged != nil {
 			s.onPrefixChanged(s.dirPrefixLen)

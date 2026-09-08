@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/vtui"
 )
@@ -26,7 +27,7 @@ type ColorStyle struct {
 const customColorStyleName = "Custom"
 
 var getUserStylesDir = func() string {
-	return filepath.Join(GetF4ConfigDir(), "styles")
+	return filepath.Join(config.GetF4ConfigDir(), "styles")
 }
 
 func styleFromIni(fallbackName string, ini *ini.File) ColorStyle {
@@ -40,7 +41,7 @@ func styleFromIni(fallbackName string, ini *ini.File) ColorStyle {
 func customStyleFromIni(ini *ini.File) ColorStyle {
 	baseName := strings.TrimSpace(ini.GetString("style", "Base", ""))
 	if baseName == "" || strings.EqualFold(baseName, customColorStyleName) {
-		baseName = strings.TrimSpace(AppConfig.ColorStyle)
+		baseName = strings.TrimSpace(config.App.ColorStyle)
 	}
 	if baseName == "" || strings.EqualFold(baseName, customColorStyleName) {
 		baseName = "Modern"
@@ -174,7 +175,7 @@ func isStandaloneCustomColorIni(ini *ini.File) bool {
 // available as the standalone Custom style. It is a variable for the same
 // reason getUserStylesDir is: tests need to point it somewhere harmless.
 var userColorOverridesPath = func() string {
-	return filepath.Join(GetF4ConfigDir(), "farcolors.ini")
+	return filepath.Join(config.GetF4ConfigDir(), "farcolors.ini")
 }
 
 // ApplyColorStyle rebuilds the palette from scratch: built-in defaults, then

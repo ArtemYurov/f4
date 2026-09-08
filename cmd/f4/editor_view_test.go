@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
@@ -1419,14 +1420,14 @@ func TestEditorBar_PositionFieldKeepsItsWidth(t *testing.T) {
 }
 
 func TestEditorTitle_FullPathSettingKeepsWorkspaceTabCompact(t *testing.T) {
-	old := AppConfig.DisplayFullPathInTitle
-	t.Cleanup(func() { AppConfig.DisplayFullPathInTitle = old })
+	old := config.App.DisplayFullPathInTitle
+	t.Cleanup(func() { config.App.DisplayFullPathInTitle = old })
 
 	path := filepath.Join(t.TempDir(), "nested", "editor.txt")
 	ev := NewEditorView(piecetable.New([]byte("text")), nil, path)
 	defer ev.Close()
 
-	AppConfig.DisplayFullPathInTitle = false
+	config.App.DisplayFullPathInTitle = false
 	if got, want := ev.GetTopBar().GetLeft(), " editor.txt"; got != want {
 		t.Fatalf("short editor title = %q, want %q", got, want)
 	}
@@ -1434,7 +1435,7 @@ func TestEditorTitle_FullPathSettingKeepsWorkspaceTabCompact(t *testing.T) {
 		t.Fatalf("workspace tab title = %q, want %q", got, want)
 	}
 
-	AppConfig.DisplayFullPathInTitle = true
+	config.App.DisplayFullPathInTitle = true
 	if got, want := ev.GetTopBar().GetLeft(), " "+path; got != want {
 		t.Fatalf("full editor title = %q, want %q", got, want)
 	}
@@ -4847,9 +4848,9 @@ func TestEditorView_CrosshairStateAndNoLeak(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	SetDefaultF4Palette()
 
-	oldCrosshair := AppConfig.EditorCrosshair
-	AppConfig.EditorCrosshair = true
-	defer func() { AppConfig.EditorCrosshair = oldCrosshair }()
+	oldCrosshair := config.App.EditorCrosshair
+	config.App.EditorCrosshair = true
+	defer func() { config.App.EditorCrosshair = oldCrosshair }()
 
 	pt := piecetable.New([]byte("line1\nline2\nline3"))
 	ev := NewEditorView(pt, nil, "test.txt")
@@ -5712,10 +5713,10 @@ func TestEditorView_Autocomplete_Logic(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
 	// Настраиваем конфиг
-	oldCfg := AppConfig
-	AppConfig.EditorAutoComplete = true
-	AppConfig.EditorAutoCompleteMask = "*.txt"
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	config.App.EditorAutoComplete = true
+	config.App.EditorAutoCompleteMask = "*.txt"
+	defer func() { config.App = oldCfg }()
 
 	// Создаем текст с повторяющимися словами
 	content := "apple application approach\nbanana\napple"
@@ -6329,8 +6330,8 @@ func TestEditorView_Codepages_AutoDetect(t *testing.T) {
 	defer ev.Close()
 	ev.file = f
 
-	AppConfig.EditorAutodetectCodePage = true
-	AppConfig.EditorDefaultCodePage = 11111 // ANSI
+	config.App.EditorAutodetectCodePage = true
+	config.App.EditorDefaultCodePage = 11111 // ANSI
 	ev.ReloadWithAutoDetect()
 
 	if ev.Codepage != 11111 {

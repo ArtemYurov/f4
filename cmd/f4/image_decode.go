@@ -7,10 +7,10 @@ import (
 	"image"
 	"io"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 	"github.com/woozymasta/png"
@@ -60,7 +60,7 @@ func allImageDecoders() []ImageDecoder {
 	// in the registry, so that clearing the setting brings the built-in
 	// order back without a second copy of the built-in numbers.
 	for i := range out {
-		out[i].Priority = imageDecoderPriorityOf(out[i].Name, out[i].Priority)
+		out[i].Priority = config.ImageDecoderPriorityOf(out[i].Name, out[i].Priority)
 	}
 	return out
 }
@@ -94,64 +94,6 @@ func UnregisterImageDecoder(name string) {
 			return
 		}
 	}
-}
-
-// The priority overrides read from the [Images] section.
-var (
-	imageDecoderPrioMu sync.RWMutex
-	imageDecoderPrio   map[string]int
-)
-
-// SetImageDecoderPriorities replaces the overrides. A nil or empty map means
-// every decoder keeps the priority it registered with.
-func SetImageDecoderPriorities(prio map[string]int) {
-	imageDecoderPrioMu.Lock()
-	defer imageDecoderPrioMu.Unlock()
-	if len(prio) == 0 {
-		imageDecoderPrio = nil
-		return
-	}
-	imageDecoderPrio = make(map[string]int, len(prio))
-	for name, value := range prio {
-		imageDecoderPrio[name] = value
-	}
-}
-
-// imageDecoderPriorityOf returns the priority a decoder should be sorted by.
-func imageDecoderPriorityOf(name string, registered int) int {
-	imageDecoderPrioMu.RLock()
-	defer imageDecoderPrioMu.RUnlock()
-	if value, ok := imageDecoderPrio[name]; ok {
-		return value
-	}
-	return registered
-}
-
-// ParseImageDecoderPriorities reads the DecoderPriority setting: pairs of a
-// decoder name and a number, separated by commas, semicolons or vertical
-// bars. A pair that does not parse is dropped rather than turned into an
-// error, because a typo in the settings file should not stop pictures from
-// opening.
-func ParseImageDecoderPriorities(spec string) map[string]int {
-	out := make(map[string]int)
-	for _, part := range strings.FieldsFunc(spec, func(r rune) bool {
-		return r == ',' || r == ';' || r == '|'
-	}) {
-		colon := strings.LastIndex(part, ":")
-		if colon <= 0 {
-			continue
-		}
-		name := strings.TrimSpace(part[:colon])
-		value, err := strconv.Atoi(strings.TrimSpace(part[colon+1:]))
-		if name == "" || err != nil {
-			continue
-		}
-		out[name] = value
-	}
-	if len(out) == 0 {
-		return nil
-	}
-	return out
 }
 
 func imageExtension(path string) string {

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -21,13 +22,13 @@ func TestViewer_Issue875_MenuChoiceDoesNotStickToNextFile(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	testutil.DrainPendingTasks()
 
-	oldState, oldAuto, oldDefault := GlobalFileState, AppConfig.ViewerAutodetectCodePage, AppConfig.ViewerDefaultCodePage
+	oldState, oldAuto, oldDefault := GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage
 	defer func() {
-		GlobalFileState, AppConfig.ViewerAutodetectCodePage, AppConfig.ViewerDefaultCodePage = oldState, oldAuto, oldDefault
+		GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage = oldState, oldAuto, oldDefault
 	}()
 	GlobalFileState = nil // no per-file memory in this test: the point is the globals
-	AppConfig.ViewerAutodetectCodePage = true
-	AppConfig.ViewerDefaultCodePage = 65001
+	config.App.ViewerAutodetectCodePage = true
+	config.App.ViewerDefaultCodePage = 65001
 
 	dir := t.TempDir()
 	v := vfs.NewOSVFS(dir)
@@ -70,11 +71,11 @@ func TestViewer_Issue875_MenuChoiceDoesNotStickToNextFile(t *testing.T) {
 	}
 	first.Close()
 
-	if !AppConfig.ViewerAutodetectCodePage {
+	if !config.App.ViewerAutodetectCodePage {
 		t.Error("picking a codepage for one file switched global auto-detect off")
 	}
-	if AppConfig.ViewerDefaultCodePage != 65001 {
-		t.Errorf("picking a codepage for one file rewrote the global default to %d", AppConfig.ViewerDefaultCodePage)
+	if config.App.ViewerDefaultCodePage != 65001 {
+		t.Errorf("picking a codepage for one file rewrote the global default to %d", config.App.ViewerDefaultCodePage)
 	}
 
 	// The next file must still be detected, not opened in 866.
@@ -102,13 +103,13 @@ func TestViewer_Issue875_MenuAutoDetectDetectsRegardlessOfGlobalSwitch(t *testin
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	testutil.DrainPendingTasks()
 
-	oldState, oldAuto, oldDefault := GlobalFileState, AppConfig.ViewerAutodetectCodePage, AppConfig.ViewerDefaultCodePage
+	oldState, oldAuto, oldDefault := GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage
 	defer func() {
-		GlobalFileState, AppConfig.ViewerAutodetectCodePage, AppConfig.ViewerDefaultCodePage = oldState, oldAuto, oldDefault
+		GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage = oldState, oldAuto, oldDefault
 	}()
 	GlobalFileState = nil
-	AppConfig.ViewerAutodetectCodePage = false
-	AppConfig.ViewerDefaultCodePage = 1252
+	config.App.ViewerAutodetectCodePage = false
+	config.App.ViewerDefaultCodePage = 1252
 
 	dir := t.TempDir()
 	v := vfs.NewOSVFS(dir)
@@ -130,7 +131,7 @@ func TestViewer_Issue875_MenuAutoDetectDetectsRegardlessOfGlobalSwitch(t *testin
 	if vv.Codepage != 866 {
 		t.Errorf("Auto-detect from the menu gave %d, want 866", vv.Codepage)
 	}
-	if AppConfig.ViewerAutodetectCodePage {
+	if config.App.ViewerAutodetectCodePage {
 		t.Error("Auto-detect from the menu flipped the global switch")
 	}
 }

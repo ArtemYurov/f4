@@ -21,6 +21,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ttyx"
 	"github.com/unxed/vtui"
 )
@@ -79,7 +80,7 @@ func InstallX11Overlay() {
 // there is nothing to connect to, when the terminal window could not be
 // identified, or when the option is off.
 func newX11ImageOverlay() *x11ImageOverlay {
-	if !AppConfig.ImageOverlay {
+	if !config.App.ImageOverlay {
 		return nil
 	}
 	sess := sharedTTYXSession()
@@ -394,8 +395,8 @@ func (x *x11ImageOverlay) refineGrid(grid ttyx.Rect) ttyx.Rect {
 // nudgeGrid applies the setting, and is separate so that the arithmetic can be
 // tested without a display.
 func nudgeGrid(grid ttyx.Rect) ttyx.Rect {
-	grid.X += AppConfig.ImageX11OffsetX
-	grid.Y += AppConfig.ImageX11OffsetY
+	grid.X += config.App.ImageX11OffsetX
+	grid.Y += config.App.ImageX11OffsetY
 	return grid
 }
 

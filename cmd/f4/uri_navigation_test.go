@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -95,9 +96,9 @@ func (v *navigationURIVFS) Stat(context.Context, string) (vfs.VFSItem, error) {
 func TestNavigateToPathRestoresRegisteredURIAsynchronously(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldSync := AppConfig.SyncPanelLoad
-	AppConfig.SyncPanelLoad = false
-	t.Cleanup(func() { AppConfig.SyncPanelLoad = oldSync })
+	oldSync := config.App.SyncPanelLoad
+	config.App.SyncPanelLoad = false
+	t.Cleanup(func() { config.App.SyncPanelLoad = oldSync })
 
 	target := "core-uri-navigation-test://profile/folder-id"
 	mounted := &navigationURIVFS{NullVFS: vfs.NewNullVFS(0), uri: target}
@@ -169,9 +170,9 @@ func TestNavigateToPathDoesNotFeedUnavailableURIToCurrentVFS(t *testing.T) {
 func TestPendingURIMountIsPersistedAndPlainEscapeCancelsIt(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldSync := AppConfig.SyncPanelLoad
-	AppConfig.SyncPanelLoad = false
-	t.Cleanup(func() { AppConfig.SyncPanelLoad = oldSync })
+	oldSync := config.App.SyncPanelLoad
+	config.App.SyncPanelLoad = false
+	t.Cleanup(func() { config.App.SyncPanelLoad = oldSync })
 
 	target := "core-uri-blocking-test://profile/folder-id"
 	provider := &blockingNavigationURIProvider{
@@ -224,9 +225,9 @@ func TestPendingURIMountIsPersistedAndPlainEscapeCancelsIt(t *testing.T) {
 func TestFolderHistoryBackUsesPendingVisualTargetInsteadOfSourceVFS(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldSync := AppConfig.SyncPanelLoad
-	AppConfig.SyncPanelLoad = false
-	t.Cleanup(func() { AppConfig.SyncPanelLoad = oldSync })
+	oldSync := config.App.SyncPanelLoad
+	config.App.SyncPanelLoad = false
+	t.Cleanup(func() { config.App.SyncPanelLoad = oldSync })
 
 	root := t.TempDir()
 	sourcePath := filepath.Join(root, "source")
@@ -307,9 +308,9 @@ func TestFolderHistoryBackUsesPendingVisualTargetInsteadOfSourceVFS(t *testing.T
 func TestFolderHistoryCommitsPositionOnlyAfterSuccessfulURIMount(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldSync := AppConfig.SyncPanelLoad
-	AppConfig.SyncPanelLoad = false
-	t.Cleanup(func() { AppConfig.SyncPanelLoad = oldSync })
+	oldSync := config.App.SyncPanelLoad
+	config.App.SyncPanelLoad = false
+	t.Cleanup(func() { config.App.SyncPanelLoad = oldSync })
 
 	bad := "core-uri-history-test://missing/folder"
 	good := "core-uri-history-test://available/folder"

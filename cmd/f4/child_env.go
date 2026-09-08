@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync/atomic"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
 
@@ -87,8 +88,8 @@ func privateEnvEntry(kv string) bool {
 
 var currentHostShellMode = func() ShellMode {
 	return resolveShellMode(ShellModeConfig{
-		ConsoleMode:      AppConfig.ConsoleMode,
-		ConsoleOverlayUI: AppConfig.ConsoleOverlayUI,
+		ConsoleMode:      config.App.ConsoleMode,
+		ConsoleOverlayUI: config.App.ConsoleOverlayUI,
 	})
 }
 
@@ -145,7 +146,7 @@ func buildChildEnv(env []string, graphics, kittyTerm bool) []string {
 // up breaks every program that opens the terminfo database, which is a far
 // worse trade than a picture drawn with characters.
 func announceKittyTerm() bool {
-	if !AppConfig.AnnounceKittyTerm {
+	if !config.App.AnnounceKittyTerm {
 		return false
 	}
 	return terminfoExists(kittyTermName)

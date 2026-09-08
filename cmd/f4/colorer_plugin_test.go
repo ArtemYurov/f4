@@ -16,6 +16,7 @@ import (
 	"github.com/unxed/f4/internal/colorer"
 	"github.com/unxed/f4/internal/piecetable"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
 
@@ -397,9 +398,9 @@ func TestColorer_DownloadColorerSchemas(t *testing.T) {
 
 	// Preserve an initialized config cache when this test temporarily swaps
 	// the directory below. Otherwise cleanup can restore an empty cache while
-	// configDirOnce remains consumed, making later shuffled tests resolve
+	// config.ConfigDirOnce remains consumed, making later shuffled tests resolve
 	// relative paths.
-	_ = GetF4ConfigDir()
+	_ = config.GetF4ConfigDir()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/zip")
@@ -410,17 +411,17 @@ func TestColorer_DownloadColorerSchemas(t *testing.T) {
 	defer ts.Close()
 
 	tmpDir := t.TempDir()
-	oldConfigDirFunc := getUserConfigIniPath
-	getUserConfigIniPath = func() string { return filepath.Join(tmpDir, "settings.ini") }
-	origPathsFunc := getConfigIniPaths
-	getConfigIniPaths = func() []string { return []string{filepath.Join(tmpDir, "settings.ini")} }
-	oldConfigDir := cachedF4ConfigDir
-	cachedF4ConfigDir = tmpDir
+	oldConfigDirFunc := config.GetUserConfigIniPath
+	config.GetUserConfigIniPath = func() string { return filepath.Join(tmpDir, "settings.ini") }
+	origPathsFunc := config.GetConfigIniPaths
+	config.GetConfigIniPaths = func() []string { return []string{filepath.Join(tmpDir, "settings.ini")} }
+	oldConfigDir := config.CachedF4ConfigDir
+	config.CachedF4ConfigDir = tmpDir
 
 	defer func() {
-		getUserConfigIniPath = oldConfigDirFunc
-		getConfigIniPaths = origPathsFunc
-		cachedF4ConfigDir = oldConfigDir
+		config.GetUserConfigIniPath = oldConfigDirFunc
+		config.GetConfigIniPaths = origPathsFunc
+		config.CachedF4ConfigDir = oldConfigDir
 	}()
 
 	oldURL := colorerDownloadURL

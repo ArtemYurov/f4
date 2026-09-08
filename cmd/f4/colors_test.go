@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/vtui"
 	"os"
@@ -54,9 +55,9 @@ func TestColors_InitColors_FromIni(t *testing.T) {
 	vtui.SetDefaultPalette()
 	SetDefaultF4Palette()
 
-	oldCfg := AppConfig
-	AppConfig.EnforceColorCorrection = false
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	config.App.EnforceColorCorrection = false
+	defer func() { config.App = oldCfg }()
 
 	tmpDir := t.TempDir()
 	iniPath := filepath.Join(tmpDir, "farcolors.ini")
@@ -101,14 +102,14 @@ Editor.Text = foreground:#A0A0A0 | background:#232323
 func TestColors_HelpBoxOverrideReachesHelpViewFrame(t *testing.T) {
 	oldPalette := append([]uint64(nil), vtui.Palette...)
 	oldTheme := vtui.ThemePalette
-	oldCfg := AppConfig
+	oldCfg := config.App
 	t.Cleanup(func() {
 		vtui.Palette = oldPalette
 		vtui.ThemePalette = oldTheme
-		AppConfig = oldCfg
+		config.App = oldCfg
 	})
 
-	AppConfig.EnforceColorCorrection = false
+	config.App.EnforceColorCorrection = false
 	vtui.SetDefaultPalette()
 	SetDefaultF4Palette()
 	InitColors(ini.Parse(strings.NewReader(`[farcolors]
@@ -134,14 +135,14 @@ Help.Box = foreground:#102030 | background:#405060
 func TestColors_HelpScrollbarOverrideReachesHelpViewScrollbar(t *testing.T) {
 	oldPalette := append([]uint64(nil), vtui.Palette...)
 	oldTheme := vtui.ThemePalette
-	oldCfg := AppConfig
+	oldCfg := config.App
 	t.Cleanup(func() {
 		vtui.Palette = oldPalette
 		vtui.ThemePalette = oldTheme
-		AppConfig = oldCfg
+		config.App = oldCfg
 	})
 
-	AppConfig.EnforceColorCorrection = false
+	config.App.EnforceColorCorrection = false
 	vtui.SetDefaultPalette()
 	SetDefaultF4Palette()
 	InitColors(ini.Parse(strings.NewReader(`[farcolors]
@@ -262,9 +263,9 @@ func TestColors_ExportColors_Grouped(t *testing.T) {
 func TestColors_ExportColorsPreservesAuthoredExpressions(t *testing.T) {
 	vtui.SetDefaultPalette()
 	SetDefaultF4Palette()
-	oldCfg := AppConfig
-	AppConfig.EnforceColorCorrection = true
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	config.App.EnforceColorCorrection = true
+	defer func() { config.App = oldCfg }()
 
 	authored := ini.Parse(strings.NewReader(`[farcolors]
 Panel.Cursor.Inactive.Selected = foreground:#feff00 | background:#555753
@@ -298,9 +299,9 @@ WarnDialog.Edit.Unchanged = foreground:#a0a0a0 | background:#0000a0
 func TestColors_ExportColorsUsesCurrentPaletteAfterDirectChange(t *testing.T) {
 	vtui.SetDefaultPalette()
 	SetDefaultF4Palette()
-	oldCfg := AppConfig
-	AppConfig.EnforceColorCorrection = true
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	config.App.EnforceColorCorrection = true
+	defer func() { config.App = oldCfg }()
 
 	authored := ini.Parse(strings.NewReader(`[farcolors]
 Panel.Text = foreground:#123456 | background:#654321

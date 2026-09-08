@@ -1,11 +1,15 @@
 package main
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/unxed/f4/internal/config"
+)
 
 func TestFadeSyntax_DisabledByDefault(t *testing.T) {
-	old := AppConfig.EditorSyntaxAnimation
-	AppConfig.EditorSyntaxAnimation = false
-	t.Cleanup(func() { AppConfig.EditorSyntaxAnimation = old })
+	old := config.App.EditorSyntaxAnimation
+	config.App.EditorSyntaxAnimation = false
+	t.Cleanup(func() { config.App.EditorSyntaxAnimation = old })
 
 	ev := &EditorView{}
 	syntax := []uint64{0x123, 0x456, 0x789}

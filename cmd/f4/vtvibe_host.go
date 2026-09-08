@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/vtvibe"
@@ -42,7 +43,7 @@ func aiSession() *vtvibe.Session {
 }
 
 func vtvibeIniPath() string {
-	return filepath.Join(GetF4ConfigDir(), vtvibeIniName)
+	return filepath.Join(config.GetF4ConfigDir(), vtvibeIniName)
 }
 
 // vtvibeConfig re-reads the settings on every use, so editing vtvibe.ini or

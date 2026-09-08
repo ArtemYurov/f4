@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
 
@@ -28,11 +29,6 @@ const (
 	// decoder: starting a process is dear, so it only runs when nothing
 	// inside f4 can read the file.
 	externalImagePriority = -10
-
-	// defaultImageExternalTimeout bounds one conversion, in seconds. A raw
-	// photograph on a slow machine is a few seconds; a converter that has
-	// gone to sleep on a malformed file is forever.
-	defaultImageExternalTimeout = 20
 
 	// externalImageStderrLimit is how much of the converter's complaint
 	// ends up in the error message the viewer shows in its title.
@@ -127,9 +123,9 @@ func findExternalImageTool() (externalImageTool, bool) {
 
 // configuredExternalImageTimeout reads the [Images] ExternalTimeout setting.
 func configuredExternalImageTimeout() time.Duration {
-	seconds := AppConfig.ImageExternalTimeout
+	seconds := config.App.ImageExternalTimeout
 	if seconds <= 0 {
-		seconds = defaultImageExternalTimeout
+		seconds = config.DefaultImageExternalTimeout
 	}
 	return time.Duration(seconds) * time.Second
 }

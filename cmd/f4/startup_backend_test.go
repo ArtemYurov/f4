@@ -1,35 +1,36 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/config"
 	"path/filepath"
 	"testing"
 )
 
 func TestParseStartupModeRoundTrip(t *testing.T) {
-	for _, mode := range []StartupMode{StartupModeAuto, StartupModeTTY, StartupModeGui} {
-		if got := ParseStartupMode(mode.String()); got != mode {
-			t.Errorf("ParseStartupMode(%q) = %v, want %v", mode.String(), got, mode)
+	for _, mode := range []config.StartupMode{config.StartupModeAuto, config.StartupModeTTY, config.StartupModeGui} {
+		if got := config.ParseStartupMode(mode.String()); got != mode {
+			t.Errorf("config.ParseStartupMode(%q) = %v, want %v", mode.String(), got, mode)
 		}
 	}
 
 	for _, tt := range []struct {
 		value string
-		want  StartupMode
+		want  config.StartupMode
 	}{
-		{value: "TTY", want: StartupModeTTY},
-		{value: " console ", want: StartupModeTTY},
-		{value: "terminal", want: StartupModeTTY},
-		{value: "GUI", want: StartupModeGui},
-		{value: "graphics", want: StartupModeGui},
-		{value: "window", want: StartupModeGui},
-		{value: "", want: StartupModeAuto},
-		{value: "auto", want: StartupModeAuto},
+		{value: "TTY", want: config.StartupModeTTY},
+		{value: " console ", want: config.StartupModeTTY},
+		{value: "terminal", want: config.StartupModeTTY},
+		{value: "GUI", want: config.StartupModeGui},
+		{value: "graphics", want: config.StartupModeGui},
+		{value: "window", want: config.StartupModeGui},
+		{value: "", want: config.StartupModeAuto},
+		{value: "auto", want: config.StartupModeAuto},
 		// A value this build does not know must degrade to auto-detection
 		// rather than leave f4 with no way to start.
-		{value: "holographic", want: StartupModeAuto},
+		{value: "holographic", want: config.StartupModeAuto},
 	} {
-		if got := ParseStartupMode(tt.value); got != tt.want {
-			t.Errorf("ParseStartupMode(%q) = %v, want %v", tt.value, got, tt.want)
+		if got := config.ParseStartupMode(tt.value); got != tt.want {
+			t.Errorf("config.ParseStartupMode(%q) = %v, want %v", tt.value, got, tt.want)
 		}
 	}
 }
@@ -60,8 +61,8 @@ func TestNormalizeStartupGuiBackend(t *testing.T) {
 		{value: "vulkan", want: ""},
 		{value: "ansi", want: ""},
 	} {
-		if got := normalizeStartupGuiBackend(tt.value); got != tt.want {
-			t.Errorf("normalizeStartupGuiBackend(%q) = %q, want %q", tt.value, got, tt.want)
+		if got := config.NormalizeStartupGuiBackend(tt.value); got != tt.want {
+			t.Errorf("config.NormalizeStartupGuiBackend(%q) = %q, want %q", tt.value, got, tt.want)
 		}
 	}
 }
@@ -80,8 +81,8 @@ func TestNormalizeStartupTTYBackend(t *testing.T) {
 		{value: "gogpu", want: ""},
 		{value: "nonsense", want: ""},
 	} {
-		if got := normalizeStartupTTYBackend(tt.value); got != tt.want {
-			t.Errorf("normalizeStartupTTYBackend(%q) = %q, want %q", tt.value, got, tt.want)
+		if got := config.NormalizeStartupTTYBackend(tt.value); got != tt.want {
+			t.Errorf("config.NormalizeStartupTTYBackend(%q) = %q, want %q", tt.value, got, tt.want)
 		}
 	}
 }
@@ -105,7 +106,7 @@ func TestResolveStartupBackendPrecedence(t *testing.T) {
 		{name: "flag typo is not swallowed", flagValue: "gogpuu", flagGiven: true, configured: "", want: "gogpuu"},
 		{name: "config typo falls back to detect", flagValue: "", flagGiven: false, configured: "gogpuu", want: ""},
 	} {
-		got := resolveStartupBackend(tt.flagValue, tt.flagGiven, tt.configured, normalizeStartupGuiBackend)
+		got := resolveStartupBackend(tt.flagValue, tt.flagGiven, tt.configured, config.NormalizeStartupGuiBackend)
 		if got != tt.want {
 			t.Errorf("%s: resolveStartupBackend(%q, %v, %q) = %q, want %q",
 				tt.name, tt.flagValue, tt.flagGiven, tt.configured, got, tt.want)
@@ -114,10 +115,10 @@ func TestResolveStartupBackendPrecedence(t *testing.T) {
 }
 
 func TestStartupChoiceHelpers(t *testing.T) {
-	if got := startupModeChoiceIndex(StartupModeGui); startupModeChoices[got] != StartupModeGui {
+	if got := startupModeChoiceIndex(config.StartupModeGui); startupModeChoices[got] != config.StartupModeGui {
 		t.Errorf("startupModeChoiceIndex(gui) = %d, which maps back to %v", got, startupModeChoices[got])
 	}
-	if got := startupModeChoiceIndex(StartupMode(42)); got != 0 {
+	if got := startupModeChoiceIndex(config.StartupMode(42)); got != 0 {
 		t.Errorf("startupModeChoiceIndex(unknown) = %d, want 0 (auto)", got)
 	}
 
@@ -145,7 +146,7 @@ func TestStartupChoiceHelpers(t *testing.T) {
 	if got := startupChoiceAt(choices, len(choices)); got != "" {
 		t.Errorf("startupChoiceAt(out of range) = %q, want the auto entry", got)
 	}
-	if got := startupChoiceAt(startupModeChoices, 1); got != StartupModeTTY {
+	if got := startupChoiceAt(startupModeChoices, 1); got != config.StartupModeTTY {
 		t.Errorf("startupChoiceAt(modes, 1) = %v, want tty", got)
 	}
 }
@@ -153,45 +154,45 @@ func TestStartupChoiceHelpers(t *testing.T) {
 func TestStartupSettingsConfigRoundtrip(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	oldCfg := AppConfig
-	oldGetConfig := getUserConfigIniPath
+	oldCfg := config.App
+	oldGetConfig := config.GetUserConfigIniPath
 	defer func() {
-		AppConfig = oldCfg
-		getUserConfigIniPath = oldGetConfig
+		config.App = oldCfg
+		config.GetUserConfigIniPath = oldGetConfig
 	}()
-	getUserConfigIniPath = func() string {
+	config.GetUserConfigIniPath = func() string {
 		return filepath.Join(tmpDir, "settings.ini")
 	}
 
-	AppConfig.StartupMode = StartupModeGui
-	AppConfig.GuiBackend = "gogpu"
-	AppConfig.TTYBackend = "winapi"
-	SaveConfig()
+	config.App.StartupMode = config.StartupModeGui
+	config.App.GuiBackend = "gogpu"
+	config.App.TTYBackend = "winapi"
+	config.SaveConfig()
 
-	LoadConfig()
-	if AppConfig.StartupMode != StartupModeGui {
-		t.Errorf("StartupMode = %v, want gui", AppConfig.StartupMode)
+	config.LoadConfig()
+	if config.App.StartupMode != config.StartupModeGui {
+		t.Errorf("config.StartupMode = %v, want gui", config.App.StartupMode)
 	}
-	if AppConfig.GuiBackend != "gogpu" {
-		t.Errorf("GuiBackend = %q, want gogpu", AppConfig.GuiBackend)
+	if config.App.GuiBackend != "gogpu" {
+		t.Errorf("GuiBackend = %q, want gogpu", config.App.GuiBackend)
 	}
-	if AppConfig.TTYBackend != "winapi" {
-		t.Errorf("TTYBackend = %q, want winapi", AppConfig.TTYBackend)
+	if config.App.TTYBackend != "winapi" {
+		t.Errorf("TTYBackend = %q, want winapi", config.App.TTYBackend)
 	}
 
 	// Clearing the backends back to automatic selection has to survive the
 	// round trip too, otherwise a user could never undo a pinned backend.
-	AppConfig.StartupMode = StartupModeTTY
-	AppConfig.GuiBackend = ""
-	AppConfig.TTYBackend = ""
-	SaveConfig()
+	config.App.StartupMode = config.StartupModeTTY
+	config.App.GuiBackend = ""
+	config.App.TTYBackend = ""
+	config.SaveConfig()
 
-	LoadConfig()
-	if AppConfig.StartupMode != StartupModeTTY {
-		t.Errorf("StartupMode = %v, want tty", AppConfig.StartupMode)
+	config.LoadConfig()
+	if config.App.StartupMode != config.StartupModeTTY {
+		t.Errorf("config.StartupMode = %v, want tty", config.App.StartupMode)
 	}
-	if AppConfig.GuiBackend != "" || AppConfig.TTYBackend != "" {
-		t.Errorf("backends = (%q, %q), want both empty", AppConfig.GuiBackend, AppConfig.TTYBackend)
+	if config.App.GuiBackend != "" || config.App.TTYBackend != "" {
+		t.Errorf("backends = (%q, %q), want both empty", config.App.GuiBackend, config.App.TTYBackend)
 	}
 }
 
@@ -201,26 +202,26 @@ func TestStartupSettingsConfigRoundtrip(t *testing.T) {
 func TestStartupConfigDefaultsAreAuto(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	oldCfg := AppConfig
-	oldGetConfig := getUserConfigIniPath
+	oldCfg := config.App
+	oldGetConfig := config.GetUserConfigIniPath
 	defer func() {
-		AppConfig = oldCfg
-		getUserConfigIniPath = oldGetConfig
+		config.App = oldCfg
+		config.GetUserConfigIniPath = oldGetConfig
 	}()
-	getUserConfigIniPath = func() string {
+	config.GetUserConfigIniPath = func() string {
 		return filepath.Join(tmpDir, "settings.ini")
 	}
 
-	AppConfig.StartupMode = StartupModeGui
-	AppConfig.GuiBackend = "x11"
-	AppConfig.TTYBackend = "ansi"
+	config.App.StartupMode = config.StartupModeGui
+	config.App.GuiBackend = "x11"
+	config.App.TTYBackend = "ansi"
 
-	LoadConfig()
-	if AppConfig.StartupMode != StartupModeAuto {
-		t.Errorf("StartupMode = %v, want auto for an absent [Startup] section", AppConfig.StartupMode)
+	config.LoadConfig()
+	if config.App.StartupMode != config.StartupModeAuto {
+		t.Errorf("config.StartupMode = %v, want auto for an absent [Startup] section", config.App.StartupMode)
 	}
-	if AppConfig.GuiBackend != "" || AppConfig.TTYBackend != "" {
+	if config.App.GuiBackend != "" || config.App.TTYBackend != "" {
 		t.Errorf("backends = (%q, %q), want both empty for an absent [Startup] section",
-			AppConfig.GuiBackend, AppConfig.TTYBackend)
+			config.App.GuiBackend, config.App.TTYBackend)
 	}
 }

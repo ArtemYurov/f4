@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/ffibridge"
 	"github.com/unxed/vtui"
 )
@@ -81,7 +82,7 @@ type PermissionStore struct {
 
 // DefaultPermissionStorePath is where grants live.
 func DefaultPermissionStorePath() string {
-	return filepath.Join(GetF4ConfigDir(), "plugin_permissions.json")
+	return filepath.Join(config.GetF4ConfigDir(), "plugin_permissions.json")
 }
 
 // LoadPermissionStore reads the store, returning an empty one when there is

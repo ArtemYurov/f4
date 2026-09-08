@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/vfs"
 	"github.com/vmihailenco/msgpack/v5"
 )
@@ -82,9 +83,9 @@ func findPluginCommandByID(commands []vfs.PluginCommand, id string) (vfs.PluginC
 
 func TestRPCPluginCommandsRegisterLocalizeExecuteAndUnregister(t *testing.T) {
 	const commandID = "test.rpc-command.greeting"
-	oldLanguage := AppConfig.Language
-	AppConfig.Language = "ru"
-	t.Cleanup(func() { AppConfig.Language = oldLanguage })
+	oldLanguage := config.App.Language
+	config.App.Language = "ru"
+	t.Cleanup(func() { config.App.Language = oldLanguage })
 
 	transport := &rpcCommandTestTransport{}
 	registrations := &pluginSessionRegistrations{}

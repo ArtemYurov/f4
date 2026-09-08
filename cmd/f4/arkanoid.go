@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -737,7 +738,7 @@ type ArkScore struct {
 var ArkHighScores []ArkScore
 
 func loadArkScores() {
-	cfgDir, _ := userConfigDir()
+	cfgDir, _ := config.UserConfigDir()
 	p := filepath.Join(cfgDir, "f4", "ark_scores.json")
 	data, err := os.ReadFile(p)
 	if err == nil {
@@ -746,7 +747,7 @@ func loadArkScores() {
 }
 
 func saveArkScores() {
-	cfgDir, _ := userConfigDir()
+	cfgDir, _ := config.UserConfigDir()
 	p := filepath.Join(cfgDir, "f4", "ark_scores.json")
 	os.MkdirAll(filepath.Dir(p), 0755)
 	data, _ := json.MarshalIndent(ArkHighScores, "", "  ")

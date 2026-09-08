@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -155,9 +156,9 @@ func TestCommandPalettePendingProviderCancelRevalidatesTask(t *testing.T) {
 }
 
 func TestCommandPaletteSearchFirstFocusToggleIsStateSpecific(t *testing.T) {
-	oldMode := AppConfig.NavigationMode
-	AppConfig.NavigationMode = NavigationSearchFirst
-	t.Cleanup(func() { AppConfig.NavigationMode = oldMode })
+	oldMode := config.App.NavigationMode
+	config.App.NavigationMode = config.NavigationSearchFirst
+	t.Cleanup(func() { config.App.NavigationMode = oldMode })
 
 	pf, _, _ := newSearchFirstTestFrame(t)
 	setDirectPaletteTopFrame(t, pf)

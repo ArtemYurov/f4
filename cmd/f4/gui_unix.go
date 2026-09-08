@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync/atomic"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
 
@@ -39,7 +40,7 @@ func RunGui(backend string) error {
 		var startupComplete atomic.Bool
 		return runGuiWithStartupRecovery(backend, &startupComplete, func() error {
 			applyDarwinDockIcon(backend)
-			return vtui.RunInGUIWindow(AppConfig.GuiCols, AppConfig.GuiRows, backend, effectiveGuiFont(), float64(AppConfig.GuiFontSize), func() {
+			return vtui.RunInGUIWindow(config.App.GuiCols, config.App.GuiRows, backend, effectiveGuiFont(), float64(config.App.GuiFontSize), func() {
 				SetupUI()
 				openDashEFileIfRequested()
 				restoreGuiWindowPosition()

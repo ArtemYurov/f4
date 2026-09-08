@@ -3,15 +3,16 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
 
 func TestHostConsole_LeaveReleasesStaleMouseCapture_Issue856(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
-	oldNavigationMode := AppConfig.NavigationMode
-	AppConfig.NavigationMode = NavigationClassic
-	t.Cleanup(func() { AppConfig.NavigationMode = oldNavigationMode })
+	oldNavigationMode := config.App.NavigationMode
+	config.App.NavigationMode = config.NavigationClassic
+	t.Cleanup(func() { config.App.NavigationMode = oldNavigationMode })
 
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)

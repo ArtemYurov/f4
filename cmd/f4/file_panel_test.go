@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/testutil"
@@ -83,17 +84,17 @@ NormalColor = foreground:#FFFFFF
 	dir := &fileEntry{VFSItem: vfs.VFSItem{Name: "work", IsDir: true}}
 
 	// Column 0 should have the marker '/' prepended
-	oldConfig := AppConfig
-	defer func() { AppConfig = oldConfig }()
+	oldConfig := config.App
+	defer func() { config.App = oldConfig }()
 
 	// 1. By default, ShowDirPrefix is false, so no prefix should be shown
-	AppConfig.ShowDirPrefix = false
+	config.App.ShowDirPrefix = false
 	if got, want := dir.GetCellText(0), "work"; got != want {
 		t.Errorf("Expected dir name without prefix, got %q, want %q", got, want)
 	}
 
 	// 2. When ShowDirPrefix is true, the marker '/' should be prepended (no space)
-	AppConfig.ShowDirPrefix = true
+	config.App.ShowDirPrefix = true
 	if got, want := dir.GetCellText(0), "/work"; got != want {
 		t.Errorf("Expected dir name with '/' prefix, got %q, want %q", got, want)
 	}
@@ -447,9 +448,9 @@ func (m *panelStatCountingVFS) Stat(ctx context.Context, p string) (vfs.VFSItem,
 func TestFileSystemPanel_ReadDirectoryReusesRootStatForUpEntry(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
-	oldSyncPanelLoad := AppConfig.SyncPanelLoad
-	AppConfig.SyncPanelLoad = true
-	defer func() { AppConfig.SyncPanelLoad = oldSyncPanelLoad }()
+	oldSyncPanelLoad := config.App.SyncPanelLoad
+	config.App.SyncPanelLoad = true
+	defer func() { config.App.SyncPanelLoad = oldSyncPanelLoad }()
 
 	want := vfs.VFSItem{
 		Name:     "/",
@@ -490,9 +491,9 @@ func TestFileSystemPanel_ReadDirectoryReusesRootStatForUpEntry(t *testing.T) {
 func TestFileSystemPanel_ReadDirectoryStatsDistinctParent(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
-	oldSyncPanelLoad := AppConfig.SyncPanelLoad
-	AppConfig.SyncPanelLoad = true
-	defer func() { AppConfig.SyncPanelLoad = oldSyncPanelLoad }()
+	oldSyncPanelLoad := config.App.SyncPanelLoad
+	config.App.SyncPanelLoad = true
+	defer func() { config.App.SyncPanelLoad = oldSyncPanelLoad }()
 
 	dirMTime := time.Unix(100, 0)
 	parentMTime := time.Unix(200, 0)
@@ -557,8 +558,8 @@ func TestFileSystemPanel_ShowHiddenFiles(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
 	// Protect global config from leakage
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
 
 	tmp := t.TempDir()
 	if err := os.WriteFile(filepath.Join(tmp, "normal.txt"), []byte(""), 0600); err != nil {
@@ -571,7 +572,7 @@ func TestFileSystemPanel_ShowHiddenFiles(t *testing.T) {
 	v := vfs.NewOSVFS(tmp)
 
 	// 1. Show hidden files
-	AppConfig.ShowHiddenFiles = true
+	config.App.ShowHiddenFiles = true
 	fp1 := NewFileSystemPanel(0, 0, 80, 24, v)
 	waitForLoad(t, fp1)
 
@@ -587,7 +588,7 @@ func TestFileSystemPanel_ShowHiddenFiles(t *testing.T) {
 	}
 
 	// 2. Hide hidden files
-	AppConfig.ShowHiddenFiles = false
+	config.App.ShowHiddenFiles = false
 	fp2 := NewFileSystemPanel(0, 0, 80, 24, v)
 	waitForLoad(t, fp2)
 
@@ -672,9 +673,9 @@ done2:
 	}
 }
 func TestFileSystemPanel_SelectedInfo(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.ShowPanelFileInfo = true
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.ShowPanelFileInfo = true
 
 	vtui.SetDefaultPalette()
 	SetDefaultF4Palette()
@@ -756,7 +757,7 @@ func TestFileSystemPanel_SelectedInfo(t *testing.T) {
 
 	// Hiding the separate file-information line must not hide the selection
 	// summary drawn directly on the panel's bottom border.
-	AppConfig.ShowPanelFileInfo = false
+	config.App.ShowPanelFileInfo = false
 	fp.SetPosition(0, 0, 79, 23)
 	fp.Show(scr)
 	if cell = scr.GetCell(40, 23); cell.Attributes != vtui.Palette[ColPanelSelectedInfo] {
@@ -781,13 +782,13 @@ func TestFileSystemPanel_SelectedInfo(t *testing.T) {
 }
 
 func TestFileSystemPanel_HiddenInfoShowsCursorFileSizeOnMulticolumnBorder(t *testing.T) {
-	oldCfg := AppConfig
+	oldCfg := config.App
 	oldColor := vtui.Palette[ColPanelText]
 	defer func() {
-		AppConfig = oldCfg
+		config.App = oldCfg
 		vtui.Palette[ColPanelText] = oldColor
 	}()
-	AppConfig.ShowPanelFileInfo = false
+	config.App.ShowPanelFileInfo = false
 
 	vtui.SetDefaultPalette()
 	SetDefaultF4Palette()
@@ -848,7 +849,7 @@ func TestFileSystemPanel_HiddenInfoShowsCursorFileSizeOnMulticolumnBorder(t *tes
 	}
 
 	fp.SetViewMode(ViewModeMedium)
-	AppConfig.ShowPanelFileInfo = true
+	config.App.ShowPanelFileInfo = true
 	fp.Show(scr)
 	if got := rowText(1, fp.Y2, 13); strings.Contains(got, "1 234 567") {
 		t.Fatalf("visible file-info row unexpectedly duplicated cursor size on bottom border: %q", got)
@@ -856,9 +857,9 @@ func TestFileSystemPanel_HiddenInfoShowsCursorFileSizeOnMulticolumnBorder(t *tes
 }
 
 func TestFileSystemPanel_Initialization(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.ShowPanelFileInfo = false
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.ShowPanelFileInfo = false
 
 	if ViewModeMedium != 0 || ViewModeDetailed != 1 {
 		t.Fatalf("legacy view mode values changed: Medium=%d Detailed=%d", ViewModeMedium, ViewModeDetailed)
@@ -879,7 +880,7 @@ func TestFileSystemPanel_Initialization(t *testing.T) {
 		t.Errorf("Internal table coordinates mismatch: got (%d,%d)-(%d,%d)", tx1, ty1, tx2, ty2)
 	}
 
-	AppConfig.ShowPanelFileInfo = true
+	config.App.ShowPanelFileInfo = true
 	fp.SetPosition(x, y, x+w-1, y+h-1)
 	_, _, _, ty2 = fp.table.GetPosition()
 	if expected := y + h - 4; ty2 != expected {
@@ -964,10 +965,10 @@ func TestFileEntryModifiedCell(t *testing.T) {
 }
 
 func TestFormatPanelFileNameSeparateExtension(t *testing.T) {
-	oldConfig := AppConfig
-	defer func() { AppConfig = oldConfig }()
-	AppConfig.SeparateFileExtensions = true
-	AppConfig.ShowDirPrefix = false
+	oldConfig := config.App
+	defer func() { config.App = oldConfig }()
+	config.App.SeparateFileExtensions = true
+	config.App.ShowDirPrefix = false
 
 	entry := &fileEntry{VFSItem: vfs.VFSItem{Name: "report.txt"}}
 	if got, want := formatPanelFileName(entry, 20), "report           txt"; got != want {
@@ -1008,9 +1009,9 @@ func TestFormatPanelFileNameSeparateExtension(t *testing.T) {
 }
 
 func TestSeparateExtensionAppliesToEveryViewMode(t *testing.T) {
-	oldConfig := AppConfig
-	defer func() { AppConfig = oldConfig }()
-	AppConfig.SeparateFileExtensions = true
+	oldConfig := config.App
+	defer func() { config.App = oldConfig }()
+	config.App.SeparateFileExtensions = true
 
 	fp := NewFileSystemPanel(0, 0, 90, 12, vfs.NewOSVFS("."))
 	fp.entries = []*fileEntry{{VFSItem: vfs.VFSItem{Name: "sample.go"}}}
@@ -1576,9 +1577,9 @@ func newPanelScrollTestFixture(mode ViewMode, entryCount int) *FileSystemPanel {
 }
 
 func TestPanelFileNameMatchSpans_AlignedExtension(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.SeparateFileExtensions = true
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.SeparateFileExtensions = true
 
 	entry := &fileEntry{VFSItem: vfs.VFSItem{Name: "report.json"}}
 	spans := panelFileNameMatchSpans(entry, 16, 0, len([]rune("report.jso")))
@@ -1594,9 +1595,9 @@ func TestPanelFileNameMatchSpans_AlignedExtension(t *testing.T) {
 }
 
 func TestPanelFileNameMatchSpans_NoExtension(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.SeparateFileExtensions = true
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.SeparateFileExtensions = true
 
 	entry := &fileEntry{VFSItem: vfs.VFSItem{
 		Name:        "V2454A (192.168.1.100:38477)",
@@ -1611,9 +1612,9 @@ func TestPanelFileNameMatchSpans_NoExtension(t *testing.T) {
 }
 
 func TestPanelFileNameMatchSpans_Anywhere(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.SeparateFileExtensions = true
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.SeparateFileExtensions = true
 
 	entry := &fileEntry{VFSItem: vfs.VFSItem{Name: "report.json"}}
 	if got := panelFileNameMatchSpans(entry, 16, 2, 4); len(got) != 1 || got[0] != (panelMatchSpan{start: 2, width: 4}) {
@@ -1627,9 +1628,9 @@ func TestPanelFileNameMatchSpans_Anywhere(t *testing.T) {
 func TestFileSystemPanel_DrawFastFindMatches(t *testing.T) {
 	vtui.SetDefaultPalette()
 	SetDefaultF4Palette()
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.SeparateFileExtensions = false
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.SeparateFileExtensions = false
 
 	fp := NewFileSystemPanel(0, 0, 40, 12, vfs.NewOSVFS(t.TempDir()))
 	waitForLoad(t, fp)
@@ -1674,9 +1675,9 @@ func TestFileSystemPanel_DrawFastFindMatches(t *testing.T) {
 func TestFileSystemPanel_DrawFastFindMatchesInEveryGridColumn(t *testing.T) {
 	vtui.SetDefaultPalette()
 	SetDefaultF4Palette()
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.SeparateFileExtensions = false
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.SeparateFileExtensions = false
 
 	for _, mode := range []ViewMode{ViewModeBrief, ViewModeMedium} {
 		fp := NewFileSystemPanel(0, 0, 60, 12, vfs.NewOSVFS(t.TempDir()))
@@ -1783,9 +1784,9 @@ func TestFileSystemPanel_DragAutoScrollStopsOnRelease(t *testing.T) {
 }
 
 func TestFileSystemPanel_ScrollBarMetricsAllViewModes(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.PanelScrollbarMode = PanelScrollbarFull
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.PanelScrollbarMode = config.PanelScrollbarFull
 
 	for _, tc := range []struct {
 		name    string
@@ -1834,9 +1835,9 @@ func TestFileSystemPanel_ScrollBarMetricsAllViewModes(t *testing.T) {
 func TestFileSystemPanel_ScrollBarDrawAndMouse(t *testing.T) {
 	vtui.SetDefaultPalette()
 	SetDefaultF4Palette()
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.PanelScrollbarMode = PanelScrollbarFull
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.PanelScrollbarMode = config.PanelScrollbarFull
 
 	fp := newPanelScrollTestFixture(ViewModeMedium, 0)
 	capacity := fp.table.ViewHeight * fp.gridColumnCount()
@@ -1907,9 +1908,9 @@ func TestFileSystemPanel_ScrollBarDrawAndMouse(t *testing.T) {
 }
 
 func TestFileSystemPanel_ScrollBarHiddenWhenGridFits(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.PanelScrollbarMode = PanelScrollbarFull
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.PanelScrollbarMode = config.PanelScrollbarFull
 
 	fp := newPanelScrollTestFixture(ViewModeBrief, 0)
 	fp.entries = make([]*fileEntry, fp.table.ViewHeight*fp.gridColumnCount())
@@ -1930,9 +1931,9 @@ func TestFileSystemPanel_ScrollBarHiddenWhenGridFits(t *testing.T) {
 }
 
 func TestFileSystemPanel_ScrollBarDisabled(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.PanelScrollbarMode = PanelScrollbarOff
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.PanelScrollbarMode = config.PanelScrollbarOff
 
 	fp := newPanelScrollTestFixture(ViewModeDetailed, 50)
 	if fp.syncScrollBar() {
@@ -1968,9 +1969,9 @@ func TestMinimalPanelScrollThumbUsesWholeHeight(t *testing.T) {
 func TestFileSystemPanel_MinimalScrollBarDrawAndMouse(t *testing.T) {
 	vtui.SetDefaultPalette()
 	SetDefaultF4Palette()
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.PanelScrollbarMode = PanelScrollbarMinimal
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.PanelScrollbarMode = config.PanelScrollbarMinimal
 
 	fp := newPanelScrollTestFixture(ViewModeDetailed, 50)
 	fp.Refresh()
@@ -3567,10 +3568,10 @@ drain:
 
 func TestFileSystemPanel_PermissionFailureRestoresAbsoluteParentWithoutDialogLoop(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldConfig := AppConfig
-	AppConfig.SyncPanelLoad = true
-	AppConfig.ShowHiddenFiles = true
-	defer func() { AppConfig = oldConfig }()
+	oldConfig := config.App
+	config.App.SyncPanelLoad = true
+	config.App.ShowHiddenFiles = true
+	defer func() { config.App = oldConfig }()
 
 	remote := newAbsoluteRecoveryVFS()
 	fp := NewFileSystemPanel(0, 0, 60, 20, remote)
@@ -3682,9 +3683,9 @@ func TestFileSystemPanel_SyncPanelLoad(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
 	// Save original config and restore after test
-	oldSync := AppConfig.SyncPanelLoad
-	AppConfig.SyncPanelLoad = true
-	defer func() { AppConfig.SyncPanelLoad = oldSync }()
+	oldSync := config.App.SyncPanelLoad
+	config.App.SyncPanelLoad = true
+	defer func() { config.App.SyncPanelLoad = oldSync }()
 
 	tmpDir := t.TempDir()
 	v := vfs.NewOSVFS(tmpDir)
@@ -3852,10 +3853,10 @@ func TestFileSystemPanel_Cache_FullCycle(t *testing.T) {
 
 func TestFileSystemPanel_CacheSwapPreservesLiveCursorAndMarks(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldConfig := AppConfig
-	AppConfig.SyncPanelLoad = false
-	AppConfig.ShowHiddenFiles = true
-	defer func() { AppConfig = oldConfig }()
+	oldConfig := config.App
+	config.App.SyncPanelLoad = false
+	config.App.ShowHiddenFiles = true
+	defer func() { config.App = oldConfig }()
 
 	remote := newStagedPanelVFS(
 		[]vfs.VFSItem{{Name: "aardvark.txt"}, {Name: "alpha.txt"}},
@@ -3943,10 +3944,10 @@ func TestFileSystemPanel_CacheSwapPreservesLiveCursorAndMarks(t *testing.T) {
 
 func TestFileSystemPanel_CacheSwapUsesNearestRowWhenFocusedItemDisappears(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldConfig := AppConfig
-	AppConfig.SyncPanelLoad = false
-	AppConfig.ShowHiddenFiles = true
-	defer func() { AppConfig = oldConfig }()
+	oldConfig := config.App
+	config.App.SyncPanelLoad = false
+	config.App.ShowHiddenFiles = true
+	defer func() { config.App = oldConfig }()
 
 	remote := newStagedPanelVFS(
 		[]vfs.VFSItem{{Name: "alpha.txt"}},
@@ -4134,9 +4135,9 @@ func TestFileSystemPanel_HeldEnterDuringProviderOpenIsCoalesced(t *testing.T) {
 
 func TestFileSystemPanel_HeldEnterReturnWithSyncLoadNeverActivatesStaleUpRow(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldConfig := AppConfig
-	AppConfig.SyncPanelLoad = true
-	defer func() { AppConfig = oldConfig }()
+	oldConfig := config.App
+	config.App.SyncPanelLoad = true
+	defer func() { config.App = oldConfig }()
 
 	manager := newBlockingProviderManagerVFS("SM_G930F (sync-load)")
 	provider := newBlockingMountProvider(manager)
@@ -4342,10 +4343,10 @@ func TestPanelsFrame_FailedNavigationRestoresCanceledProviderLoadingState(t *tes
 func TestFileSystemPanel_CachedEnterStaysResponsiveAndCoalescesRefresh(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldConfig := AppConfig
-	AppConfig.SyncPanelLoad = false
-	AppConfig.ShowHiddenFiles = true
-	defer func() { AppConfig = oldConfig }()
+	oldConfig := config.App
+	config.App.SyncPanelLoad = false
+	config.App.ShowHiddenFiles = true
+	defer func() { config.App = oldConfig }()
 
 	oldDisable := DisableLoadingAnimationInTests
 	DisableLoadingAnimationInTests = false
@@ -4483,10 +4484,10 @@ oldTimerDrained:
 
 func TestPanelsFrame_NavigateToCachedRemotePathIsOptimistic(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldConfig := AppConfig
-	AppConfig.SyncPanelLoad = false
-	AppConfig.ShowHiddenFiles = true
-	defer func() { AppConfig = oldConfig }()
+	oldConfig := config.App
+	config.App.SyncPanelLoad = false
+	config.App.ShowHiddenFiles = true
+	defer func() { config.App = oldConfig }()
 
 	fp := NewFileSystemPanel(0, 0, 40, 20, vfs.NewOSVFS(t.TempDir()))
 	waitForLoad(t, fp)
@@ -4529,10 +4530,10 @@ func TestPanelsFrame_NavigateToCachedRemotePathIsOptimistic(t *testing.T) {
 
 func TestFileSystemPanelCachedNavigateUpSelectsFolderLeft(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldConfig := AppConfig
-	AppConfig.SyncPanelLoad = false
-	AppConfig.ShowHiddenFiles = true
-	defer func() { AppConfig = oldConfig }()
+	oldConfig := config.App
+	config.App.SyncPanelLoad = false
+	config.App.ShowHiddenFiles = true
+	defer func() { config.App = oldConfig }()
 	history := &stubHistoryProvider{}
 	oldHistory := vtui.GlobalHistoryProvider
 	vtui.GlobalHistoryProvider = history
@@ -4575,9 +4576,9 @@ func TestFileSystemPanelCachedNavigateUpSelectsFolderLeft(t *testing.T) {
 
 func TestFileSystemPanelPendingSelectionDoesNotSuppressFolderHistory(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldConfig := AppConfig
-	AppConfig.SyncPanelLoad = false
-	defer func() { AppConfig = oldConfig }()
+	oldConfig := config.App
+	config.App.SyncPanelLoad = false
+	defer func() { config.App = oldConfig }()
 	history := &stubHistoryProvider{}
 	oldHistory := vtui.GlobalHistoryProvider
 	vtui.GlobalHistoryProvider = history
@@ -4608,9 +4609,9 @@ func TestFileSystemPanelPendingSelectionDoesNotSuppressFolderHistory(t *testing.
 
 func TestFileSystemPanelSlowOlderLoadDoesNotReorderNewerFolderHistory(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldConfig := AppConfig
-	AppConfig.SyncPanelLoad = false
-	defer func() { AppConfig = oldConfig }()
+	oldConfig := config.App
+	config.App.SyncPanelLoad = false
+	defer func() { config.App = oldConfig }()
 	history := &stubHistoryProvider{}
 	oldHistory := vtui.GlobalHistoryProvider
 	vtui.GlobalHistoryProvider = history
@@ -4829,15 +4830,15 @@ NormalColor = foreground:#00FF00
 		VFSItem: vfs.VFSItem{Name: "main.go", IsDir: false},
 	}
 
-	oldConfig := AppConfig
-	defer func() { AppConfig = oldConfig }()
+	oldConfig := config.App
+	defer func() { config.App = oldConfig }()
 
-	AppConfig.ShowHighlightMarks = false
+	config.App.ShowHighlightMarks = false
 	if got := entry.GetCellText(0); got != "main.go" {
 		t.Errorf("Expected name without marker when ShowHighlightMarks=false, got %q", got)
 	}
 
-	AppConfig.ShowHighlightMarks = true
+	config.App.ShowHighlightMarks = true
 	text := entry.GetCellText(0)
 	expectedText := "• main.go"
 	if text != expectedText {
@@ -4860,9 +4861,9 @@ func TestFileEntry_SymlinkDisplayNameAndStatus(t *testing.T) {
 }
 
 func TestFileSystemPanel_SymlinkTargetReplacesStatusSize(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.ShowPanelFileInfo = true
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.ShowPanelFileInfo = true
 
 	vtui.SetDefaultPalette()
 	SetDefaultF4Palette()
@@ -4905,9 +4906,9 @@ func TestFileSystemPanel_BottomFrameShowsCursorEntry(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
-	was := AppConfig.ShowPanelFileInfo
-	AppConfig.ShowPanelFileInfo = false
-	t.Cleanup(func() { AppConfig.ShowPanelFileInfo = was })
+	was := config.App.ShowPanelFileInfo
+	config.App.ShowPanelFileInfo = false
+	t.Cleanup(func() { config.App.ShowPanelFileInfo = was })
 
 	fp := NewFileSystemPanel(0, 0, 60, 20, vfs.NewOSVFS(t.TempDir()))
 	waitForLoad(t, fp)
@@ -4945,7 +4946,7 @@ func TestFileSystemPanel_BottomFrameShowsCursorEntry(t *testing.T) {
 	}
 
 	// With the far2l status line on, the marker steps aside.
-	AppConfig.ShowPanelFileInfo = true
+	config.App.ShowPanelFileInfo = true
 	fp.Show(scr)
 	if got := bottom(); strings.Contains(got, "▸") {
 		t.Errorf("marker should be dropped when the status line is on: %q", got)

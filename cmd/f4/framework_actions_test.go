@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -140,11 +141,11 @@ func TestNativeFrameworkShortcutMetadataRespectsTerminalOwnership(t *testing.T) 
 	initFrameworkActionTestScreen(t)
 	previousHotkeys := GlobalHotkeysMgr
 	GlobalHotkeysMgr = nil
-	previousCtrlN := AppConfig.TerminalCtrlNWorkspace
-	AppConfig.TerminalCtrlNWorkspace = true
+	previousCtrlN := config.App.TerminalCtrlNWorkspace
+	config.App.TerminalCtrlNWorkspace = true
 	t.Cleanup(func() {
 		GlobalHotkeysMgr = previousHotkeys
-		AppConfig.TerminalCtrlNWorkspace = previousCtrlN
+		config.App.TerminalCtrlNWorkspace = previousCtrlN
 	})
 
 	// A hidden AltScreen terminal consumes ordinary framework fallbacks before
@@ -172,7 +173,7 @@ func TestNativeFrameworkShortcutMetadataRespectsTerminalOwnership(t *testing.T) 
 	if got := NativeShortcutsForAction("Shell", newAction); !reflect.DeepEqual(got, []string{"Ctrl+N"}) {
 		t.Fatalf("preferred terminal new-workspace shortcut = %v, want [Ctrl+N]", got)
 	}
-	AppConfig.TerminalCtrlNWorkspace = false
+	config.App.TerminalCtrlNWorkspace = false
 	if got := NativeShortcutsForAction("Shell", newAction); len(got) != 0 {
 		t.Fatalf("terminal-owned Ctrl+N was advertised with preference disabled: %v", got)
 	}

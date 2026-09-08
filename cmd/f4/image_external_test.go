@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
 
@@ -29,14 +30,14 @@ func fakeExternalTools(t *testing.T, bins ...string) {
 	savedRun := externalImageRun
 	savedTimeout := externalImageTimeout
 	savedDecoders := imageDecoders
-	savedConfig := AppConfig.ImageExternalTimeout
+	savedConfig := config.App.ImageExternalTimeout
 	t.Cleanup(func() {
 		externalImageLookPath = savedLook
 		externalImageRun = savedRun
 		externalImageTimeout = savedTimeout
 		imageDecoders = savedDecoders
-		AppConfig.ImageExternalTimeout = savedConfig
-		SetImageDecoderPriorities(nil)
+		config.App.ImageExternalTimeout = savedConfig
+		config.SetImageDecoderPriorities(nil)
 	})
 
 	externalImageLookPath = func(bin string) (string, error) {
@@ -182,7 +183,7 @@ func TestDecodeImageExternallyConvertsThroughATempFile(t *testing.T) {
 
 func TestDecodeImageExternallyPassesTheDeadlineOn(t *testing.T) {
 	fakeExternalTools(t, "magick")
-	AppConfig.ImageExternalTimeout = 7
+	config.App.ImageExternalTimeout = 7
 
 	var left time.Duration
 	externalImageRun = func(ctx context.Context, tool externalImageTool, path string) ([]byte, error) {
@@ -285,16 +286,16 @@ func TestExternalDecoderIsTheLastResort(t *testing.T) {
 }
 
 func TestConfiguredExternalImageTimeout(t *testing.T) {
-	saved := AppConfig.ImageExternalTimeout
-	t.Cleanup(func() { AppConfig.ImageExternalTimeout = saved })
+	saved := config.App.ImageExternalTimeout
+	t.Cleanup(func() { config.App.ImageExternalTimeout = saved })
 
-	AppConfig.ImageExternalTimeout = 3
+	config.App.ImageExternalTimeout = 3
 	if got := configuredExternalImageTimeout(); got != 3*time.Second {
 		t.Errorf("got %v, want three seconds", got)
 	}
 	for _, bad := range []int{0, -1} {
-		AppConfig.ImageExternalTimeout = bad
-		if got := configuredExternalImageTimeout(); got != defaultImageExternalTimeout*time.Second {
+		config.App.ImageExternalTimeout = bad
+		if got := configuredExternalImageTimeout(); got != config.DefaultImageExternalTimeout*time.Second {
 			t.Errorf("%d seconds should fall back to the default, got %v", bad, got)
 		}
 	}

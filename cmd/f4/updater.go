@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/vtui"
 )
@@ -22,19 +23,19 @@ var sessionDismissedUpdateKey string
 // depend on where they are stored.
 func updateSettings() update.Settings {
 	return update.Settings{
-		Channel:     AppConfig.UpdateChannel,
-		Interval:    AppConfig.UpdateInterval,
-		LastCheck:   AppConfig.LastUpdateCheck,
-		LastVersion: AppConfig.LastUpdateVersion,
+		Channel:     config.App.UpdateChannel,
+		Interval:    config.App.UpdateInterval,
+		LastCheck:   config.App.LastUpdateCheck,
+		LastVersion: config.App.LastUpdateVersion,
 	}
 }
 
 func applyUpdateSettings(s update.Settings) {
-	AppConfig.UpdateChannel = s.Channel
-	AppConfig.UpdateInterval = s.Interval
-	AppConfig.LastUpdateCheck = s.LastCheck
-	AppConfig.LastUpdateVersion = s.LastVersion
-	SaveConfig()
+	config.App.UpdateChannel = s.Channel
+	config.App.UpdateInterval = s.Interval
+	config.App.LastUpdateCheck = s.LastCheck
+	config.App.LastUpdateVersion = s.LastVersion
+	config.SaveConfig()
 }
 
 // currentBuild describes this binary to the update check. A release tag is an
@@ -61,15 +62,15 @@ func getCurrentVersion() string {
 }
 
 func shouldCheck() bool {
-	if AppConfig.UpdateInterval == 0 {
+	if config.App.UpdateInterval == 0 {
 		return false
 	}
-	if AppConfig.LastUpdateCheck == 0 {
+	if config.App.LastUpdateCheck == 0 {
 		return true
 	}
-	last := time.Unix(AppConfig.LastUpdateCheck, 0)
+	last := time.Unix(config.App.LastUpdateCheck, 0)
 	now := time.Now()
-	switch AppConfig.UpdateInterval {
+	switch config.App.UpdateInterval {
 	case 1:
 		return true
 	case 2:
@@ -85,8 +86,8 @@ func CheckForUpdates(pf *PanelsFrame, manual bool) {
 		return
 	}
 
-	AppConfig.LastUpdateCheck = time.Now().Unix()
-	SaveConfig()
+	config.App.LastUpdateCheck = time.Now().Unix()
+	config.SaveConfig()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -126,7 +127,7 @@ func CheckForUpdates(pf *PanelsFrame, manual bool) {
 			}
 			// User declined. Remember only for this session — the
 			// next restart (or a manual check) will offer it again.
-			// AppConfig.LastUpdateVersion is deliberately NOT touched
+			// config.App.LastUpdateVersion is deliberately NOT touched
 			// here: that field is the "we already installed this
 			// version" marker and must survive across restarts, while
 			// a declined prompt must not (see #374).
@@ -175,8 +176,8 @@ func performUpdate(pf *PanelsFrame, cand update.Candidate) {
 			return
 		}
 
-		AppConfig.LastUpdateVersion = cand.UpdateKey
-		SaveConfig()
+		config.App.LastUpdateVersion = cand.UpdateKey
+		config.SaveConfig()
 
 		dlg := vtui.ShowMessage(" Update Successful ", "f4 has been updated successfully.\nPlease restart the application to apply changes.", []string{"E&xit now", "&Later"})
 		dlg.OnResult = func(code int) {

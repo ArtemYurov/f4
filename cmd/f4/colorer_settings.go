@@ -3,17 +3,8 @@ package main
 import (
 	"strings"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
-)
-
-// Cross drawing modes. FarColorer calls the option "Show cross" and lets the
-// scheme pick the axes through its parameters; those are not reachable through
-// the WASM build, so the axes are chosen by hand instead.
-const (
-	ColorerCrossOff = iota
-	ColorerCrossVertical
-	ColorerCrossHorizontal
-	ColorerCrossBoth
 )
 
 // The regions FarColorer reads the cross colors from.
@@ -35,17 +26,17 @@ func colorerCrossModeItems() []string {
 
 // colorerIsActive reports whether Colorer is the highlighter in charge.
 func colorerIsActive() bool {
-	return strings.EqualFold(AppConfig.EditorHighlighter, "Colorer")
+	return strings.EqualFold(config.App.EditorHighlighter, "Colorer")
 }
 
 // crossModeAxes splits a cross mode into its horizontal and vertical parts.
 func crossModeAxes(mode int) (horz, vert bool) {
 	switch mode {
-	case ColorerCrossVertical:
+	case config.ColorerCrossVertical:
 		return false, true
-	case ColorerCrossHorizontal:
+	case config.ColorerCrossHorizontal:
 		return true, false
-	case ColorerCrossBoth:
+	case config.ColorerCrossBoth:
 		return true, true
 	}
 	return false, false
@@ -77,10 +68,10 @@ func colorerCrossAttr(region string, base uint64) uint64 {
 // colors. The crosshair checkbox stays the master switch, the mode only picks
 // the axes.
 func EditorCrossAttrs() (horz, vert bool, horzAttr, vertAttr uint64) {
-	if !AppConfig.EditorCrosshair {
+	if !config.App.EditorCrosshair {
 		return false, false, 0, 0
 	}
-	horz, vert = crossModeAxes(AppConfig.EditorCrossMode)
+	horz, vert = crossModeAxes(config.App.EditorCrossMode)
 	if !horz && !vert {
 		return false, false, 0, 0
 	}
@@ -115,7 +106,7 @@ func actionColorerSettings(pf *PanelsFrame) {
 	}
 	selectedScheme := 0
 	for i := 0; i < len(schemeNames); i++ {
-		if strings.EqualFold(schemeNames[i], AppConfig.EditorColorerScheme) {
+		if strings.EqualFold(schemeNames[i], config.App.EditorColorerScheme) {
 			selectedScheme = i
 			break
 		}
@@ -127,9 +118,9 @@ func actionColorerSettings(pf *PanelsFrame) {
 	lblScheme := vtui.NewLabel(0, 0, Msg("ColorerSettings.Style"), comboScheme)
 
 	crossItems := colorerCrossModeItems()
-	crossPos := AppConfig.EditorCrossMode
+	crossPos := config.App.EditorCrossMode
 	if crossPos < 0 || crossPos >= len(crossItems) {
-		crossPos = ColorerCrossBoth
+		crossPos = config.ColorerCrossBoth
 	}
 	comboCross := vtui.NewComboBox(0, 0, 44, crossItems)
 	comboCross.DropdownOnly = true
@@ -138,16 +129,16 @@ func actionColorerSettings(pf *PanelsFrame) {
 	lblCross := vtui.NewLabel(0, 0, Msg("ColorerSettings.Cross"), comboCross)
 
 	chkSyntax := vtui.NewCheckbox(0, 0, Msg("ColorerSettings.Syntax"), false)
-	if AppConfig.EditorColorerSyntax {
+	if config.App.EditorColorerSyntax {
 		chkSyntax.State = 1
 	}
 
 	chkBackground := vtui.NewCheckbox(0, 0, Msg("ColorerSettings.Background"), false)
-	if AppConfig.EditorColorerBackground {
+	if config.App.EditorColorerBackground {
 		chkBackground.State = 1
 	}
 
-	editCatalog := vtui.NewEdit(0, 0, width-6, AppConfig.EditorColorerCatalog)
+	editCatalog := vtui.NewEdit(0, 0, width-6, config.App.EditorColorerCatalog)
 	editCatalog.ClearSelection()
 	lblCatalog := vtui.NewLabel(0, 0, Msg("ColorerSettings.Catalog"), editCatalog)
 
@@ -214,23 +205,23 @@ func actionColorerSettings(pf *PanelsFrame) {
 	// 4. Logic
 	apply := func() {
 		if chkEnabled.State == 1 {
-			AppConfig.EditorHighlighter = "Colorer"
+			config.App.EditorHighlighter = "Colorer"
 		} else if colorerIsActive() {
-			AppConfig.EditorHighlighter = "Chroma"
+			config.App.EditorHighlighter = "Chroma"
 		}
-		AppConfig.EditorColorerScheme = ""
+		config.App.EditorColorerScheme = ""
 		if pos := comboScheme.Menu.SelectPos; pos > 0 && pos < len(schemeNames) {
-			AppConfig.EditorColorerScheme = schemeNames[pos]
+			config.App.EditorColorerScheme = schemeNames[pos]
 		}
-		AppConfig.EditorCrossMode = comboCross.Menu.SelectPos
-		AppConfig.EditorColorerSyntax = chkSyntax.State == 1
-		AppConfig.EditorColorerBackground = chkBackground.State == 1
-		AppConfig.EditorColorerCatalog = strings.TrimSpace(editCatalog.GetText())
+		config.App.EditorCrossMode = comboCross.Menu.SelectPos
+		config.App.EditorColorerSyntax = chkSyntax.State == 1
+		config.App.EditorColorerBackground = chkBackground.State == 1
+		config.App.EditorColorerCatalog = strings.TrimSpace(editCatalog.GetText())
 		// The catalog may now point somewhere else, so the styles are dropped
 		// instead of being kept under the same name.
 		ResetColorerScheme()
-		SetColorerScheme(AppConfig.EditorColorerScheme)
-		SaveConfig()
+		SetColorerScheme(config.App.EditorColorerScheme)
+		config.SaveConfig()
 	}
 
 	btnCancel.OnClick = func() { dlg.Close() }
@@ -257,7 +248,7 @@ func actionColorerSettings(pf *PanelsFrame) {
 			ResetColorerSessions()
 			ResetColorerRegions()
 			ResetColorerScheme()
-			SetColorerScheme(AppConfig.EditorColorerScheme)
+			SetColorerScheme(config.App.EditorColorerScheme)
 		})
 	}
 

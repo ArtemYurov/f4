@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/unxed/f4/internal/config"
 	archiveplugin "github.com/unxed/f4/plugins/archive"
 	"github.com/unxed/f4/plugins/cloudfox"
 	"github.com/unxed/f4/vfs"
@@ -73,10 +74,10 @@ func TestRealSavedCloudArchives(t *testing.T) {
 
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	SetDefaultF4Palette()
-	originalConfig := AppConfig
-	t.Cleanup(func() { AppConfig = originalConfig })
-	AppConfig.ViewerAutodetectCodePage = false
-	AppConfig.ViewerDefaultCodePage = 65001
+	originalConfig := config.App
+	t.Cleanup(func() { config.App = originalConfig })
+	config.App.ViewerAutodetectCodePage = false
+	config.App.ViewerDefaultCodePage = 65001
 
 	meter := installRealCloudFoxArchiveNetworkMeter(t)
 	prompt := cloudfox.MasterPasswordPromptFunc(func(ctx context.Context, _ bool) (string, error) {

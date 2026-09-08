@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -140,9 +141,9 @@ func TestFileHighlighter_GetColor(t *testing.T) {
 	vtui.SetDefaultPalette()
 	SetDefaultF4Palette()
 
-	oldCfg := AppConfig
-	AppConfig.EnforceColorCorrection = false
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	config.App.EnforceColorCorrection = false
+	defer func() { config.App = oldCfg }()
 
 	iniData := `[Highlight_0]
 Name = Executables
@@ -451,9 +452,9 @@ func TestFileEntry_HighlightIntegration(t *testing.T) {
 	vtui.SetDefaultPalette()
 	SetDefaultF4Palette()
 
-	oldConfig := AppConfig
-	defer func() { AppConfig = oldConfig }()
-	AppConfig.ShowHighlightMarks = true
+	oldConfig := config.App
+	defer func() { config.App = oldConfig }()
+	config.App.ShowHighlightMarks = true
 
 	// Загружаем тестовые правила в глобальный объект подсветки
 	iniData := `[Highlight_0]
@@ -544,9 +545,9 @@ func TestFileHighlighter_GetColor_ContrastCorrection(t *testing.T) {
 	vtui.SetDefaultPalette()
 	SetDefaultF4Palette()
 
-	oldCfg := AppConfig
-	AppConfig.EnforceColorCorrection = true
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	config.App.EnforceColorCorrection = true
+	defer func() { config.App = oldCfg }()
 
 	// Low contrast rule: Dark Gray on Black background
 	iniData := `[Highlight_0]
@@ -689,9 +690,9 @@ func TestFileHighlighter_NormalColorKeepsItsBackground(t *testing.T) {
 	vtui.SetDefaultPalette()
 	SetDefaultF4Palette()
 
-	oldCfg := AppConfig
-	AppConfig.EnforceColorCorrection = false
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	config.App.EnforceColorCorrection = false
+	defer func() { config.App = oldCfg }()
 
 	highlighter := &FileHighlighter{}
 	highlighter.LoadFromIni(ini.Parse(strings.NewReader(`[Highlight_0]
@@ -714,9 +715,9 @@ func TestFileHighlighter_DirectoryRuleLeavesFilesAlone(t *testing.T) {
 	vtui.SetDefaultPalette()
 	SetDefaultF4Palette()
 
-	oldCfg := AppConfig
-	AppConfig.EnforceColorCorrection = false
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	config.App.EnforceColorCorrection = false
+	defer func() { config.App = oldCfg }()
 
 	// A rule for folders carries no mask, so only IncludeAttributes keeps it
 	// off the files; Name is a caption and matches nothing by itself (#912).

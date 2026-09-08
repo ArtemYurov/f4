@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"path/filepath"
@@ -8,29 +8,29 @@ import (
 func TestEnforceColorCorrection_ConfigRoundtrip(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	oldCfg := AppConfig
-	oldGetConfig := getUserConfigIniPath
+	oldCfg := App
+	oldGetConfig := GetUserConfigIniPath
 	defer func() {
-		AppConfig = oldCfg
-		getUserConfigIniPath = oldGetConfig
+		App = oldCfg
+		GetUserConfigIniPath = oldGetConfig
 	}()
-	getUserConfigIniPath = func() string {
+	GetUserConfigIniPath = func() string {
 		return filepath.Join(tmpDir, "settings.ini")
 	}
 
-	AppConfig.EnforceColorCorrection = true
+	App.EnforceColorCorrection = true
 	SaveConfig()
 
 	LoadConfig()
-	if !AppConfig.EnforceColorCorrection {
+	if !App.EnforceColorCorrection {
 		t.Errorf("expected EnforceColorCorrection to be saved as true and loaded as true")
 	}
 
-	AppConfig.EnforceColorCorrection = false
+	App.EnforceColorCorrection = false
 	SaveConfig()
 
 	LoadConfig()
-	if AppConfig.EnforceColorCorrection {
+	if App.EnforceColorCorrection {
 		t.Errorf("expected EnforceColorCorrection to be saved as false and loaded as false")
 	}
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -97,13 +98,13 @@ func actionViewerSettings(pf *PanelsFrame) {
 	ids, labels := codepageSettingChoices()
 	comboDefault := vtui.NewComboBox(0, 0, 40, labels)
 	comboDefault.DropdownOnly = true
-	selected := codepageChoiceIndex(ids, AppConfig.ViewerDefaultCodePage)
+	selected := codepageChoiceIndex(ids, config.App.ViewerDefaultCodePage)
 	comboDefault.Menu.SetSelectPos(selected)
 	comboDefault.Edit.SetText(labels[selected])
 	lblDefault := vtui.NewLabel(0, 0, Msg("ViewerSettings.DefaultCodePage"), comboDefault)
 
 	chkAutodetect := vtui.NewCheckbox(0, 0, Msg("ViewerSettings.AutodetectCodePage"), false)
-	if AppConfig.ViewerAutodetectCodePage {
+	if config.App.ViewerAutodetectCodePage {
 		chkAutodetect.State = 1
 	}
 	btnOK := vtui.NewButton(0, 0, Msg("vtui.Ok"))
@@ -132,11 +133,11 @@ func actionViewerSettings(pf *PanelsFrame) {
 
 	btnCancel.OnClick = func() { dlg.Close() }
 	btnOK.OnClick = func() {
-		AppConfig.ViewerAutodetectCodePage = chkAutodetect.State == 1
+		config.App.ViewerAutodetectCodePage = chkAutodetect.State == 1
 		if pos := comboDefault.Menu.SelectPos; pos >= 0 && pos < len(ids) {
-			AppConfig.ViewerDefaultCodePage = ids[pos]
+			config.App.ViewerDefaultCodePage = ids[pos]
 		}
-		SaveConfig()
+		config.SaveConfig()
 		dlg.Close()
 	}
 

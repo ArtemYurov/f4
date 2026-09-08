@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -25,9 +26,9 @@ func TestShowEditor_UTF8BOMIsNotDisplayedOrLostOnSave(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			oldMemoryMap := AppConfig.EditorMemoryMap
-			AppConfig.EditorMemoryMap = memoryMap
-			defer func() { AppConfig.EditorMemoryMap = oldMemoryMap }()
+			oldMemoryMap := config.App.EditorMemoryMap
+			config.App.EditorMemoryMap = memoryMap
+			defer func() { config.App.EditorMemoryMap = oldMemoryMap }()
 
 			filesystem := vfs.NewOSVFS(dir)
 			pf := NewPanelsFrame()

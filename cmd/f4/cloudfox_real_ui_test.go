@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/plugins/cloudfox"
 	"github.com/unxed/f4/vfs"
@@ -78,16 +79,16 @@ func TestRealSavedCloudConnectionsUI(t *testing.T) {
 	// test does not rely on any of those routes in the first place.
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	SetDefaultF4Palette()
-	originalConfig := AppConfig
-	t.Cleanup(func() { AppConfig = originalConfig })
-	AppConfig.EditorHighlighter = "None"
-	AppConfig.EditorUseEditorConfig = false
-	AppConfig.EditorAutodetectCodePage = false
-	AppConfig.EditorDefaultCodePage = 65001
-	AppConfig.ViewerAutodetectCodePage = false
-	AppConfig.ViewerDefaultCodePage = 65001
-	AppConfig.ConfirmCopy = false
-	AppConfig.DefaultFileOpMode = 2 // production foreground progress route
+	originalConfig := config.App
+	t.Cleanup(func() { config.App = originalConfig })
+	config.App.EditorHighlighter = "None"
+	config.App.EditorUseEditorConfig = false
+	config.App.EditorAutodetectCodePage = false
+	config.App.EditorDefaultCodePage = 65001
+	config.App.ViewerAutodetectCodePage = false
+	config.App.ViewerDefaultCodePage = 65001
+	config.App.ConfirmCopy = false
+	config.App.DefaultFileOpMode = 2 // production foreground progress route
 
 	prompt := cloudfox.MasterPasswordPromptFunc(func(ctx context.Context, _ bool) (string, error) {
 		if err := ctx.Err(); err != nil {

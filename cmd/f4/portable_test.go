@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ini"
-	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/vtui"
 )
 
@@ -19,15 +19,15 @@ func TestPortableSettingsDialogUsesContextHelp(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	oldExecutable := update.Executable
-	oldUserConfigDir := userConfigDir
-	update.Executable = func() (string, error) { return exe, nil }
-	userConfigDir = func() (string, error) { return tmpDir, nil }
-	resetConfigDirForTest()
+	oldExecutable := config.Executable
+	oldUserConfigDir := config.UserConfigDir
+	config.Executable = func() (string, error) { return exe, nil }
+	config.UserConfigDir = func() (string, error) { return tmpDir, nil }
+	config.ResetConfigDirForTest()
 	t.Cleanup(func() {
-		update.Executable = oldExecutable
-		userConfigDir = oldUserConfigDir
-		resetConfigDirForTest()
+		config.Executable = oldExecutable
+		config.UserConfigDir = oldUserConfigDir
+		config.ResetConfigDirForTest()
 	})
 
 	actionPortableSettings(nil)
@@ -63,21 +63,21 @@ func TestConfig_PortableProfile(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Имитируем путь исполняемого файла в тестовой директории
-	origExeFunc := update.Executable
-	origConfigDir := GetF4ConfigDir()
-	origPortable := cachedF4Portable
+	origExeFunc := config.Executable
+	origConfigDir := config.GetF4ConfigDir()
+	origPortable := config.CachedF4Portable
 	t.Cleanup(func() {
-		update.Executable = origExeFunc
-		resetConfigDirForTest()
-		cachedF4ConfigDir = origConfigDir
-		cachedF4Portable = origPortable
-		configDirOnce.Do(func() {})
+		config.Executable = origExeFunc
+		config.ResetConfigDirForTest()
+		config.CachedF4ConfigDir = origConfigDir
+		config.CachedF4Portable = origPortable
+		config.ConfigDirOnce.Do(func() {})
 	})
 	mockExe := filepath.Join(tmpDir, "f4.exe")
 	if err := os.WriteFile(mockExe, []byte(""), 0600); err != nil {
 		t.Fatal(err)
 	}
-	update.Executable = func() (string, error) {
+	config.Executable = func() (string, error) {
 		return mockExe, nil
 	}
 
@@ -91,9 +91,9 @@ UseSystemProfiles = 0
 	}
 
 	// Сбрасываем кэш путей
-	resetConfigDirForTest()
+	config.ResetConfigDirForTest()
 
-	gotDir := GetF4ConfigDir()
+	gotDir := config.GetF4ConfigDir()
 	wantDir := filepath.Join(tmpDir, "Profile")
 
 	if filepath.Clean(gotDir) != filepath.Clean(wantDir) {
@@ -123,7 +123,7 @@ func TestResolveProfileDir_ProfileKey(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, portable := resolveProfileDir(exeDir, ini.Parse(strings.NewReader(tc.ini)))
+			got, portable := config.ResolveProfileDir(exeDir, ini.Parse(strings.NewReader(tc.ini)))
 			if portable != tc.portable {
 				t.Fatalf("portable = %v, want %v", portable, tc.portable)
 			}
@@ -140,7 +140,7 @@ func TestResolveProfileDir_ProfileKey(t *testing.T) {
 func TestGetF4ConfigDir_ExportsF4HOME(t *testing.T) {
 	tmpDir := setupPortableIni(t, "0")
 	t.Setenv("F4HOME", "")
-	_ = GetF4ConfigDir()
+	_ = config.GetF4ConfigDir()
 	if got := os.Getenv("F4HOME"); filepath.Clean(got) != filepath.Clean(tmpDir) {
 		t.Errorf("F4HOME = %q, want %q", got, tmpDir)
 	}
@@ -149,19 +149,19 @@ func TestGetF4ConfigDir_ExportsF4HOME(t *testing.T) {
 func TestPortableIniPath_PrefersExeIni(t *testing.T) {
 	dir := t.TempDir()
 	exe := filepath.Join(dir, "f4-gui.exe")
-	if got, want := portableIniPath(exe), filepath.Join(dir, portableIniName); got != want {
+	if got, want := config.PortableIniPath(exe), filepath.Join(dir, config.PortableIniName); got != want {
 		t.Errorf("without exe.ini: %q, want %q", got, want)
 	}
 	if err := os.WriteFile(exe+".ini", nil, 0600); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := portableIniPath(exe), exe+".ini"; got != want {
+	if got, want := config.PortableIniPath(exe), exe+".ini"; got != want {
 		t.Errorf("with exe.ini: %q, want %q", got, want)
 	}
 }
 
 func TestSetPortableMode_RoundTripKeepsOtherKeys(t *testing.T) {
-	iniPath := filepath.Join(t.TempDir(), portableIniName)
+	iniPath := filepath.Join(t.TempDir(), config.PortableIniName)
 
 	if err := setPortableMode(iniPath, true); err != nil {
 		t.Fatal(err)

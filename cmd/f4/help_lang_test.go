@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
 
@@ -29,18 +30,18 @@ func TestHelpLanguageSwitch(t *testing.T) {
 		t.Fatalf("failed to write test hlf: %v", err)
 	}
 
-	// Ensure GetF4ConfigDir's once-only detector cannot overwrite the test
+	// Ensure config.GetF4ConfigDir's once-only detector cannot overwrite the test
 	// override on its first call from InitHelpSystem.
-	_ = GetF4ConfigDir()
-	oldF4ConfigDir := cachedF4ConfigDir
-	oldHelpLanguage := AppConfig.HelpLanguage
-	cachedF4ConfigDir = tempDir
+	_ = config.GetF4ConfigDir()
+	oldF4ConfigDir := config.CachedF4ConfigDir
+	oldHelpLanguage := config.App.HelpLanguage
+	config.CachedF4ConfigDir = tempDir
 	t.Cleanup(func() {
-		cachedF4ConfigDir = oldF4ConfigDir
-		AppConfig.HelpLanguage = oldHelpLanguage
+		config.CachedF4ConfigDir = oldF4ConfigDir
+		config.App.HelpLanguage = oldHelpLanguage
 	})
 
-	AppConfig.HelpLanguage = "ru"
+	config.App.HelpLanguage = "ru"
 	InitHelpSystem()
 
 	topic := vtui.GlobalHelpEngine.GetTopic("TestTopic")

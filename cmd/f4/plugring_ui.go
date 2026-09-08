@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/netproxy"
 	"github.com/unxed/f4/internal/unpack"
 	"github.com/unxed/vtui"
@@ -266,7 +267,7 @@ func actionInstallPlugRingItem(pf *PanelsFrame, parent *vtui.Window, item PlugRi
 	isTarGz := strings.HasSuffix(url, ".tar.gz") || strings.HasSuffix(url, ".tgz")
 	isArchive := isTarGz || strings.HasSuffix(url, ".zip")
 
-	plugringDir := filepath.Join(GetF4ConfigDir(), "plugring")
+	plugringDir := filepath.Join(config.GetF4ConfigDir(), "plugring")
 	pluginDir := filepath.Join(plugringDir, item.ID)
 
 	pf.RunProgressTask(" Installing Plugin ", "Downloading "+item.Name+"...", false, func(ctx context.Context, updateProgress func(msg string, percent int)) error {
@@ -387,7 +388,7 @@ func actionRemovePlugRingItem(pf *PanelsFrame, parent *vtui.Window, item PlugRin
 		vtui.ShowMessageOn(parent, " Error ", "Plugin catalog contains an invalid ID.", []string{"&Ok"})
 		return
 	}
-	plugringDir := filepath.Join(GetF4ConfigDir(), "plugring")
+	plugringDir := filepath.Join(config.GetF4ConfigDir(), "plugring")
 	pluginDir := filepath.Join(plugringDir, item.ID)
 
 	if _, err := os.Stat(pluginDir); os.IsNotExist(err) {

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/config"
 )
 
 func TestGenerateKeysHelpTopic_Russian(t *testing.T) {
@@ -12,12 +13,12 @@ func TestGenerateKeysHelpTopic_Russian(t *testing.T) {
 	GlobalHotkeysMgr = NewHotkeyManager("")
 	defer func() { GlobalHotkeysMgr = old }()
 
-	oldLang := AppConfig.Language
+	oldLang := config.App.Language
 	defer func() {
-		AppConfig.Language = oldLang
+		config.App.Language = oldLang
 		InitLang()
 	}()
-	AppConfig.Language = "ru"
+	config.App.Language = "ru"
 	InitLang()
 
 	topic := generateKeysHelpTopic("PanelNav", "t", []string{"Shell"}, "")
@@ -37,12 +38,12 @@ func TestGenerateKeysHelpTopicsFitHelpWidth(t *testing.T) {
 	GlobalHotkeysMgr = NewHotkeyManager("")
 	t.Cleanup(func() { GlobalHotkeysMgr = old })
 
-	oldLang := AppConfig.Language
+	oldLang := config.App.Language
 	t.Cleanup(func() {
-		AppConfig.Language = oldLang
+		config.App.Language = oldLang
 		InitLang()
 	})
-	AppConfig.Language = "ru"
+	config.App.Language = "ru"
 	InitLang()
 
 	for _, tc := range []struct {
@@ -69,12 +70,12 @@ func TestGenerateKeysHelpTopic_HelpLanguageOverridesUI(t *testing.T) {
 	GlobalHotkeysMgr = NewHotkeyManager("")
 	defer func() { GlobalHotkeysMgr = old }()
 
-	oldLang := AppConfig.Language
+	oldLang := config.App.Language
 	defer func() {
-		AppConfig.Language = oldLang
+		config.App.Language = oldLang
 		InitLang()
 	}()
-	AppConfig.Language = "en"
+	config.App.Language = "en"
 	InitLang()
 
 	oldStrings := helpActionStrings

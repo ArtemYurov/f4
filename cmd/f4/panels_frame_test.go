@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/plugins/archive"
@@ -131,10 +132,10 @@ func (p *mouseCaptureTestPanel) ProcessMouse(e *vtinput.InputEvent) bool {
 func (p *mouseCaptureTestPanel) GetSelectedName() string { return "" }
 
 func TestPanelsFrame_MouseGestureStaysWithOriginPanel(t *testing.T) {
-	oldConfig := AppConfig
-	defer func() { AppConfig = oldConfig }()
-	AppConfig.NavigationMode = NavigationClassic
-	AppConfig.AlwaysShowMenuBar = false
+	oldConfig := config.App
+	defer func() { config.App = oldConfig }()
+	config.App.NavigationMode = config.NavigationClassic
+	config.App.AlwaysShowMenuBar = false
 
 	left := &mouseCaptureTestPanel{}
 	right := &mouseCaptureTestPanel{}
@@ -237,10 +238,10 @@ func TestPanelsFrame_MiddleMouseGestureTriggersOnce(t *testing.T) {
 }
 
 func TestPanelsFrame_MiddleHeldWheelRoutesToPanel(t *testing.T) {
-	oldConfig := AppConfig
-	defer func() { AppConfig = oldConfig }()
-	AppConfig.NavigationMode = NavigationClassic
-	AppConfig.AlwaysShowMenuBar = false
+	oldConfig := config.App
+	defer func() { config.App = oldConfig }()
+	config.App.NavigationMode = config.NavigationClassic
+	config.App.AlwaysShowMenuBar = false
 
 	left := &mouseCaptureTestPanel{}
 	right := &mouseCaptureTestPanel{}
@@ -426,9 +427,9 @@ func TestPanelsFrame_SelectionByMask(t *testing.T) {
 func TestPanelsFrame_DriveMenuListsAssignedBookmarks(t *testing.T) {
 	cfg := t.TempDir()
 	// os.UserConfigDir ignores XDG_CONFIG_HOME on darwin; go through the seam.
-	oldUserConfigDir := userConfigDir
-	userConfigDir = func() (string, error) { return cfg, nil }
-	t.Cleanup(func() { userConfigDir = oldUserConfigDir })
+	oldUserConfigDir := config.UserConfigDir
+	config.UserConfigDir = func() (string, error) { return cfg, nil }
+	t.Cleanup(func() { config.UserConfigDir = oldUserConfigDir })
 	if err := os.MkdirAll(filepath.Join(cfg, "f4", "settings"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -488,9 +489,9 @@ func TestPanelsFrame_DriveMenuListsAssignedBookmarks(t *testing.T) {
 
 func TestPanelsFrame_DriveMenuExpandsBookmarkPath(t *testing.T) {
 	cfg := t.TempDir()
-	oldUserConfigDir := userConfigDir
-	userConfigDir = func() (string, error) { return cfg, nil }
-	t.Cleanup(func() { userConfigDir = oldUserConfigDir })
+	oldUserConfigDir := config.UserConfigDir
+	config.UserConfigDir = func() (string, error) { return cfg, nil }
+	t.Cleanup(func() { config.UserConfigDir = oldUserConfigDir })
 	if err := os.MkdirAll(filepath.Join(cfg, "f4", "settings"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -630,9 +631,9 @@ func wantDriveMenuRow(menu *vtui.VMenu, cur string) int {
 func TestPanelsFrame_DriveMenuBookmarkKeys(t *testing.T) {
 	cfg := t.TempDir()
 	// os.UserConfigDir ignores XDG_CONFIG_HOME on darwin; go through the seam.
-	oldUserConfigDir := userConfigDir
-	userConfigDir = func() (string, error) { return cfg, nil }
-	t.Cleanup(func() { userConfigDir = oldUserConfigDir })
+	oldUserConfigDir := config.UserConfigDir
+	config.UserConfigDir = func() (string, error) { return cfg, nil }
+	t.Cleanup(func() { config.UserConfigDir = oldUserConfigDir })
 	if err := os.MkdirAll(filepath.Join(cfg, "f4", "settings"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -750,9 +751,9 @@ func TestPanelsFrame_GetActivePTY(t *testing.T) {
 	}
 }
 func TestPanelsFrame_ProcessMouse_DoubleClick(t *testing.T) {
-	oldNavigationMode := AppConfig.NavigationMode
-	AppConfig.NavigationMode = NavigationClassic
-	t.Cleanup(func() { AppConfig.NavigationMode = oldNavigationMode })
+	oldNavigationMode := config.App.NavigationMode
+	config.App.NavigationMode = config.NavigationClassic
+	t.Cleanup(func() { config.App.NavigationMode = oldNavigationMode })
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -820,9 +821,9 @@ func setupMockPanelsFrame(t *testing.T) *PanelsFrame {
 }
 func TestPanelsFrame_ProcessMouse_DoubleClickFile(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
-	oldNavigationMode := AppConfig.NavigationMode
-	AppConfig.NavigationMode = NavigationClassic
-	t.Cleanup(func() { AppConfig.NavigationMode = oldNavigationMode })
+	oldNavigationMode := config.App.NavigationMode
+	config.App.NavigationMode = config.NavigationClassic
+	t.Cleanup(func() { config.App.NavigationMode = oldNavigationMode })
 
 	pf := setupMockPanelsFrame(t)
 	defer pf.Close()
@@ -1029,9 +1030,9 @@ func TestPanelsFrame_EscTogglesPanels(t *testing.T) {
 	pf.ResizeConsole(80, 25)
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
-	old := AppConfig.EscTogglePanels
-	defer func() { AppConfig.EscTogglePanels = old }()
-	AppConfig.EscTogglePanels = true
+	old := config.App.EscTogglePanels
+	defer func() { config.App.EscTogglePanels = old }()
+	config.App.EscTogglePanels = true
 
 	sendEsc := func() bool {
 		return pressKey(pf, &vtinput.InputEvent{
@@ -1082,9 +1083,9 @@ func TestPanelsFrame_EscTogglePanels_RespectsOption(t *testing.T) {
 	pf.ResizeConsole(80, 25)
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
-	old := AppConfig.EscTogglePanels
-	defer func() { AppConfig.EscTogglePanels = old }()
-	AppConfig.EscTogglePanels = false
+	old := config.App.EscTogglePanels
+	defer func() { config.App.EscTogglePanels = old }()
+	config.App.EscTogglePanels = false
 
 	pressKey(pf, &vtinput.InputEvent{
 		Type: vtinput.KeyEventType, KeyDown: true,
@@ -1765,11 +1766,11 @@ func TestPanelsFrame_AlwaysShowMenuBar(t *testing.T) {
 	pf := NewPanelsFrame()
 	defer pf.Close()
 
-	origAlways := AppConfig.AlwaysShowMenuBar
-	defer func() { AppConfig.AlwaysShowMenuBar = origAlways }()
+	origAlways := config.App.AlwaysShowMenuBar
+	defer func() { config.App.AlwaysShowMenuBar = origAlways }()
 
 	// 1. Test when AlwaysShowMenuBar is false (default)
-	AppConfig.AlwaysShowMenuBar = false
+	config.App.AlwaysShowMenuBar = false
 
 	pf.showPanels = true
 	pf.ResizeConsole(80, 25)
@@ -1780,7 +1781,7 @@ func TestPanelsFrame_AlwaysShowMenuBar(t *testing.T) {
 	}
 
 	// 2. Test when AlwaysShowMenuBar is true (panels shifted down)
-	AppConfig.AlwaysShowMenuBar = true
+	config.App.AlwaysShowMenuBar = true
 	pf.ResizeConsole(80, 25)
 
 	if fspL.Y1 != 1 {
@@ -2087,9 +2088,9 @@ func TestPanelsFrame_AutoRefresh(t *testing.T) {
 	waitForLoad(t, fsp)
 }
 func TestPanelsFrame_ResizingIntegration(t *testing.T) {
-	oldWidthDecrement := AppConfig.WidthDecrement
-	AppConfig.WidthDecrement = 0
-	t.Cleanup(func() { AppConfig.WidthDecrement = oldWidthDecrement })
+	oldWidthDecrement := config.App.WidthDecrement
+	config.App.WidthDecrement = 0
+	t.Cleanup(func() { config.App.WidthDecrement = oldWidthDecrement })
 
 	vtui.SetDefaultPalette()
 	SetDefaultF4Palette()
@@ -2178,9 +2179,9 @@ func TestPanelsFrame_ExitWarning_ActiveTasks(t *testing.T) {
 	}
 }
 func TestPanelsFrame_SwapPanels(t *testing.T) {
-	oldWidthDecrement := AppConfig.WidthDecrement
-	AppConfig.WidthDecrement = 0
-	t.Cleanup(func() { AppConfig.WidthDecrement = oldWidthDecrement })
+	oldWidthDecrement := config.App.WidthDecrement
+	config.App.WidthDecrement = 0
+	t.Cleanup(func() { config.App.WidthDecrement = oldWidthDecrement })
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -3411,8 +3412,8 @@ func TestPanelsFrame_TerminalForwarding_BusyNonAltScreenWorkspaceKeys(t *testing
 }
 
 func TestPanelsFrame_TerminalCtrlNWorkspacePreference(t *testing.T) {
-	old := AppConfig.TerminalCtrlNWorkspace
-	defer func() { AppConfig.TerminalCtrlNWorkspace = old }()
+	old := config.App.TerminalCtrlNWorkspace
+	defer func() { config.App.TerminalCtrlNWorkspace = old }()
 
 	for _, altScreen := range []bool{false, true} {
 		pf := NewPanelsFrame()
@@ -3431,7 +3432,7 @@ func TestPanelsFrame_TerminalCtrlNWorkspacePreference(t *testing.T) {
 			}
 		}
 
-		AppConfig.TerminalCtrlNWorkspace = true
+		config.App.TerminalCtrlNWorkspace = true
 		if pressKey(pf, event()) {
 			t.Errorf("Ctrl+N was not released to FrameManager (AltScreen=%v)", altScreen)
 		}
@@ -3439,7 +3440,7 @@ func TestPanelsFrame_TerminalCtrlNWorkspacePreference(t *testing.T) {
 			t.Errorf("enabled Ctrl+N preference wrote %q to PTY (AltScreen=%v)", got, altScreen)
 		}
 
-		AppConfig.TerminalCtrlNWorkspace = false
+		config.App.TerminalCtrlNWorkspace = false
 		pty.Reset()
 		if !pressKey(pf, event()) {
 			t.Errorf("disabled Ctrl+N preference did not return key to PTY (AltScreen=%v)", altScreen)
@@ -4393,10 +4394,10 @@ func TestPanelsFrame_VimHotkeys_Comprehensive(t *testing.T) {
 		},
 	}
 
-	oldCfg := AppConfig
-	AppConfig.NavigationMode = NavigationVim
-	AppConfig.AutoSaveSettings = false
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	config.App.NavigationMode = config.NavigationVim
+	config.App.AutoSaveSettings = false
+	defer func() { config.App = oldCfg }()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -4906,13 +4907,13 @@ func TestPanelsFrame_ShiftF9_SaveSettings(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	oldGetPath := getUserConfigIniPath
-	oldGetPaths := getConfigIniPaths
-	getUserConfigIniPath = func() string { return tmp.Name() }
-	getConfigIniPaths = func() []string { return []string{tmp.Name()} }
+	oldGetPath := config.GetUserConfigIniPath
+	oldGetPaths := config.GetConfigIniPaths
+	config.GetUserConfigIniPath = func() string { return tmp.Name() }
+	config.GetConfigIniPaths = func() []string { return []string{tmp.Name()} }
 	defer func() {
-		getUserConfigIniPath = oldGetPath
-		getConfigIniPaths = oldGetPaths
+		config.GetUserConfigIniPath = oldGetPath
+		config.GetConfigIniPaths = oldGetPaths
 	}()
 
 	pf := NewPanelsFrame()
@@ -5656,13 +5657,13 @@ func panelHeight(p Panel) int { _, y1, _, y2 := p.GetPosition(); return y2 - y1 
 // non-empty cmdline must fall through to word-navigation.
 func TestPanelsFrame_CtrlArrows_ResizePanels(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
-	oldW, oldL, oldR := AppConfig.WidthDecrement, AppConfig.LeftHeightDecrement, AppConfig.RightHeightDecrement
-	oldAutoSave := AppConfig.AutoSaveSettings
-	AppConfig.WidthDecrement, AppConfig.LeftHeightDecrement, AppConfig.RightHeightDecrement = 0, 0, 0
-	AppConfig.AutoSaveSettings = false
+	oldW, oldL, oldR := config.App.WidthDecrement, config.App.LeftHeightDecrement, config.App.RightHeightDecrement
+	oldAutoSave := config.App.AutoSaveSettings
+	config.App.WidthDecrement, config.App.LeftHeightDecrement, config.App.RightHeightDecrement = 0, 0, 0
+	config.App.AutoSaveSettings = false
 	t.Cleanup(func() {
-		AppConfig.WidthDecrement, AppConfig.LeftHeightDecrement, AppConfig.RightHeightDecrement = oldW, oldL, oldR
-		AppConfig.AutoSaveSettings = oldAutoSave
+		config.App.WidthDecrement, config.App.LeftHeightDecrement, config.App.RightHeightDecrement = oldW, oldL, oldR
+		config.App.AutoSaveSettings = oldAutoSave
 	})
 
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
@@ -5755,13 +5756,13 @@ func TestPanelsFrame_CtrlArrows_ResizePanels(t *testing.T) {
 // rightHeightDecrement in one shot, matching far2l's Ctrl+Clear.
 func TestPanelsFrame_CtrlClear_ResetsLayoutDecrements(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
-	oldW, oldL, oldR := AppConfig.WidthDecrement, AppConfig.LeftHeightDecrement, AppConfig.RightHeightDecrement
-	oldAutoSave := AppConfig.AutoSaveSettings
-	AppConfig.WidthDecrement, AppConfig.LeftHeightDecrement, AppConfig.RightHeightDecrement = 0, 0, 0
-	AppConfig.AutoSaveSettings = false
+	oldW, oldL, oldR := config.App.WidthDecrement, config.App.LeftHeightDecrement, config.App.RightHeightDecrement
+	oldAutoSave := config.App.AutoSaveSettings
+	config.App.WidthDecrement, config.App.LeftHeightDecrement, config.App.RightHeightDecrement = 0, 0, 0
+	config.App.AutoSaveSettings = false
 	t.Cleanup(func() {
-		AppConfig.WidthDecrement, AppConfig.LeftHeightDecrement, AppConfig.RightHeightDecrement = oldW, oldL, oldR
-		AppConfig.AutoSaveSettings = oldAutoSave
+		config.App.WidthDecrement, config.App.LeftHeightDecrement, config.App.RightHeightDecrement = oldW, oldL, oldR
+		config.App.AutoSaveSettings = oldAutoSave
 	})
 
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
@@ -5772,9 +5773,9 @@ func TestPanelsFrame_CtrlClear_ResetsLayoutDecrements(t *testing.T) {
 	pf.widthDecrement = 5
 	pf.leftHeightDecrement = 3
 	pf.rightHeightDecrement = 4
-	AppConfig.WidthDecrement = 5
-	AppConfig.LeftHeightDecrement = 3
-	AppConfig.RightHeightDecrement = 4
+	config.App.WidthDecrement = 5
+	config.App.LeftHeightDecrement = 3
+	config.App.RightHeightDecrement = 4
 	pressKey(pf, &vtinput.InputEvent{
 		Type: vtinput.KeyEventType, KeyDown: true,
 		VirtualKeyCode:  vtinput.VK_CLEAR,
@@ -5785,29 +5786,29 @@ func TestPanelsFrame_CtrlClear_ResetsLayoutDecrements(t *testing.T) {
 		t.Errorf("Ctrl+Clear: fields = %d/%d/%d, want 0/0/0",
 			pf.widthDecrement, pf.leftHeightDecrement, pf.rightHeightDecrement)
 	}
-	if AppConfig.WidthDecrement != 0 || AppConfig.LeftHeightDecrement != 0 || AppConfig.RightHeightDecrement != 0 {
-		t.Errorf("Ctrl+Clear: AppConfig = %d/%d/%d, want 0/0/0",
-			AppConfig.WidthDecrement, AppConfig.LeftHeightDecrement, AppConfig.RightHeightDecrement)
+	if config.App.WidthDecrement != 0 || config.App.LeftHeightDecrement != 0 || config.App.RightHeightDecrement != 0 {
+		t.Errorf("Ctrl+Clear: config.App = %d/%d/%d, want 0/0/0",
+			config.App.WidthDecrement, config.App.LeftHeightDecrement, config.App.RightHeightDecrement)
 	}
 }
 
 // TestPanelsFrame_LayoutDecrements_InitFromAppConfig verifies that a
-// fresh PanelsFrame picks up saved layout offsets from AppConfig so a
+// fresh PanelsFrame picks up saved layout offsets from config.App so a
 // restart restores the last on-disk state.
 func TestPanelsFrame_LayoutDecrements_InitFromAppConfig(t *testing.T) {
-	oldW, oldL, oldR := AppConfig.WidthDecrement, AppConfig.LeftHeightDecrement, AppConfig.RightHeightDecrement
-	AppConfig.WidthDecrement = -3
-	AppConfig.LeftHeightDecrement = 4
-	AppConfig.RightHeightDecrement = 5
+	oldW, oldL, oldR := config.App.WidthDecrement, config.App.LeftHeightDecrement, config.App.RightHeightDecrement
+	config.App.WidthDecrement = -3
+	config.App.LeftHeightDecrement = 4
+	config.App.RightHeightDecrement = 5
 	defer func() {
-		AppConfig.WidthDecrement, AppConfig.LeftHeightDecrement, AppConfig.RightHeightDecrement = oldW, oldL, oldR
+		config.App.WidthDecrement, config.App.LeftHeightDecrement, config.App.RightHeightDecrement = oldW, oldL, oldR
 	}()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
 
 	if pf.widthDecrement != -3 || pf.leftHeightDecrement != 4 || pf.rightHeightDecrement != 5 {
-		t.Errorf("init from AppConfig: got %d/%d/%d, want -3/4/5",
+		t.Errorf("init from config.App: got %d/%d/%d, want -3/4/5",
 			pf.widthDecrement, pf.leftHeightDecrement, pf.rightHeightDecrement)
 	}
 }
@@ -5818,13 +5819,13 @@ func TestPanelsFrame_LayoutDecrements_InitFromAppConfig(t *testing.T) {
 // Ctrl+Up/Down (panels visible + cmdline empty).
 func TestPanelsFrame_CtrlShiftArrows_AsymmetricHeight(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
-	oldW, oldL, oldR := AppConfig.WidthDecrement, AppConfig.LeftHeightDecrement, AppConfig.RightHeightDecrement
-	oldAutoSave := AppConfig.AutoSaveSettings
-	AppConfig.WidthDecrement, AppConfig.LeftHeightDecrement, AppConfig.RightHeightDecrement = 0, 0, 0
-	AppConfig.AutoSaveSettings = false
+	oldW, oldL, oldR := config.App.WidthDecrement, config.App.LeftHeightDecrement, config.App.RightHeightDecrement
+	oldAutoSave := config.App.AutoSaveSettings
+	config.App.WidthDecrement, config.App.LeftHeightDecrement, config.App.RightHeightDecrement = 0, 0, 0
+	config.App.AutoSaveSettings = false
 	t.Cleanup(func() {
-		AppConfig.WidthDecrement, AppConfig.LeftHeightDecrement, AppConfig.RightHeightDecrement = oldW, oldL, oldR
-		AppConfig.AutoSaveSettings = oldAutoSave
+		config.App.WidthDecrement, config.App.LeftHeightDecrement, config.App.RightHeightDecrement = oldW, oldL, oldR
+		config.App.AutoSaveSettings = oldAutoSave
 	})
 
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
@@ -5862,9 +5863,9 @@ func TestPanelsFrame_CtrlShiftArrows_AsymmetricHeight(t *testing.T) {
 		t.Errorf("right panel height=%d, want %d",
 			panelHeight(pf.panels[1]), baseRightH-1)
 	}
-	if AppConfig.RightHeightDecrement != 1 {
-		t.Errorf("AppConfig.RightHeightDecrement=%d, want 1",
-			AppConfig.RightHeightDecrement)
+	if config.App.RightHeightDecrement != 1 {
+		t.Errorf("config.App.RightHeightDecrement=%d, want 1",
+			config.App.RightHeightDecrement)
 	}
 	// Ctrl+Shift+Down on active=right undoes it.
 	send(pf, vtinput.VK_DOWN)
@@ -6166,10 +6167,10 @@ func TestFilePanel_WheelScrollSpeed(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	SetDefaultF4Palette()
 
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.WheelPanelUp = 2
-	AppConfig.WheelPanelDown = 3
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.WheelPanelUp = 2
+	config.App.WheelPanelDown = 3
 
 	pf := NewPanelsFrame()
 	defer pf.Close()

@@ -1,41 +1,42 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/config"
 	"path/filepath"
 	"testing"
 )
 
 func TestConfig_FallbackLanguagePersistence(t *testing.T) {
 	tmpDir := t.TempDir()
-	oldCfg := AppConfig
-	oldGetUserConfigIniPath := getUserConfigIniPath
-	oldGetConfigPaths := getConfigIniPaths
+	oldCfg := config.App
+	oldGetUserConfigIniPath := config.GetUserConfigIniPath
+	oldGetConfigPaths := config.GetConfigIniPaths
 	defer func() {
-		AppConfig = oldCfg
-		getUserConfigIniPath = oldGetUserConfigIniPath
-		getConfigIniPaths = oldGetConfigPaths
+		config.App = oldCfg
+		config.GetUserConfigIniPath = oldGetUserConfigIniPath
+		config.GetConfigIniPaths = oldGetConfigPaths
 	}()
-	getUserConfigIniPath = func() string {
+	config.GetUserConfigIniPath = func() string {
 		return filepath.Join(tmpDir, "settings.ini")
 	}
-	getConfigIniPaths = func() []string {
+	config.GetConfigIniPaths = func() []string {
 		return []string{filepath.Join(tmpDir, "settings.ini")}
 	}
 
-	AppConfig.Language = "ka"
-	AppConfig.FallbackLanguage = "ru"
-	SaveConfig()
+	config.App.Language = "ka"
+	config.App.FallbackLanguage = "ru"
+	config.SaveConfig()
 
 	// Reset in-memory values
-	AppConfig.Language = ""
-	AppConfig.FallbackLanguage = ""
+	config.App.Language = ""
+	config.App.FallbackLanguage = ""
 
-	LoadConfig()
+	config.LoadConfig()
 
-	if AppConfig.Language != "ka" {
-		t.Errorf("expected Primary Language 'ka', got '%s'", AppConfig.Language)
+	if config.App.Language != "ka" {
+		t.Errorf("expected Primary Language 'ka', got '%s'", config.App.Language)
 	}
-	if AppConfig.FallbackLanguage != "ru" {
-		t.Errorf("expected Fallback Language 'ru', got '%s'", AppConfig.FallbackLanguage)
+	if config.App.FallbackLanguage != "ru" {
+		t.Errorf("expected Fallback Language 'ru', got '%s'", config.App.FallbackLanguage)
 	}
 }

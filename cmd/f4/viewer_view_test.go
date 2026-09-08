@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
@@ -605,8 +606,8 @@ func TestViewerView_GetTitle(t *testing.T) {
 }
 
 func TestViewerTitle_FullPathSetting(t *testing.T) {
-	old := AppConfig.DisplayFullPathInTitle
-	t.Cleanup(func() { AppConfig.DisplayFullPathInTitle = old })
+	old := config.App.DisplayFullPathInTitle
+	t.Cleanup(func() { config.App.DisplayFullPathInTitle = old })
 
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "nested", "doc.txt")
@@ -623,12 +624,12 @@ func TestViewerTitle_FullPathSetting(t *testing.T) {
 	}
 	defer vv.Close()
 
-	AppConfig.DisplayFullPathInTitle = false
+	config.App.DisplayFullPathInTitle = false
 	if got, want := vv.topBar.GetLeft(), " doc.txt"; got != want {
 		t.Fatalf("short viewer title = %q, want %q", got, want)
 	}
 
-	AppConfig.DisplayFullPathInTitle = true
+	config.App.DisplayFullPathInTitle = true
 	if got, want := vv.topBar.GetLeft(), " "+path; got != want {
 		t.Fatalf("full viewer title = %q, want %q", got, want)
 	}
@@ -755,7 +756,7 @@ func TestViewerView_TabRendering(t *testing.T) {
 	}
 	vv.Show(scr)
 
-	// Tab size is AppConfig.EditorTabSize (default 4).
+	// Tab size is config.App.EditorTabSize (default 4).
 	// "a" (col 0) -> "\t" starts at col 1, should take 3 spaces to reach col 4.
 	// "b" should be at col 4.
 	cell := scr.GetCell(4, 1) // Y=1 is content row
@@ -967,9 +968,9 @@ func TestViewerView_Codepages_Load(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	oldDefault := AppConfig.ViewerDefaultCodePage
-	AppConfig.ViewerDefaultCodePage = 866
-	defer func() { AppConfig.ViewerDefaultCodePage = oldDefault }()
+	oldDefault := config.App.ViewerDefaultCodePage
+	config.App.ViewerDefaultCodePage = 866
+	defer func() { config.App.ViewerDefaultCodePage = oldDefault }()
 
 	v := vfs.NewOSVFS(tmpDir)
 	vv, err := NewViewerView(context.Background(), v, path)
@@ -1075,8 +1076,8 @@ func TestViewerView_Codepages_AutoDetect(t *testing.T) {
 	}
 	defer vv.Close()
 
-	AppConfig.ViewerAutodetectCodePage = true
-	AppConfig.ViewerDefaultCodePage = 11111 // ANSI
+	config.App.ViewerAutodetectCodePage = true
+	config.App.ViewerDefaultCodePage = 11111 // ANSI
 	vv.ReloadWithAutoDetect()
 
 	if vv.Codepage != 65001 {
@@ -1097,17 +1098,17 @@ func TestViewerView_Codepages_RestoresPerFileOverride(t *testing.T) {
 	}
 
 	oldState := GlobalFileState
-	oldAuto, oldDefault := AppConfig.ViewerAutodetectCodePage, AppConfig.ViewerDefaultCodePage
+	oldAuto, oldDefault := config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage
 	defer func() {
 		GlobalFileState = oldState
-		AppConfig.ViewerAutodetectCodePage = oldAuto
-		AppConfig.ViewerDefaultCodePage = oldDefault
+		config.App.ViewerAutodetectCodePage = oldAuto
+		config.App.ViewerDefaultCodePage = oldDefault
 	}()
 	GlobalFileState = &F4FileStateProvider{Limit: 10, Data: make(map[string]*FileState)}
 	v := vfs.NewOSVFS(tmpDir)
 	GlobalFileState.SaveCodepage(FileStateKey(v, path), 1251)
-	AppConfig.ViewerAutodetectCodePage = true
-	AppConfig.ViewerDefaultCodePage = 65001
+	config.App.ViewerAutodetectCodePage = true
+	config.App.ViewerDefaultCodePage = 65001
 
 	vv, err := NewViewerView(context.Background(), v, path)
 	if err != nil {

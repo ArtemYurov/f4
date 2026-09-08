@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtinput"
@@ -51,7 +52,7 @@ func TestHistorySearchTimeAndDirectoryModes(t *testing.T) {
 	search := newHistorySearch(menu, []history.HistoryRecord{{Name: "echo hi", Dir: "/very/long/work/tree", Timestamp: stamp}}, "")
 	defer search.cleanup()
 	search.showTimes = true
-	search.timeMode = historyShowDateTime
+	search.timeMode = config.HistoryShowDateTime
 	search.showDirPrefix = true
 	search.dirPrefixLen = 12
 	search.applyFilter()
@@ -69,7 +70,7 @@ func TestHistorySearchTimeAndDirectoryModes(t *testing.T) {
 	}) {
 		t.Fatal("Ctrl+T was not handled")
 	}
-	if search.timeMode != historyShowDate || !strings.Contains(menu.Items[0].Text, "2026-08-24") || strings.Contains(menu.Items[0].Text, "12:34:56") {
+	if search.timeMode != config.HistoryShowDate || !strings.Contains(menu.Items[0].Text, "2026-08-24") || strings.Contains(menu.Items[0].Text, "12:34:56") {
 		t.Fatalf("date-only history row = %q, mode=%d", menu.Items[0].Text, search.timeMode)
 	}
 
@@ -81,7 +82,7 @@ func TestHistorySearchTimeAndDirectoryModes(t *testing.T) {
 	}) {
 		t.Fatal("second Ctrl+T was not handled")
 	}
-	if search.timeMode != historyShowNone || strings.Contains(menu.Items[0].Text, "2026-08-24") {
+	if search.timeMode != config.HistoryShowNone || strings.Contains(menu.Items[0].Text, "2026-08-24") {
 		t.Fatalf("hidden-time history row = %q, mode=%d", menu.Items[0].Text, search.timeMode)
 	}
 }
@@ -92,7 +93,7 @@ func TestHistorySearchCtrlDirectoryWidth(t *testing.T) {
 	search := newHistorySearch(menu, []history.HistoryRecord{{Name: "cmd", Dir: "/work"}}, "")
 	defer search.cleanup()
 	search.showDirPrefix = true
-	search.timeMode = historyShowDateTime
+	search.timeMode = config.HistoryShowDateTime
 	search.dirPrefixLen = 8
 	search.applyFilter()
 
@@ -388,7 +389,7 @@ func TestHistorySearchPadsRowsWithoutTimestamp(t *testing.T) {
 	}, "")
 	defer search.cleanup()
 	search.showTimes = true
-	search.timeMode = historyShowDateTime
+	search.timeMode = config.HistoryShowDateTime
 	search.applyFilter()
 
 	dated := search.displayText(search.all[1])
@@ -397,7 +398,7 @@ func TestHistorySearchPadsRowsWithoutTimestamp(t *testing.T) {
 		t.Fatalf("undated row %q is not aligned with dated row %q", undated, dated)
 	}
 
-	search.timeMode = historyShowNone
+	search.timeMode = config.HistoryShowNone
 	if got := search.displayText(search.all[0]); got != "legacy.txt" {
 		t.Fatalf("hidden time column still padded the row: %q", got)
 	}

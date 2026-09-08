@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -79,13 +80,13 @@ func TestCommandPaletteGrabberEntryRejectsStaleTopFrame(t *testing.T) {
 }
 
 func TestCommandPaletteArkanoidProviderRoutesCommandsAndGuardsState(t *testing.T) {
-	oldLanguage := AppConfig.Language
-	oldFallback := AppConfig.FallbackLanguage
-	AppConfig.Language = "ru"
-	AppConfig.FallbackLanguage = ""
+	oldLanguage := config.App.Language
+	oldFallback := config.App.FallbackLanguage
+	config.App.Language = "ru"
+	config.App.FallbackLanguage = ""
 	t.Cleanup(func() {
-		AppConfig.Language = oldLanguage
-		AppConfig.FallbackLanguage = oldFallback
+		config.App.Language = oldLanguage
+		config.App.FallbackLanguage = oldFallback
 	})
 
 	arkanoid := &ArkanoidFrame{BaseWindow: *vtui.NewBaseWindow(1, 1, 63, 20, " Arkanoid ")}

@@ -3,6 +3,7 @@ package main
 import (
 	"path/filepath"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/vfs"
 )
 
@@ -14,7 +15,7 @@ func displayFileTitle(filesystem vfs.VFS, filePath string) string {
 	if filePath == "" {
 		return ""
 	}
-	if AppConfig.DisplayFullPathInTitle {
+	if config.App.DisplayFullPathInTitle {
 		return filePath
 	}
 	if filesystem != nil {

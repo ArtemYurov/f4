@@ -4,13 +4,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
 
 func TestDriveMenuPlatformRowsAlignColumns(t *testing.T) {
-	options := driveMenuShowType | driveMenuShowLabel | driveMenuShowFilesystem | driveMenuShowSize
+	options := config.DriveMenuShowType | config.DriveMenuShowLabel | config.DriveMenuShowFilesystem | config.DriveMenuShowSize
 	rows := []driveMenuPlatformRow{
 		{base: "C:", kind: "fixed", label: "Win10", filesystem: "NTFS", total: "953.0 GiB", free: "300.6 GiB"},
 		{base: "K:", kind: "network", label: "DISK-K", filesystem: "NTFS", total: "13.8 TiB", free: "1.2 TiB"},
@@ -32,7 +33,7 @@ func TestDriveMenuPlatformRowsAlignColumns(t *testing.T) {
 }
 
 func TestDriveMenuPhysicalDiskHasNoTypeDescription(t *testing.T) {
-	got := driveMenuPlatformItemText(sysinfo.DriveEntry{Name: "Physical Disks"}, driveMenuShowType)
+	got := driveMenuPlatformItemText(sysinfo.DriveEntry{Name: "Physical Disks"}, config.DriveMenuShowType)
 	if got != "Physical Disks" {
 		t.Fatalf("physical disk row = %q, want no type suffix", got)
 	}
@@ -59,13 +60,13 @@ func TestDriveMenuOptionsDialogSizeIsContentBased(t *testing.T) {
 }
 
 func TestDriveMenuOptions_DefaultsAndFormatting(t *testing.T) {
-	if parseDriveMenuOptions("") != defaultDriveMenuOptions {
-		t.Fatalf("empty options did not use defaults: %#x", parseDriveMenuOptions(""))
+	if config.ParseDriveMenuOptions("") != config.DefaultDriveMenuOptions {
+		t.Fatalf("empty options did not use defaults: %#x", config.ParseDriveMenuOptions(""))
 	}
-	if parseDriveMenuOptions("not-a-number") != defaultDriveMenuOptions {
+	if config.ParseDriveMenuOptions("not-a-number") != config.DefaultDriveMenuOptions {
 		t.Fatalf("invalid options did not use defaults")
 	}
-	if got := driveMenuPlatformItemText(sysinfo.DriveEntry{Name: "/ Root"}, driveMenuShowType|driveMenuShowFilesystem); !strings.Contains(got, "/") {
+	if got := driveMenuPlatformItemText(sysinfo.DriveEntry{Name: "/ Root"}, config.DriveMenuShowType|config.DriveMenuShowFilesystem); !strings.Contains(got, "/") {
 		t.Fatalf("root row lost its name: %q", got)
 	}
 	if got := driveMenuSize(1024*1024*3, false); got != "3 MiB" {
@@ -82,9 +83,9 @@ func TestPanelsFrame_DriveMenu_F9OpensOptions(t *testing.T) {
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
-	oldOptions := AppConfig.DriveMenuOptions
-	AppConfig.DriveMenuOptions = defaultDriveMenuOptions
-	t.Cleanup(func() { AppConfig.DriveMenuOptions = oldOptions })
+	oldOptions := config.App.DriveMenuOptions
+	config.App.DriveMenuOptions = config.DefaultDriveMenuOptions
+	t.Cleanup(func() { config.App.DriveMenuOptions = oldOptions })
 
 	pf.showDriveMenu(0)
 	menu, ok := driveMenuFromFrame(vtui.FrameManager.GetTopFrame())

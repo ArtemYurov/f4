@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -471,16 +472,16 @@ func TestPanelBookmarkHotkeysKeepRightCtrlDistinct(t *testing.T) {
 }
 
 func TestMacroFastFindEscapeBypassesPanelToggle(t *testing.T) {
-	oldCfg := AppConfig
+	oldCfg := config.App
 	oldHotkeys := GlobalHotkeysMgr
 	oldMacroMgr := MacroMgr
 	defer func() {
-		AppConfig = oldCfg
+		config.App = oldCfg
 		GlobalHotkeysMgr = oldHotkeys
 		MacroMgr = oldMacroMgr
 	}()
 
-	AppConfig.NavigationMode = NavigationClassic
+	config.App.NavigationMode = config.NavigationClassic
 	MacroMgr = nil
 	pf, left, _ := newSearchFirstTestFrame(t)
 	vtui.FrameManager.Push(pf)
@@ -526,17 +527,17 @@ func TestMacroFastFindEscapeBypassesPanelToggle(t *testing.T) {
 }
 
 func TestMacroFastFindDeleteBypassesPanelToggle(t *testing.T) {
-	oldCfg := AppConfig
+	oldCfg := config.App
 	oldHotkeys := GlobalHotkeysMgr
 	oldMacroMgr := MacroMgr
 	defer func() {
-		AppConfig = oldCfg
+		config.App = oldCfg
 		GlobalHotkeysMgr = oldHotkeys
 		MacroMgr = oldMacroMgr
 	}()
 
-	AppConfig.NavigationMode = NavigationClassic
-	AppConfig.EscTogglePanels = true
+	config.App.NavigationMode = config.NavigationClassic
+	config.App.EscTogglePanels = true
 	MacroMgr = nil
 	pf, left, _ := newSearchFirstTestFrame(t)
 	vtui.FrameManager.Push(pf)
@@ -577,16 +578,16 @@ func TestMacroFastFindDeleteBypassesPanelToggle(t *testing.T) {
 }
 
 func TestMacroShellDoesNotRunDuringFastFind(t *testing.T) {
-	oldCfg := AppConfig
+	oldCfg := config.App
 	oldHotkeys := GlobalHotkeysMgr
 	oldMacroMgr := MacroMgr
 	defer func() {
-		AppConfig = oldCfg
+		config.App = oldCfg
 		GlobalHotkeysMgr = oldHotkeys
 		MacroMgr = oldMacroMgr
 	}()
 
-	AppConfig.NavigationMode = NavigationClassic
+	config.App.NavigationMode = config.NavigationClassic
 	MacroMgr = nil
 	GlobalHotkeysMgr = NewHotkeyManager("")
 	pf, left, _ := newSearchFirstTestFrame(t)
@@ -1084,7 +1085,7 @@ func TestMacro_ReassignAndCleanup(t *testing.T) {
 	})
 	mgr.Lua = engine
 
-	scriptDir := filepath.Join(GetF4ConfigDir(), "Macros", "scripts")
+	scriptDir := filepath.Join(config.GetF4ConfigDir(), "Macros", "scripts")
 	if err := os.MkdirAll(scriptDir, 0700); err != nil {
 		t.Fatal(err)
 	}

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -132,9 +133,9 @@ func TestViewerEditorHistoryStampsEntriesAndFiltersByDate(t *testing.T) {
 	vtui.GlobalHistoryProvider = &provider
 	t.Cleanup(func() { vtui.GlobalHistoryProvider = previous })
 
-	previousModes := AppConfig.HistoryShowTimes
-	AppConfig.HistoryShowTimes[historyTypeViewEdit] = historyShowDateTime
-	t.Cleanup(func() { AppConfig.HistoryShowTimes = previousModes })
+	previousModes := config.App.HistoryShowTimes
+	config.App.HistoryShowTimes[config.HistoryTypeViewEdit] = config.HistoryShowDateTime
+	t.Cleanup(func() { config.App.HistoryShowTimes = previousModes })
 
 	root := t.TempDir()
 	opened := time.Now().Add(-time.Second)
@@ -191,16 +192,16 @@ func TestViewerEditorHistoryStampsEntriesAndFiltersByDate(t *testing.T) {
 // command and folder dialogs.
 func TestViewerEditorHistoryCtrlTCyclesTimeMode(t *testing.T) {
 	initHistoryTestScreen(t)
-	// onTimesChanged calls SaveConfig; keep it inside a temporary profile.
+	// onTimesChanged calls config.SaveConfig; keep it inside a temporary profile.
 	setupPortableIni(t, "0")
 	previous := vtui.GlobalHistoryProvider
 	provider := stubHistoryProvider{}
 	vtui.GlobalHistoryProvider = &provider
 	t.Cleanup(func() { vtui.GlobalHistoryProvider = previous })
 
-	previousModes := AppConfig.HistoryShowTimes
-	AppConfig.HistoryShowTimes = [historyTypeCount]int{historyShowDateTime, historyShowDateTime, historyShowDateTime}
-	t.Cleanup(func() { AppConfig.HistoryShowTimes = previousModes })
+	previousModes := config.App.HistoryShowTimes
+	config.App.HistoryShowTimes = [config.HistoryTypeCount]int{config.HistoryShowDateTime, config.HistoryShowDateTime, config.HistoryShowDateTime}
+	t.Cleanup(func() { config.App.HistoryShowTimes = previousModes })
 
 	root := t.TempDir()
 	rememberViewerEditorHistory(vfs.NewOSVFS(root), filepath.Join(root, "note.txt"), historyModeEdit)
@@ -217,7 +218,7 @@ func TestViewerEditorHistoryCtrlTCyclesTimeMode(t *testing.T) {
 		}
 		menu.SetExitCode(-1)
 	})
-	if search == nil || search.timeMode != historyShowDateTime {
+	if search == nil || search.timeMode != config.HistoryShowDateTime {
 		t.Fatalf("viewer/editor dialog did not pick up the configured time mode: %#v", search)
 	}
 	clock := loadViewerEditorHistory()[0].Timestamp.Format("15:04:05")
@@ -227,22 +228,22 @@ func TestViewerEditorHistoryCtrlTCyclesTimeMode(t *testing.T) {
 		VirtualKeyCode: vtinput.VK_T, ControlKeyState: vtinput.LeftCtrlPressed,
 	}
 	menu.ProcessKey(ctrlT)
-	if search.timeMode != historyShowDate || AppConfig.HistoryShowTimes[historyTypeViewEdit] != historyShowDate {
-		t.Fatalf("Ctrl+T mode = %d, config = %v", search.timeMode, AppConfig.HistoryShowTimes)
+	if search.timeMode != config.HistoryShowDate || config.App.HistoryShowTimes[config.HistoryTypeViewEdit] != config.HistoryShowDate {
+		t.Fatalf("Ctrl+T mode = %d, config = %v", search.timeMode, config.App.HistoryShowTimes)
 	}
 	if row := search.displayText(search.all[0]); strings.Contains(row, clock) {
 		t.Fatalf("date-only row still shows the clock: %q", row)
 	}
-	if AppConfig.HistoryShowTimes[historyTypeCommands] != historyShowDateTime {
-		t.Fatalf("Ctrl+T leaked into the command history slot: %v", AppConfig.HistoryShowTimes)
+	if config.App.HistoryShowTimes[config.HistoryTypeCommands] != config.HistoryShowDateTime {
+		t.Fatalf("Ctrl+T leaked into the command history slot: %v", config.App.HistoryShowTimes)
 	}
 
 	menu.ProcessKey(ctrlT)
-	if search.timeMode != historyShowNone {
-		t.Fatalf("second Ctrl+T mode = %d, want %d", search.timeMode, historyShowNone)
+	if search.timeMode != config.HistoryShowNone {
+		t.Fatalf("second Ctrl+T mode = %d, want %d", search.timeMode, config.HistoryShowNone)
 	}
 	menu.ProcessKey(ctrlT)
-	if search.timeMode != historyShowDateTime {
-		t.Fatalf("third Ctrl+T mode = %d, want %d", search.timeMode, historyShowDateTime)
+	if search.timeMode != config.HistoryShowDateTime {
+		t.Fatalf("third Ctrl+T mode = %d, want %d", search.timeMode, config.HistoryShowDateTime)
 	}
 }

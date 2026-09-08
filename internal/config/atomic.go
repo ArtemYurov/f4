@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"io"
@@ -7,10 +7,19 @@ import (
 	"time"
 )
 
-// writeFileAtomically publishes a complete file without exposing a truncated
-// target. The temporary file lives beside the target so Rename is atomic on
-// filesystems that support atomic same-directory replacement.
-func writeFileAtomically(path string, data []byte, mode os.FileMode) (returnErr error) {
+// WriteUserFileAtomically writes one of f4's own configuration files. A crash
+// or a full disk leaves either the old file or the new one, never a truncated
+// one: the temporary file lives beside the target so Rename replaces it in one
+// step on every filesystem that supports same-directory atomic replacement.
+//
+// Both halves of the name earn their place. "UserFile" because every caller
+// writes a user configuration file — the settings ini, bookmarks, the user
+// menu, file associations — and a generic "write bytes atomically" in a
+// layer-0 package collects callers who want the utility and take a dependency
+// on the configuration package with it. "Atomically" because without it the
+// call reads like os.WriteFile with extra steps, and the next person
+// simplifying this file would drop the guarantee without noticing it was one.
+func WriteUserFileAtomically(path string, data []byte, mode os.FileMode) (returnErr error) {
 	dir := filepath.Dir(path)
 	if dir == "" {
 		dir = "."

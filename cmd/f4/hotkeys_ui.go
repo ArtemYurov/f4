@@ -7,6 +7,7 @@ import (
 	"unicode"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -193,7 +194,7 @@ func normalizeHotkeySearchQuery(query string) string {
 
 func configureHotkeyTableSearch(table *vtui.Table) {
 	table.QuickSearch = true
-	table.SearchExactOnHit = AppConfig.SearchExactOnHit
+	table.SearchExactOnHit = config.App.SearchExactOnHit
 	normalizing := false
 	table.OnSearchChange = func(text string) {
 		if normalizing {

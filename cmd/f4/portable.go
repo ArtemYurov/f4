@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ini"
-	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/vtui"
 )
 
@@ -18,15 +18,11 @@ import (
 // binary writes — settings, history, macros, plugins, crash logs — then stays
 // in that profile, so the whole directory can be moved to another machine.
 //
-// The ini is deliberately read before anything else (see GetF4ConfigDir), so
+// The ini is deliberately read before anything else (see config.GetF4ConfigDir), so
 // no setting stored *inside* the profile can switch the mode: the program
 // would not know which profile to read it from. The Options → Portable mode
 // dialog therefore edits <exe>.ini and asks for a restart instead of flipping
 // a live flag.
-
-// portableIniName is the file name shared by every binary in the directory
-// (f4, f4-gui, f4.exe, f4-gui.exe), as asked for in unxed/f4#274.
-const portableIniName = "f4.ini"
 
 // portableProfileSubdirs are created inside a fresh portable profile so a user
 // browsing the directory sees where macros, plugins and styles go instead of
@@ -38,55 +34,16 @@ var portableProfileSubdirs = []string{
 	"styles",
 }
 
-// portableIniPath returns the ini GetF4ConfigDir reads for the given
-// executable: <exe>.ini when it exists, otherwise f4.ini in the same
-// directory. The second file need not exist; the caller decides whether a
-// missing file matters.
-func portableIniPath(exe string) string {
-	own := exe + ".ini"
-	// #nosec G703 -- own is the executable path plus ".ini", not an untrusted path component.
-	if _, err := os.Stat(own); err == nil {
-		return own
-	}
-	return filepath.Join(filepath.Dir(exe), portableIniName)
-}
-
-// expandProfileVars expands %NAME% (Far/Windows style) and $NAME / ${NAME}
-// (Unix style) in a Profile= value. F4HOME always means exeDir, even when the
-// process environment carries a different value, so a profile path in an ini
-// that travels with the binary keeps pointing next to that binary.
-func expandProfileVars(value, exeDir string) string {
-	lookup := func(name string) string {
-		if strings.EqualFold(name, "F4HOME") {
-			return exeDir
-		}
-		return os.Getenv(name)
-	}
-	var out strings.Builder
-	for i := 0; i < len(value); i++ {
-		if value[i] == '%' {
-			end := strings.IndexByte(value[i+1:], '%')
-			if end > 0 {
-				out.WriteString(lookup(value[i+1 : i+1+end]))
-				i += end + 1
-				continue
-			}
-		}
-		out.WriteByte(value[i])
-	}
-	return os.Expand(out.String(), lookup)
-}
-
-// currentPortableIniPath is portableIniPath for the running binary.
+// currentPortableIniPath is config.PortableIniPath for the running binary.
 func currentPortableIniPath() string {
-	exe, err := update.Executable()
+	exe, err := config.Executable()
 	if err != nil {
 		exe = os.Args[0]
 	}
 	if abs, err := filepath.Abs(exe); err == nil {
 		exe = abs
 	}
-	return portableIniPath(exe)
+	return config.PortableIniPath(exe)
 }
 
 // setPortableMode writes UseSystemProfiles into the ini next to the binary,
@@ -103,8 +60,8 @@ func setPortableMode(iniPath string, enable bool) error {
 	if enable {
 		value = "0"
 	}
-	updated := updateIniValues(data, "General", map[string]string{"UseSystemProfiles": value})
-	// Trim the blank line updateIniValues puts before a brand new section so
+	updated := config.UpdateIniValues(data, "General", map[string]string{"UseSystemProfiles": value})
+	// Trim the blank line config.UpdateIniValues puts before a brand new section so
 	// a freshly created file does not start with an empty line.
 	updated = []byte(strings.TrimLeft(string(updated), "\r\n"))
 	return os.WriteFile(iniPath, updated, 0600)
@@ -195,7 +152,7 @@ func copyFileNoClobber(src, dst string) error {
 
 // systemProfileDir is the per-user directory f4 uses when it is not portable.
 func systemProfileDir() string {
-	sysDir, _ := userConfigDir()
+	sysDir, _ := config.UserConfigDir()
 	return filepath.Join(sysDir, "f4")
 }
 
@@ -203,7 +160,7 @@ func systemProfileDir() string {
 // current <exe>.ini (honoring Profile= when present).
 func portableProfileDir() string {
 	iniPath := currentPortableIniPath()
-	return portableProfileDirFor(filepath.Dir(iniPath), ini.Load(iniPath))
+	return config.PortableProfileDirFor(filepath.Dir(iniPath), ini.Load(iniPath))
 }
 
 // actionPortableSettings is Options → Portable mode. It shows where the
@@ -213,7 +170,7 @@ func portableProfileDir() string {
 // detected (see the comment at the top of this file).
 func actionPortableSettings(pf *PanelsFrame) {
 	iniPath := currentPortableIniPath()
-	wasPortable := IsPortableProfile()
+	wasPortable := config.IsPortableProfile()
 
 	width, height := 70, 14
 	dlg := vtui.NewCenteredDialog(width, height, Msg("PortableSettings.Title"))
@@ -233,7 +190,7 @@ func actionPortableSettings(pf *PanelsFrame) {
 		label := fmt.Sprintf(Msg(key), "")
 		return label + truncPathLeft(path, width-4-vtui.StringWidth(label))
 	}
-	current := vtui.NewText(0, 0, pathLine("PortableSettings.Current", GetF4ConfigDir()), 0)
+	current := vtui.NewText(0, 0, pathLine("PortableSettings.Current", config.GetF4ConfigDir()), 0)
 	iniInfo := vtui.NewText(0, 0, pathLine("PortableSettings.ini.File", iniPath), 0)
 	note := vtui.NewText(0, 0, Msg("PortableSettings.Note"), 0)
 	note2 := vtui.NewText(0, 0, Msg("PortableSettings.Note2"), 0)
@@ -289,8 +246,8 @@ func actionPortableSettings(pf *PanelsFrame) {
 // the profile if asked, and only then rewrites the ini. Ordering matters: if
 // the copy fails the ini is untouched and the next start is unchanged.
 func applyPortableMode(iniPath string, enable, copyProfile bool) error {
-	SaveConfig()
-	src := GetF4ConfigDir()
+	config.SaveConfig()
+	src := config.GetF4ConfigDir()
 	var dst string
 	if enable {
 		dst = portableProfileDir()

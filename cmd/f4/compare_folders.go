@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/vfs"
 )
 
@@ -89,7 +90,7 @@ type compareProgress func(path string, done, total int)
 
 // compareTimesEqual answers whether two modification times count as the
 // same one under the current options.
-func compareTimesEqual(a, b time.Time, opts compareOptions) bool {
+func compareTimesEqual(a, b time.Time, opts config.CompareOptions) bool {
 	d := a.Sub(b)
 	if d < 0 {
 		d = -d
@@ -116,7 +117,7 @@ func compareTimesEqual(a, b time.Time, opts compareOptions) bool {
 // from the directory listing alone. It reports whether the metadata
 // differs, whether that difference is one of time only, and which side is
 // the newer one (1 left, -1 right, 0 neither).
-func compareMetadata(a, b vfs.VFSItem, opts compareOptions) (differs, timeOnly bool, newer int) {
+func compareMetadata(a, b vfs.VFSItem, opts config.CompareOptions) (differs, timeOnly bool, newer int) {
 	sizeDiffers := opts.BySize && a.Size != b.Size
 	timeDiffers := opts.ByTime && !compareTimesEqual(a.MTime, b.MTime, opts)
 	if timeDiffers {
@@ -153,7 +154,7 @@ func firstPathComponent(rel string) string {
 // whole comparison: one unreadable folder should not cost the answer about
 // every other one. An unreadable panel folder is fatal, because then there
 // is nothing to compare at all.
-func collectCompareSide(ctx context.Context, v vfs.VFS, root string, allow map[string]bool, opts compareOptions, progress func(string)) (map[string]compareItem, error) {
+func collectCompareSide(ctx context.Context, v vfs.VFS, root string, allow map[string]bool, opts config.CompareOptions, progress func(string)) (map[string]compareItem, error) {
 	if v == nil {
 		return nil, errors.New("compare: no file system")
 	}
@@ -224,7 +225,7 @@ func collectCompareSide(ctx context.Context, v vfs.VFS, root string, allow map[s
 
 // compareSides is the comparison proper: it pairs the two collections by
 // relative path and decides, for every pair, which side to mark.
-func compareSides(ctx context.Context, leftFS, rightFS vfs.VFS, left, right map[string]compareItem, opts compareOptions, progress compareProgress) (*compareOutcome, error) {
+func compareSides(ctx context.Context, leftFS, rightFS vfs.VFS, left, right map[string]compareItem, opts config.CompareOptions, progress compareProgress) (*compareOutcome, error) {
 	out := newCompareOutcome()
 
 	keys := make([]string, 0, len(left)+len(right))
@@ -314,14 +315,14 @@ func compareSides(ctx context.Context, leftFS, rightFS vfs.VFS, left, right map[
 
 // compareSkipMode turns the ignore options into the content filter mode,
 // where -1 means "compare the bytes as they are".
-func compareSkipMode(opts compareOptions) int {
+func compareSkipMode(opts config.CompareOptions) int {
 	if !opts.Ignore {
 		return -1
 	}
-	if opts.IgnoreMode == compareIgnoreSpaces {
-		return compareIgnoreSpaces
+	if opts.IgnoreMode == config.CompareIgnoreSpaces {
+		return config.CompareIgnoreSpaces
 	}
-	return compareIgnoreEOL
+	return config.CompareIgnoreEOL
 }
 
 // compareContents answers whether two files hold the same bytes, under the
@@ -399,7 +400,7 @@ func (s *compareStream) fill() error {
 // chunk is handed on as it is, so the common case copies nothing.
 func (s *compareStream) normalize(chunk []byte) []byte {
 	switch s.skip {
-	case compareIgnoreSpaces:
+	case config.CompareIgnoreSpaces:
 		out := s.work[:0]
 		for _, b := range chunk {
 			switch b {
@@ -410,7 +411,7 @@ func (s *compareStream) normalize(chunk []byte) []byte {
 		}
 		s.work = out
 		return out
-	case compareIgnoreEOL:
+	case config.CompareIgnoreEOL:
 		out := s.work[:0]
 		for _, b := range chunk {
 			switch b {

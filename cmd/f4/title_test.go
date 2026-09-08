@@ -5,14 +5,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
 
 func TestUpdateWindowTitle(t *testing.T) {
 	// 1. Резервное копирование текущего состояния конфигурации
-	origTemplate := AppConfig.ConsoleTitleTemplate
+	origTemplate := config.App.ConsoleTitleTemplate
 	defer func() {
-		AppConfig.ConsoleTitleTemplate = origTemplate
+		config.App.ConsoleTitleTemplate = origTemplate
 	}()
 
 	// 2. Инициализация кэша заголовков для детерминированности теста
@@ -65,7 +66,7 @@ func TestUpdateWindowTitle(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			out.Reset()
-			AppConfig.ConsoleTitleTemplate = tt.template
+			config.App.ConsoleTitleTemplate = tt.template
 
 			// Имитируем проход рендеринга
 			UpdateWindowTitle(scr)
@@ -100,8 +101,8 @@ func TestBuildVersionOverridesVCSMetadata(t *testing.T) {
 }
 
 func TestCurrentWindowTitleMatchesRenderedTitle(t *testing.T) {
-	origTemplate := AppConfig.ConsoleTitleTemplate
-	defer func() { AppConfig.ConsoleTitleTemplate = origTemplate }()
+	origTemplate := config.App.ConsoleTitleTemplate
+	defer func() { config.App.ConsoleTitleTemplate = origTemplate }()
 
 	t.Cleanup(swapFrameManager(t))
 	scr := vtui.NewScreenBuf()
@@ -109,7 +110,7 @@ func TestCurrentWindowTitleMatchesRenderedTitle(t *testing.T) {
 	vtui.FrameManager.Init(scr)
 	vtui.FrameManager.Push(vtui.NewDesktop())
 
-	AppConfig.ConsoleTitleTemplate = "debug %State|%Platform"
+	config.App.ConsoleTitleTemplate = "debug %State|%Platform"
 	if got, want := currentWindowTitle(), "debug Desktop|"+cachedPlat; got != want {
 		t.Fatalf("currentWindowTitle() = %q, want %q", got, want)
 	}

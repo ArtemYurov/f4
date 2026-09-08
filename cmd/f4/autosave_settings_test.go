@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/config"
 	"os"
 	"path/filepath"
 	"testing"
@@ -8,36 +9,36 @@ import (
 
 func TestConfig_AutoSaveCategoriesRoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "settings.ini")
-	origUserPathFunc := getUserConfigIniPath
-	origPathsFunc := getConfigIniPaths
-	oldConfig := AppConfig
+	origUserPathFunc := config.GetUserConfigIniPath
+	origPathsFunc := config.GetConfigIniPaths
+	oldConfig := config.App
 	defer func() {
-		getUserConfigIniPath = origUserPathFunc
-		getConfigIniPaths = origPathsFunc
-		AppConfig = oldConfig
+		config.GetUserConfigIniPath = origUserPathFunc
+		config.GetConfigIniPaths = origPathsFunc
+		config.App = oldConfig
 	}()
-	getUserConfigIniPath = func() string { return path }
-	getConfigIniPaths = func() []string { return []string{path} }
+	config.GetUserConfigIniPath = func() string { return path }
+	config.GetConfigIniPaths = func() []string { return []string{path} }
 
-	AppConfig.AutoSaveSettings = true
-	AppConfig.AutoSaveDialogSettings = true
-	AppConfig.AutoSavePanelSettings = false
-	AppConfig.AutoSaveCurrentPanel = true
-	AppConfig.AutoSaveGUIWindow = false
-	SaveConfig()
+	config.App.AutoSaveSettings = true
+	config.App.AutoSaveDialogSettings = true
+	config.App.AutoSavePanelSettings = false
+	config.App.AutoSaveCurrentPanel = true
+	config.App.AutoSaveGUIWindow = false
+	config.SaveConfig()
 
-	AppConfig.AutoSaveSettings = false
-	AppConfig.AutoSaveDialogSettings = false
-	AppConfig.AutoSavePanelSettings = true
-	AppConfig.AutoSaveCurrentPanel = false
-	AppConfig.AutoSaveGUIWindow = true
-	LoadConfig()
+	config.App.AutoSaveSettings = false
+	config.App.AutoSaveDialogSettings = false
+	config.App.AutoSavePanelSettings = true
+	config.App.AutoSaveCurrentPanel = false
+	config.App.AutoSaveGUIWindow = true
+	config.LoadConfig()
 
-	if !AppConfig.AutoSaveSettings || !AppConfig.AutoSaveDialogSettings || AppConfig.AutoSavePanelSettings ||
-		!AppConfig.AutoSaveCurrentPanel || AppConfig.AutoSaveGUIWindow {
+	if !config.App.AutoSaveSettings || !config.App.AutoSaveDialogSettings || config.App.AutoSavePanelSettings ||
+		!config.App.AutoSaveCurrentPanel || config.App.AutoSaveGUIWindow {
 		t.Fatalf("autosave categories did not round-trip: master=%v dialog=%v panel=%v current=%v gui=%v",
-			AppConfig.AutoSaveSettings, AppConfig.AutoSaveDialogSettings, AppConfig.AutoSavePanelSettings,
-			AppConfig.AutoSaveCurrentPanel, AppConfig.AutoSaveGUIWindow)
+			config.App.AutoSaveSettings, config.App.AutoSaveDialogSettings, config.App.AutoSavePanelSettings,
+			config.App.AutoSaveCurrentPanel, config.App.AutoSaveGUIWindow)
 	}
 }
 
@@ -46,32 +47,32 @@ func TestConfig_AutoSaveCategoriesMigrateLegacyMaster(t *testing.T) {
 	if err := os.WriteFile(path, []byte("[System]\nAutoSaveSettings = 0\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	origUserPathFunc := getUserConfigIniPath
-	origPathsFunc := getConfigIniPaths
-	oldConfig := AppConfig
+	origUserPathFunc := config.GetUserConfigIniPath
+	origPathsFunc := config.GetConfigIniPaths
+	oldConfig := config.App
 	defer func() {
-		getUserConfigIniPath = origUserPathFunc
-		getConfigIniPaths = origPathsFunc
-		AppConfig = oldConfig
+		config.GetUserConfigIniPath = origUserPathFunc
+		config.GetConfigIniPaths = origPathsFunc
+		config.App = oldConfig
 	}()
-	getUserConfigIniPath = func() string { return path }
-	getConfigIniPaths = func() []string { return []string{path} }
+	config.GetUserConfigIniPath = func() string { return path }
+	config.GetConfigIniPaths = func() []string { return []string{path} }
 
-	LoadConfig()
-	if AppConfig.AutoSaveSettings || AppConfig.AutoSaveDialogSettings || AppConfig.AutoSavePanelSettings ||
-		AppConfig.AutoSaveCurrentPanel || AppConfig.AutoSaveGUIWindow {
+	config.LoadConfig()
+	if config.App.AutoSaveSettings || config.App.AutoSaveDialogSettings || config.App.AutoSavePanelSettings ||
+		config.App.AutoSaveCurrentPanel || config.App.AutoSaveGUIWindow {
 		t.Fatalf("legacy disabled autosave did not disable all categories: master=%v dialog=%v panel=%v current=%v gui=%v",
-			AppConfig.AutoSaveSettings, AppConfig.AutoSaveDialogSettings, AppConfig.AutoSavePanelSettings,
-			AppConfig.AutoSaveCurrentPanel, AppConfig.AutoSaveGUIWindow)
+			config.App.AutoSaveSettings, config.App.AutoSaveDialogSettings, config.App.AutoSavePanelSettings,
+			config.App.AutoSaveCurrentPanel, config.App.AutoSaveGUIWindow)
 	}
 }
 
 func TestSaveSession_DisabledWhenAllCategoriesAreOff(t *testing.T) {
-	oldConfig := AppConfig
+	oldConfig := config.App
 	oldSessionPath := getSessionIniPath
 	oldLoaded := sessionLoaded
 	defer func() {
-		AppConfig = oldConfig
+		config.App = oldConfig
 		getSessionIniPath = oldSessionPath
 		sessionLoaded = oldLoaded
 	}()
@@ -80,11 +81,11 @@ func TestSaveSession_DisabledWhenAllCategoriesAreOff(t *testing.T) {
 	getSessionIniPath = func() string { return path }
 	// Otherwise the assertion passes for the wrong reason: unloaded state.
 	sessionLoaded = true
-	AppConfig.AutoSaveSettings = true
-	AppConfig.AutoSaveDialogSettings = false
-	AppConfig.AutoSavePanelSettings = false
-	AppConfig.AutoSaveCurrentPanel = false
-	AppConfig.AutoSaveGUIWindow = false
+	config.App.AutoSaveSettings = true
+	config.App.AutoSaveDialogSettings = false
+	config.App.AutoSavePanelSettings = false
+	config.App.AutoSaveCurrentPanel = false
+	config.App.AutoSaveGUIWindow = false
 	SaveSession()
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Fatalf("all-disabled automatic session save created %s, err=%v", path, err)
@@ -95,11 +96,11 @@ func TestSaveSession_DisabledWhenAllCategoriesAreOff(t *testing.T) {
 // without ever calling LoadSession: their defaults would cost the daemon's file
 // its panel paths and wide mode.
 func TestSaveSession_SkippedWhenStateWasNeverLoaded(t *testing.T) {
-	oldConfig := AppConfig
+	oldConfig := config.App
 	oldSessionPath := getSessionIniPath
 	oldLoaded := sessionLoaded
 	defer func() {
-		AppConfig = oldConfig
+		config.App = oldConfig
 		getSessionIniPath = oldSessionPath
 		sessionLoaded = oldLoaded
 	}()
@@ -107,11 +108,11 @@ func TestSaveSession_SkippedWhenStateWasNeverLoaded(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "session.ini")
 	getSessionIniPath = func() string { return path }
 	sessionLoaded = false
-	AppConfig.AutoSaveSettings = true
-	AppConfig.AutoSaveDialogSettings = true
-	AppConfig.AutoSavePanelSettings = true
-	AppConfig.AutoSaveCurrentPanel = true
-	AppConfig.AutoSaveGUIWindow = true
+	config.App.AutoSaveSettings = true
+	config.App.AutoSaveDialogSettings = true
+	config.App.AutoSavePanelSettings = true
+	config.App.AutoSaveCurrentPanel = true
+	config.App.AutoSaveGUIWindow = true
 	SaveSession()
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Fatalf("session save without a loaded state created %s, err=%v", path, err)

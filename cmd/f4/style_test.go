@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
 
@@ -50,9 +51,9 @@ func TestApplyColorStyleModernAndClassic(t *testing.T) {
 	getUserStylesDir = func() string { return userDir }
 	defer func() { getUserStylesDir = oldDir }()
 
-	oldCfg := AppConfig
-	AppConfig.EnforceColorCorrection = false
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	config.App.EnforceColorCorrection = false
+	defer func() { config.App = oldCfg }()
 
 	if err := ApplyColorStyle("Modern"); err != nil {
 		t.Fatal(err)
@@ -145,9 +146,9 @@ func TestApplyColorStyleRadiolaWorkspaceTabs(t *testing.T) {
 	getUserStylesDir = func() string { return t.TempDir() }
 	defer func() { getUserStylesDir = oldDir }()
 
-	oldCfg := AppConfig
-	AppConfig.EnforceColorCorrection = false
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	config.App.EnforceColorCorrection = false
+	defer func() { config.App = oldCfg }()
 
 	if err := ApplyColorStyle("Radiola"); err != nil {
 		t.Fatal(err)
@@ -187,9 +188,9 @@ func TestApplyColorStyleDefaultDarkWorkspaceTabs(t *testing.T) {
 	getUserStylesDir = func() string { return userDir }
 	defer func() { getUserStylesDir = oldDir }()
 
-	oldCfg := AppConfig
-	AppConfig.EnforceColorCorrection = false
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	config.App.EnforceColorCorrection = false
+	defer func() { config.App = oldCfg }()
 
 	if err := ApplyColorStyle("Default Dark"); err != nil {
 		t.Fatal(err)

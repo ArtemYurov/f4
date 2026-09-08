@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/config"
 	"strings"
 	"testing"
 )
@@ -10,12 +11,12 @@ func TestGenerateKeysHelpTopic_Arabic(t *testing.T) {
 	GlobalHotkeysMgr = NewHotkeyManager("")
 	defer func() { GlobalHotkeysMgr = old }()
 
-	oldLang := AppConfig.Language
+	oldLang := config.App.Language
 	defer func() {
-		AppConfig.Language = oldLang
+		config.App.Language = oldLang
 		InitLang()
 	}()
-	AppConfig.Language = "ar"
+	config.App.Language = "ar"
 	InitLang()
 
 	topic := generateKeysHelpTopic("PanelNav", "t", []string{"Shell"}, "")
@@ -35,12 +36,12 @@ func TestGenerateKeysHelpTopic_HelpLanguageOverridesUI_Arabic(t *testing.T) {
 	GlobalHotkeysMgr = NewHotkeyManager("")
 	defer func() { GlobalHotkeysMgr = old }()
 
-	oldLang := AppConfig.Language
+	oldLang := config.App.Language
 	defer func() {
-		AppConfig.Language = oldLang
+		config.App.Language = oldLang
 		InitLang()
 	}()
-	AppConfig.Language = "en"
+	config.App.Language = "en"
 	InitLang()
 
 	oldStrings := helpActionStrings

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 	"testing"
@@ -137,9 +138,9 @@ func TestCommandLine_AutoCompleteDisabled(t *testing.T) {
 	cl.Edit.History = []string{"ls", "long-command"}
 
 	// 1. Выключаем глобальную настройку
-	oldCfg := AppConfig
-	AppConfig.CommandLineAutoComplete = false
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	config.App.CommandLineAutoComplete = false
+	defer func() { config.App = oldCfg }()
 
 	// 2. Симулируем ввод буквы 'l'
 	cl.ProcessKey(&vtinput.InputEvent{
@@ -159,14 +160,14 @@ func TestCommandLine_NoAutoCompleteMenuWhenDisabled(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	SetDefaultF4Palette()
 
-	oldCfg := AppConfig
-	AppConfig.CommandLineAutoComplete = false
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	config.App.CommandLineAutoComplete = false
+	defer func() { config.App = oldCfg }()
 
 	cl := NewCommandLine("> ")
 	cl.SetPosition(0, 0, 30, 0)
 	// PathHintsEnabled follows the option (synced like the settings dialog does).
-	cl.Edit.PathHintsEnabled = AppConfig.CommandLineAutoComplete
+	cl.Edit.PathHintsEnabled = config.App.CommandLineAutoComplete
 	cl.Edit.History = []string{"dir /s", "dir /s d", "dir /s"}
 
 	// Type "dir /s": the separator and the trailing character must not open
@@ -194,9 +195,9 @@ func TestCommandLine_AutoCompleteSuppressed(t *testing.T) {
 	cl.Edit.History = []string{"ls", "long-command"}
 	cl.AutoCompleteSuppressed = true
 
-	oldCfg := AppConfig
-	AppConfig.CommandLineAutoComplete = true
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	config.App.CommandLineAutoComplete = true
+	defer func() { config.App = oldCfg }()
 
 	cl.ProcessKey(&vtinput.InputEvent{
 		Type:    vtinput.KeyEventType,
@@ -227,9 +228,9 @@ func TestCommandLine_AutoCompleteStillOpensWhenAllowed(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	SetDefaultF4Palette()
 
-	oldCfg := AppConfig
-	AppConfig.CommandLineAutoComplete = true
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	config.App.CommandLineAutoComplete = true
+	defer func() { config.App = oldCfg }()
 
 	cl := NewCommandLine("> ")
 	cl.SetPosition(0, 0, 10, 0)

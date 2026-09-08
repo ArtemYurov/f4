@@ -5,21 +5,22 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtinput"
 )
 
 func TestSlideShowInterval(t *testing.T) {
-	was := AppConfig.SlideShowDelay
-	t.Cleanup(func() { AppConfig.SlideShowDelay = was })
+	was := config.App.SlideShowDelay
+	t.Cleanup(func() { config.App.SlideShowDelay = was })
 
-	AppConfig.SlideShowDelay = 3
+	config.App.SlideShowDelay = 3
 	if got := slideShowInterval(); got != 3*time.Second {
 		t.Errorf("a configured delay of three seconds gave %v", got)
 	}
 
 	for _, bad := range []int{0, -1} {
-		AppConfig.SlideShowDelay = bad
-		if got := slideShowInterval(); got != defaultSlideShowDelay*time.Second {
+		config.App.SlideShowDelay = bad
+		if got := slideShowInterval(); got != config.DefaultSlideShowDelay*time.Second {
 			t.Errorf("a delay of %d gave %v instead of the default", bad, got)
 		}
 	}

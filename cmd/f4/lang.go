@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/vtui"
 )
@@ -32,7 +33,7 @@ func Msg(key string) string {
 }
 
 func init() {
-	// Initial load for tests. SetupUI will call this again after LoadConfig.
+	// Initial load for tests. SetupUI will call this again after config.LoadConfig.
 	InitLang()
 }
 
@@ -76,11 +77,11 @@ func InitLang() {
 		}
 	}
 
-	primary := AppConfig.Language
+	primary := config.App.Language
 	if primary == "" {
 		primary = "en"
 	}
-	fallback := AppConfig.FallbackLanguage
+	fallback := config.App.FallbackLanguage
 	if !safeLanguageCode(primary) {
 		primary = "en"
 	}
@@ -101,7 +102,7 @@ func InitLang() {
 	vtui.ReplaceStrings(allBaseStrings)
 
 	exeDir := filepath.Dir(os.Args[0])
-	userDir := filepath.Join(GetF4ConfigDir(), "lang")
+	userDir := filepath.Join(config.GetF4ConfigDir(), "lang")
 
 	loadLang := func(code string) {
 		if !safeLanguageCode(code) {

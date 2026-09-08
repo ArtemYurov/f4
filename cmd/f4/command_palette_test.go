@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -180,15 +181,15 @@ func TestCommandPaletteIncludesBothPluginLocationsAndReResolves(t *testing.T) {
 }
 
 func TestCommandPalettePluginMetadataUsesCurrentLanguageAndAllLanguageAliases(t *testing.T) {
-	oldLanguage := AppConfig.Language
-	oldFallbackLanguage := AppConfig.FallbackLanguage
+	oldLanguage := config.App.Language
+	oldFallbackLanguage := config.App.FallbackLanguage
 	t.Cleanup(func() {
-		AppConfig.Language = oldLanguage
-		AppConfig.FallbackLanguage = oldFallbackLanguage
+		config.App.Language = oldLanguage
+		config.App.FallbackLanguage = oldFallbackLanguage
 		InitLang()
 	})
-	AppConfig.Language = "en"
-	AppConfig.FallbackLanguage = ""
+	config.App.Language = "en"
+	config.App.FallbackLanguage = ""
 	InitLang()
 
 	api := &coreAPI{}
@@ -242,7 +243,7 @@ func TestCommandPalettePluginMetadataUsesCurrentLanguageAndAllLanguageAliases(t 
 		}
 	}
 
-	AppConfig.Language = "ru"
+	config.App.Language = "ru"
 	InitLang()
 	entry = findEntry()
 	if entry.Label != "Извлечь файлы" || entry.Description != "Извлечь выбранный архив в пассивную панель" {

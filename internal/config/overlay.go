@@ -1,4 +1,4 @@
-package main
+package config
 
 // One switch, two overlays, and a name that only ever described one of them.
 //
@@ -12,14 +12,14 @@ package main
 // somebody who switched the overlay off in 2026 and never thought about it
 // again must not have it come back on under them after an update.
 
-// overlayEnabled resolves the setting. get is `ini.GetString` — taken as a
+// OverlayEnabled resolves the setting. get is `ini.GetString` — taken as a
 // function so this can be tested without a file on disk.
 //
 // The precedence is the obvious one: the new name wins where it is present,
 // the old name answers where it is not, and the default is on. That falls out
 // of using the old name's value as the new name's default rather than being
 // spelled out with a lookup for presence, which the ini reader does not offer.
-func overlayEnabled(get func(section, key, def string) string) bool {
+func OverlayEnabled(get func(section, key, def string) string) bool {
 	legacy := get("Images", "X11Overlay", "1")
 	return get("Images", "Overlay", legacy) == "1"
 }

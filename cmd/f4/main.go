@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/ini"
@@ -169,7 +170,10 @@ func sudoStartupMode(args []string, askpassParent bool) (dispatcher string, askp
 
 func main() {
 	vtui.AppName = "f4"
-	configureF4DebugLogPath(GetF4ConfigDir())
+	// Before anything asks where the configuration lives: internal/config is a
+	// layer-0 leaf and cannot reach internal/update for the answer.
+	config.Executable = update.Executable
+	configureF4DebugLogPath(config.GetF4ConfigDir())
 	if archivePath, archiveKind, found, err := update.ParseHelperArgs(os.Args[1:]); found {
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
@@ -224,13 +228,13 @@ func main() {
 
 	// Setup crash/stderr location before any logging starts; in portable mode
 	// this keeps crash reports inside <configDir>\crashes (Profile\crashes).
-	vtui.CrashDirFull = filepath.Join(GetF4ConfigDir(), "crashes")
+	vtui.CrashDirFull = filepath.Join(config.GetF4ConfigDir(), "crashes")
 	installHangDumpHandler()
 
 	vtui.SetupStderrLog()
 	redirectDetachedStdout()
 	vtui.DebugLog("MAIN: Starting with args: %v", os.Args)
-	LoadConfig() // Load config early to apply GUI font settings
+	config.LoadConfig() // Load config early to apply GUI font settings
 
 	defer func() {
 		SaveSession() // Гарантирует сохранение размеров и путей при любом выходе
@@ -363,7 +367,7 @@ func main() {
 			}
 			os.Exit(RunNewPlugin(pluginName, os.Stdout, os.Stderr))
 		case "-test-plugins":
-			configureF4DebugLogPath(GetF4ConfigDir())
+			configureF4DebugLogPath(config.GetF4ConfigDir())
 			vtui.ConfigDiskLogging(true)
 			vtui.DebugLog("--- PLUGIN TEST MODE ---")
 			pm := NewPluginManager()
@@ -425,7 +429,7 @@ func main() {
 		}
 	}
 	rememberStartupDirs(startupDirArgs(os.Args[1:]))
-	configureF4DebugLogPath(GetF4ConfigDir())
+	configureF4DebugLogPath(config.GetF4ConfigDir())
 
 	if version {
 		fmt.Println(getFormattedVersionInfo())
@@ -532,18 +536,18 @@ see in vtinput project: https://github.com/unxed/vtinput
 	// renderer family f4 opens, each backend says which renderer that family
 	// uses once opened.
 	if !startupChoiceGiven {
-		switch AppConfig.StartupMode {
-		case StartupModeTTY:
+		switch config.App.StartupMode {
+		case config.StartupModeTTY:
 			ttyMode = true
-		case StartupModeGui:
+		case config.StartupModeGui:
 			guiMode = true
 		}
 	}
-	guiBackendFromConfig := !guiBackendGiven && normalizeStartupGuiBackend(AppConfig.GuiBackend) != ""
-	guiBackend = resolveStartupBackend(guiBackend, guiBackendGiven, AppConfig.GuiBackend, normalizeStartupGuiBackend)
-	ttyBackend = resolveStartupBackend(ttyBackend, ttyBackendGiven, AppConfig.TTYBackend, normalizeStartupTTYBackend)
+	guiBackendFromConfig := !guiBackendGiven && config.NormalizeStartupGuiBackend(config.App.GuiBackend) != ""
+	guiBackend = resolveStartupBackend(guiBackend, guiBackendGiven, config.App.GuiBackend, config.NormalizeStartupGuiBackend)
+	ttyBackend = resolveStartupBackend(ttyBackend, ttyBackendGiven, config.App.TTYBackend, config.NormalizeStartupTTYBackend)
 	vtui.DebugLog("MAIN: startup mode=%s guiMode=%v ttyMode=%v guiBackend=%q ttyBackend=%q",
-		AppConfig.StartupMode, guiMode, ttyMode, guiBackend, ttyBackend)
+		config.App.StartupMode, guiMode, ttyMode, guiBackend, ttyBackend)
 
 	if ttyBackend != "" {
 		SelectedTTYBackend = ttyBackend
@@ -755,24 +759,24 @@ func SetupUI() {
 	vtui.DebugLog("=== F4 STARTUP [%s] PID:%d ===", getFormattedVersionInfo(), os.Getpid())
 
 	SetDefaultF4Palette()
-	LoadConfig()
-	applyWheelSettings()
+	config.LoadConfig()
+	config.ApplyWheelSettings()
 	vtui.PathHintProvider = pathHintProvider
 	applyPathHintSettings()
 	ctrlTabMode := vtui.WorkspaceCtrlTabDirect
-	if AppConfig.CtrlTabShowsMenu {
+	if config.App.CtrlTabShowsMenu {
 		ctrlTabMode = vtui.WorkspaceCtrlTabMenu
 	}
-	vtui.FrameManager.ConfigureWorkspaceTabs(vtui.WorkspaceTabMode(AppConfig.WorkspaceTabMode), ctrlTabMode)
-	vtui.FrameManager.ConfigureWorkspaceTabOverlay(AppConfig.WorkspaceTabsOverlay)
-	vtui.FrameManager.ConfigureWorkspaceAltNumberSwitch(AppConfig.AltNumberSwitchesTabs)
+	vtui.FrameManager.ConfigureWorkspaceTabs(vtui.WorkspaceTabMode(config.App.WorkspaceTabMode), ctrlTabMode)
+	vtui.FrameManager.ConfigureWorkspaceTabOverlay(config.App.WorkspaceTabsOverlay)
+	vtui.FrameManager.ConfigureWorkspaceAltNumberSwitch(config.App.AltNumberSwitchesTabs)
 	InitLang()
-	if err := ApplyColorStyle(AppConfig.ColorStyle); err != nil {
+	if err := ApplyColorStyle(config.App.ColorStyle); err != nil {
 		vtui.DebugLog("COLORS: %v; falling back to Modern", err)
-		AppConfig.ColorStyle = "Modern"
-		_ = ApplyColorStyle(AppConfig.ColorStyle)
+		config.App.ColorStyle = "Modern"
+		_ = ApplyColorStyle(config.App.ColorStyle)
 	}
-	vtui.GlobalHistoryProvider = history.NewF4HistoryProvider(GetF4ConfigDir())
+	vtui.GlobalHistoryProvider = history.NewF4HistoryProvider(config.GetF4ConfigDir())
 	history.SamePath = sameFolderHistoryPath
 	GlobalFileState = NewF4FileStateProvider()
 	StartQueueWorker()
@@ -783,12 +787,12 @@ func SetupUI() {
 	vtui.GlobalClipboardAccessManager = NewF4ClipboardAuth()
 	// sysinfo.RegisterDrive("Null VFS", func() vfs.VFS { return vfs.NewNullVFS(50 * 1024 * 1024) }) // 50 MB/s
 
-	configDir := GetF4ConfigDir()
+	configDir := config.GetF4ConfigDir()
 
 	// Initialize File Highlighting
 	highlightPath := filepath.Join(configDir, "highlight.ini")
 	if _, err := os.Stat(highlightPath); os.IsNotExist(err) {
-		createDefaultHighlightIni(highlightPath)
+		config.CreateDefaultHighlightIni(highlightPath)
 	}
 	if _, err := os.Stat(highlightPath); err == nil {
 		highlightIni := ini.Load(highlightPath)
@@ -837,7 +841,7 @@ func SetupUI() {
 	}
 
 	LoadSession()
-	vtui.ManageCursorStyle = !AppConfig.KeepTerminalCursor
+	vtui.ManageCursorStyle = !config.App.KeepTerminalCursor
 	vtui.FrameManager.Push(vtui.NewDesktop())
 
 	width := vtui.FrameManager.GetScreenSize()
@@ -846,13 +850,13 @@ func SetupUI() {
 	panels := NewPanelsFrame()
 	panels.ResizeConsole(width, height)
 	states, activeWorkspace := workspaceSessionsForRestore(
-		LastWorkspaceSessions, LastActiveWorkspace, AppConfig.RestoreWorkspaceTabs,
+		LastWorkspaceSessions, LastActiveWorkspace, config.App.RestoreWorkspaceTabs,
 	)
-	if len(states) == 0 && AppConfig.SavePanelPaths {
+	if len(states) == 0 && config.App.SavePanelPaths {
 		states = []workspaceSessionState{legacyWorkspaceSession()}
 	}
 	if len(states) > 0 {
-		applyWorkspaceSession(panels, states[0], width, height, AppConfig.SavePanelPaths)
+		applyWorkspaceSession(panels, states[0], width, height, config.App.SavePanelPaths)
 	}
 	// The startup directories outrank the restored paths. A client attaching to
 	// a running daemon brings its own instead -- see attachPayload.
@@ -865,12 +869,12 @@ func SetupUI() {
 		for i := len(states) - 1; i >= 1; i-- {
 			state := states[i]
 			extra := NewPanelsFrame()
-			applyWorkspaceSession(extra, state, width, height, AppConfig.SavePanelPaths)
+			applyWorkspaceSession(extra, state, width, height, config.App.SavePanelPaths)
 			vtui.FrameManager.AddScreenBackground(extra)
 		}
 	}
 	if len(states) > 0 {
-		if AppConfig.WorkspaceTabNumbering == WorkspaceTabNumbersAlways {
+		if config.App.WorkspaceTabNumbering == config.WorkspaceTabNumbersAlways {
 			numbers := make([]int, len(states))
 			for i, state := range states {
 				numbers[i] = state.Number
@@ -929,7 +933,7 @@ func SetupUI() {
 	// overlay rows.
 	consoleOverlayOwnedScreen := true
 	vtui.FrameManager.OnRender = func(scr *vtui.ScreenBuf) {
-		if AppConfig.WorkspaceTabNumbering == WorkspaceTabNumbersOrder {
+		if config.App.WorkspaceTabNumbering == config.WorkspaceTabNumbersOrder {
 			renumberWorkspaceScreens()
 		}
 		UpdateWindowTitle(scr)
@@ -954,7 +958,7 @@ func SetupUI() {
 	}
 
 	// Background update check
-	if AppConfig.UpdateInterval > 0 {
+	if config.App.UpdateInterval > 0 {
 		go CheckForUpdates(panels, false)
 		go CheckForPluginUpdates()
 	}
@@ -990,7 +994,7 @@ func configureNestedInputMode() {
 }
 
 var getSessionIniPath = func() string {
-	return filepath.Join(GetF4ConfigDir(), "session.ini")
+	return filepath.Join(config.GetF4ConfigDir(), "session.ini")
 }
 
 // sessionLoaded marks the process that read the session and may write it back.
@@ -1060,15 +1064,15 @@ func SaveSession() {
 		vtui.DebugLog("SESSION: State was never loaded, nothing to save")
 		return
 	}
-	if !AppConfig.AutoSaveSettings {
+	if !config.App.AutoSaveSettings {
 		vtui.DebugLog("SESSION: Automatic saving is disabled")
 		return
 	}
-	saveSessionWithOptions(AppConfig.AutoSavePanelSettings, AppConfig.AutoSaveCurrentPanel, AppConfig.AutoSaveGUIWindow)
+	saveSessionWithOptions(config.App.AutoSavePanelSettings, config.App.AutoSaveCurrentPanel, config.App.AutoSaveGUIWindow)
 }
 
 func saveSessionWithOptions(savePanelSettings, saveCurrentPanel, saveGUIWindow bool) {
-	if !savePanelSettings && !saveCurrentPanel && !saveGUIWindow && !AppConfig.AutoSaveDialogSettings {
+	if !savePanelSettings && !saveCurrentPanel && !saveGUIWindow && !config.App.AutoSaveDialogSettings {
 		return
 	}
 	path := getSessionIniPath()
@@ -1076,16 +1080,16 @@ func saveSessionWithOptions(savePanelSettings, saveCurrentPanel, saveGUIWindow b
 		windowChanged := captureCurrentWindowSize()
 		positionChanged := captureCurrentWindowPosition()
 		if windowChanged || positionChanged {
-			if AppConfig.AutoSaveDialogSettings {
-				saveConfigWithWindowSize(true)
+			if config.App.AutoSaveDialogSettings {
+				config.SaveWithWindowSize(true)
 			} else {
-				saveGuiWindowSize()
+				config.SaveGuiWindowSize()
 			}
 		}
-	} else if AppConfig.AutoSaveDialogSettings {
+	} else if config.App.AutoSaveDialogSettings {
 		// Flush a pending settings-dialog change at shutdown without replacing
 		// the last GUI geometry when that group is disabled.
-		saveConfigWithWindowSize(false)
+		config.SaveWithWindowSize(false)
 	}
 
 	if savePanelSettings || saveCurrentPanel {
@@ -1099,11 +1103,11 @@ func captureCurrentWindowSize() bool {
 	}
 	w := vtui.FrameManager.GetScreenSize()
 	h := vtui.FrameManager.GetScreenHeight()
-	if w <= 0 || h <= 0 || (AppConfig.GuiCols == w && AppConfig.GuiRows == h) {
+	if w <= 0 || h <= 0 || (config.App.GuiCols == w && config.App.GuiRows == h) {
 		return false
 	}
-	AppConfig.GuiCols = w
-	AppConfig.GuiRows = h
+	config.App.GuiCols = w
+	config.App.GuiRows = h
 	return true
 }
 
@@ -1112,12 +1116,12 @@ func captureCurrentWindowPosition() bool {
 		return false
 	}
 	x, y, ok := vtui.GetWindowPosition()
-	if !ok || (AppConfig.GuiPositionSaved && AppConfig.GuiPosX == x && AppConfig.GuiPosY == y) {
+	if !ok || (config.App.GuiPositionSaved && config.App.GuiPosX == x && config.App.GuiPosY == y) {
 		return false
 	}
-	AppConfig.GuiPosX = x
-	AppConfig.GuiPosY = y
-	AppConfig.GuiPositionSaved = true
+	config.App.GuiPosX = x
+	config.App.GuiPosY = y
+	config.App.GuiPositionSaved = true
 	return true
 }
 
@@ -1179,14 +1183,14 @@ func saveSessionFileWithOptions(path string, savePanelSettings, saveCurrentPanel
 	if vtui.FrameManager != nil {
 		if states, active := captureWorkspaceSessions(); len(states) > 0 {
 			states, active = mergeWorkspaceSessionSave(LastWorkspaceSessions, LastActiveWorkspace, states, active, savePanelSettings, saveCurrentPanel)
-			if !AppConfig.SavePanelPaths {
+			if !config.App.SavePanelPaths {
 				for i := range states {
 					states[i].Left.Path, states[i].Right.Path = "", ""
 					states[i].Left.Cursor, states[i].Right.Cursor = "", ""
 				}
 			}
 			LastWorkspaceSessions, LastActiveWorkspace = states, active
-			if AppConfig.SavePanelPaths {
+			if config.App.SavePanelPaths {
 				setLegacyWorkspaceSession(states[0])
 			}
 		}

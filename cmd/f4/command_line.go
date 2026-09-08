@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -22,7 +23,7 @@ func NewCommandLine(prompt string) *CommandLine {
 	}
 	cl.Edit.DeduplicateHistory = true
 	cl.Edit.HistoryLimit = 100
-	cl.Edit.PathHintsEnabled = AppConfig.CommandLineAutoComplete
+	cl.Edit.PathHintsEnabled = config.App.CommandLineAutoComplete
 	// CommandLine.ProcessKey drives the completion menu itself, under
 	// gating that vtui knows nothing about: CommandLineAutoComplete,
 	// AutoCompleteSuppressed, and whether history browsing is in progress.
@@ -111,7 +112,7 @@ func (cl *CommandLine) ProcessKey(e *vtinput.InputEvent) bool {
 	}
 
 	// AutoComplete logic:
-	if AppConfig.CommandLineAutoComplete && !cl.AutoCompleteSuppressed && handled && cl.Edit.HistoryPos == -1 && !cl.IsEmpty() {
+	if config.App.CommandLineAutoComplete && !cl.AutoCompleteSuppressed && handled && cl.Edit.HistoryPos == -1 && !cl.IsEmpty() {
 		isChar := e.Char != 0
 		isDel := e.VirtualKeyCode == vtinput.VK_BACK || e.VirtualKeyCode == vtinput.VK_DELETE
 		if isChar || isDel {

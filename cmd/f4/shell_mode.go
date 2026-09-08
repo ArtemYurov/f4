@@ -5,6 +5,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 	"golang.org/x/term"
 )
@@ -100,8 +101,8 @@ func consoleViewStyleOf(cfg ShellModeConfig) string {
 // consoleViewStyle returns the console view configured for this instance.
 func consoleViewStyle() string {
 	return consoleViewStyleOf(ShellModeConfig{
-		ConsoleMode:      AppConfig.ConsoleMode,
-		ConsoleOverlayUI: AppConfig.ConsoleOverlayUI,
+		ConsoleMode:      config.App.ConsoleMode,
+		ConsoleOverlayUI: config.App.ConsoleOverlayUI,
 	})
 }
 

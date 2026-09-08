@@ -21,6 +21,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/vfs/hostmode"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -387,15 +388,15 @@ func NewPanelsFrame() *PanelsFrame {
 	pf.lastShowPanels = true
 	pf.showLeftPanel = true
 	pf.showRightPanel = true
-	pf.widthDecrement = AppConfig.WidthDecrement
-	pf.leftHeightDecrement = AppConfig.LeftHeightDecrement
-	pf.rightHeightDecrement = AppConfig.RightHeightDecrement
+	pf.widthDecrement = config.App.WidthDecrement
+	pf.leftHeightDecrement = config.App.LeftHeightDecrement
+	pf.rightHeightDecrement = config.App.RightHeightDecrement
 	pf.shellMode = resolveShellMode(ShellModeConfig{
-		ConsoleMode:      AppConfig.ConsoleMode,
-		ConsoleOverlayUI: AppConfig.ConsoleOverlayUI,
+		ConsoleMode:      config.App.ConsoleMode,
+		ConsoleOverlayUI: config.App.ConsoleOverlayUI,
 	})
 	vtui.DebugLog("SHELL: mode=%s cfg.ConsoleMode=%q cfg.ConsoleOverlayUI=%v view=%s backend=%q",
-		pf.shellMode, AppConfig.ConsoleMode, AppConfig.ConsoleOverlayUI,
+		pf.shellMode, config.App.ConsoleMode, config.App.ConsoleOverlayUI,
 		consoleViewStyleFor(pf.shellMode), SelectedTTYBackend)
 
 	pf.menuBar = vtui.NewMenuBar(nil)
@@ -403,7 +404,7 @@ func NewPanelsFrame() *PanelsFrame {
 	pf.menuBar.Items = pf.buildMenuItems()
 	// We no longer need pf.menuBar.OnCommand for routing!
 	pf.cmdLine = NewCommandLine(Msg("Panels.Prompt"))
-	if AppConfig.NavigationMode == NavigationSearchFirst {
+	if config.App.NavigationMode == config.NavigationSearchFirst {
 		pf.cmdLine.SetFocus(false)
 	}
 	pf.cmdLine.Edit.HistoryID = "cmdline"
@@ -461,7 +462,7 @@ func NewPanelsFrame() *PanelsFrame {
 }
 
 func (pf *PanelsFrame) searchFirstMode() bool {
-	return AppConfig.NavigationMode == NavigationSearchFirst
+	return config.App.NavigationMode == config.NavigationSearchFirst
 }
 
 func isCommandFocusToggleKey(e *vtinput.InputEvent) bool {
@@ -1370,7 +1371,7 @@ func (pf *PanelsFrame) ResizeConsole(w, h int) {
 	pf.menuBar.SetPosition(0, topInset, w-1, topInset)
 
 	contentY1 := topInset
-	if AppConfig.AlwaysShowMenuBar && pf.showPanels {
+	if config.App.AlwaysShowMenuBar && pf.showPanels {
 		contentY1++
 	}
 
@@ -1752,7 +1753,7 @@ func (pf *PanelsFrame) Show(scr *vtui.ScreenBuf) {
 		pf.termView.Show(scr)
 	}
 
-	if AppConfig.AlwaysShowMenuBar && pf.showPanels {
+	if config.App.AlwaysShowMenuBar && pf.showPanels {
 		pf.menuBar.SetVisible(true)
 		pf.menuBar.Show(scr)
 	}
@@ -2026,7 +2027,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 	// applications may use that key themselves, so this interception is a
 	// default-on preference rather than an unconditional global shortcut.
 	if e.Type == vtinput.KeyEventType && e.KeyDown && !pf.showPanels &&
-		e.VirtualKeyCode == vtinput.VK_N && ctrl && !alt && !shift && AppConfig.TerminalCtrlNWorkspace {
+		e.VirtualKeyCode == vtinput.VK_N && ctrl && !alt && !shift && config.App.TerminalCtrlNWorkspace {
 		return false
 	}
 
@@ -2293,12 +2294,12 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 	// arrows. With an empty line they remain panel navigation keys (including
 	// Detailed view's Left/Right page mapping). Search-first uses explicit
 	// focus below, while Vim retains its existing routing.
-	if AppConfig.NavigationMode == NavigationClassic && pf.showPanels && !pf.cmdLine.IsEmpty() &&
+	if config.App.NavigationMode == config.NavigationClassic && pf.showPanels && !pf.cmdLine.IsEmpty() &&
 		(e.VirtualKeyCode == vtinput.VK_LEFT || e.VirtualKeyCode == vtinput.VK_RIGHT) && !ctrl && !alt {
 		return pf.cmdLine.ProcessKey(e)
 	}
 	// Vim-like hotkeys
-	if AppConfig.NavigationMode == NavigationVim && pf.showPanels && !alt && !ctrl && !shift && e.Char != 0 && pf.cmdLine.Edit.HistoryPos == -1 {
+	if config.App.NavigationMode == config.NavigationVim && pf.showPanels && !alt && !ctrl && !shift && e.Char != 0 && pf.cmdLine.Edit.HistoryPos == -1 {
 		isFastFind := false
 		if fsp := pf.getActivePanel(); fsp != nil {
 			isFastFind = fsp.fastFindMode
@@ -2390,14 +2391,14 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 			lowerCmd := strings.ToLower(trimmedCmd)
 			if dispatchCommandPrefix(pf, trimmedCmd) {
 				pf.cmdLine.Clear()
-				if pf.searchFirstMode() && !AppConfig.SearchCommandStayFocused {
+				if pf.searchFirstMode() && !config.App.SearchCommandStayFocused {
 					pf.setCommandLineFocus(false)
 				}
 				return true
 			}
 			if lowerCmd == "exit f4" {
 				pf.cmdLine.Clear()
-				if pf.searchFirstMode() && !AppConfig.SearchCommandStayFocused {
+				if pf.searchFirstMode() && !config.App.SearchCommandStayFocused {
 					pf.setCommandLineFocus(false)
 				}
 				vtui.FrameManager.EmitCommand(vtui.CmQuit, nil)
@@ -2409,7 +2410,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 			targetPath, isDirChange := parseDirChangeCommand(trimmedCmd)
 			if !isDirChange && lowerCmd == "exit" {
 				pf.cmdLine.Clear()
-				if pf.searchFirstMode() && !AppConfig.SearchCommandStayFocused {
+				if pf.searchFirstMode() && !config.App.SearchCommandStayFocused {
 					pf.setCommandLineFocus(false)
 				}
 				pf.resetLocalShell()
@@ -2423,7 +2424,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 				actualCmd := strings.TrimSpace(trimmedCmd[idx+3:])
 
 				pf.cmdLine.Clear()
-				if pf.searchFirstMode() && !AppConfig.SearchCommandStayFocused {
+				if pf.searchFirstMode() && !config.App.SearchCommandStayFocused {
 					pf.setCommandLineFocus(false)
 				}
 				executeCapturedCommand(pf, action, actualCmd)
@@ -2436,7 +2437,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 					targetPath = expandPathEnv(targetPath)
 					if pf.NavigateToPath(fsp, targetPath) {
 						pf.cmdLine.Clear()
-						if pf.searchFirstMode() && !AppConfig.SearchCommandStayFocused {
+						if pf.searchFirstMode() && !config.App.SearchCommandStayFocused {
 							pf.setCommandLineFocus(false)
 						}
 
@@ -2460,7 +2461,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 				if runner, ok := fsp.vfs.(vfs.CommandRunner); ok {
 					pf.cmdLine.Clear()
 					pf.cmdLine.Edit.HistoryPos = -1
-					if pf.searchFirstMode() && !AppConfig.SearchCommandStayFocused {
+					if pf.searchFirstMode() && !config.App.SearchCommandStayFocused {
 						pf.setCommandLineFocus(false)
 					}
 					showRemoteCommandOutput(pf, runner, fsp.vfs.GetPath(), cmd)
@@ -2471,7 +2472,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 			// Fallthrough for regular commands or if directory change failed
 			if pf.shellMode == ShellModeSimpleInline {
 				pf.cmdLine.Clear()
-				if pf.searchFirstMode() && !AppConfig.SearchCommandStayFocused {
+				if pf.searchFirstMode() && !config.App.SearchCommandStayFocused {
 					pf.setCommandLineFocus(false)
 				}
 				var dir string
@@ -2484,7 +2485,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 
 			if pf.shellMode == ShellModeSimpleCaptured {
 				pf.cmdLine.Clear()
-				if pf.searchFirstMode() && !AppConfig.SearchCommandStayFocused {
+				if pf.searchFirstMode() && !config.App.SearchCommandStayFocused {
 					pf.setCommandLineFocus(false)
 				}
 				var dir string
@@ -2622,7 +2623,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 			}
 
 			pf.cmdLine.Clear()
-			if pf.searchFirstMode() && !AppConfig.SearchCommandStayFocused {
+			if pf.searchFirstMode() && !config.App.SearchCommandStayFocused {
 				pf.setCommandLineFocus(false)
 			}
 			pf.showPanels = false
@@ -2671,7 +2672,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 	// command line. The gray numpad keys are bound to the corresponding
 	// actions (Panel.SelectGroup / DeselectGroup / InvertSelection);
 	// both paths are suspended while fast find is active.
-	if pf.showPanels && AppConfig.NavigationMode != NavigationSearchFirst && !alt && !ctrl && pf.cmdLine.IsEmpty() {
+	if pf.showPanels && config.App.NavigationMode != config.NavigationSearchFirst && !alt && !ctrl && pf.cmdLine.IsEmpty() {
 		if e.Char == '+' || e.Char == '-' || e.Char == '*' {
 			isFastFind := false
 			if fsp := pf.getActivePanel(); fsp != nil && fsp.fastFindMode {
@@ -2724,7 +2725,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 				return true
 			}
 		}
-		if AppConfig.CommandLineAutoComplete && !pf.cmdLine.IsEmpty() {
+		if config.App.CommandLineAutoComplete && !pf.cmdLine.IsEmpty() {
 			acMenu := vtui.NewAutoCompleteMenu(pf.cmdLine.Edit)
 			if acMenu.HasMatches() {
 				vtui.FrameManager.Push(acMenu)
@@ -3101,7 +3102,7 @@ func (pf *PanelsFrame) ProcessMouse(e *vtinput.InputEvent) bool {
 	}
 
 	// Активация меню кликом мыши на нулевую строку (AlwaysShowMenuBar)
-	if AppConfig.AlwaysShowMenuBar && pf.showPanels && my == 0 && e.WheelDirection == 0 && e.ButtonState != 0 {
+	if config.App.AlwaysShowMenuBar && pf.showPanels && my == 0 && e.WheelDirection == 0 && e.ButtonState != 0 {
 		pf.menuBar.Active = true
 		pf.menuBar.ProcessMouse(e)
 		return true
@@ -3295,7 +3296,7 @@ func (pf *PanelsFrame) HandleCommand(cmd int, args any) bool {
 		if GlobalQueueManager != nil {
 			active = GlobalQueueManager.ActiveTasksCount()
 		}
-		if AppConfig.ConfirmExit || active > 0 {
+		if config.App.ConfirmExit || active > 0 {
 			msg := Msg("Quit.Confirm")
 			if active > 0 {
 				msg = fmt.Sprintf("There are %d active background operations!\nIf you exit, they will be aborted.\n\n%s", active, msg)
@@ -4896,7 +4897,7 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 	// rendered at menu-open time, just like Far's ChangeDiskMenu, so labels,
 	// filesystem types and free space reflect the current state. Collect all
 	// rows first: the formatter needs the whole list to align its columns.
-	driveMenuOptions := AppConfig.DriveMenuOptions
+	driveMenuOptions := config.App.DriveMenuOptions
 	platformDrives := make([]sysinfo.DriveEntry, 0)
 	for _, drv := range sysinfo.GetPlatformDrives() {
 		if !driveMenuPlatformItemVisible(drv, driveMenuOptions) {
@@ -4940,7 +4941,7 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 	// digit as the hotkey, so Alt+F1 followed by 6 lands on slot 6.
 	// Unassigned slots are left out.
 	bookmarkRows := map[int]int{} // menu row -> slot, for the keys below
-	if driveMenuOptionEnabled(driveMenuOptions, driveMenuShowBookmarks) {
+	if driveMenuOptionEnabled(driveMenuOptions, config.DriveMenuShowBookmarks) {
 		if set, err := LoadBookmarks(BookmarksFilePath()); err == nil {
 			firstBookmark := true
 			for i := range set {
@@ -4967,9 +4968,9 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 
 	// 4. Plugins & custom drives
 	drives := []sysinfo.DriveEntry(nil)
-	if driveMenuOptionEnabled(driveMenuOptions, driveMenuShowPlugins) {
+	if driveMenuOptionEnabled(driveMenuOptions, config.DriveMenuShowPlugins) {
 		drives = sysinfo.DriveRegistrySnapshot()
-		if driveMenuOptionEnabled(driveMenuOptions, driveMenuSortPluginsByHotkey) {
+		if driveMenuOptionEnabled(driveMenuOptions, config.DriveMenuSortPluginsByHotkey) {
 			sort.SliceStable(drives, func(i, j int) bool {
 				return strings.ToLower(driveMenuNameWithoutMarker(drives[i].Name)) <
 					strings.ToLower(driveMenuNameWithoutMarker(drives[j].Name))
@@ -5015,7 +5016,7 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 	driveBookmarkRows := map[int]int{} // menu row -> named bookmark index
 	driveBookmarks := []DriveBookmark(nil)
 	headerRow := -1
-	if driveMenuOptionEnabled(driveMenuOptions, driveMenuShowBookmarks) {
+	if driveMenuOptionEnabled(driveMenuOptions, config.DriveMenuShowBookmarks) {
 		var err error
 		driveBookmarks, err = LoadDriveBookmarks(DriveBookmarksFilePath())
 		if err != nil {

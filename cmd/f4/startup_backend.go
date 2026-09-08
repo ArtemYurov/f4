@@ -1,60 +1,19 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/config"
 	"strings"
 )
-
-// startupAutoBackend is the spelling that means "decide at startup". It is
-// accepted both in settings.ini and on the command line, where it is the way
-// to override a configured backend back to automatic selection for one run.
-const startupAutoBackend = "auto"
 
 // startupGuiBackends and startupTTYBackends are the backends the settings
 // dialog offers, in display order. They are deliberately not the full set
 // vtui accepts: "qt" and the "ext:" family are external-UI integrations that
-// are configured by hand, and normalizeStartupGuiBackend keeps letting them
+// are configured by hand, and config.NormalizeStartupGuiBackend keeps letting them
 // through.
 var (
 	startupGuiBackends = []string{"win32", "gogpu", "ebiten", "x11", "wayland"}
 	startupTTYBackends = []string{"ansi", "winapi"}
 )
-
-// normalizeStartupGuiBackend canonicalizes a configured graphics backend
-// name, returning "" for "use automatic selection". An unrecognized name also
-// becomes "": a stale config naming a backend this build does not know must
-// degrade to detection rather than to a failed start.
-func normalizeStartupGuiBackend(value string) string {
-	trimmed := strings.TrimSpace(value)
-	lower := strings.ToLower(trimmed)
-	if lower == "" || lower == startupAutoBackend {
-		return ""
-	}
-	// External UI backends are passed through untouched; RunGui routes them
-	// to RunExternalUIWithMapping, which owns their naming.
-	if lower == "qt" || strings.HasPrefix(lower, "ext:") {
-		return trimmed
-	}
-	switch lower {
-	case "win32", "winapi", "gdi", "win32gui":
-		return "win32"
-	case "gogpu", "ebiten", "x11", "wayland":
-		return lower
-	}
-	return ""
-}
-
-// normalizeStartupTTYBackend canonicalizes a configured console backend name.
-// "win32" is the documented alias of "winapi"; both spellings are understood
-// downstream, so f4 stores only the canonical one.
-func normalizeStartupTTYBackend(value string) string {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "ansi":
-		return "ansi"
-	case "winapi", "win32":
-		return "winapi"
-	}
-	return ""
-}
 
 // resolveStartupBackend decides which backend name f4 should use for one
 // renderer family.
@@ -70,7 +29,7 @@ func normalizeStartupTTYBackend(value string) string {
 // value there must fall back to automatic selection.
 func resolveStartupBackend(flagValue string, flagGiven bool, configured string, normalize func(string) string) string {
 	if flagGiven {
-		if strings.EqualFold(strings.TrimSpace(flagValue), startupAutoBackend) {
+		if strings.EqualFold(strings.TrimSpace(flagValue), config.StartupAutoBackend) {
 			return ""
 		}
 		return flagValue
@@ -80,10 +39,10 @@ func resolveStartupBackend(flagValue string, flagGiven bool, configured string, 
 
 // startupModeChoices is the order the settings dialog lists modes in; index 0
 // must stay the safe default so an out-of-range selection lands on "auto".
-var startupModeChoices = []StartupMode{StartupModeAuto, StartupModeTTY, StartupModeGui}
+var startupModeChoices = []config.StartupMode{config.StartupModeAuto, config.StartupModeTTY, config.StartupModeGui}
 
 // startupModeChoiceIndex is the inverse of startupModeChoices.
-func startupModeChoiceIndex(mode StartupMode) int {
+func startupModeChoiceIndex(mode config.StartupMode) int {
 	for i, candidate := range startupModeChoices {
 		if candidate == mode {
 			return i

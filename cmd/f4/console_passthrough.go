@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -355,7 +356,7 @@ func (pf *PanelsFrame) handleHostConsoleTab(e *vtinput.InputEvent) bool {
 	if e.ControlKeyState&(vtinput.LeftCtrlPressed|vtinput.RightCtrlPressed|vtinput.LeftAltPressed|vtinput.RightAltPressed|vtinput.ShiftPressed) != 0 {
 		return false
 	}
-	if pf.cmdLine == nil || pf.cmdLine.IsEmpty() || !AppConfig.CommandLineAutoComplete || vtui.FrameManager == nil {
+	if pf.cmdLine == nil || pf.cmdLine.IsEmpty() || !config.App.CommandLineAutoComplete || vtui.FrameManager == nil {
 		return false
 	}
 

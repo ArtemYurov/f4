@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -89,7 +90,7 @@ func (fh *FileHighlighter) LoadThemeRules(ini *ini.File) {
 
 func (fh *FileHighlighter) CombineRules() {
 	fh.Rules = nil
-	if AppConfig.HighlightPriority == 1 { // Theme wins
+	if config.App.HighlightPriority == 1 { // Theme wins
 		fh.Rules = append(fh.Rules, fh.ThemeRules...)
 		fh.Rules = append(fh.Rules, fh.UserRules...)
 	} else { // User wins
@@ -425,7 +426,7 @@ func (fh *FileHighlighter) GetColor(item *vfs.VFSItem, defaultAttr uint64, isSel
 			// Если каскадная обработка выключена, сразу возвращаем результат
 			if !rule.ContinueProcessing {
 				if matchedAny {
-					if AppConfig.EnforceColorCorrection {
+					if config.App.EnforceColorCorrection {
 						fg, bg := GetColorRGBBoth(attr)
 						nfg := CorrectContrast(fg, bg)
 						if nfg != fg {
@@ -440,7 +441,7 @@ func (fh *FileHighlighter) GetColor(item *vfs.VFSItem, defaultAttr uint64, isSel
 	}
 
 	if matchedAny {
-		if AppConfig.EnforceColorCorrection {
+		if config.App.EnforceColorCorrection {
 			fg, bg := GetColorRGBBoth(attr)
 			nfg := CorrectContrast(fg, bg)
 			if nfg != fg {

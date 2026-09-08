@@ -7,9 +7,11 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/internal/toast"
+	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -45,6 +47,11 @@ func TestMain(m *testing.M) {
 func installTestSeams() {
 	vfs.InitSudoClient("/usr/bin/f4", "")
 
+	// main() wires this before it reads the config directory; without it here
+	// the tests would exercise the "resolver not wired" fallback instead of the
+	// path a running f4 takes.
+	config.Executable = update.Executable
+
 	// SetupUI installs this in production; the test binary never runs it, and
 	// without it every action label falls back to its English spelling.
 	action.Localize = Msg
@@ -72,8 +79,8 @@ func installTestSeams() {
 	// os.UserConfigDir ignores XDG_CONFIG_HOME and APPDATA on darwin, so the
 	// seam is what actually isolates the suite from the developer's profile.
 	if dir := testutil.ConfigDir(); dir != "" {
-		userConfigDir = func() (string, error) { return dir, nil }
-		resetConfigDirForTest()
+		config.UserConfigDir = func() (string, error) { return dir, nil }
+		config.ResetConfigDirForTest()
 	}
 }
 

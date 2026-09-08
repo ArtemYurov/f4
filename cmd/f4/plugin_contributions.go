@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -100,8 +101,8 @@ func pluginCommandLanguageCandidates() []string {
 			}
 		}
 	}
-	appendLanguage(AppConfig.Language)
-	appendLanguage(AppConfig.FallbackLanguage)
+	appendLanguage(config.App.Language)
+	appendLanguage(config.App.FallbackLanguage)
 	appendLanguage("en")
 	return candidates
 }

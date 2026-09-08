@@ -35,6 +35,11 @@ var architectureLayers = map[string]int{
 	// Checked conversions, shared by seven packages. Zero imports of ours.
 	"internal/numeric": 0,
 
+	// The user's configuration: F4Config, config.App, the ini round trip, and
+	// the schema of every field — the enumeration it may hold, the parser that
+	// normalises it, the default it falls back to.
+	"internal/config": 0,
+
 	// The ini parser. Its own package because the four configuration leaves —
 	// config, i18n, theme, keymap — all parse ini files and none of them may
 	// import another of ours; a package that imports nothing can be shared by

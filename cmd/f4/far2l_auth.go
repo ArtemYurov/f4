@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
 
@@ -16,7 +17,7 @@ type F4ClipboardAuth struct {
 }
 
 func NewF4ClipboardAuth() *F4ClipboardAuth {
-	p := filepath.Join(GetF4ConfigDir(), "tty_clipboard", "autheds")
+	p := filepath.Join(config.GetF4ConfigDir(), "tty_clipboard", "autheds")
 	os.MkdirAll(filepath.Dir(p), 0755)
 
 	auths := make(map[string]bool)

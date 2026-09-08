@@ -11,6 +11,7 @@ import (
 
 	colorer "github.com/unxed/colorer4go"
 	colorerdata "github.com/unxed/f4/internal/colorer"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
 
@@ -225,10 +226,10 @@ func ResetColorerSessions() {
 }
 
 func ColorerConfigsDir() string {
-	if custom := strings.TrimSpace(AppConfig.EditorColorerCatalog); custom != "" {
+	if custom := strings.TrimSpace(config.App.EditorColorerCatalog); custom != "" {
 		return custom
 	}
-	return filepath.Join(GetF4ConfigDir(), "colorer", "configs")
+	return filepath.Join(config.GetF4ConfigDir(), "colorer", "configs")
 }
 
 func ResetColorerRegions() {
@@ -371,10 +372,10 @@ func colorerGetRegionDefineFor(region, configsDir, activeScheme string) *colorer
 }
 
 func ColorerEditorBaseAttr(base uint64) uint64 {
-	if !AppConfig.EditorColorerBackground {
+	if !config.App.EditorColorerBackground {
 		return base
 	}
-	if !strings.EqualFold(AppConfig.EditorHighlighter, "Colorer") {
+	if !strings.EqualFold(config.App.EditorHighlighter, "Colorer") {
 		return base
 	}
 
@@ -428,7 +429,7 @@ func applyColorerBackground(base uint64, rd *colorer.RegionDefine) uint64 {
 }
 
 func newColorerHighlighter(ev *EditorView, filename, firstLine string, fallback vtui.Highlighter) *ColorerHighlighter {
-	SetColorerScheme(AppConfig.EditorColorerScheme)
+	SetColorerScheme(config.App.EditorColorerScheme)
 
 	sessionCtx, sessionCancel := context.WithCancel(context.Background())
 	ch := &ColorerHighlighter{

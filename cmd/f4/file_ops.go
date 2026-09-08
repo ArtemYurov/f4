@@ -16,6 +16,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -710,7 +711,7 @@ func ExecuteFileOpAt(pf *PanelsFrame, srcVfs, dstVfs vfs.VFS, srcBasePath string
 						tracker.DirDone()
 					} else {
 						displayString := name
-						switch AppConfig.FileOpPathDisplay {
+						switch config.App.FileOpPathDisplay {
 						case 1:
 							displayString = srcPath
 						case 2:
@@ -921,7 +922,7 @@ func ExecuteDeleteOpWithDispositionAt(pf *PanelsFrame, activeVfs vfs.VFS, basePa
 			fullPath := activeVfs.Join(basePath, name)
 
 			displayString := name
-			if AppConfig.FileOpPathDisplay > 0 {
+			if config.App.FileOpPathDisplay > 0 {
 				displayString = fullPath
 			}
 			tracker.StartFile(displayString, 0)
@@ -1286,7 +1287,7 @@ func recursiveCopy(ctx context.Context, srcVfs vfs.VFS, srcPath string, dstVfs v
 	itemName := dstVfs.Base(destPath)
 	if state.Tracker != nil || state.StartFile != nil {
 		displayString := itemName
-		switch AppConfig.FileOpPathDisplay {
+		switch config.App.FileOpPathDisplay {
 		case 1:
 			displayString = srcPath
 		case 2:

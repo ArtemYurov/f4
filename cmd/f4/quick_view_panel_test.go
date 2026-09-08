@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -647,7 +648,7 @@ func TestQuickView_DirScan_CancelsOnSelectionChange(t *testing.T) {
 }
 
 // TestPanelsFrame_BToggle_WithQuickView ensures pressing plain `B`
-// while a quick-view alt is up flips AppConfig.InfoPanelBytes. Before
+// while a quick-view alt is up flips config.App.InfoPanelBytes. Before
 // this PR the B toggle only fired for `info` alts.
 func TestPanelsFrame_BToggle_WithQuickView(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
@@ -665,16 +666,16 @@ func TestPanelsFrame_BToggle_WithQuickView(t *testing.T) {
 		t.Fatalf("expected QuickView on left, got %T", pf.altPanels[0])
 	}
 
-	before := AppConfig.InfoPanelBytes
+	before := config.App.InfoPanelBytes
 	pressKey(pf, &vtinput.InputEvent{
 		Type: vtinput.KeyEventType, KeyDown: true,
 		VirtualKeyCode: vtinput.VK_B,
 	})
-	if AppConfig.InfoPanelBytes == before {
+	if config.App.InfoPanelBytes == before {
 		t.Error("B with QuickView visible should flip InfoPanelBytes")
 	}
 	// Flip back so the test is idempotent across a full suite.
-	AppConfig.InfoPanelBytes = before
+	config.App.InfoPanelBytes = before
 }
 
 // TestQuickView_ImageFilePreview generates a valid 1x1 QOI image file,

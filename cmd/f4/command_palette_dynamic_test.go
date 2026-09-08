@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
@@ -523,11 +524,11 @@ func TestCommandPaletteIndexesPanelContextAndPlatformDriveCommands(t *testing.T)
 
 func TestCommandPaletteBookmarksRejectPluginOnlyAndStalePanelTargets(t *testing.T) {
 	// Keep unrelated process-wide config users on the TestMain directory.
-	_ = GetF4ConfigDir()
+	_ = config.GetF4ConfigDir()
 	configRoot := t.TempDir()
-	oldUserConfigDir := userConfigDir
-	userConfigDir = func() (string, error) { return configRoot, nil }
-	t.Cleanup(func() { userConfigDir = oldUserConfigDir })
+	oldUserConfigDir := config.UserConfigDir
+	config.UserConfigDir = func() (string, error) { return configRoot, nil }
+	t.Cleanup(func() { config.UserConfigDir = oldUserConfigDir })
 
 	bookmarks := BookmarkSet{}
 	bookmarks[1] = Bookmark{Plugin: "legacy-plugin", PluginData: "opaque"}

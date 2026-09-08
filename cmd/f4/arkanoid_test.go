@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
 
@@ -126,9 +127,9 @@ func TestArkanoid_AutoplayAI(t *testing.T) {
 func TestArkanoid_HighScores(t *testing.T) {
 	// Подменяем путь к директории настроек, чтобы не мусорить на диске
 	tmpDir := t.TempDir()
-	oldUserConfigDir := userConfigDir
-	userConfigDir = func() (string, error) { return tmpDir, nil }
-	t.Cleanup(func() { userConfigDir = oldUserConfigDir })
+	oldUserConfigDir := config.UserConfigDir
+	config.UserConfigDir = func() (string, error) { return tmpDir, nil }
+	t.Cleanup(func() { config.UserConfigDir = oldUserConfigDir })
 
 	oldHighScores := ArkHighScores
 	t.Cleanup(func() { ArkHighScores = oldHighScores })

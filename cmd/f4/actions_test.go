@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/update"
@@ -26,12 +27,12 @@ func TestActionUpdateSettings_ManualCheckDoesNotBlockMouseDispatch(t *testing.T)
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	SetDefaultF4Palette()
 
-	oldCfg := AppConfig
+	oldCfg := config.App
 	oldAPIURL := update.APIURL
 	oldOS := update.CurrentOS
 	oldArch := update.CurrentArch
 	t.Cleanup(func() {
-		AppConfig = oldCfg
+		config.App = oldCfg
 		update.APIURL = oldAPIURL
 		update.CurrentOS = oldOS
 		update.CurrentArch = oldArch
@@ -56,8 +57,8 @@ func TestActionUpdateSettings_ManualCheckDoesNotBlockMouseDispatch(t *testing.T)
 	update.APIURL = server.URL + "/repos/unxed/f4/releases"
 	update.CurrentOS = "windows"
 	update.CurrentArch = "amd64"
-	AppConfig.UpdateChannel = 0
-	AppConfig.UpdateInterval = 0
+	config.App.UpdateChannel = 0
+	config.App.UpdateInterval = 0
 
 	actionUpdateSettings(nil)
 	window := vtui.FrameManager.GetTopFrame()
@@ -1115,12 +1116,12 @@ func TestDelete_FocusCustomization(t *testing.T) {
 	fsp.entries = []*fileEntry{{VFSItem: vfs.VFSItem{Name: "test.txt"}}}
 	pf.activeIdx = 0
 
-	origDelFocus := AppConfig.DeleteCancelFocused
-	defer func() { AppConfig.DeleteCancelFocused = origDelFocus }()
+	origDelFocus := config.App.DeleteCancelFocused
+	defer func() { config.App.DeleteCancelFocused = origDelFocus }()
 
 	// 1. By default the destructive action is focused, matching the other
 	// confirmation dialogs and allowing Enter to confirm it.
-	AppConfig.DeleteCancelFocused = false
+	config.App.DeleteCancelFocused = false
 	actionDelete(pf)
 
 	dlg1 := fm.GetTopFrame().(vtui.Container)
@@ -1140,7 +1141,7 @@ func TestDelete_FocusCustomization(t *testing.T) {
 	fm.Pop()
 
 	// 2. The safety option can still explicitly focus Cancel.
-	AppConfig.DeleteCancelFocused = true
+	config.App.DeleteCancelFocused = true
 	actionDelete(pf)
 
 	dlg2 := fm.GetTopFrame().(vtui.Container)
@@ -1167,8 +1168,8 @@ func TestActionDelete_UsesWarnPalette_Issue379(t *testing.T) {
 	fm := vtui.FrameManager
 	fm.Init(vtui.NewSilentScreenBuf())
 	SetDefaultF4Palette()
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -1177,8 +1178,8 @@ func TestActionDelete_UsesWarnPalette_Issue379(t *testing.T) {
 	fsp.entries = []*fileEntry{{VFSItem: vfs.VFSItem{Name: "goner.txt"}, Selected: true}}
 	pf.activeIdx = 0
 
-	AppConfig.ConfirmDelete = true
-	AppConfig.UseTrash = true
+	config.App.ConfirmDelete = true
+	config.App.UseTrash = true
 	actionDelete(pf)
 
 	top := fm.GetTopFrame()
@@ -1194,7 +1195,7 @@ func TestActionDelete_UsesWarnPalette_Issue379(t *testing.T) {
 	}
 	fm.Pop()
 
-	AppConfig.UseTrash = false
+	config.App.UseTrash = false
 	actionDelete(pf)
 	top = fm.GetTopFrame()
 	dlg, ok = top.(*vtui.Window)
@@ -1206,7 +1207,7 @@ func TestActionDelete_UsesWarnPalette_Issue379(t *testing.T) {
 	}
 	fm.Pop()
 
-	AppConfig.UseTrash = true
+	config.App.UseTrash = true
 	actionDeletePermanent(pf)
 	top = fm.GetTopFrame()
 	dlg, ok = top.(*vtui.Window)
@@ -1476,7 +1477,7 @@ func TestSession_DiskPersistence(t *testing.T) {
 	tmpDir := t.TempDir()
 	t.Cleanup(swapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldConfig := AppConfig
+	oldConfig := config.App
 	oldEditorSearch, oldFindMask := LastEditorSearch, LastFindFileMask
 	oldLeftPath, oldRightPath := LastLeftPath, LastRightPath
 	oldLeftCursor, oldRightCursor := LastLeftCursor, LastRightCursor
@@ -1487,7 +1488,7 @@ func TestSession_DiskPersistence(t *testing.T) {
 	oldShowPanels, oldShowLeft, oldShowRight := LastShowPanels, LastShowLeft, LastShowRight
 	oldWorkspaces, oldActiveWorkspace := LastWorkspaceSessions, LastActiveWorkspace
 	t.Cleanup(func() {
-		AppConfig = oldConfig
+		config.App = oldConfig
 		LastEditorSearch, LastFindFileMask = oldEditorSearch, oldFindMask
 		LastLeftPath, LastRightPath = oldLeftPath, oldRightPath
 		LastLeftCursor, LastRightCursor = oldLeftCursor, oldRightCursor
@@ -1500,15 +1501,15 @@ func TestSession_DiskPersistence(t *testing.T) {
 	})
 	LastWorkspaceSessions = nil
 	LastActiveWorkspace = 0
-	AppConfig.AutoSaveSettings = true
+	config.App.AutoSaveSettings = true
 	// SaveSession passes these through to saveSessionWithOptions, and the panel
 	// group is what writes ViewMode, SortMode, SortReverse and the Show* keys.
 	// They are process-wide settings that another test may have left switched
 	// off, and inheriting that leaves those keys out of the file: the load
 	// below then returns defaults and the assertions on them fail while the
 	// ones on paths and the cursor still pass.
-	AppConfig.AutoSavePanelSettings = true
-	AppConfig.AutoSaveCurrentPanel = true
+	config.App.AutoSavePanelSettings = true
+	config.App.AutoSaveCurrentPanel = true
 
 	// Перехватываем путь к ini файлу (в реальном коде он завязан на os.UserConfigDir)
 	// Для теста мы просто вручную вызовем SaveSession и проверим результат в файле.
@@ -1686,10 +1687,10 @@ func TestActionPanelSettings_ConsoleModes(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	SetDefaultF4Palette()
 
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.ConsoleMode = "own"
-	AppConfig.ConsoleOverlayUI = false
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.ConsoleMode = "own"
+	config.App.ConsoleOverlayUI = false
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -1747,11 +1748,11 @@ func TestActionPanelSettings_ConsoleModes(t *testing.T) {
 	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
 	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
 
-	if AppConfig.ConsoleMode != "host" {
-		t.Errorf("AppConfig.ConsoleMode = %q, want host", AppConfig.ConsoleMode)
+	if config.App.ConsoleMode != "host" {
+		t.Errorf("config.App.ConsoleMode = %q, want host", config.App.ConsoleMode)
 	}
-	if !AppConfig.ConsoleOverlayUI {
-		t.Error("AppConfig.ConsoleOverlayUI = false, want true")
+	if !config.App.ConsoleOverlayUI {
+		t.Error("config.App.ConsoleOverlayUI = false, want true")
 	}
 	if top = vtui.FrameManager.GetTopFrame(); top != nil {
 		top.SetExitCode(-1)
@@ -1763,9 +1764,9 @@ func TestActionPanelAdditionalSettings_SearchExactOnHit(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	SetDefaultF4Palette()
 
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.SearchExactOnHit = false
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.SearchExactOnHit = false
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -1790,8 +1791,8 @@ func TestActionPanelAdditionalSettings_SearchExactOnHit(t *testing.T) {
 	chkExact.State = 1
 
 	clickDialogButton(t, dlg, "Ok")
-	if !AppConfig.SearchExactOnHit {
-		t.Error("AppConfig.SearchExactOnHit = false, want true after OK")
+	if !config.App.SearchExactOnHit {
+		t.Error("config.App.SearchExactOnHit = false, want true after OK")
 	}
 	if top = vtui.FrameManager.GetTopFrame(); top != nil {
 		top.SetExitCode(-1)
@@ -1853,9 +1854,9 @@ func TestActionManagePlugins_Flow(t *testing.T) {
 	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
 	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
 
-	oldPlugins := AppConfig.RegisteredPlugins
-	AppConfig.RegisteredPlugins = []string{"/old/path"}
-	defer func() { AppConfig.RegisteredPlugins = oldPlugins }()
+	oldPlugins := config.App.RegisteredPlugins
+	config.App.RegisteredPlugins = []string{"/old/path"}
+	defer func() { config.App.RegisteredPlugins = oldPlugins }()
 
 	actionManagePlugins(pf)
 	top := vtui.FrameManager.GetTopFrame().(vtui.Container)
@@ -1886,7 +1887,7 @@ func TestActionManagePlugins_Flow(t *testing.T) {
 		confirmDlg.OnResult(0)
 	}
 
-	if len(AppConfig.RegisteredPlugins) != 0 {
+	if len(config.App.RegisteredPlugins) != 0 {
 		t.Error("Plugin was not removed from config")
 	}
 
@@ -1898,12 +1899,12 @@ func TestActionManagePlugins_Flow(t *testing.T) {
 	}
 
 	newPath := filepath.Join(tmpDir, testFile)
-	AppConfig.RegisteredPlugins = append(AppConfig.RegisteredPlugins, newPath)
-	lb.Items = AppConfig.RegisteredPlugins
+	config.App.RegisteredPlugins = append(config.App.RegisteredPlugins, newPath)
+	lb.Items = config.App.RegisteredPlugins
 	lb.UpdateRows()
 
-	if len(AppConfig.RegisteredPlugins) != 1 || AppConfig.RegisteredPlugins[0] != newPath {
-		t.Errorf("Failed to add new plugin. Current: %v", AppConfig.RegisteredPlugins)
+	if len(config.App.RegisteredPlugins) != 1 || config.App.RegisteredPlugins[0] != newPath {
+		t.Errorf("Failed to add new plugin. Current: %v", config.App.RegisteredPlugins)
 	}
 }
 func TestActionRename_CacheAndSelection(t *testing.T) {
@@ -2291,10 +2292,10 @@ func TestActionAppearanceSettings_SaveCursor(t *testing.T) {
 	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
 	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
 
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
 
-	AppConfig.KeepTerminalCursor = false
+	config.App.KeepTerminalCursor = false
 
 	actionAppearanceSettings(pf)
 	top := vtui.FrameManager.GetTopFrame().(vtui.Container)
@@ -2327,8 +2328,8 @@ func TestActionAppearanceSettings_SaveCursor(t *testing.T) {
 		}
 	}
 
-	if !AppConfig.KeepTerminalCursor {
-		t.Error("KeepTerminalCursor was not saved to AppConfig")
+	if !config.App.KeepTerminalCursor {
+		t.Error("KeepTerminalCursor was not saved to config.App")
 	}
 }
 
@@ -2336,14 +2337,14 @@ func TestActionAppearanceSettingsSavesSystemMonospace(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	SetDefaultF4Palette()
 
-	oldConfig := AppConfig
-	oldPath := getUserConfigIniPath
-	getUserConfigIniPath = func() string { return filepath.Join(t.TempDir(), "settings.ini") }
+	oldConfig := config.App
+	oldPath := config.GetUserConfigIniPath
+	config.GetUserConfigIniPath = func() string { return filepath.Join(t.TempDir(), "settings.ini") }
 	defer func() {
-		AppConfig = oldConfig
-		getUserConfigIniPath = oldPath
+		config.App = oldConfig
+		config.GetUserConfigIniPath = oldPath
 	}()
-	AppConfig.GuiUseSystemMonospace = true
+	config.App.GuiUseSystemMonospace = true
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -2369,7 +2370,7 @@ func TestActionAppearanceSettingsSavesSystemMonospace(t *testing.T) {
 	}
 	systemFont.Toggle()
 	clickDialogButton(t, top, "Ok")
-	if AppConfig.GuiUseSystemMonospace {
+	if config.App.GuiUseSystemMonospace {
 		t.Fatal("system monospace setting was not saved")
 	}
 }
@@ -2378,14 +2379,14 @@ func TestActionAppearanceSettingsSavesFullPathInTitle(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	SetDefaultF4Palette()
 
-	oldConfig := AppConfig
-	oldPath := getUserConfigIniPath
-	getUserConfigIniPath = func() string { return filepath.Join(t.TempDir(), "settings.ini") }
+	oldConfig := config.App
+	oldPath := config.GetUserConfigIniPath
+	config.GetUserConfigIniPath = func() string { return filepath.Join(t.TempDir(), "settings.ini") }
 	defer func() {
-		AppConfig = oldConfig
-		getUserConfigIniPath = oldPath
+		config.App = oldConfig
+		config.GetUserConfigIniPath = oldPath
 	}()
-	AppConfig.DisplayFullPathInTitle = false
+	config.App.DisplayFullPathInTitle = false
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -2411,7 +2412,7 @@ func TestActionAppearanceSettingsSavesFullPathInTitle(t *testing.T) {
 	}
 	fullPath.Toggle()
 	clickDialogButton(t, top, "Ok")
-	if !AppConfig.DisplayFullPathInTitle {
+	if !config.App.DisplayFullPathInTitle {
 		t.Fatal("full path in title setting was not saved")
 	}
 }
@@ -2420,14 +2421,14 @@ func TestActionAppearanceSettingsSavesWorkspaceTabRestoration(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	SetDefaultF4Palette()
 
-	oldConfig := AppConfig
-	oldPath := getUserConfigIniPath
-	getUserConfigIniPath = func() string { return filepath.Join(t.TempDir(), "settings.ini") }
+	oldConfig := config.App
+	oldPath := config.GetUserConfigIniPath
+	config.GetUserConfigIniPath = func() string { return filepath.Join(t.TempDir(), "settings.ini") }
 	defer func() {
-		AppConfig = oldConfig
-		getUserConfigIniPath = oldPath
+		config.App = oldConfig
+		config.GetUserConfigIniPath = oldPath
 	}()
-	AppConfig.RestoreWorkspaceTabs = true
+	config.App.RestoreWorkspaceTabs = true
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -2453,7 +2454,7 @@ func TestActionAppearanceSettingsSavesWorkspaceTabRestoration(t *testing.T) {
 	}
 	restoreTabs.Toggle()
 	clickDialogButton(t, top, "Ok")
-	if AppConfig.RestoreWorkspaceTabs {
+	if config.App.RestoreWorkspaceTabs {
 		t.Fatal("disabled workspace tab restoration setting was not saved")
 	}
 }
@@ -2462,14 +2463,14 @@ func TestActionAppearanceSettingsSavesWorkspaceTabOverlay(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	SetDefaultF4Palette()
 
-	oldConfig := AppConfig
-	oldPath := getUserConfigIniPath
-	getUserConfigIniPath = func() string { return filepath.Join(t.TempDir(), "settings.ini") }
+	oldConfig := config.App
+	oldPath := config.GetUserConfigIniPath
+	config.GetUserConfigIniPath = func() string { return filepath.Join(t.TempDir(), "settings.ini") }
 	defer func() {
-		AppConfig = oldConfig
-		getUserConfigIniPath = oldPath
+		config.App = oldConfig
+		config.GetUserConfigIniPath = oldPath
 	}()
-	AppConfig.WorkspaceTabsOverlay = true
+	config.App.WorkspaceTabsOverlay = true
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -2497,7 +2498,7 @@ func TestActionAppearanceSettingsSavesWorkspaceTabOverlay(t *testing.T) {
 	clickDialogButton(t, top, "Ok")
 	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
 	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
-	if AppConfig.WorkspaceTabsOverlay {
+	if config.App.WorkspaceTabsOverlay {
 		t.Fatal("disabled workspace tab overlay setting was not saved")
 	}
 }
@@ -2506,14 +2507,14 @@ func TestActionAppearanceSettingsSavesWorkspaceTabNumbering(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	SetDefaultF4Palette()
 
-	oldConfig := AppConfig
-	oldPath := getUserConfigIniPath
-	getUserConfigIniPath = func() string { return filepath.Join(t.TempDir(), "settings.ini") }
+	oldConfig := config.App
+	oldPath := config.GetUserConfigIniPath
+	config.GetUserConfigIniPath = func() string { return filepath.Join(t.TempDir(), "settings.ini") }
 	defer func() {
-		AppConfig = oldConfig
-		getUserConfigIniPath = oldPath
+		config.App = oldConfig
+		config.GetUserConfigIniPath = oldPath
 	}()
-	AppConfig.WorkspaceTabNumbering = WorkspaceTabNumbersAlways
+	config.App.WorkspaceTabNumbering = config.WorkspaceTabNumbersAlways
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -2534,10 +2535,10 @@ func TestActionAppearanceSettingsSavesWorkspaceTabNumbering(t *testing.T) {
 	if numbering == nil {
 		t.Fatal("workspace tab numbering combobox not found in Appearance Settings")
 	}
-	numbering.Menu.SetSelectPos(int(WorkspaceTabNumbersOrder))
+	numbering.Menu.SetSelectPos(int(config.WorkspaceTabNumbersOrder))
 	clickDialogButton(t, top, "Ok")
-	if AppConfig.WorkspaceTabNumbering != WorkspaceTabNumbersOrder {
-		t.Fatalf("workspace tab numbering = %v, want order", AppConfig.WorkspaceTabNumbering)
+	if config.App.WorkspaceTabNumbering != config.WorkspaceTabNumbersOrder {
+		t.Fatalf("workspace tab numbering = %v, want order", config.App.WorkspaceTabNumbering)
 	}
 }
 

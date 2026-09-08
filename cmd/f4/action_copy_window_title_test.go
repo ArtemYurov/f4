@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
 
@@ -28,8 +29,8 @@ func TestAction_AppCopyWindowTitle(t *testing.T) {
 		t.Fatalf("action metadata = %+v", action)
 	}
 
-	origTemplate := AppConfig.ConsoleTitleTemplate
-	defer func() { AppConfig.ConsoleTitleTemplate = origTemplate }()
+	origTemplate := config.App.ConsoleTitleTemplate
+	defer func() { config.App.ConsoleTitleTemplate = origTemplate }()
 	t.Cleanup(swapFrameManager(t))
 	origCopyWindowTitleToClipboard := copyWindowTitleToClipboard
 	copyWindowTitleToClipboard = vtui.SetClipboard

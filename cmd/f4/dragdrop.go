@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/f4/vfs/hostmode"
 	"github.com/unxed/f4/vfs/hostpath"
@@ -300,7 +301,7 @@ func (pf *PanelsFrame) dropExternalFiles(info dropTargetInfo, paths []string, is
 		g := groups[i]
 		vtui.DebugLog("DND: dropExternalFiles group %d: srcDir=%q names=%v -> dstDir=%q", i, g.dir, g.names, dstDir)
 		src := vfs.NewOSVFS(g.dir)
-		go ExecuteFileOp(pf, src, dst, g.names, dstDir, isMove, AppConfig.DefaultFileOpMode, func() {
+		go ExecuteFileOp(pf, src, dst, g.names, dstDir, isMove, config.App.DefaultFileOpMode, func() {
 			run(i + 1)
 		})
 	}

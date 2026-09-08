@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -235,7 +236,7 @@ func actionReloadLuaMacros() bool {
 	if MacroMgr == nil {
 		return false
 	}
-	dir := filepath.Join(GetF4ConfigDir(), "Macros", "scripts")
+	dir := filepath.Join(config.GetF4ConfigDir(), "Macros", "scripts")
 	count, err := MacroMgr.ReloadLuaMacros(dir)
 	if err != nil {
 		vtui.DebugLog("MACRO: reload: %v", err)

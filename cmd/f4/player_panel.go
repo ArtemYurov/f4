@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/config"
 	id3 "github.com/unxed/id3-go"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -175,7 +176,7 @@ func (pp *PlayerPanel) tick() {
 // ---- playlist model ---------------------------------------------------
 
 func playlistFile() string {
-	return filepath.Join(GetF4ConfigDir(), "playlist.json")
+	return filepath.Join(config.GetF4ConfigDir(), "playlist.json")
 }
 
 func (pp *PlayerPanel) loadPlaylist() {

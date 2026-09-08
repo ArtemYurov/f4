@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
@@ -101,13 +102,13 @@ func TestViewer_Issue875_OpensEverySample(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	testutil.DrainPendingTasks()
 
-	oldState, oldAuto, oldDefault := GlobalFileState, AppConfig.ViewerAutodetectCodePage, AppConfig.ViewerDefaultCodePage
+	oldState, oldAuto, oldDefault := GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage
 	defer func() {
-		GlobalFileState, AppConfig.ViewerAutodetectCodePage, AppConfig.ViewerDefaultCodePage = oldState, oldAuto, oldDefault
+		GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage = oldState, oldAuto, oldDefault
 	}()
 	GlobalFileState = nil
-	AppConfig.ViewerAutodetectCodePage = true
-	AppConfig.ViewerDefaultCodePage = 65001
+	config.App.ViewerAutodetectCodePage = true
+	config.App.ViewerDefaultCodePage = 65001
 
 	dir := t.TempDir()
 	v := vfs.NewOSVFS(dir)
@@ -158,13 +159,13 @@ func TestViewer_Issue875_ManualCodepageLeavesGuessedHex(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	testutil.DrainPendingTasks()
 
-	oldState, oldAuto, oldDefault := GlobalFileState, AppConfig.ViewerAutodetectCodePage, AppConfig.ViewerDefaultCodePage
+	oldState, oldAuto, oldDefault := GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage
 	defer func() {
-		GlobalFileState, AppConfig.ViewerAutodetectCodePage, AppConfig.ViewerDefaultCodePage = oldState, oldAuto, oldDefault
+		GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage = oldState, oldAuto, oldDefault
 	}()
 	GlobalFileState = nil
-	AppConfig.ViewerAutodetectCodePage = true
-	AppConfig.ViewerDefaultCodePage = 65001
+	config.App.ViewerAutodetectCodePage = true
+	config.App.ViewerDefaultCodePage = 65001
 
 	dir := t.TempDir()
 	// UTF-16 with too little ASCII for the byte-order-mark-less check to
@@ -298,14 +299,14 @@ func newIssue875EditorRig(t *testing.T) *issue875EditorRig {
 	testutil.DrainPendingTasks()
 
 	oldState := GlobalFileState
-	oldAuto, oldDefault := AppConfig.EditorAutodetectCodePage, AppConfig.EditorDefaultCodePage
+	oldAuto, oldDefault := config.App.EditorAutodetectCodePage, config.App.EditorDefaultCodePage
 	t.Cleanup(func() {
 		GlobalFileState = oldState
-		AppConfig.EditorAutodetectCodePage, AppConfig.EditorDefaultCodePage = oldAuto, oldDefault
+		config.App.EditorAutodetectCodePage, config.App.EditorDefaultCodePage = oldAuto, oldDefault
 	})
 	GlobalFileState = nil
-	AppConfig.EditorAutodetectCodePage = true
-	AppConfig.EditorDefaultCodePage = 65001
+	config.App.EditorAutodetectCodePage = true
+	config.App.EditorDefaultCodePage = 65001
 
 	dir := t.TempDir()
 	panels := NewPanelsFrame()

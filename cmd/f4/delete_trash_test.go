@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -193,9 +194,9 @@ func TestQueuedTrashCapturesOriginalDirectory(t *testing.T) {
 func TestDeleteActionsExposeDistinctDispositions(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	SetDefaultF4Palette()
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.ConfirmDelete = true
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.ConfirmDelete = true
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -222,11 +223,11 @@ func TestDeleteActionsExposeDistinctDispositions(t *testing.T) {
 		t.Fatalf("button %q not found", want)
 	}
 
-	AppConfig.UseTrash = true
+	config.App.UseTrash = true
 	actionDelete(pf)
 	findButton(t, "Move to Recycle Bin")
 
-	AppConfig.UseTrash = false
+	config.App.UseTrash = false
 	actionDelete(pf)
 	findButton(t, "Delete")
 

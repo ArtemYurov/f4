@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
 
@@ -17,9 +18,9 @@ func TestDefaultDarkStyle(t *testing.T) {
 // Colours the earlier attempt got wrong, spot-checked against the far2l theme.
 // Contrast correction is off here so the palette is compared as authored.
 func TestDefaultDarkStyle_PanelColors(t *testing.T) {
-	oldCfg := AppConfig
-	AppConfig.EnforceColorCorrection = false
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	config.App.EnforceColorCorrection = false
+	defer func() { config.App = oldCfg }()
 
 	if err := ApplyColorStyle("Default Dark"); err != nil {
 		t.Fatalf("Failed to apply Default Dark style: %v", err)
@@ -57,9 +58,9 @@ func TestDefaultDarkStyle_PanelColors(t *testing.T) {
 // With correction on, far2l's algorithm leaves these pairs alone. If a future
 // change makes the keybar go white again, this is the test that catches it.
 func TestDefaultDarkStyle_SurvivesContrastCorrection(t *testing.T) {
-	oldCfg := AppConfig
-	AppConfig.EnforceColorCorrection = true
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	config.App.EnforceColorCorrection = true
+	defer func() { config.App = oldCfg }()
 
 	if err := ApplyColorStyle("Default Dark"); err != nil {
 		t.Fatalf("Failed to apply Default Dark style: %v", err)

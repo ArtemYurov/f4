@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/config"
 	"runtime"
 	"strings"
 )
@@ -24,16 +25,9 @@ func resolveGuiFont(goos string, useSystem bool, configured string) string {
 }
 
 func effectiveGuiFont() string {
-	font := resolveGuiFont(runtime.GOOS, AppConfig.GuiUseSystemMonospace, AppConfig.GuiFont)
+	font := resolveGuiFont(runtime.GOOS, config.App.GuiUseSystemMonospace, config.App.GuiFont)
 	if p := windowsFontFile(font); p != "" {
 		return p
 	}
 	return font
-}
-
-func defaultGuiFontSize(goos string) int {
-	if goos == "darwin" {
-		return 17
-	}
-	return 16
 }

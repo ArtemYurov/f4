@@ -3,6 +3,7 @@ package main
 import (
 	"strings"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/netproxy"
 	"github.com/unxed/vtui"
 )
@@ -43,18 +44,18 @@ func actionProxySettings() {
 	modes := proxyModeItems()
 	comboMode := vtui.NewComboBox(0, 0, 28, modes)
 	comboMode.DropdownOnly = true
-	modeIdx := proxyModeIndex(AppConfig.ProxyMode)
+	modeIdx := proxyModeIndex(config.App.ProxyMode)
 	comboMode.Menu.SetSelectPos(modeIdx)
 	comboMode.Edit.SetText(modes[modeIdx])
 	lblMode := vtui.NewLabel(0, 0, padProxyLabel(Msg("ProxySettings.Mode")), comboMode)
 
-	editHost := vtui.NewEdit(0, 0, 24, AppConfig.ProxyHost)
+	editHost := vtui.NewEdit(0, 0, 24, config.App.ProxyHost)
 	lblHost := vtui.NewLabel(0, 0, padProxyLabel(Msg("ProxySettings.Host")), editHost)
-	editPort := vtui.NewEdit(0, 0, 8, AppConfig.ProxyPort)
+	editPort := vtui.NewEdit(0, 0, 8, config.App.ProxyPort)
 	lblPort := vtui.NewLabel(0, 0, padProxyLabel(Msg("ProxySettings.Port")), editPort)
-	editUser := vtui.NewEdit(0, 0, 30, AppConfig.ProxyUser)
+	editUser := vtui.NewEdit(0, 0, 30, config.App.ProxyUser)
 	lblUser := vtui.NewLabel(0, 0, padProxyLabel(Msg("ProxySettings.User")), editUser)
-	editPass := vtui.NewPasswordEdit(0, 0, 30, AppConfig.ProxyPass)
+	editPass := vtui.NewPasswordEdit(0, 0, 30, config.App.ProxyPass)
 	lblPass := vtui.NewLabel(0, 0, padProxyLabel(Msg("ProxySettings.Password")), editPass)
 	lblHint := vtui.NewLabel(0, 0, padProxyLabel(Msg("ProxySettings.Hint")), nil)
 
@@ -105,14 +106,14 @@ func actionProxySettings() {
 		if sel < 0 || sel >= len(proxyModeOrder) {
 			sel = 0
 		}
-		AppConfig.ProxyMode = proxyModeOrder[sel]
-		AppConfig.ProxyHost = strings.TrimSpace(editHost.GetText())
-		AppConfig.ProxyPort = strings.TrimSpace(editPort.GetText())
-		AppConfig.ProxyUser = editUser.GetText()
-		AppConfig.ProxyPass = editPass.GetText()
-		// SaveConfig republishes the settings, so the next download already
+		config.App.ProxyMode = proxyModeOrder[sel]
+		config.App.ProxyHost = strings.TrimSpace(editHost.GetText())
+		config.App.ProxyPort = strings.TrimSpace(editPort.GetText())
+		config.App.ProxyUser = editUser.GetText()
+		config.App.ProxyPass = editPass.GetText()
+		// config.SaveConfig republishes the settings, so the next download already
 		// takes the new route.
-		SaveConfig()
+		config.SaveConfig()
 		dlg.Close()
 	}
 

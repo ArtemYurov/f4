@@ -3,14 +3,15 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
 
 func comboStyle(t *testing.T, name string) {
 	t.Helper()
-	oldCfg := AppConfig
-	AppConfig.EnforceColorCorrection = false
-	t.Cleanup(func() { AppConfig = oldCfg })
+	oldCfg := config.App
+	config.App.EnforceColorCorrection = false
+	t.Cleanup(func() { config.App = oldCfg })
 	if err := ApplyColorStyle(name); err != nil {
 		t.Fatalf("ApplyColorStyle(%q): %v", name, err)
 	}

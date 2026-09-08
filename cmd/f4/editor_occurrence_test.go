@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/vtui"
 )
@@ -31,9 +32,9 @@ func selectRange(ev *EditorView, from, to int) {
 }
 
 func TestEditor_OccurrenceHighlight_MarksOtherMatches(t *testing.T) {
-	old := AppConfig.EditorMarkOccurrences
-	AppConfig.EditorMarkOccurrences = true
-	defer func() { AppConfig.EditorMarkOccurrences = old }()
+	old := config.App.EditorMarkOccurrences
+	config.App.EditorMarkOccurrences = true
+	defer func() { config.App.EditorMarkOccurrences = old }()
 
 	// "foo" selected on the first line; the copy on the third line is the
 	// one that has to light up, and so does the "foo" inside "food": the
@@ -72,9 +73,9 @@ func TestEditor_OccurrenceHighlight_MarksOtherMatches(t *testing.T) {
 }
 
 func TestEditor_OccurrenceHighlight_ClearsWithSelection(t *testing.T) {
-	old := AppConfig.EditorMarkOccurrences
-	AppConfig.EditorMarkOccurrences = true
-	defer func() { AppConfig.EditorMarkOccurrences = old }()
+	old := config.App.EditorMarkOccurrences
+	config.App.EditorMarkOccurrences = true
+	defer func() { config.App.EditorMarkOccurrences = old }()
 
 	ev, scr := occurrenceEditor(t, "foo\nfoo\n")
 	selectRange(ev, 0, 3)
@@ -93,9 +94,9 @@ func TestEditor_OccurrenceHighlight_ClearsWithSelection(t *testing.T) {
 }
 
 func TestEditor_OccurrenceHighlight_RespectsSetting(t *testing.T) {
-	old := AppConfig.EditorMarkOccurrences
-	AppConfig.EditorMarkOccurrences = false
-	defer func() { AppConfig.EditorMarkOccurrences = old }()
+	old := config.App.EditorMarkOccurrences
+	config.App.EditorMarkOccurrences = false
+	defer func() { config.App.EditorMarkOccurrences = old }()
 
 	ev, scr := occurrenceEditor(t, "foo\nfoo\n")
 	selectRange(ev, 0, 3)
@@ -108,9 +109,9 @@ func TestEditor_OccurrenceHighlight_RespectsSetting(t *testing.T) {
 }
 
 func TestEditor_OccurrenceNeedle_Eligibility(t *testing.T) {
-	old := AppConfig.EditorMarkOccurrences
-	AppConfig.EditorMarkOccurrences = true
-	defer func() { AppConfig.EditorMarkOccurrences = old }()
+	old := config.App.EditorMarkOccurrences
+	config.App.EditorMarkOccurrences = true
+	defer func() { config.App.EditorMarkOccurrences = old }()
 
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	ev := NewEditorView(piecetable.New([]byte("word\t  \nword word\n")), nil, "test.txt")
@@ -155,9 +156,9 @@ func TestEditor_OccurrenceNeedle_Eligibility(t *testing.T) {
 // Matches are searched per painted fragment, so one split across a wrapped row
 // has to be found from both halves.
 func TestEditor_OccurrenceSpans_AcrossWrappedRows(t *testing.T) {
-	old := AppConfig.EditorMarkOccurrences
-	AppConfig.EditorMarkOccurrences = true
-	defer func() { AppConfig.EditorMarkOccurrences = old }()
+	old := config.App.EditorMarkOccurrences
+	config.App.EditorMarkOccurrences = true
+	defer func() { config.App.EditorMarkOccurrences = old }()
 
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	text := "abcd abcd"

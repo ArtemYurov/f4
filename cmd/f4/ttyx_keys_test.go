@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ttyx"
 )
 
@@ -74,7 +75,7 @@ func TestParseTTYXCombosIgnoresBlanks(t *testing.T) {
 // The default list has to be readable by the parser that will read it, and
 // every entry in it has to be a real combination.
 func TestDefaultTTYXKeyListParses(t *testing.T) {
-	got, bad := parseTTYXCombos(defaultTTYXKeyList)
+	got, bad := parseTTYXCombos(config.DefaultTTYXKeyList)
 	if len(bad) != 0 {
 		t.Errorf("the built-in list must parse cleanly: %v", bad)
 	}
@@ -91,9 +92,9 @@ func TestDefaultTTYXKeyListParses(t *testing.T) {
 // Switching it off has to switch it off: it is the way out for whoever
 // disagrees about which combinations are worth taking from the desktop.
 func TestTTYXKeyboardCanBeSwitchedOff(t *testing.T) {
-	saved := AppConfig.TTYXKeys
-	AppConfig.TTYXKeys = false
-	defer func() { AppConfig.TTYXKeys = saved }()
+	saved := config.App.TTYXKeys
+	config.App.TTYXKeys = false
+	defer func() { config.App.TTYXKeys = saved }()
 
 	if k := startTTYXKeyboard(); k != nil {
 		k.Close()
@@ -104,7 +105,7 @@ func TestTTYXKeyboardCanBeSwitchedOff(t *testing.T) {
 // It is on unless it is turned off, because a Ctrl+Enter that only works after
 // the user has found a setting does not work.
 func TestTTYXKeyboardOnByDefault(t *testing.T) {
-	if !AppConfig.TTYXKeys {
+	if !config.App.TTYXKeys {
 		t.Error("the default must be on")
 	}
 }
@@ -112,7 +113,7 @@ func TestTTYXKeyboardOnByDefault(t *testing.T) {
 // Ctrl+Enter is the combination this exists for, so it has to be in the list
 // that is asked for when nobody says otherwise.
 func TestDefaultTTYXKeyListHasCtrlEnter(t *testing.T) {
-	got, _ := parseTTYXCombos(defaultTTYXKeyList)
+	got, _ := parseTTYXCombos(config.DefaultTTYXKeyList)
 	for _, c := range got {
 		if c.Keysym == 0xFF0D && c.Mods == ttyx.ModCtrl {
 			return

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -12,16 +13,16 @@ import (
 
 func TestIssue95_HostConsoleTabCompletesBareDirectory(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
-	oldConfig := AppConfig
-	t.Cleanup(func() { AppConfig = oldConfig })
+	oldConfig := config.App
+	t.Cleanup(func() { config.App = oldConfig })
 	oldProvider := vtui.PathHintProvider
 	t.Cleanup(func() { vtui.PathHintProvider = oldProvider })
 	oldAutoCompleteEnabled := vtui.AutoCompleteEnabled
 	t.Cleanup(func() { vtui.AutoCompleteEnabled = oldAutoCompleteEnabled })
 
-	AppConfig.CommandLineAutoComplete = true
-	AppConfig.ConsoleMode = ConsoleViewFar
-	AppConfig.ConsoleOverlayUI = true
+	config.App.CommandLineAutoComplete = true
+	config.App.ConsoleMode = ConsoleViewFar
+	config.App.ConsoleOverlayUI = true
 	vtui.PathHintProvider = pathHintProvider
 	vtui.AutoCompleteEnabled = true
 

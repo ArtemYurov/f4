@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/internal/vtvibe"
@@ -37,7 +38,7 @@ const (
 
 // aiPatcherPath is where the cached copy of ap.py lives.
 func aiPatcherPath() string {
-	return filepath.Join(GetF4ConfigDir(), "vtvibe", "ap.py")
+	return filepath.Join(config.GetF4ConfigDir(), "vtvibe", "ap.py")
 }
 
 // aiPatchTargetDir picks the folder the patch applies to: the other panel,

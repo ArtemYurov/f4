@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -15,20 +16,20 @@ import (
 func TestPanelNavigationModeConfigRoundTripAndMigration(t *testing.T) {
 	tmpDir := t.TempDir()
 	iniPath := filepath.Join(tmpDir, "settings.ini")
-	origUserPath := getUserConfigIniPath
-	origPaths := getConfigIniPaths
-	oldCfg := AppConfig
+	origUserPath := config.GetUserConfigIniPath
+	origPaths := config.GetConfigIniPaths
+	oldCfg := config.App
 	defer func() {
-		getUserConfigIniPath = origUserPath
-		getConfigIniPaths = origPaths
-		AppConfig = oldCfg
+		config.GetUserConfigIniPath = origUserPath
+		config.GetConfigIniPaths = origPaths
+		config.App = oldCfg
 	}()
-	getUserConfigIniPath = func() string { return iniPath }
-	getConfigIniPaths = func() []string { return []string{iniPath} }
+	config.GetUserConfigIniPath = func() string { return iniPath }
+	config.GetConfigIniPaths = func() []string { return []string{iniPath} }
 
-	AppConfig.NavigationMode = NavigationSearchFirst
-	AppConfig.SearchCommandStayFocused = true
-	SaveConfig()
+	config.App.NavigationMode = config.NavigationSearchFirst
+	config.App.SearchCommandStayFocused = true
+	config.SaveConfig()
 	body, err := os.ReadFile(iniPath)
 	if err != nil {
 		t.Fatal(err)
@@ -39,27 +40,27 @@ func TestPanelNavigationModeConfigRoundTripAndMigration(t *testing.T) {
 		}
 	}
 
-	AppConfig.NavigationMode = NavigationClassic
-	AppConfig.SearchCommandStayFocused = false
-	LoadConfig()
-	if AppConfig.NavigationMode != NavigationSearchFirst || !AppConfig.SearchCommandStayFocused {
-		t.Fatalf("round trip got mode=%v stay=%v", AppConfig.NavigationMode, AppConfig.SearchCommandStayFocused)
+	config.App.NavigationMode = config.NavigationClassic
+	config.App.SearchCommandStayFocused = false
+	config.LoadConfig()
+	if config.App.NavigationMode != config.NavigationSearchFirst || !config.App.SearchCommandStayFocused {
+		t.Fatalf("round trip got mode=%v stay=%v", config.App.NavigationMode, config.App.SearchCommandStayFocused)
 	}
 
 	if err := os.WriteFile(iniPath, []byte("[Panel]\nVimHotkeys = 1\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	LoadConfig()
-	if AppConfig.NavigationMode != NavigationVim {
-		t.Fatalf("legacy VimHotkeys migration got %v", AppConfig.NavigationMode)
+	config.LoadConfig()
+	if config.App.NavigationMode != config.NavigationVim {
+		t.Fatalf("legacy VimHotkeys migration got %v", config.App.NavigationMode)
 	}
 
 	if err := os.WriteFile(iniPath, []byte("[Panel]\nNavigationMode = classic\nVimHotkeys = 1\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	LoadConfig()
-	if AppConfig.NavigationMode != NavigationClassic {
-		t.Fatalf("NavigationMode must override legacy VimHotkeys, got %v", AppConfig.NavigationMode)
+	config.LoadConfig()
+	if config.App.NavigationMode != config.NavigationClassic {
+		t.Fatalf("NavigationMode must override legacy VimHotkeys, got %v", config.App.NavigationMode)
 	}
 }
 
@@ -94,10 +95,10 @@ func newSearchFirstTestFrame(t *testing.T) (*PanelsFrame, *FileSystemPanel, *Fil
 }
 
 func TestSearchFirstKeyboardRoutingAndFocusToggle(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.NavigationMode = NavigationSearchFirst
-	AppConfig.CommandLineAutoComplete = false
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.NavigationMode = config.NavigationSearchFirst
+	config.App.CommandLineAutoComplete = false
 
 	pf, left, _ := newSearchFirstTestFrame(t)
 	if pf.commandLineFocused || pf.cmdLine.IsFocused() || !left.IsFocused() {
@@ -130,10 +131,10 @@ func TestSearchFirstKeyboardRoutingAndFocusToggle(t *testing.T) {
 }
 
 func TestSearchFirstFastFindCtrlEnterNavigation(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.NavigationMode = NavigationSearchFirst
-	AppConfig.CommandLineAutoComplete = false
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.NavigationMode = config.NavigationSearchFirst
+	config.App.CommandLineAutoComplete = false
 
 	pf, left, _ := newSearchFirstTestFrame(t)
 	left.entries = []*fileEntry{
@@ -185,10 +186,10 @@ func TestSearchFirstFastFindCtrlEnterNavigation(t *testing.T) {
 }
 
 func TestClassicFastFindEscapeDoesNotHidePanels(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.NavigationMode = NavigationClassic
-	AppConfig.EscTogglePanels = true
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.NavigationMode = config.NavigationClassic
+	config.App.EscTogglePanels = true
 
 	pf, left, _ := newSearchFirstTestFrame(t)
 	pf.ProcessKey(&vtinput.InputEvent{
@@ -217,9 +218,9 @@ func TestClassicFastFindEscapeDoesNotHidePanels(t *testing.T) {
 }
 
 func TestClassicFastFindF2TogglesAnywhereMatching(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.NavigationMode = NavigationClassic
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.NavigationMode = config.NavigationClassic
 
 	pf, left, _ := newSearchFirstTestFrame(t)
 	left.entries = []*fileEntry{
@@ -279,9 +280,9 @@ func TestClassicFastFindF2TogglesAnywhereMatching(t *testing.T) {
 }
 
 func TestSearchFirstFocusToggleAcceptsGUITextOnlyGraveEvents(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.NavigationMode = NavigationSearchFirst
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.NavigationMode = config.NavigationSearchFirst
 
 	for _, char := range []rune{'`', 'ё'} {
 		pf, _, _ := newSearchFirstTestFrame(t)
@@ -299,9 +300,9 @@ func TestSearchFirstFocusToggleAcceptsGUITextOnlyGraveEvents(t *testing.T) {
 }
 
 func TestSearchFirstAltGraveInsertsBacktickInCommandFocus(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.NavigationMode = NavigationSearchFirst
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.NavigationMode = config.NavigationSearchFirst
 
 	events := []*vtinput.InputEvent{
 		{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_OEM_3, ControlKeyState: vtinput.LeftAltPressed},
@@ -325,10 +326,10 @@ func TestSearchFirstAltGraveInsertsBacktickInCommandFocus(t *testing.T) {
 }
 
 func TestSearchFirstCommandEnterPolicyAndTab(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.NavigationMode = NavigationSearchFirst
-	AppConfig.CommandLineAutoComplete = false
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.NavigationMode = config.NavigationSearchFirst
+	config.App.CommandLineAutoComplete = false
 
 	pf, _, _ := newSearchFirstTestFrame(t)
 	pf.setCommandLineFocus(true)
@@ -338,7 +339,7 @@ func TestSearchFirstCommandEnterPolicyAndTab(t *testing.T) {
 		t.Fatal("default Enter policy must return focus to panel")
 	}
 
-	AppConfig.SearchCommandStayFocused = true
+	config.App.SearchCommandStayFocused = true
 	pf.setCommandLineFocus(true)
 	pf.cmdLine.Edit.SetText("exit")
 	pressKey(pf, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_RETURN})
@@ -358,9 +359,9 @@ func TestSearchFirstCommandEnterPolicyAndTab(t *testing.T) {
 }
 
 func TestSearchFirstHistoryAndPromptFocusColors(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.NavigationMode = NavigationSearchFirst
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.NavigationMode = config.NavigationSearchFirst
 
 	pf, _, _ := newSearchFirstTestFrame(t)
 	inactivePrompt := pf.buildPrompt()
@@ -395,9 +396,9 @@ func TestSearchFirstHistoryAndPromptFocusColors(t *testing.T) {
 }
 
 func TestSearchFirstMouseFocusAndInactiveCursor(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
-	AppConfig.NavigationMode = NavigationSearchFirst
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
+	config.App.NavigationMode = config.NavigationSearchFirst
 	vtui.SetDefaultPalette()
 	SetDefaultF4Palette()
 
@@ -430,8 +431,8 @@ func TestSearchFirstMouseFocusAndInactiveCursor(t *testing.T) {
 }
 
 func TestDetailedHorizontalArrowsMatchPageNavigationExceptVim(t *testing.T) {
-	oldCfg := AppConfig
-	t.Cleanup(func() { AppConfig = oldCfg })
+	oldCfg := config.App
+	t.Cleanup(func() { config.App = oldCfg })
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
 	fp := NewFileSystemPanel(0, 0, 50, 20, vfs.NewOSVFS(t.TempDir()))
@@ -453,7 +454,7 @@ func TestDetailedHorizontalArrowsMatchPageNavigationExceptVim(t *testing.T) {
 		return &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vk}
 	}
 
-	AppConfig.NavigationMode = NavigationClassic
+	config.App.NavigationMode = config.NavigationClassic
 	fp.SetCursorIndex(4)
 	fp.ProcessKey(key(vtinput.VK_RIGHT))
 	rightPos := fp.GetCursorIndex()
@@ -472,7 +473,7 @@ func TestDetailedHorizontalArrowsMatchPageNavigationExceptVim(t *testing.T) {
 		t.Fatalf("Detailed Left moved to %d, Page Up moved to %d", leftPos, got)
 	}
 
-	AppConfig.NavigationMode = NavigationVim
+	config.App.NavigationMode = config.NavigationVim
 	fp.SetCursorIndex(20)
 	if fp.ProcessKey(key(vtinput.VK_RIGHT)) || fp.GetCursorIndex() != 20 {
 		t.Fatal("Vim mode must retain the previous Detailed Right behavior")
@@ -480,8 +481,8 @@ func TestDetailedHorizontalArrowsMatchPageNavigationExceptVim(t *testing.T) {
 }
 
 func TestDetailedArrowRoutingByNavigationFocus(t *testing.T) {
-	oldCfg := AppConfig
-	defer func() { AppConfig = oldCfg }()
+	oldCfg := config.App
+	defer func() { config.App = oldCfg }()
 
 	key := func(vk uint16) *vtinput.InputEvent {
 		return &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vk}
@@ -490,7 +491,7 @@ func TestDetailedArrowRoutingByNavigationFocus(t *testing.T) {
 		return &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: r, VirtualKeyCode: testutil.Uint16Rune(r)}
 	}
 
-	AppConfig.NavigationMode = NavigationClassic
+	config.App.NavigationMode = config.NavigationClassic
 	pf, left, _ := newSearchFirstTestFrame(t)
 	left.SetViewMode(ViewModeDetailed)
 	left.SetCursorIndex(0)
@@ -510,7 +511,7 @@ func TestDetailedArrowRoutingByNavigationFocus(t *testing.T) {
 		t.Fatal("Classic empty command line did not page the Detailed panel")
 	}
 
-	AppConfig.NavigationMode = NavigationSearchFirst
+	config.App.NavigationMode = config.NavigationSearchFirst
 	pf.applyNavigationMode()
 	left.SetCursorIndex(0)
 	pressKey(pf, key(vtinput.VK_RIGHT))

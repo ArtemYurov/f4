@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/netproxy"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/vtui"
@@ -99,7 +100,7 @@ func ResolveAssetURL(urlTpl string) string {
 
 // GetInstalledPlugRingItems scans the local plugins directory for manifests.
 func GetInstalledPlugRingItems() map[string]PlugRingItem {
-	dir := filepath.Join(GetF4ConfigDir(), "plugring")
+	dir := filepath.Join(config.GetF4ConfigDir(), "plugring")
 	res := make(map[string]PlugRingItem)
 	entries, err := os.ReadDir(dir)
 	if err != nil {

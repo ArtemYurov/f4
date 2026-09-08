@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/vtui"
 )
@@ -366,7 +367,7 @@ func FormatFarColor(attr uint64) string {
 func ExportColors(path string) error {
 	var sb strings.Builder
 	sb.WriteString("[style]\nName = Custom\n")
-	if base := strings.TrimSpace(AppConfig.ColorStyle); base != "" && !strings.EqualFold(base, customColorStyleName) {
+	if base := strings.TrimSpace(config.App.ColorStyle); base != "" && !strings.EqualFold(base, customColorStyleName) {
 		fmt.Fprintf(&sb, "Base = %s\n", base)
 	}
 	sb.WriteString("\n[farcolors]\n")
@@ -440,7 +441,7 @@ func CorrectContrast(fg, bg uint32) uint32 {
 }
 
 func AdjustContrastLevels() {
-	if !AppConfig.EnforceColorCorrection {
+	if !config.App.EnforceColorCorrection {
 		return
 	}
 	vtui.DebugLog("COLORS: Adjusting contrast levels for palette")

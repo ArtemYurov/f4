@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -66,13 +67,13 @@ func startLocalConPTY(t *testing.T) *PanelsFrame {
 	}
 
 	oldSpawn := spawnLocalShellPTY
-	oldConfig := AppConfig
+	oldConfig := config.App
 	t.Cleanup(func() {
 		spawnLocalShellPTY = oldSpawn
-		AppConfig = oldConfig
+		config.App = oldConfig
 	})
 	spawnLocalShellPTY = true
-	AppConfig.ConsoleMode = "own"
+	config.App.ConsoleMode = "own"
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
 	pf := NewPanelsFrame()

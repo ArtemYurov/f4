@@ -11,6 +11,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -304,14 +305,14 @@ func showApplyCommandDialog(session *applyCommandSession) {
 	comboMode.Edit.SetText(modes[0])
 	lblMode := vtui.NewLabel(0, 0, Msg("ApplyCommand.Mode"), comboMode)
 
-	workerDefault := AppConfig.ApplyCommandParallelism
+	workerDefault := config.App.ApplyCommandParallelism
 	if workerDefault <= 0 {
 		workerDefault = runtime.NumCPU()
 	}
 	editWorkers := vtui.NewEdit(0, 0, 10, strconv.Itoa(workerDefault))
 	lblWorkers := vtui.NewLabel(0, 0, Msg("ApplyCommand.Workers"), editWorkers)
 	chkUnlimited := vtui.NewCheckbox(0, 0, Msg("ApplyCommand.Unlimited"), false)
-	if AppConfig.ApplyCommandParallelism == 0 {
+	if config.App.ApplyCommandParallelism == 0 {
 		chkUnlimited.State = 1
 	}
 
@@ -425,8 +426,8 @@ func showApplyCommandDialog(session *applyCommandSession) {
 			lastApplyCommandTemplate = raw
 			editCommand.AddHistory(raw)
 			if mode == ApplyCommandParallel {
-				AppConfig.ApplyCommandParallelism = workers
-				RequestSaveConfig()
+				config.App.ApplyCommandParallelism = workers
+				config.RequestSaveConfig()
 			}
 			session.active.panel.SaveSelection()
 			dlg.Close()

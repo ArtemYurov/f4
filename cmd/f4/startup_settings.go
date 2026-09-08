@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/vtui"
 )
 
@@ -36,7 +37,7 @@ func actionStartupSettings(pf *PanelsFrame) {
 	}
 	comboMode := vtui.NewComboBox(0, 0, 28, modeLabels)
 	comboMode.DropdownOnly = true
-	modeIndex := startupModeChoiceIndex(AppConfig.StartupMode)
+	modeIndex := startupModeChoiceIndex(config.App.StartupMode)
 	comboMode.Menu.SetSelectPos(modeIndex)
 	comboMode.Edit.SetText(modeLabels[modeIndex])
 	lblMode := vtui.NewLabel(0, 0, Msg("StartupSettings.Mode"), comboMode)
@@ -45,7 +46,7 @@ func actionStartupSettings(pf *PanelsFrame) {
 	guiLabels := startupBackendLabels(guiChoices)
 	comboGui := vtui.NewComboBox(0, 0, 28, guiLabels)
 	comboGui.DropdownOnly = true
-	guiIndex := startupBackendChoiceIndex(guiChoices, AppConfig.GuiBackend)
+	guiIndex := startupBackendChoiceIndex(guiChoices, config.App.GuiBackend)
 	comboGui.Menu.SetSelectPos(guiIndex)
 	comboGui.Edit.SetText(guiLabels[guiIndex])
 	lblGui := vtui.NewLabel(0, 0, Msg("StartupSettings.GuiBackend"), comboGui)
@@ -54,7 +55,7 @@ func actionStartupSettings(pf *PanelsFrame) {
 	ttyLabels := startupBackendLabels(ttyChoices)
 	comboTTY := vtui.NewComboBox(0, 0, 28, ttyLabels)
 	comboTTY.DropdownOnly = true
-	ttyIndex := startupBackendChoiceIndex(ttyChoices, AppConfig.TTYBackend)
+	ttyIndex := startupBackendChoiceIndex(ttyChoices, config.App.TTYBackend)
 	comboTTY.Menu.SetSelectPos(ttyIndex)
 	comboTTY.Edit.SetText(ttyLabels[ttyIndex])
 	lblTTY := vtui.NewLabel(0, 0, Msg("StartupSettings.TTYBackend"), comboTTY)
@@ -104,10 +105,10 @@ func actionStartupSettings(pf *PanelsFrame) {
 
 	btnCancel.OnClick = func() { dlg.Close() }
 	btnOk.OnClick = func() {
-		AppConfig.StartupMode = startupChoiceAt(startupModeChoices, comboMode.Menu.SelectPos)
-		AppConfig.GuiBackend = startupChoiceAt(guiChoices, comboGui.Menu.SelectPos)
-		AppConfig.TTYBackend = startupChoiceAt(ttyChoices, comboTTY.Menu.SelectPos)
-		SaveConfig()
+		config.App.StartupMode = startupChoiceAt(startupModeChoices, comboMode.Menu.SelectPos)
+		config.App.GuiBackend = startupChoiceAt(guiChoices, comboGui.Menu.SelectPos)
+		config.App.TTYBackend = startupChoiceAt(ttyChoices, comboTTY.Menu.SelectPos)
+		config.SaveConfig()
 		dlg.Close()
 	}
 

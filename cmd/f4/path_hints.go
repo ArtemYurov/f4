@@ -6,11 +6,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
 
-// Path hint VFS sources (AppConfig.PathHintSource).
+// Path hint VFS sources (config.App.PathHintSource).
 const (
 	PathHintSourceActive  = 0 // active panel only
 	PathHintSourcePassive = 1 // passive panel only
@@ -19,21 +20,21 @@ const (
 
 // applyPathHintSettings pushes the path hint row limits into vtui.
 func applyPathHintSettings() {
-	vtui.SetAutoCompleteMaxVisible(AppConfig.PathHintMaxVisible)
-	vtui.SetAutoCompletePerCategory(AppConfig.PathHintPerCategory)
+	vtui.SetAutoCompleteMaxVisible(config.App.PathHintMaxVisible)
+	vtui.SetAutoCompletePerCategory(config.App.PathHintPerCategory)
 	// Subtractive only, like Opt.Dialogs.AutoComplete in Far: this cannot
 	// bring the drop-down to a field that has neither history nor path
 	// hints, it only takes it away from the fields that qualify.
-	vtui.AutoCompleteEnabled = AppConfig.DialogAutoComplete
+	vtui.AutoCompleteEnabled = config.App.DialogAutoComplete
 }
 
 // pathHintProvider is installed as vtui.PathHintProvider. It resolves the
 // token under the cursor against the panel VFS selected by
-// AppConfig.PathHintSource and returns directory listing items for the
+// config.App.PathHintSource and returns directory listing items for the
 // autocomplete menu.
 func pathHintProvider(edit *vtui.Edit, word string, from, to int) []vtui.AutoCompleteItem {
 	// Path hints only make sense when command line autocompletion is enabled.
-	if !AppConfig.CommandLineAutoComplete {
+	if !config.App.CommandLineAutoComplete {
 		return nil
 	}
 	if vtui.FrameManager == nil {
@@ -52,7 +53,7 @@ func pathHintProvider(edit *vtui.Edit, word string, from, to int) []vtui.AutoCom
 	}
 
 	var panels []*FileSystemPanel
-	switch AppConfig.PathHintSource {
+	switch config.App.PathHintSource {
 	case PathHintSourcePassive:
 		panels = append(panels, pf.getInactivePanel())
 	case PathHintSourceBoth:
@@ -167,7 +168,7 @@ func pathHintItemsWithOptions(v vfs.VFS, word string, from, to int, allowBare bo
 	}
 
 	// A slow remote VFS degrades to "no hint" instead of freezing the UI.
-	timeout := time.Duration(AppConfig.PathHintTimeout) * time.Second
+	timeout := time.Duration(config.App.PathHintTimeout) * time.Second
 	if timeout < time.Second {
 		timeout = time.Second
 	}
@@ -243,14 +244,14 @@ func pathHintItemsWithOptions(v vfs.VFS, word string, from, to int, allowBare bo
 			name += sep
 		}
 		marker := ""
-		if AppConfig.ShowHighlightMarks && GlobalFileHighlighter != nil {
+		if config.App.ShowHighlightMarks && GlobalFileHighlighter != nil {
 			if m := GlobalFileHighlighter.GetMarker(&c.item); m != "" {
 				marker = m + " "
 			}
 		}
 		display := marker + name
 		matchOffset := len([]rune(marker))
-		if AppConfig.PathHintFullPath {
+		if config.App.PathHintFullPath {
 			display = dirPart + display
 			matchOffset += len([]rune(dirPart))
 		}

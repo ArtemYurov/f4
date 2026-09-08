@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/action"
-	"github.com/unxed/f4/internal/ini"
+	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -67,7 +67,7 @@ func ShowCompareFoldersDialog(pf *PanelsFrame) {
 	if pf == nil {
 		return
 	}
-	opts := AppConfig.Compare.normalize()
+	opts := config.App.Compare.Normalize()
 
 	const (
 		subIndent   = 4
@@ -159,7 +159,7 @@ func ShowCompareFoldersDialog(pf *PanelsFrame) {
 	cbDepth := vtui.NewCheckbox(0, 0, capDepth, false)
 	cbDepth.State = compareCheckState(opts.LimitDepth)
 	edDepth := vtui.NewEdit(0, 0, depthWidth, strconv.Itoa(opts.MaxDepth))
-	edDepth.Validator = &vtui.IntRangeValidator{Min: 1, Max: compareMaxDepthLimit, Title: Msg("Compare.Title")}
+	edDepth.Validator = &vtui.IntRangeValidator{Min: 1, Max: config.CompareMaxDepthLimit, Title: Msg("Compare.Title")}
 	cbMarked := vtui.NewCheckbox(0, 0, capMarked, false)
 	cbMarked.State = compareCheckState(opts.MarkedOnly)
 
@@ -190,7 +190,7 @@ func ShowCompareFoldersDialog(pf *PanelsFrame) {
 	cbIgnore := vtui.NewCheckbox(0, 0, capIgnore, false)
 	cbIgnore.State = compareCheckState(opts.Ignore)
 	rgIgnore := vtui.NewRadioGroup(0, 0, 1, ignoreItems)
-	if opts.IgnoreMode == compareIgnoreSpaces {
+	if opts.IgnoreMode == config.CompareIgnoreSpaces {
 		rgIgnore.Selected = 1
 	}
 
@@ -229,7 +229,7 @@ func ShowCompareFoldersDialog(pf *PanelsFrame) {
 
 	btnCancel.OnClick = func() { dlg.Close() }
 	btnOk.OnClick = func() {
-		next := compareOptions{
+		next := config.CompareOptions{
 			Recursive:   cbRecursive.State == 1,
 			LimitDepth:  cbDepth.State == 1,
 			MaxDepth:    opts.MaxDepth,
@@ -246,17 +246,17 @@ func ShowCompareFoldersDialog(pf *PanelsFrame) {
 		if depth, err := strconv.Atoi(strings.TrimSpace(edDepth.GetText())); err == nil {
 			next.MaxDepth = depth
 		}
-		if !next.hasCriteria() {
+		if !next.HasCriteria() {
 			// Comparing by name alone would call two folders equal
 			// whenever they hold the same names, which is not an answer
 			// anybody asked for.
 			vtui.ShowMessage(Msg("Compare.Title"), Msg("Compare.NoCriteria"), []string{"&Ok"})
 			return
 		}
-		next = next.normalize()
-		AppConfig.Compare = next
-		if AppConfig.AutoSaveDialogSettings {
-			SaveConfig()
+		next = next.Normalize()
+		config.App.Compare = next
+		if config.App.AutoSaveDialogSettings {
+			config.SaveConfig()
 		}
 		dlg.Close()
 		runCompareFolders(pf, next)
@@ -283,7 +283,7 @@ type comparePanelSnapshot struct {
 	epoch uint64
 }
 
-func captureComparePanel(fsp *FileSystemPanel, opts compareOptions) (comparePanelSnapshot, bool) {
+func captureComparePanel(fsp *FileSystemPanel, opts config.CompareOptions) (comparePanelSnapshot, bool) {
 	if fsp == nil || fsp.vfs == nil {
 		return comparePanelSnapshot{}, false
 	}
@@ -332,7 +332,7 @@ func (s comparePanelSnapshot) applyCompareMarks(marks map[string]bool) {
 }
 
 // runCompareFolders compares the two panels and marks what differs.
-func runCompareFolders(pf *PanelsFrame, opts compareOptions) {
+func runCompareFolders(pf *PanelsFrame, opts config.CompareOptions) {
 	if pf == nil {
 		return
 	}
@@ -418,60 +418,4 @@ func runCompareFolders(pf *PanelsFrame, opts compareOptions) {
 			}
 		})
 	})
-}
-
-// loadCompareOptions reads the [Compare] section, falling back to Far's
-// built-in comparison for a profile that has never opened the dialog.
-func loadCompareOptions(ini *ini.File) compareOptions {
-	defaults := defaultCompareOptions()
-	flag := func(key string, def bool) bool {
-		fallback := "0"
-		if def {
-			fallback = "1"
-		}
-		return ini.GetString("Compare", key, fallback) == "1"
-	}
-	opts := compareOptions{
-		Recursive:   flag("Recursive", defaults.Recursive),
-		LimitDepth:  flag("LimitDepth", defaults.LimitDepth),
-		MaxDepth:    defaults.MaxDepth,
-		MarkedOnly:  flag("MarkedOnly", defaults.MarkedOnly),
-		ByTime:      flag("ByTime", defaults.ByTime),
-		TimeSlack:   flag("TimeSlack", defaults.TimeSlack),
-		IgnoreZones: flag("IgnoreZones", defaults.IgnoreZones),
-		BySize:      flag("BySize", defaults.BySize),
-		ByContent:   flag("ByContent", defaults.ByContent),
-		Ignore:      flag("Ignore", defaults.Ignore),
-		IgnoreMode:  defaults.IgnoreMode,
-		ReportEqual: flag("ReportEqual", defaults.ReportEqual),
-	}
-	if depth, err := strconv.Atoi(ini.GetString("Compare", "MaxDepth", strconv.Itoa(defaults.MaxDepth))); err == nil {
-		opts.MaxDepth = depth
-	}
-	if mode, err := strconv.Atoi(ini.GetString("Compare", "IgnoreMode", strconv.Itoa(defaults.IgnoreMode))); err == nil {
-		opts.IgnoreMode = mode
-	}
-	return opts.normalize()
-}
-
-// writeCompareOptions emits the [Compare] section body.
-func writeCompareOptions(sb *strings.Builder, opts compareOptions) {
-	bit := func(on bool) int {
-		if on {
-			return 1
-		}
-		return 0
-	}
-	fmt.Fprintf(sb, "Recursive = %d\n", bit(opts.Recursive))
-	fmt.Fprintf(sb, "LimitDepth = %d\n", bit(opts.LimitDepth))
-	fmt.Fprintf(sb, "MaxDepth = %d\n", opts.MaxDepth)
-	fmt.Fprintf(sb, "MarkedOnly = %d\n", bit(opts.MarkedOnly))
-	fmt.Fprintf(sb, "ByTime = %d\n", bit(opts.ByTime))
-	fmt.Fprintf(sb, "TimeSlack = %d\n", bit(opts.TimeSlack))
-	fmt.Fprintf(sb, "IgnoreZones = %d\n", bit(opts.IgnoreZones))
-	fmt.Fprintf(sb, "BySize = %d\n", bit(opts.BySize))
-	fmt.Fprintf(sb, "ByContent = %d\n", bit(opts.ByContent))
-	fmt.Fprintf(sb, "Ignore = %d\n", bit(opts.Ignore))
-	fmt.Fprintf(sb, "IgnoreMode = %d\n", opts.IgnoreMode)
-	fmt.Fprintf(sb, "ReportEqual = %d\n", bit(opts.ReportEqual))
 }

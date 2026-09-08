@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/unxed/f4/internal/config"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -65,12 +66,12 @@ func AssociationsFilePath() string { return associationsFilePathFn() }
 func defaultAssociationsFilePath() string {
 	// In portable mode (UseSystemProfiles=0) write under <exeDir>/Profile;
 	// otherwise use the system %AppData%/f4/settings path as before. Read
-	// userConfigDir live in non-portable mode so tests overriding the seam
+	// config.UserConfigDir live in non-portable mode so tests overriding the seam
 	// keep working.
-	if IsPortableProfile() {
-		return filepath.Join(GetF4ConfigDir(), "settings", "associations.ini")
+	if config.IsPortableProfile() {
+		return filepath.Join(config.GetF4ConfigDir(), "settings", "associations.ini")
 	}
-	configDir, _ := userConfigDir()
+	configDir, _ := config.UserConfigDir()
 	return filepath.Join(configDir, "f4", "settings", "associations.ini")
 }
 
@@ -181,7 +182,7 @@ func SaveAssociations(path string, list []FileAssoc) error {
 		fmt.Fprintf(&buf, "State=%d\n", encodeAssocState(a.Enabled))
 	}
 
-	return writeFileAtomically(path, []byte(buf.String()), 0o600)
+	return config.WriteUserFileAtomically(path, []byte(buf.String()), 0o600)
 }
 
 func parseAssocState(v string) uint32 {

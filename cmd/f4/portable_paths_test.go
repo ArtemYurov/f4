@@ -5,12 +5,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/unxed/f4/internal/update"
+	"github.com/unxed/f4/internal/config"
 )
 
 // iniResolvers lists per-INI path functions and the fragment they append to
 // the f4 config dir in both portable and non-portable modes. Portable resolves
-// under <exeDir>/Profile, non-portable under <userConfigDir>/f4, so the same
+// under <exeDir>/Profile, non-portable under <config.UserConfigDir>/f4, so the same
 // fragment works for both bases.
 var iniResolvers = []struct {
 	name string
@@ -25,9 +25,9 @@ var iniResolvers = []struct {
 	{"userColorOverridesPath", userColorOverridesPath, "farcolors.ini"},
 }
 
-// setupPortableIni points update.Executable at a mock f4 binary accompanied by an
+// setupPortableIni points config.Executable at a mock f4 binary accompanied by an
 // f4.ini that selects the given UseSystemProfiles value, then drops the cached
-// config directory so GetF4ConfigDir/IsPortableProfile re-detect from scratch.
+// config directory so config.GetF4ConfigDir/config.IsPortableProfile re-detect from scratch.
 // It returns the directory holding the mock executable.
 func setupPortableIni(t *testing.T, useSystemProfiles string) string {
 	t.Helper()
@@ -41,15 +41,15 @@ func setupPortableIni(t *testing.T, useSystemProfiles string) string {
 		t.Fatal(err)
 	}
 
-	origExe := update.Executable
-	update.Executable = func() (string, error) { return mockExe, nil }
+	origExe := config.Executable
+	config.Executable = func() (string, error) { return mockExe, nil }
 	t.Cleanup(func() {
-		update.Executable = origExe
-		resetConfigDirForTest()
-		cachedF4Portable = false
-		cachedF4ConfigDir = ""
+		config.Executable = origExe
+		config.ResetConfigDirForTest()
+		config.CachedF4Portable = false
+		config.CachedF4ConfigDir = ""
 	})
-	resetConfigDirForTest()
+	config.ResetConfigDirForTest()
 	return tmpDir
 }
 
@@ -67,9 +67,9 @@ func TestIniPaths_NonPortableProfile(t *testing.T) {
 	// Redirect the user config dir seam so the system path resolves inside a
 	// temp dir instead of the developer's real profile.
 	cfgDir := t.TempDir()
-	orig := userConfigDir
-	userConfigDir = func() (string, error) { return cfgDir, nil }
-	t.Cleanup(func() { userConfigDir = orig })
+	orig := config.UserConfigDir
+	config.UserConfigDir = func() (string, error) { return cfgDir, nil }
+	t.Cleanup(func() { config.UserConfigDir = orig })
 
 	setupPortableIni(t, "1")
 	for _, tc := range iniResolvers {
@@ -82,21 +82,21 @@ func TestIniPaths_NonPortableProfile(t *testing.T) {
 
 func TestConfigIniPaths_PortableProfile(t *testing.T) {
 	tmpDir := setupPortableIni(t, "0")
-	paths := getConfigIniPaths()
+	paths := config.GetConfigIniPaths()
 	want := []string{filepath.Join(tmpDir, "Profile", "settings.ini")}
 	if len(paths) != len(want) || paths[0] != want[0] {
-		t.Errorf("getConfigIniPaths() portable = %v, want exactly %v (machine-wide paths must not leak)", paths, want)
+		t.Errorf("config.GetConfigIniPaths() portable = %v, want exactly %v (machine-wide paths must not leak)", paths, want)
 	}
 }
 
 func TestConfigIniPaths_NonPortableProfile(t *testing.T) {
 	cfgDir := t.TempDir()
-	orig := userConfigDir
-	userConfigDir = func() (string, error) { return cfgDir, nil }
-	t.Cleanup(func() { userConfigDir = orig })
+	orig := config.UserConfigDir
+	config.UserConfigDir = func() (string, error) { return cfgDir, nil }
+	t.Cleanup(func() { config.UserConfigDir = orig })
 
 	setupPortableIni(t, "1")
-	paths := getConfigIniPaths()
+	paths := config.GetConfigIniPaths()
 	userPath := filepath.Join(cfgDir, "f4", "settings.ini")
 	found := false
 	for _, p := range paths {
@@ -105,9 +105,9 @@ func TestConfigIniPaths_NonPortableProfile(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Errorf("getConfigIniPaths() non-portable = %v, want it to contain user path %q", paths, userPath)
+		t.Errorf("config.GetConfigIniPaths() non-portable = %v, want it to contain user path %q", paths, userPath)
 	}
 	if len(paths) < 2 {
-		t.Errorf("getConfigIniPaths() non-portable = %v, want at least system + user paths", paths)
+		t.Errorf("config.GetConfigIniPaths() non-portable = %v, want at least system + user paths", paths)
 	}
 }
