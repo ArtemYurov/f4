@@ -400,6 +400,54 @@ func TestPanelsFrame_TerminalMouseSelect_EscapeDismissesWithoutPTY(t *testing.T)
 	}
 }
 
+// TestPanelsFrame_TerminalMouseSelect_EscapeWinsOverEscToggle exercises the
+// complete input path. EscToggle is a global idle-terminal binding, so the
+// selection must disable that condition long enough for PanelsFrame to clear
+// the highlight instead of making the panels visible (#881).
+func TestPanelsFrame_TerminalMouseSelect_EscapeWinsOverEscToggle(t *testing.T) {
+	pf, pty := panelsFrameWithMouseSelect(t)
+	pty.busy = false // idle terminal: EscToggle would otherwise be disabled
+	oldHotkeys, oldMacros := GlobalHotkeysMgr, MacroMgr
+	GlobalHotkeysMgr = NewHotkeyManager("")
+	MacroMgr = NewMacroManager("")
+	t.Cleanup(func() {
+		GlobalHotkeysMgr, MacroMgr = oldHotkeys, oldMacros
+	})
+
+	tv := pf.termView
+	tv.StartSelection(2, 0, false)
+	tv.ExtendSelection(6, 0)
+
+	esc := func(down bool) *vtinput.InputEvent {
+		return &vtinput.InputEvent{
+			Type:           vtinput.KeyEventType,
+			KeyDown:        down,
+			VirtualKeyCode: vtinput.VK_ESCAPE,
+			Char:           0x1b,
+		}
+	}
+
+	if !pressKey(pf, esc(true)) {
+		t.Fatal("Esc on a selected idle terminal should be consumed")
+	}
+	if pf.showPanels {
+		t.Fatal("Esc on a terminal selection must not toggle panels")
+	}
+	if tv.HasSelection() {
+		t.Fatal("Esc should clear the terminal selection through the hotkey path")
+	}
+	if len(pty.writes) != 0 {
+		t.Fatalf("Esc press must not reach the PTY, got %q", pty.writes)
+	}
+
+	if !pressKey(pf, esc(false)) {
+		t.Fatal("release of the dismissing Esc should be consumed")
+	}
+	if pf.showPanels || len(pty.writes) != 0 {
+		t.Fatalf("Esc release changed terminal state: showPanels=%v writes=%q", pf.showPanels, pty.writes)
+	}
+}
+
 // TestPanelsFrame_TerminalMouseSelect_ModifiedEscapeNotSwallowed keeps
 // Alt+Esc / Ctrl+Esc / Shift+Esc on the regular any-key path: they clear
 // the highlight but are not treated as the dismiss gesture.
