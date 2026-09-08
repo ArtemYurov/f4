@@ -251,7 +251,7 @@ titles, not the ordering.
 - [x] Task 2: Re-key the command-palette auditor's 42 entries to qualified symbols ([details](phase-01-baseline-and-barriers.md#task-2-re-key-the-command-palette-auditor-to-qualified-symbols))
 - [x] Task 3: Make action registration order explicit and golden-tested ([details](phase-01-baseline-and-barriers.md#task-3-make-action-registration-order-explicit))
 - [x] Task 4: Move `F4Config`'s three stray field types into `config.go` ([details](phase-01-baseline-and-barriers.md#task-4-move-f4configs-field-types-into-configgo))
-- [ ] Task 5: Stop `queue_manager.go` starting a goroutine from `init()` ([details](phase-01-baseline-and-barriers.md#task-5-stop-starting-a-goroutine-from-init))
+- [x] Task 5: Stop `queue_manager.go` starting a goroutine from `init()` ([details](phase-01-baseline-and-barriers.md#task-5-stop-starting-a-goroutine-from-init))
 - [ ] Task 6: Lift the drive registry out of `panels_frame.go` ([details](phase-01-baseline-and-barriers.md#task-6-lift-the-drive-registry-out-of-panels_framego))
 - [ ] Task 7: Remove sysinfo's last localization call (`gpu_info_linux.go:113`) ([details](phase-01-baseline-and-barriers.md#task-7-remove-sysinfos-last-localization-call))
 - [ ] Task 8: Add the module boundary auditor `cmd/f4/architecture_test.go` ([details](phase-01-baseline-and-barriers.md#task-8-add-the-module-boundary-auditor))

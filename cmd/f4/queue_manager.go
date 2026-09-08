@@ -314,7 +314,21 @@ func init() {
 		activeKeys: make(map[string]bool),
 		wake:       make(chan struct{}, 1),
 	}
-	go GlobalQueueManager.workerLoop()
+}
+
+var queueWorkerOnce sync.Once
+
+// StartQueueWorker starts the background scheduler. It is idempotent: the
+// worker is started at most once per process, so every entry point may call it
+// without checking whether another already did.
+//
+// Enqueueing before it runs is safe and stays safe: wake is buffered and
+// workerLoop has a periodic fallback, so a task queued ahead of the worker is
+// picked up on the first cycle.
+func StartQueueWorker() {
+	queueWorkerOnce.Do(func() {
+		go GlobalQueueManager.workerLoop()
+	})
 }
 
 // signalWorker wakes the scheduler as soon as a task is enqueued or a

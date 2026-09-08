@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/pprof"
 	"strings"
 	"testing"
 	"time"
@@ -19,6 +21,7 @@ func TestQueueManager_Lifecycle(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
 	qm := GlobalQueueManager
+	StartQueueWorker()
 	// Clear tasks
 	qm.mu.Lock()
 	qm.tasks = nil
@@ -69,6 +72,7 @@ func TestQueueManager_ConcurrencyLimit(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
 	qm := GlobalQueueManager
+	StartQueueWorker()
 	qm.mu.Lock()
 	qm.tasks = nil
 	qm.activeKeys = make(map[string]bool)
@@ -152,6 +156,7 @@ func TestQueueManager_ConflictDetection(t *testing.T) {
 	st, _ := v.Stat(context.Background(), path)
 
 	qm := GlobalQueueManager
+	StartQueueWorker()
 	qm.mu.Lock()
 	qm.tasks = nil
 	qm.activeKeys = make(map[string]bool)
@@ -221,6 +226,7 @@ func TestQueueManager_ConflictDetection(t *testing.T) {
 
 func TestQueueManager_ResourceIndependence(t *testing.T) {
 	qm := GlobalQueueManager
+	StartQueueWorker()
 	qm.mu.Lock()
 	qm.tasks = nil
 	qm.activeKeys = make(map[string]bool)
@@ -300,6 +306,7 @@ func TestQueueFrame_ClearDone(t *testing.T) {
 	qf := NewQueueFrame()
 
 	qm := GlobalQueueManager
+	StartQueueWorker()
 	qm.mu.Lock()
 	qm.tasks = []*QueueTask{
 		{ID: 1, State: "Done"},
@@ -387,6 +394,7 @@ func TestQueueManager_BackgroundWorkspace(t *testing.T) {
 	}
 
 	qm := GlobalQueueManager
+	StartQueueWorker()
 	qm.mu.Lock()
 	qm.tasks = nil
 	qm.mu.Unlock()
@@ -448,6 +456,7 @@ func TestQueueFrame_InputLock(t *testing.T) {
 	qf := NewQueueFrame()
 
 	qm := GlobalQueueManager
+	StartQueueWorker()
 	task := &QueueTask{ID: 1, State: "Running"}
 	qm.mu.Lock()
 	// Имитируем активную задачу
@@ -928,5 +937,42 @@ func TestQueueCancelFinalizesOnTheFrameManagerItStartedWith(t *testing.T) {
 	case <-replacement.TaskChan:
 		t.Fatal("the finalizer posted to the frame manager that replaced it")
 	default:
+	}
+}
+
+// queueWorkerGoroutines counts the scheduler goroutines in the process.
+// StartQueueWorker is the only thing that launches workerLoop, so this is an
+// exact count rather than an approximation.
+func queueWorkerGoroutines(t *testing.T) (int, string) {
+	t.Helper()
+	var stacks bytes.Buffer
+	if err := pprof.Lookup("goroutine").WriteTo(&stacks, 2); err != nil {
+		t.Fatalf("capture goroutine profile: %v", err)
+	}
+	profile := stacks.String()
+	return strings.Count(profile, "OpQueueManager).workerLoop"), profile
+}
+
+// TestStartQueueWorkerIsIdempotent is what lets every entry point call
+// StartQueueWorker without coordinating: the worker used to be started from
+// init(), where the runtime guaranteed once, and the guarantee has to survive
+// the move to an explicit call.
+func TestStartQueueWorkerIsIdempotent(t *testing.T) {
+	StartQueueWorker()
+	StartQueueWorker()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		running, profile := queueWorkerGoroutines(t)
+		if running == 1 {
+			return
+		}
+		if running > 1 {
+			t.Fatalf("queue scheduler goroutines = %d, want 1\n%s", running, profile)
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("queue scheduler did not start\n%s", profile)
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
 }
