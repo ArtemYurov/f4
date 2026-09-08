@@ -93,6 +93,62 @@ func setUnixAttributesForTargets(ctx context.Context, v vfs.VFS, targets []attri
 	return nil
 }
 
+func showSymlinkTargetDialog(pf *PanelsFrame, v vfs.VFS, path, target string) {
+	const width, height = 72, 9
+	dlg := vtui.NewCenteredDialog(width, height, Msg("SymlinkEdit.Title"))
+	dlg.ShowClose = true
+
+	fileText := vtui.NewText(0, 0,
+		fmt.Sprintf(Msg("SymlinkEdit.File"), vtui.TruncateMiddle(v.Base(path), width-8)),
+		vtui.Palette[vtui.ColDialogText])
+	editTarget := vtui.NewEdit(0, 0, width-10, target)
+	lblTarget := vtui.NewLabel(0, 0, Msg("SymlinkEdit.Target"), editTarget)
+	btnSave := vtui.NewButton(0, 0, Msg("SymlinkEdit.Save"))
+	btnSave.IsDefault = true
+	btnCancel := vtui.NewButton(0, 0, Msg("SymlinkEdit.Cancel"))
+
+	dlg.AddItem(fileText)
+	dlg.AddItem(lblTarget)
+	dlg.AddItem(editTarget)
+	dlg.AddItem(btnSave)
+	dlg.AddItem(btnCancel)
+
+	btnSave.OnClick = func() {
+		newTarget := editTarget.GetText()
+		vtui.RunAsync(func(ctx *vtui.TaskContext) {
+			if err := replaceSymlinkTarget(ctx.Context, v, path, newTarget); err != nil {
+				ctx.RunOnUI(func() {
+					vtui.ShowMessage(Msg("SymlinkEdit.ErrorTitle"), err.Error(), []string{"&Ok"})
+				})
+				return
+			}
+			ctx.RunOnUI(func() {
+				dlg.Close()
+				if pf != nil {
+					pf.RefreshAll()
+				}
+			})
+		})
+	}
+	btnCancel.OnClick = func() { dlg.Close() }
+
+	vbox := vtui.NewVBoxLayout(dlg.X1+2, dlg.Y1+2, width-4, height-3)
+	vbox.Add(fileText, vtui.Margins{}, vtui.AlignLeft)
+	rowTarget := vtui.NewHBoxLayout(0, 0, width-4, 1)
+	rowTarget.Add(lblTarget, vtui.Margins{Right: 1}, vtui.AlignLeft)
+	rowTarget.Add(editTarget, vtui.Margins{}, vtui.AlignFill)
+	vbox.Add(rowTarget, vtui.Margins{Top: 1}, vtui.AlignFill)
+	rowButtons := vtui.NewHBoxLayout(0, 0, width-4, 1)
+	rowButtons.HorizontalAlign = vtui.AlignCenter
+	rowButtons.Spacing = 2
+	rowButtons.Add(btnSave, vtui.Margins{}, vtui.AlignTop)
+	rowButtons.Add(btnCancel, vtui.Margins{}, vtui.AlignTop)
+	vbox.Add(rowButtons, vtui.Margins{Top: 1}, vtui.AlignFill)
+	vbox.Apply()
+	dlg.SetFocusedItem(editTarget)
+	vtui.FrameManager.Push(dlg)
+}
+
 // replaceSymlinkTarget changes the link itself, never the object it points at.
 // The new link is created only after the old one has been removed because the
 // optional VFS API does not promise replace semantics. If creation fails, put

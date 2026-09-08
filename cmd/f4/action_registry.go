@@ -594,6 +594,16 @@ func init() {
 		Handler:     withPF(func(pf *PanelsFrame) { actionCreateLink(pf) }),
 	})
 	RegisterAction(Action{
+		Name:        "File.EditSymlink",
+		Area:        "Shell",
+		Label:       "Edit Symlink",
+		LabelKey:    "Action.File.EditSymlink",
+		Description: "Edit the target of the selected symbolic link",
+		DescKey:     "Action.File.EditSymlink.Desc",
+		MenuPath:    "Files",
+		Handler:     withPF(func(pf *PanelsFrame) { actionEditSymlink(pf) }),
+	})
+	RegisterAction(Action{
 		Name:        "File.Rename",
 		Area:        "Shell",
 		Label:       "Rename",

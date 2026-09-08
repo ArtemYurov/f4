@@ -5118,6 +5118,49 @@ func actionFileAttributes(pf *PanelsFrame) {
 	})
 }
 
+func actionEditSymlink(pf *PanelsFrame) {
+	fsp := pf.getActivePanel()
+	if fsp == nil || fsp.vfs == nil {
+		return
+	}
+
+	names := fsp.GetSelectedNames()
+	if len(names) != 1 {
+		vtui.ShowMessage(Msg("SymlinkEdit.ErrorTitle"), Msg("SymlinkEdit.OneFile"), []string{"&Ok"})
+		return
+	}
+
+	v := fsp.vfs
+	path := v.Join(v.GetPath(), names[0])
+	vtui.RunAsync(func(ctx *vtui.TaskContext) {
+		item, err := vfs.Lstat(ctx.Context, v, path)
+		if err == nil && !item.IsSymlink {
+			err = fmt.Errorf("%s", Msg("SymlinkEdit.NotSymlink"))
+		}
+		if err == nil {
+			if _, ok := v.(vfs.SymlinkVFS); !ok {
+				err = fmt.Errorf("%s", Msg("SymlinkEdit.Unsupported"))
+			}
+		}
+		if err != nil {
+			ctx.RunOnUI(func() {
+				vtui.ShowMessage(Msg("SymlinkEdit.ErrorTitle"), err.Error(), []string{"&Ok"})
+			})
+			return
+		}
+		target, err := vfs.Readlink(ctx.Context, v, path)
+		if err != nil {
+			ctx.RunOnUI(func() {
+				vtui.ShowMessage(Msg("SymlinkEdit.ErrorTitle"), err.Error(), []string{"&Ok"})
+			})
+			return
+		}
+		ctx.RunOnUI(func() {
+			showSymlinkTargetDialog(pf, v, path, target)
+		})
+	})
+}
+
 type langInfo struct {
 	code string
 	name string

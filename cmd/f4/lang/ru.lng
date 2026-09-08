@@ -123,6 +123,8 @@ Move.Btn=&Перенести
 
 Action.File.CreateLink=Создать &ссылку
 Action.File.CreateLink.Desc=Создать символическую ссылку, соединение каталогов или жесткую ссылку
+Action.File.EditSymlink=Изменить символьную &ссылку
+Action.File.EditSymlink.Desc=Изменить цель выбранной символической ссылки
 Action.File.ApplyCommand.Desc=Применить шаблон команды к отмеченным или текущему файлу
 Action.File.ApplyCommand=Применить команду
 Action.App.ScreenGrab=&Захват экрана
@@ -446,6 +448,16 @@ Link.TypeSymlink=Символическая ссылка
 Link.TypeJunction=Соединение каталогов
 Link.TypeHardlink=Жесткая ссылка
 Link.Btn=&Создать ссылку
+
+SymlinkEdit.Title= Изменить символическую ссылку
+SymlinkEdit.File=Файл: %s
+SymlinkEdit.Target=&Цель:
+SymlinkEdit.Save=&Сохранить
+SymlinkEdit.Cancel=&Отмена
+SymlinkEdit.ErrorTitle= Ошибка символической ссылки
+SymlinkEdit.OneFile=Выберите ровно один файл.
+SymlinkEdit.NotSymlink=Выбранный объект не является символической ссылкой.
+SymlinkEdit.Unsupported=Эта файловая система не поддерживает символические ссылки.
 
 Btn.OverwriteAll=Переписать &все
 Btn.SkipAll=П&ропустить все
