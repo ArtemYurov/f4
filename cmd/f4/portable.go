@@ -279,8 +279,10 @@ func portableProfileDir() string {
 // vertical geometry stable without changing the behavior of other windows.
 type portableSettingsDialog struct {
 	*vtui.Window
-	fixedHeight int
-	resizing    bool
+	fixedHeight      int
+	resizing         bool
+	resizeStartX2    int
+	resizeStartWidth int
 }
 
 func (d *portableSettingsDialog) ProcessMouse(e *vtinput.InputEvent) bool {
@@ -289,13 +291,23 @@ func (d *portableSettingsDialog) ProcessMouse(e *vtinput.InputEvent) bool {
 			d.resizing = false
 			return true
 		}
-		d.ChangeSize(int(e.MouseX)-d.X1+1, d.fixedHeight)
+		delta := int(e.MouseX) - d.resizeStartX2
+		width := d.resizeStartWidth + 2*delta
+		if width < d.MinW {
+			width = d.MinW
+			delta = (width - d.resizeStartWidth) / 2
+		}
+		d.ChangeSize(width, d.fixedHeight)
+		startX1 := d.resizeStartX2 - d.resizeStartWidth + 1
+		d.MoveRelative(startX1-delta-d.X1, 0)
 		return true
 	}
 
 	if e.ButtonState == vtinput.FromLeft1stButtonPressed && e.KeyDown &&
 		int(e.MouseX) == d.X2 && int(e.MouseY) == d.Y2 {
 		d.resizing = true
+		d.resizeStartX2 = d.X2
+		d.resizeStartWidth = d.X2 - d.X1 + 1
 		return true
 	}
 
