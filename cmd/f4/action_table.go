@@ -217,13 +217,17 @@ func init() {
 		Handler:     actionReloadLuaMacros,
 	})
 	action.RegisterAction(action.Action{
-		Name:                commandPaletteActionName,
-		Area:                "Common",
-		Label:               "Command Palette",
-		LabelKey:            "Action.App.CommandPalette",
-		Description:         "Search and run available commands",
-		DescKey:             "Action.App.CommandPalette.Desc",
-		DefaultKeys:         []string{"CtrlShiftP"},
+		Name:        commandPaletteActionName,
+		Area:        "Common",
+		Label:       "Command Palette",
+		LabelKey:    "Action.App.CommandPalette",
+		Description: "Search and run available commands",
+		DescKey:     "Action.App.CommandPalette.Desc",
+		DefaultKeys: []string{"CtrlShiftP"},
+		// Legacy terminals cannot distinguish Ctrl+Shift+letter from Ctrl+letter.
+		// MacroManager.Filter handles this additional escape hatch without
+		// claiming Ctrl+Alt+P as a configurable default.
+		NativeKeys:          []string{"CtrlAltP"},
 		MenuPath:            "Commands",
 		MenuSeparatorBefore: true,
 		MenuLast:            true,
@@ -448,6 +452,16 @@ func init() {
 		DefaultKeys: []string{"AltF6"},
 		MenuPath:    "Files",
 		Handler:     withPF(func(pf *PanelsFrame) { actionCreateLink(pf) }),
+	})
+	action.RegisterAction(action.Action{
+		Name:        "File.EditSymlink",
+		Area:        "Shell",
+		Label:       "Edit Symlink",
+		LabelKey:    "Action.File.EditSymlink",
+		Description: "Edit the target of the selected symbolic link",
+		DescKey:     "Action.File.EditSymlink.Desc",
+		MenuPath:    "Files",
+		Handler:     withPF(func(pf *PanelsFrame) { actionEditSymlink(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "File.Rename",
@@ -1384,7 +1398,7 @@ func init() {
 			// Terminal writes here are best effort: if stdout is gone there is
 			// nothing left to resize and the next write reports it anyway.
 			_, _ = fmt.Fprintf(os.Stdout, "\x1b[8;%d;%dt", targetRows, targetCols)
-			os.Stdout.Sync()
+			_ = os.Stdout.Sync()
 			// Forced OS window resize for GUI mode
 			if vtui.FrameManager != nil {
 				vtui.FrameManager.ResizeWindow(targetCols, targetRows)

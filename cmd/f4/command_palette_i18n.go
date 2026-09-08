@@ -90,7 +90,7 @@ func buildCommandPaletteTranslationIndex(packs []vtui.LanguagePack) map[string][
 // index with installed updates and user-supplied languages, following the same
 // locations as i18n.InitLang and the language selector.
 func loadInstalledCommandPaletteLanguagePacks() []vtui.LanguagePack {
-	directories := i18n.SearchDirs(filepath.Join(config.GetF4ConfigDir(), "lang"))
+	directories := i18n.SearchDirs(config.LocalLangDir())
 
 	seenPaths := make(map[string]bool)
 	var packs []vtui.LanguagePack

@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 )
@@ -95,5 +96,36 @@ func TestPanelsFrameCommandPrefixIsConsumedBeforePTY(t *testing.T) {
 	}
 	if !pf.showPanels {
 		t.Fatal("prefix command unexpectedly hid panels")
+	}
+}
+
+func TestCommandPrefixOpensRegisteredDrive(t *testing.T) {
+	pf := setupMockPanelsFrame(t)
+	defer pf.Close()
+
+	t.Cleanup(sysinfo.SnapshotDrives())
+	sysinfo.SetDrives([]sysinfo.DriveEntry{{Name: "ExampleDrive", Factory: func() vfs.VFS {
+		return vfs.NewNullVFS(0)
+	}}})
+
+	if !dispatchCommandPrefix(pf, "EXAMPLEDRIVE:") {
+		t.Fatal("drive prefix was not consumed")
+	}
+	if _, ok := pf.getActivePanel().vfs.(*vfs.NullVFS); !ok {
+		t.Fatalf("active panel VFS = %T, want *vfs.NullVFS", pf.getActivePanel().vfs)
+	}
+}
+
+func TestCommandPrefixDriveRequiresBarePrefix(t *testing.T) {
+	pf := setupMockPanelsFrame(t)
+	defer pf.Close()
+
+	t.Cleanup(sysinfo.SnapshotDrives())
+	sysinfo.SetDrives([]sysinfo.DriveEntry{{Name: "ExampleDrive", Factory: func() vfs.VFS {
+		return vfs.NewNullVFS(0)
+	}}})
+
+	if dispatchCommandPrefix(pf, "ExampleDrive:/child") {
+		t.Fatal("drive prefix with an argument was consumed")
 	}
 }

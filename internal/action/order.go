@@ -39,6 +39,7 @@ var actionMenuOrder = []string{
 	"File.CopyInPlace",
 	"File.Move",
 	"File.CreateLink",
+	"File.EditSymlink",
 	"File.Rename",
 	"File.MakeDir",
 	"File.Delete",

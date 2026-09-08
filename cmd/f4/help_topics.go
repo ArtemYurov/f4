@@ -38,12 +38,13 @@ func InitHelpSystem() {
 
 	if lang != "en" && lang != "eng" {
 		exeDir := filepath.Dir(os.Args[0])
-		userDir := filepath.Join(config.GetF4ConfigDir(), "help")
-
 		candidates := []string{
-			filepath.Join(userDir, lang+".hlf"),
 			filepath.Join(exeDir, "help", lang+".hlf"),
 			filepath.Join("help", lang+".hlf"), // Fallback for "go run ." development
+		}
+		if config.App.UseLocalLanguageFiles {
+			userDir := filepath.Join(config.GetF4ConfigDir(), "help")
+			candidates = append([]string{filepath.Join(userDir, lang+".hlf")}, candidates...)
 		}
 
 		var helpContent string

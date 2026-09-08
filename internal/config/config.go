@@ -45,6 +45,21 @@ var Executable = func() (string, error) {
 	return "", errors.New("config: the executable resolver is not wired; the root must set config.Executable")
 }
 
+// LocalLangDir is the profile's lang/ directory for the loaders that honour
+// UseLocalLanguageFiles, and "" when the setting is off. Empty is what
+// i18n.SearchDirs takes to mean "skip the profile directory", so a caller
+// passes this along without a branch of its own.
+//
+// The language *list* does not go through here: it enumerates what is
+// installed, and a pack the profile carries stays visible in the dialog even
+// while the loaders are told not to read it.
+func LocalLangDir() string {
+	if !App.UseLocalLanguageFiles {
+		return ""
+	}
+	return filepath.Join(GetF4ConfigDir(), "lang")
+}
+
 func GetF4ConfigDir() string {
 	ConfigDirOnce.Do(func() {
 		exe, err := Executable()
@@ -366,6 +381,7 @@ type F4Config struct {
 	Language                 string
 	FallbackLanguage         string
 	HelpLanguage             string
+	UseLocalLanguageFiles    bool
 	AlwaysShowMenuBar        bool
 	WorkspaceTabMode         int
 	WorkspaceTabsOverlay     bool
@@ -533,6 +549,7 @@ var App = F4Config{
 	Language:                 "en",
 	FallbackLanguage:         "",
 	HelpLanguage:             "en",
+	UseLocalLanguageFiles:    false,
 	AlwaysShowMenuBar:        false,
 	WorkspaceTabMode:         int(vtui.WorkspaceTabsAlways),
 	WorkspaceTabsOverlay:     true,
@@ -704,6 +721,7 @@ func LoadConfig() {
 	App.Language = merged.GetString("Interface", "Language", "en")
 	App.FallbackLanguage = merged.GetString("Interface", "FallbackLanguage", "")
 	App.HelpLanguage = merged.GetString("Interface", "HelpLanguage", "en")
+	App.UseLocalLanguageFiles = merged.GetString("Interface", "UseLocalLanguageFiles", "0") == "1"
 	App.ConsoleTitleTemplate = merged.GetString("Interface", "ConsoleTitleTemplate", "f4 %Ver %Platform %Admin - %State")
 	App.DisplayFullPathInTitle = merged.GetString("Interface", "DisplayFullPathInTitle", "0") == "1"
 	App.AlwaysShowMenuBar = merged.GetString("Interface", "AlwaysShowMenuBar", "0") == "1"
@@ -1006,6 +1024,7 @@ func SaveWithWindowSize(windowSize bool) {
 	fmt.Fprintf(&sb, "Language = %s\n", App.Language)
 	fmt.Fprintf(&sb, "FallbackLanguage = %s\n", App.FallbackLanguage)
 	fmt.Fprintf(&sb, "HelpLanguage = %s\n", App.HelpLanguage)
+	fmt.Fprintf(&sb, "UseLocalLanguageFiles = %d\n", map[bool]int{true: 1, false: 0}[App.UseLocalLanguageFiles])
 	fmt.Fprintf(&sb, "ConsoleTitleTemplate = %s\n", App.ConsoleTitleTemplate)
 	fmt.Fprintf(&sb, "DisplayFullPathInTitle = %d\n", map[bool]int{true: 1, false: 0}[App.DisplayFullPathInTitle])
 	fmt.Fprintf(&sb, "AlwaysShowMenuBar = %d\n", map[bool]int{true: 1, false: 0}[App.AlwaysShowMenuBar])

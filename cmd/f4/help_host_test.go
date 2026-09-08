@@ -36,13 +36,16 @@ func TestHelpLanguageSwitch(t *testing.T) {
 	_ = config.GetF4ConfigDir()
 	oldF4ConfigDir := config.CachedF4ConfigDir
 	oldHelpLanguage := config.App.HelpLanguage
+	oldUseLocalLanguageFiles := config.App.UseLocalLanguageFiles
 	config.CachedF4ConfigDir = tempDir
 	t.Cleanup(func() {
 		config.CachedF4ConfigDir = oldF4ConfigDir
 		config.App.HelpLanguage = oldHelpLanguage
+		config.App.UseLocalLanguageFiles = oldUseLocalLanguageFiles
 	})
 
 	config.App.HelpLanguage = "ru"
+	config.App.UseLocalLanguageFiles = true
 	InitHelpSystem()
 
 	topic := vtui.GlobalHelpEngine.GetTopic("TestTopic")

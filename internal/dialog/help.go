@@ -128,7 +128,7 @@ func LoadHelpLangStrings(code string) map[string]string {
 	if !i18n.SafeLanguageCode(code) {
 		return nil
 	}
-	for _, dir := range i18n.SearchDirs(filepath.Join(config.GetF4ConfigDir(), "lang")) {
+	for _, dir := range i18n.SearchDirs(config.LocalLangDir()) {
 		cand := filepath.Join(dir, code+".lng")
 		// #nosec G703 -- i18n.SafeLanguageCode rejects separators and ".." before code is used as a path component.
 		if _, err := os.Stat(cand); err == nil {

@@ -11,6 +11,7 @@ import (
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
+	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
 
@@ -204,7 +205,7 @@ func copyFileNoClobber(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600) // #nosec G304 -- dst is inside the target profile.
 	if err != nil {
 		if errors.Is(err, os.ErrExist) {
@@ -213,7 +214,7 @@ func copyFileNoClobber(src, dst string) error {
 		return err
 	}
 	if _, err := io.Copy(out, in); err != nil {
-		out.Close()
+		_ = out.Close()
 		return err
 	}
 	return out.Close()
@@ -232,18 +233,77 @@ func portableProfileDir() string {
 	return config.PortableProfileDirFor(filepath.Dir(iniPath), ini.Load(iniPath))
 }
 
-// profile lives now, lets the user move it next to the program (or back to
-// the user directory), optionally copies the current profile over, and tells
-// them a restart is needed — the only honest answer given how the mode is
-// detected (see the comment at the top of this file).
-// ShowPortableSettings is Options -> Portable mode. It shows where the running
-// profile lives and lets the user move it beside the executable.
+// portableSettingsDialog keeps the dialog height fixed while forwarding the
+// resize gesture as a horizontal-only resize. vtui windows expose the resize
+// corner for every window, and this small wrapper keeps this compact dialog's
+// vertical geometry stable without changing the behavior of other windows.
+type portableSettingsDialog struct {
+	*vtui.Window
+	fixedHeight int
+	resizing    bool
+}
+
+func (d *portableSettingsDialog) ProcessMouse(e *vtinput.InputEvent) bool {
+	if d.resizing {
+		if e.ButtonState == 0 {
+			d.resizing = false
+			return true
+		}
+		d.ChangeSize(int(e.MouseX)-d.X1+1, d.fixedHeight)
+		return true
+	}
+
+	if e.ButtonState == vtinput.FromLeft1stButtonPressed && e.KeyDown &&
+		int(e.MouseX) == d.X2 && int(e.MouseY) == d.Y2 {
+		d.resizing = true
+		return true
+	}
+
+	return d.Window.ProcessMouse(e)
+}
+
+// portableSettingsPathText recalculates the visible tail of a profile path
+// whenever AutoLayout gives the line a new width.
+type portableSettingsPathText struct {
+	*vtui.Text
+	key  string
+	path string
+}
+
+func newPortableSettingsPathText(key, path string, width int) *portableSettingsPathText {
+	t := &portableSettingsPathText{
+		Text: vtui.NewText(0, 0, "", 0),
+		key:  key,
+		path: path,
+	}
+	t.SetPosition(0, 0, width-1, 0)
+	return t
+}
+
+func (t *portableSettingsPathText) SetPosition(x1, y1, x2, y2 int) {
+	t.Text.SetPosition(x1, y1, x2, y2)
+	label := fmt.Sprintf(i18n.Msg(t.key), "")
+	available := x2 - x1 + 1 - vtui.StringWidth(label)
+	if available < 0 {
+		available = 0
+	}
+	t.SetText(label + TruncPathLeft(t.path, available))
+}
+
+// ShowPortableSettings is Options -> Portable mode. It shows where the profile
+// lives now, lets the user move it next to the program (or back to the user
+// directory), optionally copies the current profile over, and tells them a
+// restart is needed — the only honest answer given how the mode is detected
+// (see the comment at the top of this file).
 func ShowPortableSettings() {
 	iniPath := currentPortableIniPath()
 	wasPortable := config.IsPortableProfile()
 
 	width, height := 70, 14
-	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("PortableSettings.Title"))
+	dlg := &portableSettingsDialog{
+		Window:      vtui.NewCenteredDialog(width, height, i18n.Msg("PortableSettings.Title")),
+		fixedHeight: height,
+	}
 	dlg.ShowClose = true
 	dlg.SetHelp("PortableSettings")
 
@@ -258,14 +318,8 @@ func ShowPortableSettings() {
 	comboTransfer.Edit.SetText(transferModes[0])
 	lblTransfer := vtui.NewLabel(0, 0, i18n.Msg("PortableSettings.Transfer"), comboTransfer)
 
-	// Both paths can be long (a deep %APPDATA% or a build sandbox); keep the
-	// tail, which is the part that tells the two locations apart.
-	pathLine := func(key, path string) string {
-		label := fmt.Sprintf(i18n.Msg(key), "")
-		return label + TruncPathLeft(path, width-4-vtui.StringWidth(label))
-	}
-	current := vtui.NewText(0, 0, pathLine("PortableSettings.Current", config.GetF4ConfigDir()), 0)
-	iniInfo := vtui.NewText(0, 0, pathLine("PortableSettings.ini.File", iniPath), 0)
+	current := newPortableSettingsPathText("PortableSettings.Current", config.GetF4ConfigDir(), width-4)
+	iniInfo := newPortableSettingsPathText("PortableSettings.IniFile", iniPath, width-4)
 	note := vtui.NewText(0, 0, i18n.Msg("PortableSettings.Note"), 0)
 	note2 := vtui.NewText(0, 0, i18n.Msg("PortableSettings.Note2"), 0)
 
@@ -283,24 +337,34 @@ func ShowPortableSettings() {
 	dlg.AddItem(btnOk)
 	dlg.AddItem(btnCancel)
 
-	vbox := vtui.NewVBoxLayout(dlg.X1+2, dlg.Y1+2, width-4, height-4)
-	vbox.Add(current, vtui.Margins{}, vtui.AlignLeft)
-	vbox.Add(iniInfo, vtui.Margins{}, vtui.AlignLeft)
-	vbox.Add(chkPortable, vtui.Margins{Top: 1}, vtui.AlignLeft)
 	transferRow := vtui.NewHBoxLayout(0, 0, width-4, 1)
 	transferRow.Add(lblTransfer, vtui.Margins{Left: 3, Right: 1}, vtui.AlignLeft)
 	transferRow.Add(comboTransfer, vtui.Margins{}, vtui.AlignLeft)
-	vbox.Add(transferRow, vtui.Margins{}, vtui.AlignFill)
-	vbox.Add(note, vtui.Margins{Top: 1}, vtui.AlignLeft)
-	vbox.Add(note2, vtui.Margins{}, vtui.AlignLeft)
 
 	buttons := vtui.NewHBoxLayout(0, 0, width-4, 1)
 	buttons.HorizontalAlign = vtui.AlignCenter
 	buttons.Spacing = 2
 	buttons.Add(btnOk, vtui.Margins{}, vtui.AlignTop)
 	buttons.Add(btnCancel, vtui.Margins{}, vtui.AlignTop)
-	vbox.Add(buttons, vtui.Margins{Top: 1}, vtui.AlignFill)
-	vbox.Apply()
+
+	layout := vtui.NewAutoLayout(dlg.X1+2, dlg.Y1+2, width-4, height-4)
+	layout.SetGrowMode(vtui.GrowHiX)
+	layout.PinTop(current, 0)
+	layout.FillWidth(current, 0, 0)
+	layout.FillWidth(iniInfo, 0, 0)
+	layout.PinLeft(chkPortable, 0)
+	layout.FillWidth(transferRow, 0, 0)
+	layout.FillWidth(note, 0, 0)
+	layout.FillWidth(note2, 0, 0)
+	layout.FillWidth(buttons, 0, 0)
+	layout.StackVertical(0, current, iniInfo)
+	layout.StackVertical(1, iniInfo, chkPortable)
+	layout.StackVertical(0, chkPortable, transferRow)
+	layout.StackVertical(1, transferRow, note)
+	layout.StackVertical(0, note, note2)
+	layout.StackVertical(1, note2, buttons)
+	layout.Apply()
+	dlg.AddItem(layout)
 
 	btnCancel.OnClick = func() { dlg.Close() }
 	btnOk.OnClick = func() {

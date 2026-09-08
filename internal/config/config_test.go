@@ -54,6 +54,7 @@ func TestConfig_SaveAndLoad(t *testing.T) {
 	App.ApplyCommandParallelism = 0
 	App.AutoSaveSettings = false
 	App.DisplayFullPathInTitle = true
+	App.UseLocalLanguageFiles = true
 	App.EditorAutodetectCodePage = false
 	App.EditorDefaultCodePage = 1251
 	App.ViewerAutodetectCodePage = true
@@ -85,6 +86,7 @@ func TestConfig_SaveAndLoad(t *testing.T) {
 	App.ApplyCommandParallelism = 1
 	App.AutoSaveSettings = true
 	App.DisplayFullPathInTitle = false
+	App.UseLocalLanguageFiles = false
 	App.EditorAutodetectCodePage = true
 	App.EditorDefaultCodePage = 65001
 	App.ViewerAutodetectCodePage = false
@@ -102,6 +104,9 @@ func TestConfig_SaveAndLoad(t *testing.T) {
 	}
 	if App.WorkspaceTabMode != int(vtui.WorkspaceTabsNever) {
 		t.Errorf("LoadConfig failed to restore workspace tab mode: %d", App.WorkspaceTabMode)
+	}
+	if !App.UseLocalLanguageFiles {
+		t.Error("LoadConfig failed to restore enabled local language files")
 	}
 	if App.WorkspaceTabsOverlay {
 		t.Error("LoadConfig failed to restore disabled workspace tab overlay")

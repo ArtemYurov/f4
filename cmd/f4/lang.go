@@ -11,7 +11,7 @@ import (
 // two settings and the profile directory here is what keeps internal/i18n
 // independent of internal/config.
 func initLang() {
-	i18n.InitLang(config.App.Language, config.App.FallbackLanguage, userLangDir())
+	i18n.InitLang(config.App.Language, config.App.FallbackLanguage, config.LocalLangDir())
 }
 
 // userLangDir is where the running profile keeps separately installed .lng

@@ -9,8 +9,10 @@ import (
 
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/f4/vfs"
+	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
 
@@ -18,6 +20,7 @@ const (
 	commandPaletteActionName = "App.CommandPalette"
 	commandPaletteHistoryID  = "command-palette"
 	commandPaletteHistoryMax = 50
+	commandPaletteLegacyKey  = "CtrlAltP"
 )
 
 type commandPaletteSource uint8
@@ -136,6 +139,22 @@ func commandPaletteAreaAllowed(area string) bool {
 	default:
 		return false
 	}
+}
+
+// commandPaletteLegacyShortcut is an explicit fallback for terminals that
+// still use the legacy byte protocol. In that protocol Ctrl+Shift+P arrives
+// as the same Ctrl+P byte used by the passive-panel command, so treating
+// Ctrl+P as the palette would break an existing default. Ctrl+Alt+P survives
+// as an ESC-prefixed Ctrl+P event and remains available unless the user has
+// explicitly assigned or silenced it.
+func commandPaletteLegacyShortcut(area string, e *vtinput.InputEvent) bool {
+	if e == nil || !e.KeyDown || keymap.EventToHotkeyString(e) != commandPaletteLegacyKey {
+		return false
+	}
+	if GlobalHotkeysMgr == nil {
+		return true
+	}
+	return configuredHotkeyAction(GlobalHotkeysMgr, area, commandPaletteLegacyKey) == ""
 }
 
 func buildCommandPaletteEntries(area string, pf *PanelsFrame) []commandPaletteEntry {
