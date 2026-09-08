@@ -5,6 +5,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -45,7 +46,11 @@ func TestBundledConPTYIsSelected(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := filepath.Clean(filepath.Dir(api.path)); got != filepath.Clean(dir) {
+	if !strings.HasPrefix(api.path, "bundled:") {
+		t.Fatalf("expected bundled ConPTY, got path %q", api.path)
+	}
+	dllPath := strings.TrimPrefix(api.path, "bundled:")
+	if got := filepath.Clean(filepath.Dir(dllPath)); got != filepath.Clean(dir) {
 		t.Fatalf("ConPTY loaded from %q, want the test-installed pair in %q", got, dir)
 	}
 }

@@ -18,16 +18,20 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// conPTYAPI is loaded from the redistributable shipped next to f4.exe. The
-// DLL and OpenConsole.exe are a matched pair: the former starts the latter
-// from its own directory. Keeping the DLL loaded for the lifetime of the
-// process is required because every HPCON is owned by that module.
+// conPTYAPI wraps either the bundled ConPTY redistributable shipped next to
+// f4.exe or the in-box kernel32.dll API. Both expose the same three procs;
+// the struct lets PTY resize/close use whichever API created it.
 type conPTYAPI struct {
-	dll    *windows.DLL
-	create *windows.Proc
-	resize *windows.Proc
-	close  *windows.Proc
-	path   string
+	create procer
+	resize procer
+	close  procer
+	path   string // "bundled:<dll path>" or "system:kernel32.dll"
+}
+
+// procer is the subset of *windows.Proc and *windows.LazyProc that
+// conPTYAPI needs: just Call.
+type procer interface {
+	Call(args ...uintptr) (r1, r2 uintptr, err error)
 }
 
 var (
@@ -94,7 +98,23 @@ func loadConPTY() (*conPTYAPI, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &conPTYAPI{dll: dll, create: create, resize: resize, close: close, path: dllPath}, nil
+	return &conPTYAPI{create: create, resize: resize, close: close, path: "bundled:" + dllPath}, nil
+}
+
+// loadSystemConPTY loads the ConPTY API from kernel32.dll. This is the
+// in-box API available on Windows 10 build 1809+. It works but may shred
+// long logical lines; the bundled conpty.dll is preferred when present.
+func loadSystemConPTY() (*conPTYAPI, error) {
+	mod := windows.NewLazySystemDLL("kernel32.dll")
+	create := mod.NewProc("CreatePseudoConsole")
+	resize := mod.NewProc("ResizePseudoConsole")
+	close := mod.NewProc("ClosePseudoConsole")
+	for _, proc := range []*windows.LazyProc{create, resize, close} {
+		if proc.Find() != nil {
+			return nil, fmt.Errorf("kernel32.dll ConPTY procs not all available")
+		}
+	}
+	return &conPTYAPI{create: create, resize: resize, close: close, path: "system:kernel32.dll"}, nil
 }
 
 func bundledConPTY() (*conPTYAPI, error) {
@@ -102,6 +122,19 @@ func bundledConPTY() (*conPTYAPI, error) {
 		conPTY, conPTYErr = loadConPTY()
 	})
 	return conPTY, conPTYErr
+}
+
+var (
+	systemPTYOnce sync.Once
+	systemPTY     *conPTYAPI
+	systemPTYErr  error
+)
+
+func systemConPTY() (*conPTYAPI, error) {
+	systemPTYOnce.Do(func() {
+		systemPTY, systemPTYErr = loadSystemConPTY()
+	})
+	return systemPTY, systemPTYErr
 }
 
 func packedConPTYCoord(size windows.Coord) uintptr {
@@ -130,16 +163,21 @@ func (api *conPTYAPI) closePseudoConsole(console windows.Handle) {
 	_, _, _ = api.close.Call(uintptr(console))
 }
 
-// conPTYAvailable checks whether the matched ConPTY redistributable is
-// available beside f4.exe. Older Windows versions remain usable through the
-// other console backends, but they must never silently select the in-box API.
+// conPTYAvailable checks whether any ConPTY API is reachable: the bundled
+// redistributable is preferred (correct long-line handling), the in-box
+// kernel32.dll API is the fallback. Older Windows versions remain usable
+// through the other console backends.
 func conPTYAvailable() bool {
 	if vtui.IsWine() {
 		return false
 	}
 	_, err := bundledConPTY()
-	if err != nil {
-		vtui.DebugLog("PTY_WIN: bundled ConPTY unavailable: %v", err)
+	if err == nil {
+		return true
+	}
+	vtui.DebugLog("PTY_WIN: bundled ConPTY unavailable: %v — trying kernel32.dll fallback", err)
+	if _, err := systemConPTY(); err != nil {
+		vtui.DebugLog("PTY_WIN: kernel32.dll ConPTY also unavailable: %v", err)
 		return false
 	}
 	return true
@@ -151,6 +189,7 @@ func isPlatformPTYUsable() bool {
 // PTY для Windows реализован через ConPTY API (доступно в Windows 10+).
 type PTY struct {
 	mu        sync.Mutex
+	api       *conPTYAPI // which API created this console (bundled or system)
 	console   windows.Handle
 	inPipe    windows.Handle
 	outPipe   windows.Handle
@@ -170,11 +209,18 @@ type PTY struct {
 
 func NewPTY() (*PTY, error) {
 	if vtui.IsWine() {
-		return nil, fmt.Errorf("bundled ConPTY is unavailable under Wine")
+		return nil, fmt.Errorf("ConPTY is unavailable under Wine")
 	}
+	// Prefer the bundled ConPTY (correct long-line handling); fall back to
+	// the kernel32.dll in-box API so that users without the bundle still get
+	// a real PTY instead of ShellModeSimpleInline.
 	api, err := bundledConPTY()
 	if err != nil {
-		return nil, fmt.Errorf("bundled ConPTY is unavailable (requires the f4 ConPTY bundle on Windows 10 build 1809+): %w", err)
+		vtui.DebugLog("PTY_WIN: bundled ConPTY unavailable: %v — falling back to kernel32.dll", err)
+		api, err = systemConPTY()
+		if err != nil {
+			return nil, fmt.Errorf("no ConPTY API available (bundled or system): %w", err)
+		}
 	}
 
 	var inPipeOur, inPipePty windows.Handle
@@ -209,6 +255,7 @@ func NewPTY() (*PTY, error) {
 	windows.CloseHandle(outPipePty)
 
 	return &PTY{
+		api:       api,
 		console:   console,
 		inPipe:    inPipeOur,
 		outPipe:   outPipeOur,
@@ -255,12 +302,7 @@ func (p *PTY) SetSize(cols, rows int) {
 	// compare against REFLOW_PTY and FM_RESIZE. The HRESULT used to be
 	// dropped on the floor; a refused resize left the pseudoconsole at its
 	// previous size with nothing in the log to say so.
-	api, err := bundledConPTY()
-	if err != nil {
-		vtui.DebugLog("PTY_WIN_SIZE: bundled ConPTY unavailable: %v", err)
-		return
-	}
-	err = api.resizePseudoConsole(p.console, windows.Coord{X: int16(cols), Y: int16(rows)})
+	err := p.api.resizePseudoConsole(p.console, windows.Coord{X: int16(cols), Y: int16(rows)})
 	if err != nil {
 		vtui.DebugLog("PTY_WIN_SIZE: ResizePseudoConsole(%dx%d) failed: %v", cols, rows, err)
 		return
@@ -349,12 +391,7 @@ func (p *PTY) closeConsole() {
 		return
 	}
 	p.consoleClosed = true
-	api, err := bundledConPTY()
-	if err != nil {
-		vtui.DebugLog("PTY_WIN: bundled ConPTY unavailable while closing: %v", err)
-		return
-	}
-	api.closePseudoConsole(p.console)
+	p.api.closePseudoConsole(p.console)
 }
 
 func (p *PTY) Close() error {
@@ -372,11 +409,7 @@ func (p *PTY) Close() error {
 	}
 	if !p.consoleClosed {
 		p.consoleClosed = true
-		if api, err := bundledConPTY(); err == nil {
-			api.closePseudoConsole(p.console)
-		} else {
-			vtui.DebugLog("PTY_WIN: bundled ConPTY unavailable while closing: %v", err)
-		}
+		p.api.closePseudoConsole(p.console)
 	}
 	p.inWriter.Close()
 	p.outReader.Close()
