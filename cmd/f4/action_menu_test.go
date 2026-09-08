@@ -104,6 +104,9 @@ func TestBuildMenuBarItems_Shell(t *testing.T) {
 	if !ok {
 		t.Fatal("File.Attributes action is not registered")
 	}
+	if got, want := attrAction.DisplayLabel(), "&File attributes"; got != want {
+		t.Fatalf("File.Attributes menu mnemonic = %q, want %q", got, want)
+	}
 	var foundAttributes bool
 	for _, item := range files {
 		if item.Text == attrAction.DisplayLabel() || item.Text == "&"+attrAction.DisplayLabel() {
