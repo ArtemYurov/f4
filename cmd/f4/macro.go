@@ -601,9 +601,13 @@ func (m *MacroManager) Filter(e *vtinput.InputEvent) bool {
 				return true // Intercept and silence (explicitly unbound)
 			}
 			vtui.DebugLog("HOTKEY: Executing action %s for %s in area %s", actionName, keyStr, currentArea)
-			if RunAction(actionName) {
-				return true
-			}
+			// A configured binding owns the event even when its action cannot
+			// currently run. Letting the same key fall through to the frame
+			// dispatcher can trigger an unrelated command and leave a stale
+			// overlay behind (for example, when the selected panel entry is
+			// the parent directory and an archive command has no target).
+			RunAction(actionName)
+			return true
 		}
 	}
 
@@ -663,7 +667,11 @@ func (m *MacroManager) LookupHotkey(e *vtinput.InputEvent) bool {
 		return true
 	}
 	vtui.DebugLog("HOTKEY: Injected %s → action %s in area %s", keyStr, actionName, area)
-	return RunAction(actionName)
+	// The injected path has the same ownership rule as Filter: once a
+	// configured action matched, its result must not expose the key to the
+	// frame below it.
+	RunAction(actionName)
+	return true
 }
 
 func (m *MacroManager) showAssignDialog() {
