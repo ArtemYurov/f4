@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# Every path below is relative to the repository root, so go there rather
+# than requiring the caller to be standing in it.
+cd "$(dirname "$0")/.." || exit 1
+
 echo "1. Downloading Go dependencies..."
 go mod tidy
 

@@ -2,6 +2,10 @@
 # Rigorous test suite for f4's session resurrection feature.
 set -e
 
+# Every path below is relative to the repository root, so go there rather
+# than requiring the caller to be standing in it.
+cd "$(dirname "$0")/.." || exit 1
+
 # --- Test Configuration ---
 F4_CMD="./f4_test_binary --no-plugins" # Disable plugins for clean UI state
 TEST_DIR="/tmp/f4-test-$$"

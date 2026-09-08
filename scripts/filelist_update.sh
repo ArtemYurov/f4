@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Every path below is relative to the repository root, so go there rather
+# than requiring the caller to be standing in it.
+cd "$(dirname "$0")/.." || exit 1
+
 OUTPUT="docs/FILELIST.md"
 
 echo "# Project Structure" > "$OUTPUT"
