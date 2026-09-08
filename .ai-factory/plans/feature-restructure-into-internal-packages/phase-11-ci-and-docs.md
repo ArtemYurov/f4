@@ -790,3 +790,69 @@ rules; this task reads its result rather than extending it.
 
 - `go list -f '{{.ImportPath}} {{join .Imports " "}}' ./...`
 - `go test ./cmd/f4 -run TestArchitecture`
+
+---
+
+## Task 47
+
+Re-home the files upstream added past Task 43's roster. **Runs after the pull
+request is merged.** Depends on Task 45.
+
+### Why it cannot run earlier
+
+Task 43's roster names the 346 files of base revision `0cda22a7`. Anything
+upstream added after it has no home there, so it lands wherever the merge puts
+it — a silent decision: it compiles, the suite is green, and the package may
+still be the wrong one.
+
+Two arrived while the branch was being built, and both are covered by their own
+waves (`edit_command_test.go` → Task 34, `local_language_files_test.go` → Task
+36; both recorded in `index.md`'s Open Findings). This task is not about those.
+It is about what arrives **between Task 33 and the merge**: those files land
+after their wave has already passed, and nobody is left to remember them. The
+list is only complete once the pull request is in.
+
+So the task is written as a query, not as a list. The list will be different by
+the time it runs.
+
+### Step 1 — inventory
+
+```
+git ls-tree -r --name-only 0cda22a7   | grep '\.go$' | sort > /tmp/base.txt
+git ls-tree -r --name-only upstream/main | grep '\.go$' | sort > /tmp/up.txt
+comm -13 /tmp/base.txt /tmp/up.txt
+```
+
+Six at the time of writing, verified:
+
+| File | Bearing on the restructuring |
+|---|---|
+| `cmd/f4/edit_command_test.go` | subject `parsePlainEditCommand`, `cmd/f4/panels_frame.go` |
+| `cmd/f4/local_language_files_test.go` | subjects `initLang`, `InitHelpSystem` |
+| `tools/vtui-screen/main.go`, `main_test.go` | outside the module's restructured tree — name and skip |
+| `vfs/registry_vfs_windows.go`, `_test.go` | `vfs` is layer 0 and untouched — name and skip |
+
+Only what sits in `cmd/f4` or under `internal/` needs the question asked.
+
+### Step 2 — ask each one the extraction gate's question
+
+Where does its **subject** live — not what its name suggests. `codegraph
+callees` first, then the type grep. The file belongs in its subject's package or
+it does not. Four roster entries were assigned by filename during this work and
+four times the graph disagreed; a name that arrived from another repository has
+even less standing.
+
+### Step 3 — move what does not match
+
+`git mv`, tests with their subject, and export only what has a caller outside
+the new package.
+
+### Step 4 — write each re-homed file into Task 43's roster
+
+So that the next reader finds the answer instead of deriving it again.
+
+### Verification
+
+The wave gate, unchanged: full suite, ten-target cross-build, `GOOS=… go vet` on
+the four systems, and `go test ./cmd/f4 -run '^TestArchitecture'`.
+

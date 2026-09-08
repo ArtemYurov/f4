@@ -1,8 +1,9 @@
 # Phase 8: File Operations and the Editor
 
 Plan: [index.md](index.md)
-Tasks: 32-33
-Depends on: Phase 7, plus Task 5 (Task 32) and Task 14 (Task 33)
+Tasks: 46, 32-33
+Depends on: Phase 7, plus Task 5 (Task 32) and Task 14 (Task 33). Task 46 depends
+on nothing and runs before Task 32.
 
 ## Objective
 
@@ -58,6 +59,107 @@ package's size, not a choice.
 | `internal/editor/` | create | The F4 editor over `internal/piecetable` |
 | `cmd/f4/architecture_test.go` | modify | Two layer-map entries |
 | `docs/` | modify | File-operation and editor pages |
+
+---
+
+---
+
+## Task 46
+
+Every literal message key the code names exists in `en.lng`.
+
+### Why it runs before Task 32
+
+Nothing checks this direction. `internal/i18n/lang_consistency_test.go` compares
+the other `.lng` files against `en.lng`; a key that only the *code* names is in
+neither set. The waves ahead are the ones that need the check: Tasks 32-36 are
+run by scripts that rewrite identifiers, and three times already such a script
+rewrote a string literal instead — a YAML fixture inside a raw string, `case
+"Path":` in two ini readers, and the case below. Each compiled and passed. After
+the waves there is nothing left to catch.
+
+### The confirmed case, which is what shapes the test
+
+`internal/dialog/settings_portable.go` asked for `"PortableSettings.ini.File"`.
+No `.lng` has that key — the language files spell it `PortableSettings.IniFile`
+— so the portable-mode dialog rendered `{PortableSettings.ini.File}` where the
+profile path caption belongs. A requalification pass turned `IniFile` into
+`ini.File` inside the string. Found by the `04ba3125` merge, where upstream's
+side of the conflict carried the correct key.
+
+**The key never reaches `Msg` directly**, and this is the part that decides the
+task. It is handed to a helper — `pathLine(key, path)` before the merge,
+`newPortableSettingsPathText(key, …)` after — and the helper calls `Msg(key)` on
+a variable. A sweep of literal arguments to `Msg` does not see it. Measured on
+the tree: 1030 keys are written inside the call, and another 716 real keys reach
+`Msg` only through a helper.
+
+So the test is two sweeps, and the second is the one that covers the case above.
+
+### File
+
+`internal/i18n/msg_keys_test.go`, `package i18n`. Everything it needs is already
+in the package: `defaultLangData` (`lang.go:15`) parsed the way the package
+parses it itself (`lang.go:114`), and `testutil.ModuleRootDir`
+(`internal/testutil/paths.go:16`). Both packages are layer 0
+(`architecture_test.go:54`, `:136`), so the import needs no layer-map entry.
+
+### `TestEveryLiteralMsgKeyExists`
+
+Sweeps `(?:Msg|HelpMsg)\("([A-Za-z0-9_.]+)"\)` over every `.go` file in the
+module — plugins and tools included — and requires each key in `en.lng`.
+
+- The receiver is deliberately absent from the pattern: `i18n.Msg`, `vtui.Msg`
+  and the bare `Msg` read one table.
+- A concatenated key (`Msg("Menu." + name)`) is invisible by construction, and
+  should be: only its literal half is checkable, and half a key resolves against
+  nothing. No allowlist is needed for these — the pattern never reaches them.
+- Two files hold fixtures rather than captions and are skipped by relative path:
+  `tools/hardcode/hardcode_test.go` and `internal/i18n/lang_test.go`. They name
+  four keys between them, deliberately absent, to exercise a miss.
+- `KeyBar.EditorAltF8` (`cmd/f4/editor_view.go:3919`) is whitelisted in one line.
+  It is missing from upstream's `en.lng` too, so the editor's Alt keybar shows
+  `{KeyBar.EditorAltF8}` for everyone; the fix is a string in their table.
+- **The floor is the point.** A sweep that finds nothing passes, and would keep
+  passing once the pattern or the walk broke — the failure `xbuild.sh` had. Under
+  900 distinct keys is a `t.Fatalf` naming the count. It is 1030 today.
+- Membership is `_, ok := known[key]`, never `known[key] == ""`: a key with an
+  empty string is present, not missing.
+
+### `TestNoLiteralIsANearMissOfAKey`
+
+Sweeps every literal shaped like a key — `"([A-Z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+)"`
+— and fails on one that is absent from `en.lng` yet collides with a real key
+once dots, underscores and case are removed.
+
+That is the signature of the damage rather than of the call, which is why it
+catches the confirmed case the first sweep cannot. A rename rewriting a string
+as though it were an identifier leaves a key differing from a real one only in
+dots and case; nothing else produces one. Measured: **523** shaped literals are
+absent from `en.lng` and are ordinary strings, **zero** are near misses. So this
+sweep needs no exemptions at all — not even the fixture files.
+
+### Verification, which is part of the task
+
+A test that cannot fail is the failure being guarded against. Each of these was
+run and reverted:
+
+| Injected | Caught by | Message |
+|---|---|---|
+| `IniFile` → `ini.File` restored | near-miss sweep | `settings_portable.go:334: "PortableSettings.ini.File", and lang/en.lng has "PortableSettings.IniFile"` |
+| `Msg("PortableSettings.Nope")` | literal sweep | `settings_portable.go:335: PortableSettings.Nope` |
+| pattern broken | the floor | `swept 0 distinct keys, want at least 900` |
+
+Failures print `path:line: key`, not a count: the next rewritten literal is then
+read off the report instead of grepped for.
+
+### Walk
+
+Paths are collected inside `filepath.WalkDir` and read after it, the shape
+`command_palette_coverage_test.go:466` already uses — a filesystem call in the
+callback is `gosec` G122. `vendor`, `testdata` and any nested repository or
+worktree (detected by its `.git` marker) are skipped; a worktree under `_work/`
+would otherwise sweep a second, older copy of every file.
 
 ---
 

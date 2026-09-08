@@ -332,6 +332,13 @@ upstream merge that must happen first, the open tails and the tool hazards.
 - **Task 36 depends on every wave** — the composition root is what is left.
 - **Task 41 depends on Task 37** — `ARCHITECTURE.md` can describe the tree as a
   fact only once the tree is the tree.
+- **Task 47 runs after the pull request is merged, not before.** Until then the
+  list it works from is incomplete by construction: a file upstream adds after
+  its wave has passed lands in `cmd/f4` with nobody left to place it.
+- **Task 46 depends on nothing, and Task 32 must not start without it.** It
+  guards Tasks 32-36 against the one damage the waves actually cause: a script
+  that rewrites identifiers rewriting a string literal instead. Run after the
+  waves it would find nothing left to find.
 
 ## Tasks
 
@@ -383,6 +390,7 @@ upstream merge that must happen first, the open tails and the tool hazards.
 - [x] Task 31: Extract `internal/media` ([details](phase-07-view-and-terminal.md#task-31-extract-internalmedia)) (depends on 30)
 
 ### Phase 8: File Operations and the Editor
+- [x] Task 46: Audit the message keys — every literal `Msg`/`HelpMsg` key exists in `en.lng` ([details](phase-08-fileops-and-editor.md#task-46)) — runs before Task 32, outside the phase order
 - [ ] Task 32: Extract `internal/fileops` ([details](phase-08-fileops-and-editor.md#task-32-extract-internalfileops)) (depends on 5, 30, 31)
 - [ ] Task 33: Extract `internal/editor` ([details](phase-08-fileops-and-editor.md#task-33-extract-internaleditor)) (depends on 14, 29, 32)
 
@@ -402,6 +410,7 @@ upstream merge that must happen first, the open tails and the tool hazards.
 - [ ] Task 42: Drop the migration baseline ([details](phase-11-ci-and-docs.md#task-42-drop-the-migration-baseline)) (depends on 41)
 - [ ] Task 44: Review the finished tree before calling it done ([details](phase-11-ci-and-docs.md#task-44-review-the-finished-tree-before-calling-it-done)) (depends on 42)
 - [ ] Task 45: Write the pull request ([details](phase-11-ci-and-docs.md#task-45-write-the-pull-request)) (depends on 44)
+- [ ] Task 47: Re-home the files upstream added past Task 43's roster ([details](phase-11-ci-and-docs.md#task-47)) (depends on 45)
 
 ## Open Findings
 
@@ -526,6 +535,40 @@ calls. Apply the same answer — the package declares what it needs from above,
 the root supplies it — instead of reopening the question per wave. What each
 wave still has to do on its own is *measure* its list the way Task 26's was
 measured, because five methods is this host's number and not a general one.
+
+### Confirmed: a rewritten string literal, and where it was found
+
+`internal/dialog/settings_portable.go` called
+`i18n.Msg("PortableSettings.ini.File")`. No `.lng` carries that key — the
+language files spell it `PortableSettings.IniFile` — so the portable-mode dialog
+rendered `{PortableSettings.ini.File}` in place of the profile-path caption. A
+requalification pass turned `IniFile` into `ini.File` inside the string, which
+compiles and passes every test.
+
+Found by the `04ba3125` merge: upstream's side of the conflict carried the
+correct key. The class is described in `HANDOFF.md` as a hazard; this is the
+first instance with an address. **Task 46 closes it** — and note that it takes
+the second of that task's two sweeps to do so, because the literal is handed to
+a helper and never reaches `Msg` directly.
+
+### Files that arrive from upstream after Task 43's roster
+
+Two so far, both assigned by subject, both travelling further than `cmd/f4`, and
+neither in the roster that is supposed to say where they go:
+
+- **`cmd/f4/local_language_files_test.go`** — subjects are `initLang`
+  (`cmd/f4/lang.go`) and `InitHelpSystem` (`cmd/f4/help_topics.go`), both bound
+  for `internal/app` in Task 36. It holds three exports created for it:
+  `config.CachedF4ConfigDir`, `config.CachedF4Portable`,
+  `dialog.HelpActionStrings`. All three keep an external caller after the move,
+  so the exports stay legitimate.
+- **`cmd/f4/edit_command_test.go`** — subject is `parsePlainEditCommand`
+  (`cmd/f4/panels_frame.go:5684`), bound for `internal/panel` in Task 34.
+
+The rule this implies: **a file arriving from upstream after Task 43 has no home
+in the roster.** Assign it by subject and record it here, or it stays in
+`cmd/f4` on its own wave with nobody to notice. Upstream is active and two
+merges have produced two such files; there will be a third.
 
 ### Two packages the plan did not name
 
