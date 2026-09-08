@@ -1,11 +1,11 @@
-package main
+package cmdline
 
 // commandHasUnmatchedQuote reports whether command leaves a shell quote open.
 // The command line is a single-shot input field, so it cannot provide the
 // continuation prompt that an interactive shell would normally use; sending
 // such input would make f4 appear to hang while the child shell waits for the
 // closing quote.
-func commandHasUnmatchedQuote(command string, windowsShell bool) bool {
+func CommandHasUnmatchedQuote(command string, windowsShell bool) bool {
 	quotes := make([]rune, 0, 2)
 	escaped := false
 	for _, ch := range command {

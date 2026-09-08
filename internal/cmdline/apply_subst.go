@@ -1,4 +1,4 @@
-package main
+package cmdline
 
 import (
 	"fmt"
@@ -850,7 +850,7 @@ func applyCommandTrimOneSeparator(path string, style ApplyCommandPathStyle) stri
 }
 
 func applyCommandVolume(path string, style ApplyCommandPathStyle) string {
-	style = effectiveApplyCommandPathStyle(path, style)
+	style = EffectiveApplyCommandPathStyle(path, style)
 	if style == ApplyCommandPathStylePOSIX {
 		if strings.HasPrefix(path, "/") {
 			return "/"
@@ -900,7 +900,7 @@ func applyCommandPanelEntries(panel ApplyCommandPanel, short, full, forwardSlash
 			directory := applyCommandDirectory(panel, short, false)
 			name = applyCommandJoinPath(directory, name, panel.PathStyle)
 		}
-		if forwardSlashes && effectiveApplyCommandPathStyle(panel.Directory, panel.PathStyle) == ApplyCommandPathStyleWindows {
+		if forwardSlashes && EffectiveApplyCommandPathStyle(panel.Directory, panel.PathStyle) == ApplyCommandPathStyleWindows {
 			name = strings.ReplaceAll(name, `\`, "/")
 		}
 		entries = append(entries, name)
@@ -921,7 +921,7 @@ func applyCommandJoinPath(directory, name string, style ApplyCommandPathStyle) s
 }
 
 func applyCommandPathSeparator(path string, style ApplyCommandPathStyle) string {
-	switch effectiveApplyCommandPathStyle(path, style) {
+	switch EffectiveApplyCommandPathStyle(path, style) {
 	case ApplyCommandPathStylePOSIX:
 		return "/"
 	case ApplyCommandPathStyleWindows:
@@ -930,7 +930,7 @@ func applyCommandPathSeparator(path string, style ApplyCommandPathStyle) string 
 	return "/"
 }
 
-func effectiveApplyCommandPathStyle(path string, style ApplyCommandPathStyle) ApplyCommandPathStyle {
+func EffectiveApplyCommandPathStyle(path string, style ApplyCommandPathStyle) ApplyCommandPathStyle {
 	if style != ApplyCommandPathStyleUnknown {
 		return style
 	}
@@ -945,7 +945,7 @@ func effectiveApplyCommandPathStyle(path string, style ApplyCommandPathStyle) Ap
 }
 
 func applyCommandIsAbsolute(path string, style ApplyCommandPathStyle) bool {
-	if effectiveApplyCommandPathStyle(path, style) == ApplyCommandPathStylePOSIX {
+	if EffectiveApplyCommandPathStyle(path, style) == ApplyCommandPathStylePOSIX {
 		return strings.HasPrefix(path, "/")
 	}
 	windowsAbsolute := strings.HasPrefix(path, `\`) || strings.HasPrefix(path, "/") ||

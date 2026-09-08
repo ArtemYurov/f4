@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/unxed/f4/internal/cmdline"
 	"github.com/unxed/f4/vfs"
 )
 
@@ -67,7 +68,7 @@ func buildUserMenuScriptCommand(interpreter, script string, dialect vfs.CommandD
 
 	switch dialect {
 	case vfs.CommandDialectPOSIX:
-		quoted, err := QuoteCommandArgument(vfs.CommandDialectPOSIX, script)
+		quoted, err := cmdline.QuoteCommandArgument(vfs.CommandDialectPOSIX, script)
 		if err != nil {
 			return "", err
 		}
@@ -93,7 +94,7 @@ func buildUserMenuScriptCommand(interpreter, script string, dialect vfs.CommandD
 			_ = os.Remove(path)
 			return "", fmt.Errorf("close temporary script: %w", err)
 		}
-		quoted, err := QuoteCommandPath(vfs.CommandDialectCmd, path)
+		quoted, err := cmdline.QuoteCommandPath(vfs.CommandDialectCmd, path)
 		if err != nil {
 			_ = os.Remove(path)
 			return "", err

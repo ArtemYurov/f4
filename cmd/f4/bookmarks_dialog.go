@@ -6,6 +6,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/appcmd"
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -219,7 +220,7 @@ func (d *bookmarksDialog) rowText(slot int) string {
 	if path == "" {
 		path = i18n.Msg("Bookmarks.EmptySlot")
 	}
-	return fmt.Sprintf("%s %d   %s", i18n.Msg("Bookmarks.RowPrefix"), slot, escapeAmpersand(path))
+	return fmt.Sprintf("%s %d   %s", i18n.Msg("Bookmarks.RowPrefix"), slot, dialog.EscapeAmpersand(path))
 }
 
 // size returns the menu box dimensions: wide enough for the longest row

@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/cmdline"
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
@@ -47,8 +49,8 @@ func TestEscapeAmpersand(t *testing.T) {
 		{"a&b&c", "a&&b&&c"},
 	}
 	for _, c := range cases {
-		if got := escapeAmpersand(c.in); got != c.want {
-			t.Errorf("escapeAmpersand(%q) = %q, want %q", c.in, got, c.want)
+		if got := dialog.EscapeAmpersand(c.in); got != c.want {
+			t.Errorf("EscapeAmpersand(%q) = %q, want %q", c.in, got, c.want)
 		}
 	}
 }
@@ -309,7 +311,7 @@ func TestUserMenu_ScriptCommandUsesInterpreterAndQuotedBody(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	quotedBody, err := QuoteCommandArgument(vfs.CommandDialectPOSIX, body)
+	quotedBody, err := cmdline.QuoteCommandArgument(vfs.CommandDialectPOSIX, body)
 	if err != nil {
 		t.Fatal(err)
 	}

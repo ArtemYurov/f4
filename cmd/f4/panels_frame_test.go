@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/appcmd"
+	"github.com/unxed/f4/internal/cmdline"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/fileops"
@@ -816,7 +817,7 @@ func setupMockPanelsFrame(t *testing.T) *PanelsFrame {
 	for i := 0; i < 5; i++ {
 		pf.menuBar.Items[i].SubItems = make([]vtui.MenuItem, 8)
 	}
-	pf.cmdLine = NewCommandLine(">")
+	pf.cmdLine = cmdline.NewCommandLine(">")
 	pf.keyBar = vtui.NewKeyBar()
 	// Use OSVFS because tests create real files in t.TempDir()
 	pf.panels[0] = NewFileSystemPanel(0, 0, 40, 20, vfs.NewOSVFS("."))

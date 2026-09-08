@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package cmdline
 
 import (
 	"os"
@@ -13,12 +13,12 @@ import (
 
 const appPathsKeyPath = `Software\Microsoft\Windows\CurrentVersion\term.App Paths`
 
-// resolveWindowsCommand rewrites the first token of cmd to the full path
+// ResolveWindowsCommand rewrites the first token of cmd to the full path
 // registered in the "App Paths" registry key, but only when the program is
 // NOT resolvable by the regular search (current dir / PATH / PATHEXT) that
 // cmd.exe itself uses. Commands found normally are passed through untouched,
 // so the registry is queried only as a fallback.
-func resolveWindowsCommand(cmd string) string {
+func ResolveWindowsCommand(cmd string) string {
 	start, end, name, ok := findCmdToken(cmd)
 	if !ok || name == "" {
 		return cmd
@@ -111,8 +111,8 @@ func appPathLookup(name string) string {
 	return ""
 }
 
-// isBatchCommand reports whether the first token of cmd is a .bat or .cmd file.
-func isBatchCommand(cmd string) bool {
+// IsBatchCommand reports whether the first token of cmd is a .bat or .cmd file.
+func IsBatchCommand(cmd string) bool {
 	_, _, token, ok := findCmdToken(cmd)
 	if !ok {
 		return false

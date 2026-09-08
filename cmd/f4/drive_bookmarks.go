@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/dialog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -150,7 +151,7 @@ func driveBookmarkKeyMatches(bookmark DriveBookmark, eKey string) bool {
 }
 
 func driveBookmarkMenuText(bookmark DriveBookmark) string {
-	name := escapeAmpersand(strings.TrimSpace(bookmark.Name))
+	name := dialog.EscapeAmpersand(strings.TrimSpace(bookmark.Name))
 	key := strings.TrimSpace(bookmark.Hotkey)
 	if key == "" {
 		return "   " + name

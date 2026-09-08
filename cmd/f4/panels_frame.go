@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/unxed/f4/internal/appcmd"
+	"github.com/unxed/f4/internal/cmdline"
 	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/history"
@@ -264,7 +265,7 @@ type PanelsFrame struct {
 	workspaceCommandTitle string
 
 	menuBar *vtui.MenuBar
-	cmdLine *CommandLine
+	cmdLine *cmdline.CommandLine
 	keyBar  *vtui.KeyBar
 
 	showKeyBar     bool
@@ -425,7 +426,7 @@ func NewPanelsFrame() *PanelsFrame {
 	pf.menuBar.SetOwner(pf)
 	pf.menuBar.Items = pf.buildMenuItems()
 	// We no longer need pf.menuBar.OnCommand for routing!
-	pf.cmdLine = NewCommandLine(i18n.Msg("Panels.Prompt"))
+	pf.cmdLine = cmdline.NewCommandLine(i18n.Msg("Panels.Prompt"))
 	if config.App.NavigationMode == config.NavigationSearchFirst {
 		pf.cmdLine.SetFocus(false)
 	}
@@ -2410,7 +2411,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 		commandInputActive := !pf.searchFirstMode() || pf.commandLineFocused || !pf.showPanels
 		if commandInputActive && !pf.cmdLine.IsEmpty() {
 			cmd := pf.cmdLine.Edit.GetText()
-			if commandHasUnmatchedQuote(cmd, runtime.GOOS == "windows") {
+			if cmdline.CommandHasUnmatchedQuote(cmd, runtime.GOOS == "windows") {
 				vtui.ShowMessage(" Error ", "Unmatched quote in command. Close the quote and press Enter again.", []string{"&Ok"})
 				return true
 			}
@@ -2573,7 +2574,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 				}
 
 				if isWindowsShell {
-					cmd = resolveWindowsCommand(cmd)
+					cmd = cmdline.ResolveWindowsCommand(cmd)
 				}
 
 				// The local Unix term.PTY is a persistent shell session. Its current
@@ -2660,7 +2661,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 				pf.workspaceCommandTitle = workspaceCommandName(trimmedCmd)
 				pf.writePTY(activePty, []byte(fullWireCmd))
 				if isWindowsShell && integration == nil {
-					if isBatchCommand(cmd) {
+					if cmdline.IsBatchCommand(cmd) {
 						pf.cmdSession.noteBatchExecution()
 					}
 					pf.noteLocalShellLineSent(activePty)
@@ -5002,7 +5003,7 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 				usedHotkeys[rune('0'+i)] = true
 				bookmarkRows[menu.GetItemCount()] = i
 				menu.AddItem(vtui.MenuItem{
-					Text: fmt.Sprintf("&%d  %s", i, escapeAmpersand(dialog.TruncPathLeft(path, 64))),
+					Text: fmt.Sprintf("&%d  %s", i, dialog.EscapeAmpersand(dialog.TruncPathLeft(path, 64))),
 					UserData: func(fsp *FileSystemPanel) {
 						pf.navigateToBookmark(fsp, bookmark)
 					},

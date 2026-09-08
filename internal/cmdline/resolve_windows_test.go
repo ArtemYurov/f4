@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package cmdline
 
 import "testing"
 
@@ -30,8 +30,8 @@ func TestIsBatchCommand(t *testing.T) {
 		``:                       false,
 	}
 	for cmd, want := range cases {
-		if got := isBatchCommand(cmd); got != want {
-			t.Errorf("isBatchCommand(%q) = %v, want %v", cmd, got, want)
+		if got := IsBatchCommand(cmd); got != want {
+			t.Errorf("IsBatchCommand(%q) = %v, want %v", cmd, got, want)
 		}
 	}
 }

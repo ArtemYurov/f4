@@ -85,8 +85,6 @@ var commandPaletteTargetPackage = map[string]string{
 	"ai_chat_panel.go":            "app",
 	"arkanoid.go":                 "app",
 	"sheet_frame.go":              "app",
-	"apply_command_output.go":     "cmdline",
-	"command_line.go":             "cmdline",
 	"bookmarks_dialog.go":         "dialog",
 	"command_palette_ui.go":       "dialog",
 	"find_file.go":                "dialog",
@@ -118,7 +116,7 @@ var commandPaletteProcessKeyAudit = map[string]commandPaletteSurfaceAudit{
 	"app.(*ArkanoidFrame).ProcessKey": {
 		class: paletteAuditFrameProvider, rationale: "Arkanoid commands are supplied by commandPaletteArkanoidEntries",
 	},
-	"cmdline.(*applyOutputDialog).ProcessKey": {
+	"cmdline.(*ApplyOutputDialog).ProcessKey": {
 		class: paletteAuditModalLocal, rationale: "the apply-output window is modal and only adds its local close key",
 	},
 	"cmdline.(*CommandLine).ProcessKey": {

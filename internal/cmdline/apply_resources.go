@@ -1,4 +1,4 @@
-package main
+package cmdline
 
 import (
 	"context"
@@ -137,7 +137,7 @@ func (g *applyResourceGroup) cleanupNow() {
 	})
 }
 
-func cleanupAllApplyCommandResources() {
+func CleanupAllApplyCommandResources() {
 	cleanupAllApplyCommandResourcesWithin(applyCommandShutdownCleanupWait)
 }
 
@@ -178,7 +178,7 @@ func cleanupAllApplyCommandResourcesWithin(timeout time.Duration) bool {
 	}
 }
 
-func materializeApplyCommandResources(ctx context.Context, target vfs.VFS, dir string, dialect vfs.CommandDialect, requests []ApplyCommandResourceRequest) (map[int]string, func(bool), error) {
+func MaterializeApplyCommandResources(ctx context.Context, target vfs.VFS, dir string, dialect vfs.CommandDialect, requests []ApplyCommandResourceRequest) (map[int]string, func(bool), error) {
 	if len(requests) == 0 {
 		return nil, nil, nil
 	}

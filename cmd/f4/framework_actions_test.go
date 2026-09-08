@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/cmdline"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/media"
@@ -226,7 +227,7 @@ func TestPaletteMainMenuMatchesPanelsF9ActiveSide(t *testing.T) {
 		activeIdx:  1,
 		showPanels: true,
 		menuBar:    vtui.NewMenuBar(nil),
-		cmdLine:    NewCommandLine(">"),
+		cmdLine:    cmdline.NewCommandLine(">"),
 		termView:   terminal.NewTerminalView(100, 30),
 	}
 	panels.menuBar.SetOwner(panels)

@@ -945,7 +945,7 @@ func openTempInEditor(pf *PanelsFrame, path string, onClose func()) {
 //	"      label"   – no hotkey
 func formatMenuItemText(it UserMenuItem) string {
 	const labelCol = 6
-	label := escapeAmpersand(it.Label)
+	label := dialog.EscapeAmpersand(it.Label)
 	if fn := parseFunctionKey(it.HotKey); fn > 0 {
 		return fmt.Sprintf("%-*s%s", labelCol, it.HotKey, label)
 	}
@@ -954,12 +954,6 @@ func formatMenuItemText(it UserMenuItem) string {
 	}
 	// Single char (printable) — let vtui wire up the hotkey.
 	return fmt.Sprintf("&%s%s%s", it.HotKey, strings.Repeat(" ", labelCol-1-len(it.HotKey)), label)
-}
-
-// escapeAmpersand doubles literal '&' so vtui doesn't treat them as
-// hotkey markers in the label portion.
-func escapeAmpersand(s string) string {
-	return strings.ReplaceAll(s, "&", "&&")
 }
 
 func stripAmpersand(s string) string {

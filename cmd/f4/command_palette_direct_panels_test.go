@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/unxed/f4/internal/cmdline"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/terminal"
@@ -46,7 +47,7 @@ func newDirectPalettePanelsFrame(left, right *FileSystemPanel) *PanelsFrame {
 		showPanels:     true,
 		showLeftPanel:  true,
 		showRightPanel: true,
-		cmdLine:        NewCommandLine("$ "),
+		cmdLine:        cmdline.NewCommandLine("$ "),
 		termView:       terminal.NewTerminalView(80, 24),
 	}
 }

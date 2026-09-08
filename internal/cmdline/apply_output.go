@@ -1,4 +1,4 @@
-package main
+package cmdline
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/piecetable"
@@ -14,7 +15,7 @@ import (
 	"github.com/unxed/vtui"
 )
 
-type applyBatchViewModel struct {
+type ApplyBatchViewModel struct {
 	mu             sync.Mutex
 	transcript     *applyTranscript
 	total          int
@@ -25,18 +26,18 @@ type applyBatchViewModel struct {
 	done           bool
 	cancelling     bool
 	refreshPending bool
-	views          map[*applyOutputView]struct{}
+	views          map[*ApplyOutputView]struct{}
 }
 
-func newApplyBatchViewModel(total int) *applyBatchViewModel {
-	return &applyBatchViewModel{
+func NewApplyBatchViewModel(total int) *ApplyBatchViewModel {
+	return &ApplyBatchViewModel{
 		transcript: newApplyTranscript(),
 		total:      total,
-		views:      make(map[*applyOutputView]struct{}),
+		views:      make(map[*ApplyOutputView]struct{}),
 	}
 }
 
-func (m *applyBatchViewModel) Observe(parallel bool, ev applyBatchEvent) {
+func (m *ApplyBatchViewModel) Observe(parallel bool, ev ApplyBatchEvent) {
 	if m == nil {
 		return
 	}
@@ -55,7 +56,7 @@ func (m *applyBatchViewModel) Observe(parallel bool, ev applyBatchEvent) {
 		} else {
 			m.transcript.Add(ev.Line)
 		}
-	case applyBatchItemFinished:
+	case ApplyBatchItemFinished:
 		m.mu.Lock()
 		m.completed++
 		switch ev.Result.State {
@@ -72,7 +73,7 @@ func (m *applyBatchViewModel) Observe(parallel bool, ev applyBatchEvent) {
 	m.requestRefresh()
 }
 
-func applyResultSummary(result applyBatchItemResult) string {
+func applyResultSummary(result ApplyBatchItemResult) string {
 	switch result.State {
 	case applyItemSucceeded:
 		return i18n.Msg("ApplyCommand.ResultSuccess")
@@ -88,7 +89,7 @@ func applyResultSummary(result applyBatchItemResult) string {
 	}
 }
 
-func (m *applyBatchViewModel) Finish(result applyBatchResult) {
+func (m *ApplyBatchViewModel) Finish(result ApplyBatchResult) {
 	if m == nil {
 		return
 	}
@@ -105,7 +106,7 @@ func (m *applyBatchViewModel) Finish(result applyBatchResult) {
 	m.requestRefresh()
 }
 
-func (m *applyBatchViewModel) RequestCancel() {
+func (m *ApplyBatchViewModel) RequestCancel() {
 	if m == nil {
 		return
 	}
@@ -117,7 +118,7 @@ func (m *applyBatchViewModel) RequestCancel() {
 	m.requestRefresh()
 }
 
-func (m *applyBatchViewModel) requestRefresh() {
+func (m *ApplyBatchViewModel) requestRefresh() {
 	m.mu.Lock()
 	if m.refreshPending {
 		m.mu.Unlock()
@@ -139,7 +140,7 @@ func (m *applyBatchViewModel) requestRefresh() {
 		frames.PostTask(func() {
 			m.mu.Lock()
 			m.refreshPending = false
-			views := make([]*applyOutputView, 0, len(m.views))
+			views := make([]*ApplyOutputView, 0, len(m.views))
 			for view := range m.views {
 				views = append(views, view)
 			}
@@ -152,7 +153,7 @@ func (m *applyBatchViewModel) requestRefresh() {
 	})
 }
 
-func (m *applyBatchViewModel) snapshotStatus() (status string, percent int, done bool) {
+func (m *ApplyBatchViewModel) snapshotStatus() (status string, percent int, done bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.total > 0 {
@@ -163,12 +164,12 @@ func (m *applyBatchViewModel) snapshotStatus() (status string, percent int, done
 	} else if m.cancelling {
 		status = i18n.Msg("ApplyCommand.StatusCancelling")
 	} else {
-		status = fmt.Sprintf(i18n.Msg("ApplyCommand.StatusRunningFmt"), m.completed, m.total, escapeAmpersand(m.runningName))
+		status = fmt.Sprintf(i18n.Msg("ApplyCommand.StatusRunningFmt"), m.completed, m.total, dialog.EscapeAmpersand(m.runningName))
 	}
 	return status, percent, m.done
 }
 
-func (m *applyBatchViewModel) IsDone() bool {
+func (m *ApplyBatchViewModel) IsDone() bool {
 	if m == nil {
 		return true
 	}
@@ -177,9 +178,9 @@ func (m *applyBatchViewModel) IsDone() bool {
 	return m.done
 }
 
-type applyOutputView struct {
-	dlg       *applyOutputDialog
-	model     *applyBatchViewModel
+type ApplyOutputView struct {
+	dlg       *ApplyOutputDialog
+	model     *ApplyBatchViewModel
 	status    *vtui.Text
 	progress  *vtui.ProgressBar
 	output    *vtui.ListBox
@@ -188,11 +189,11 @@ type applyOutputView struct {
 	btnClose  *vtui.Button
 }
 
-type applyOutputDialog struct {
+type ApplyOutputDialog struct {
 	*vtui.Window
 }
 
-func (d *applyOutputDialog) ProcessKey(event *vtinput.InputEvent) bool {
+func (d *ApplyOutputDialog) ProcessKey(event *vtinput.InputEvent) bool {
 	if event != nil && event.KeyDown {
 		ctrlW := event.VirtualKeyCode == vtinput.VK_W &&
 			(event.ControlKeyState&(vtinput.LeftCtrlPressed|vtinput.RightCtrlPressed)) != 0
@@ -204,7 +205,7 @@ func (d *applyOutputDialog) ProcessKey(event *vtinput.InputEvent) bool {
 	return d.Window.ProcessKey(event)
 }
 
-func (v *applyOutputView) refresh() {
+func (v *ApplyOutputView) refresh() {
 	if v == nil || v.model == nil {
 		return
 	}
@@ -224,7 +225,7 @@ func (v *applyOutputView) refresh() {
 	v.btnClose.SetDisabled(false)
 }
 
-func newApplyTranscriptEditor(model *applyBatchViewModel, width, height int) *editor.EditorView {
+func NewApplyTranscriptEditor(model *ApplyBatchViewModel, width, height int) *editor.EditorView {
 	lines := model.transcript.Snapshot()
 	text := strings.Join(lines, "\n")
 	if len(lines) > 0 {
@@ -238,9 +239,9 @@ func newApplyTranscriptEditor(model *applyBatchViewModel, width, height int) *ed
 
 // showApplyOutputDialog opens a live or completed transcript. Closing a live
 // view only detaches the UI; the foreground or queued batch keeps running.
-func showApplyOutputDialog(anchor vtui.Frame, model *applyBatchViewModel, cancel func()) *applyOutputDialog {
+func ShowApplyOutputDialog(anchor vtui.Frame, model *ApplyBatchViewModel, cancel func()) *ApplyOutputDialog {
 	const width, height = 86, 24
-	dlg := &applyOutputDialog{Window: vtui.NewCenteredDialog(width, height, i18n.Msg("ApplyCommand.OutputTitle"))}
+	dlg := &ApplyOutputDialog{Window: vtui.NewCenteredDialog(width, height, i18n.Msg("ApplyCommand.OutputTitle"))}
 	dlg.ShowClose = true
 	dlg.ShowZoom = true
 	dlg.SetHelp("ApplyCmd")
@@ -282,7 +283,7 @@ func showApplyOutputDialog(anchor vtui.Frame, model *applyBatchViewModel, cancel
 		button.SetGrowMode(vtui.GrowLoY | vtui.GrowHiY)
 	}
 
-	view := &applyOutputView{
+	view := &ApplyOutputView{
 		dlg: dlg, model: model, status: status, progress: progress, output: output,
 		btnCancel: btnCancel, btnEditor: btnEditor, btnClose: btnClose,
 	}
@@ -307,7 +308,7 @@ func showApplyOutputDialog(anchor vtui.Frame, model *applyBatchViewModel, cancel
 			x1, y1, x2, y2 := anchor.GetPosition()
 			consoleWidth, consoleHeight = x2-x1+1, y2-y1+1
 		}
-		editor := newApplyTranscriptEditor(model, consoleWidth, consoleHeight)
+		editor := NewApplyTranscriptEditor(model, consoleWidth, consoleHeight)
 		editor.StartIndexing()
 		vtui.FrameManager.AddScreen(editor)
 	}

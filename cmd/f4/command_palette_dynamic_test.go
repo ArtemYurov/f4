@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/cmdline"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/i18n"
@@ -168,7 +169,7 @@ func TestCommandPaletteCommandPrefixReResolvesBeforeInsertion(t *testing.T) {
 	}
 	t.Cleanup(registration.Unregister)
 
-	pf := &PanelsFrame{cmdLine: NewCommandLine("")}
+	pf := &PanelsFrame{cmdLine: cmdline.NewCommandLine("")}
 	setCommandPaletteActivePanelsForTest(t, pf)
 	entries := commandPalettePrefixEntries("Shell", pf)
 	var entry commandPaletteEntry
@@ -210,7 +211,7 @@ func TestCommandPalettePrefixAndDriveRejectPreviousWorkspace(t *testing.T) {
 	t.Cleanup(registration.Unregister)
 
 	pf := &PanelsFrame{
-		cmdLine: NewCommandLine(""),
+		cmdLine: cmdline.NewCommandLine(""),
 		panels:  [2]Panel{&FileSystemPanel{}, &FileSystemPanel{}},
 	}
 	setCommandPaletteActivePanelsForTest(t, pf)
@@ -246,7 +247,7 @@ func TestCommandPalettePrefixAndDriveRejectPreviousWorkspace(t *testing.T) {
 		t.Fatal("stale-workspace drive entry is missing")
 	}
 
-	current := &PanelsFrame{cmdLine: NewCommandLine(""), panels: [2]Panel{&FileSystemPanel{}, &FileSystemPanel{}}}
+	current := &PanelsFrame{cmdLine: cmdline.NewCommandLine(""), panels: [2]Panel{&FileSystemPanel{}, &FileSystemPanel{}}}
 	t.Cleanup(testutil.AppendFrameManagerScreen(t, &vtui.AppScreen{Number: 2, Frames: []vtui.Frame{current}}, 1))
 	if executeCommandPaletteEntry(prefixEntry) || pf.cmdLine.Edit.GetText() != "" {
 		t.Fatal("stale prefix entry mutated the previous workspace")

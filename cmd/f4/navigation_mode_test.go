@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/cmdline"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/testutil"
@@ -87,7 +88,7 @@ func newSearchFirstTestFrame(t *testing.T) (*PanelsFrame, *FileSystemPanel, *Fil
 		showKeyBar:     true,
 		lastW:          80,
 		lastH:          25,
-		cmdLine:        NewCommandLine("$ "),
+		cmdLine:        cmdline.NewCommandLine("$ "),
 		termView:       terminal.NewTerminalView(80, 24),
 	}
 	pf.cmdLine.SetPosition(0, 23, 79, 23)

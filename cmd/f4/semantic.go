@@ -37,7 +37,7 @@ func (pf *PanelsFrame) SemanticNode(ctx *vtui.SemanticContext) map[string]any {
 	}
 
 	if pf.cmdLine != nil {
-		shell.CommandLine = pf.cmdLine.semanticModel(ctx)
+		shell.CommandLine = pf.cmdLine.SemanticModel(ctx)
 	}
 	if pf.termView != nil {
 		shell.Terminal = pf.termView.SemanticModel(ctx)
@@ -333,18 +333,6 @@ func sortModeName(mode SortMode) string {
 		return "unsorted"
 	default:
 		return "name"
-	}
-}
-
-func (cl *CommandLine) semanticModel(ctx *vtui.SemanticContext) *extui.CommandLineModel {
-	return &extui.CommandLineModel{
-		ID:         vtui.SemanticID(cl),
-		Visible:    cl.IsVisible(),
-		Focused:    cl.IsFocused(),
-		Prompt:     cl.Prompt,
-		PromptRuns: semanticRunsFromCells(cl.RichPrompt),
-		Text:       cl.Edit.GetText(),
-		Empty:      cl.IsEmpty(),
 	}
 }
 

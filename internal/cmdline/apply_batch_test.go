@@ -1,4 +1,4 @@
-package main
+package cmdline
 
 import (
 	"context"
@@ -33,11 +33,11 @@ func TestApplyBatchSequentialOrderAndContinues(t *testing.T) {
 		}
 		return 0, nil
 	}}
-	items := []applyBatchItem{{Name: "a"}, {Name: "b"}, {Name: "c"}}
-	res := runApplyCommandBatch(context.Background(), applyBatchRequest{
+	items := []ApplyBatchItem{{Name: "a"}, {Name: "b"}, {Name: "c"}}
+	res := RunApplyCommandBatch(context.Background(), ApplyBatchRequest{
 		Items: items, Runner: runner, Parallelism: 1,
-		Expand: func(_ context.Context, _ int, item applyBatchItem) (applyExpandedCommand, error) {
-			return applyExpandedCommand{Command: item.Name}, nil
+		Expand: func(_ context.Context, _ int, item ApplyBatchItem) (ApplyExpandedCommand, error) {
+			return ApplyExpandedCommand{Command: item.Name}, nil
 		},
 	})
 	if fmt.Sprint(got) != "[a b c]" {
@@ -58,14 +58,14 @@ func TestApplyBatchParallelBoundAndResultOrder(t *testing.T) {
 		active.Add(-1)
 		return 0, nil
 	}}
-	items := make([]applyBatchItem, 12)
+	items := make([]ApplyBatchItem, 12)
 	for i := range items {
 		items[i].Name = fmt.Sprintf("%02d", i)
 	}
-	res := runApplyCommandBatch(context.Background(), applyBatchRequest{
+	res := RunApplyCommandBatch(context.Background(), ApplyBatchRequest{
 		Items: items, Runner: runner, Parallelism: 3,
-		Expand: func(_ context.Context, _ int, item applyBatchItem) (applyExpandedCommand, error) {
-			return applyExpandedCommand{Command: item.Name}, nil
+		Expand: func(_ context.Context, _ int, item ApplyBatchItem) (ApplyExpandedCommand, error) {
+			return ApplyExpandedCommand{Command: item.Name}, nil
 		},
 	})
 	if maximum.Load() > 3 || maximum.Load() < 2 {
@@ -86,12 +86,12 @@ func TestApplyBatchCancelStopsNewItems(t *testing.T) {
 		<-ctx.Done()
 		return -1, ctx.Err()
 	}}
-	done := make(chan applyBatchResult, 1)
+	done := make(chan ApplyBatchResult, 1)
 	go func() {
-		done <- runApplyCommandBatch(ctx, applyBatchRequest{
-			Items: []applyBatchItem{{Name: "a"}, {Name: "b"}}, Runner: runner, Parallelism: 1,
-			Expand: func(_ context.Context, _ int, item applyBatchItem) (applyExpandedCommand, error) {
-				return applyExpandedCommand{Command: item.Name}, nil
+		done <- RunApplyCommandBatch(ctx, ApplyBatchRequest{
+			Items: []ApplyBatchItem{{Name: "a"}, {Name: "b"}}, Runner: runner, Parallelism: 1,
+			Expand: func(_ context.Context, _ int, item ApplyBatchItem) (ApplyExpandedCommand, error) {
+				return ApplyExpandedCommand{Command: item.Name}, nil
 			},
 		})
 	}()
@@ -112,10 +112,10 @@ func TestApplyBatchExpansionFailureIsAttempted(t *testing.T) {
 		return 0, nil
 	}}
 	want := errors.New("bad token")
-	res := runApplyCommandBatch(context.Background(), applyBatchRequest{
-		Items: []applyBatchItem{{Name: "a"}}, Runner: runner, Parallelism: 1,
-		Expand: func(context.Context, int, applyBatchItem) (applyExpandedCommand, error) {
-			return applyExpandedCommand{}, want
+	res := RunApplyCommandBatch(context.Background(), ApplyBatchRequest{
+		Items: []ApplyBatchItem{{Name: "a"}}, Runner: runner, Parallelism: 1,
+		Expand: func(context.Context, int, ApplyBatchItem) (ApplyExpandedCommand, error) {
+			return ApplyExpandedCommand{}, want
 		},
 	})
 	if res.Started != 1 || res.Failed != 1 || !errors.Is(res.Items[0].Err, want) {
@@ -130,10 +130,10 @@ func TestApplyBatchRetainsResourcesWhenCancellationArrivesAfterCompletion(t *tes
 		cancel()
 		return 0, nil
 	}}
-	result := runApplyCommandBatch(ctx, applyBatchRequest{
-		Items: []applyBatchItem{{Name: "a"}}, Runner: runner, Parallelism: 1,
-		Expand: func(context.Context, int, applyBatchItem) (applyExpandedCommand, error) {
-			return applyExpandedCommand{Command: "done", Cleanup: func(completed bool) { retained = completed }}, nil
+	result := RunApplyCommandBatch(ctx, ApplyBatchRequest{
+		Items: []ApplyBatchItem{{Name: "a"}}, Runner: runner, Parallelism: 1,
+		Expand: func(context.Context, int, ApplyBatchItem) (ApplyExpandedCommand, error) {
+			return ApplyExpandedCommand{Command: "done", Cleanup: func(completed bool) { retained = completed }}, nil
 		},
 	})
 	if !retained {

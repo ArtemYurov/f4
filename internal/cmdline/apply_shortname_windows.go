@@ -1,10 +1,10 @@
 //go:build windows
 
-package main
+package cmdline
 
 import "golang.org/x/sys/windows"
 
-func applyCommandShortPath(path string) string {
+func ApplyCommandShortPath(path string) string {
 	ptr, err := windows.UTF16PtrFromString(path)
 	if err != nil {
 		return path

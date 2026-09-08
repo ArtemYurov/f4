@@ -11,7 +11,9 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/unxed/f4/internal/cmdline"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/terminal"
@@ -38,7 +40,7 @@ type applyPanelCapture struct {
 	panelVFS vfs.VFS
 	vfs      vfs.VFS
 	dir      string
-	snapshot ApplyCommandPanel
+	snapshot cmdline.ApplyCommandPanel
 }
 
 type applyCommandSession struct {
@@ -50,13 +52,13 @@ type applyCommandSession struct {
 	tokens     map[string]panelSelectionToken
 	runner     vfs.CommandRunner
 	info       vfs.CommandRunnerInfo
-	template   *CompiledApplyCommand
-	values     ApplyCommandPromptValues
+	template   *cmdline.CompiledApplyCommand
+	values     cmdline.ApplyCommandPromptValues
 	silent     bool
-	mode       ApplyCommandMode
+	mode       cmdline.ApplyCommandMode
 	workers    int
-	activeSide ApplyCommandPanelSide
-	items      []applyBatchItem
+	activeSide cmdline.ApplyCommandPanelSide
+	items      []cmdline.ApplyBatchItem
 	ownedVFS   []vfs.VFS
 	releaseVFS sync.Once
 }
@@ -147,7 +149,7 @@ func actionApplyCommand(pf *PanelsFrame) {
 		targets: targets, explicit: explicit, tokens: tokens, runner: runner, info: info,
 	}
 	if pf.activeIdx == 1 {
-		session.activeSide = ApplyCommandRightSide
+		session.activeSide = cmdline.ApplyCommandRightSide
 	}
 	showApplyCommandDialog(session)
 }
@@ -207,21 +209,21 @@ func captureApplyCommandPanel(panel *FileSystemPanel, selectedOverride []string)
 			realDir = resolved
 		}
 	}
-	shortDir := applyCommandShortPath(dir)
-	realShortDir := applyCommandShortPath(realDir)
-	makeFile := func(name string) ApplyCommandFile {
+	shortDir := cmdline.ApplyCommandShortPath(dir)
+	realShortDir := cmdline.ApplyCommandShortPath(realDir)
+	makeFile := func(name string) cmdline.ApplyCommandFile {
 		if name == "" {
-			return ApplyCommandFile{}
+			return cmdline.ApplyCommandFile{}
 		}
 		short := name
 		if _, local := panel.vfs.(*vfs.OSVFS); local {
-			if shortPath := applyCommandShortPath(panel.vfs.Join(dir, name)); shortPath != "" {
+			if shortPath := cmdline.ApplyCommandShortPath(panel.vfs.Join(dir, name)); shortPath != "" {
 				short = filepath.Base(shortPath)
 			}
 		}
-		return ApplyCommandFile{Name: name, ShortName: short}
+		return cmdline.ApplyCommandFile{Name: name, ShortName: short}
 	}
-	selectedFiles := make([]ApplyCommandFile, 0, len(selected))
+	selectedFiles := make([]cmdline.ApplyCommandFile, 0, len(selected))
 	for _, name := range selected {
 		if name != "" && name != ".." {
 			selectedFiles = append(selectedFiles, makeFile(name))
@@ -229,7 +231,7 @@ func captureApplyCommandPanel(panel *FileSystemPanel, selectedOverride []string)
 	}
 	return applyPanelCapture{
 		panel: panel, panelVFS: panel.vfs, vfs: panel.vfs, dir: dir,
-		snapshot: ApplyCommandPanel{
+		snapshot: cmdline.ApplyCommandPanel{
 			PathStyle: detectApplyCommandPathStyle(panel.vfs, dir),
 			Directory: dir, ShortDirectory: shortDir, RealDirectory: realDir, RealShortDirectory: realShortDir,
 			Current: makeFile(current), Selected: selectedFiles,
@@ -237,47 +239,47 @@ func captureApplyCommandPanel(panel *FileSystemPanel, selectedOverride []string)
 	}
 }
 
-func detectApplyCommandPathStyle(filesystem vfs.VFS, directory string) ApplyCommandPathStyle {
+func detectApplyCommandPathStyle(filesystem vfs.VFS, directory string) cmdline.ApplyCommandPathStyle {
 	if filesystem != nil {
 		joined := filesystem.Join("f4-apply-style-a", "f4-apply-style-b")
 		if strings.Contains(joined, `\`) && !strings.Contains(joined, "/") {
-			return ApplyCommandPathStyleWindows
+			return cmdline.ApplyCommandPathStyleWindows
 		}
 		if strings.Contains(joined, "/") {
-			return ApplyCommandPathStylePOSIX
+			return cmdline.ApplyCommandPathStylePOSIX
 		}
 	}
-	return effectiveApplyCommandPathStyle(directory, ApplyCommandPathStyleUnknown)
+	return cmdline.EffectiveApplyCommandPathStyle(directory, cmdline.ApplyCommandPathStyleUnknown)
 }
 
-func (s *applyCommandSession) contextFor(name string) ApplyCommandContext {
+func (s *applyCommandSession) contextFor(name string) cmdline.ApplyCommandContext {
 	active := s.active.snapshot
 	active.Current = applyCommandFileForTarget(s.active, name)
-	return ApplyCommandContext{
+	return cmdline.ApplyCommandContext{
 		Dialect: applyCommandDialect(s.info.Dialect), ActiveSide: s.activeSide,
 		Active: active, Passive: s.passive.snapshot,
 	}
 }
 
-func applyCommandFileForTarget(capture applyPanelCapture, name string) ApplyCommandFile {
+func applyCommandFileForTarget(capture applyPanelCapture, name string) cmdline.ApplyCommandFile {
 	for _, File := range capture.snapshot.Selected {
 		if File.Name == name {
 			return File
 		}
 	}
-	return ApplyCommandFile{Name: name, ShortName: name}
+	return cmdline.ApplyCommandFile{Name: name, ShortName: name}
 }
 
-func applyCommandDialect(dialect vfs.CommandDialect) ApplyCommandDialect {
+func applyCommandDialect(dialect vfs.CommandDialect) cmdline.ApplyCommandDialect {
 	switch dialect {
 	case vfs.CommandDialectPOSIX:
-		return ApplyCommandDialectPOSIX
+		return cmdline.ApplyCommandDialectPOSIX
 	case vfs.CommandDialectCmd:
-		return ApplyCommandDialectCMD
+		return cmdline.ApplyCommandDialectCMD
 	case vfs.CommandDialectPowerShell:
-		return ApplyCommandDialectPowerShell
+		return cmdline.ApplyCommandDialectPowerShell
 	default:
-		return ApplyCommandDialectRaw
+		return cmdline.ApplyCommandDialectRaw
 	}
 }
 
@@ -349,7 +351,7 @@ func showApplyCommandDialog(session *applyCommandSession) {
 	vbox.Apply()
 
 	updateWorkers := func() {
-		parallel := comboMode.Menu.SelectPos == int(ApplyCommandParallel)
+		parallel := comboMode.Menu.SelectPos == int(cmdline.ApplyCommandParallel)
 		lblWorkers.SetDisabled(!parallel)
 		chkUnlimited.SetDisabled(!parallel)
 		editWorkers.SetDisabled(!parallel || chkUnlimited.State == 1)
@@ -382,7 +384,7 @@ func showApplyCommandDialog(session *applyCommandSession) {
 			vtui.ShowMessageOn(dlg, i18n.Msg("ApplyCommand.Title"), i18n.Msg("ApplyCommand.InvalidCommand"), []string{i18n.Msg("vtui.Ok")})
 			return
 		}
-		compiled, err := CompileApplyCommand(executable)
+		compiled, err := cmdline.CompileApplyCommand(executable)
 		if err != nil {
 			vtui.ShowMessageOn(dlg, i18n.Msg("ApplyCommand.Title"), fmt.Sprintf(i18n.Msg("ApplyCommand.InvalidTemplateFmt"), err), []string{i18n.Msg("vtui.Ok")})
 			return
@@ -391,15 +393,15 @@ func showApplyCommandDialog(session *applyCommandSession) {
 			vtui.ShowMessageOn(dlg, i18n.Msg("ApplyCommand.Title"), i18n.Msg("ApplyCommand.UnknownDialect"), []string{i18n.Msg("vtui.Ok")})
 			return
 		}
-		mode := ApplyCommandSequential
+		mode := cmdline.ApplyCommandSequential
 		switch comboMode.Menu.SelectPos {
 		case 1:
-			mode = ApplyCommandParallel
+			mode = cmdline.ApplyCommandParallel
 		case 2:
-			mode = ApplyCommandQueued
+			mode = cmdline.ApplyCommandQueued
 		}
 		workers := 1
-		if mode == ApplyCommandParallel {
+		if mode == cmdline.ApplyCommandParallel {
 			if chkUnlimited.State == 1 {
 				workers = 0
 			} else {
@@ -416,7 +418,7 @@ func showApplyCommandDialog(session *applyCommandSession) {
 			vtui.ShowMessageOn(dlg, i18n.Msg("ApplyCommand.Title"), fmt.Sprintf(i18n.Msg("ApplyCommand.InvalidTemplateFmt"), err), []string{i18n.Msg("vtui.Ok")})
 			return
 		}
-		accept := func(values ApplyCommandPromptValues) {
+		accept := func(values cmdline.ApplyCommandPromptValues) {
 			session.template = compiled
 			session.values = values
 			session.silent = silent
@@ -428,7 +430,7 @@ func showApplyCommandDialog(session *applyCommandSession) {
 			}
 			lastApplyCommandTemplate = raw
 			editCommand.AddHistory(raw)
-			if mode == ApplyCommandParallel {
+			if mode == cmdline.ApplyCommandParallel {
 				config.App.ApplyCommandParallelism = workers
 				config.RequestSaveConfig()
 			}
@@ -437,7 +439,7 @@ func showApplyCommandDialog(session *applyCommandSession) {
 			launchApplyCommandSession(session)
 		}
 		if len(prompts) == 0 {
-			accept(ApplyCommandPromptValues{})
+			accept(cmdline.ApplyCommandPromptValues{})
 			return
 		}
 		showApplyCommandPrompts(dlg, prompts, accept)
@@ -446,7 +448,7 @@ func showApplyCommandDialog(session *applyCommandSession) {
 	vtui.FrameManager.PushToFrameScreen(session.pf, dlg)
 }
 
-func showApplyCommandPrompts(anchor vtui.Frame, prompts []ApplyCommandResolvedPrompt, accepted func(ApplyCommandPromptValues)) {
+func showApplyCommandPrompts(anchor vtui.Frame, prompts []cmdline.ApplyCommandResolvedPrompt, accepted func(cmdline.ApplyCommandPromptValues)) {
 	const pageSize = 10
 
 	width := 70
@@ -473,7 +475,7 @@ func showApplyCommandPrompts(anchor vtui.Frame, prompts []ApplyCommandResolvedPr
 		if title == "" {
 			title = fmt.Sprintf(i18n.Msg("ApplyCommand.ValueFmt"), i+1)
 		}
-		title = escapeAmpersand(vtui.TruncateMiddle(title, labelWidth))
+		title = dialog.EscapeAmpersand(vtui.TruncateMiddle(title, labelWidth))
 		y := rowY + i%pageSize
 		edit := vtui.NewEdit(editX, y, editWidth, prompt.Initial)
 		if prompt.History != "" {
@@ -564,7 +566,7 @@ func showApplyCommandPrompts(anchor vtui.Frame, prompts []ApplyCommandResolvedPr
 	}
 	btnCancel.OnClick = func() { dlg.Close() }
 	btnOK.OnClick = func() {
-		values := make(ApplyCommandPromptValues, len(prompts))
+		values := make(cmdline.ApplyCommandPromptValues, len(prompts))
 		for i, prompt := range prompts {
 			value := edits[i].GetText()
 			values[prompt.Index] = value
@@ -582,32 +584,32 @@ func showApplyCommandPrompts(anchor vtui.Frame, prompts []ApplyCommandResolvedPr
 func launchApplyCommandSession(session *applyCommandSession) {
 	items := session.items
 	workers := effectiveApplyCommandWorkers(session.mode, session.workers, len(items), session.info.MaxParallel)
-	model := newApplyBatchViewModel(len(items))
-	observe := func(event applyBatchEvent) {
-		model.Observe(session.mode == ApplyCommandParallel, event)
-		if event.Kind == applyBatchItemFinished {
+	model := cmdline.NewApplyBatchViewModel(len(items))
+	observe := func(event cmdline.ApplyBatchEvent) {
+		model.Observe(session.mode == cmdline.ApplyCommandParallel, event)
+		if event.Kind == cmdline.ApplyBatchItemFinished {
 			session.postItemFinished(event.Result)
 		}
 	}
-	request := applyBatchRequest{
+	request := cmdline.ApplyBatchRequest{
 		Dir: session.active.dir, Items: items, Runner: session.runner, Parallelism: workers,
 		Expand: session.expandItem, Observe: observe,
 	}
-	if session.mode == ApplyCommandQueued {
+	if session.mode == cmdline.ApplyCommandQueued {
 		session.enqueue(request, model)
 		return
 	}
 
 	runCtx, cancel := context.WithCancel(context.Background())
 	unregister := registerForegroundApplyCommand(cancel)
-	showApplyOutputDialog(session.pf, model, func() {
+	cmdline.ShowApplyOutputDialog(session.pf, model, func() {
 		cancel()
 	})
 	vtui.RunAsync(func(ctx *vtui.TaskContext) {
 		defer unregister()
 		defer cancel()
 		defer session.releaseCapturedVFSes()
-		result := runApplyCommandBatch(runCtx, request)
+		result := cmdline.RunApplyCommandBatch(runCtx, request)
 		ctx.RunOnUI(func() {
 			model.Finish(result)
 			session.refreshCapturedPanels()
@@ -676,45 +678,45 @@ func (s *applyCommandSession) releaseCapturedVFSes() {
 	})
 }
 
-func (s *applyCommandSession) batchItems() ([]applyBatchItem, error) {
+func (s *applyCommandSession) batchItems() ([]cmdline.ApplyBatchItem, error) {
 	first, err := s.template.Expand(s.contextFor(s.targets[0]), s.values)
 	if err != nil {
 		return nil, err
 	}
-	if first.Cardinality == ApplyCommandOnce {
-		return []applyBatchItem{{Name: s.targets[0], AffectedNames: append([]string(nil), s.targets...)}}, nil
+	if first.Cardinality == cmdline.ApplyCommandOnce {
+		return []cmdline.ApplyBatchItem{{Name: s.targets[0], AffectedNames: append([]string(nil), s.targets...)}}, nil
 	}
-	items := make([]applyBatchItem, len(s.targets))
+	items := make([]cmdline.ApplyBatchItem, len(s.targets))
 	for i, name := range s.targets {
-		items[i] = applyBatchItem{Name: name, AffectedNames: []string{name}}
+		items[i] = cmdline.ApplyBatchItem{Name: name, AffectedNames: []string{name}}
 	}
 	return items, nil
 }
 
-func (s *applyCommandSession) expandItem(ctx context.Context, _ int, item applyBatchItem) (applyExpandedCommand, error) {
+func (s *applyCommandSession) expandItem(ctx context.Context, _ int, item cmdline.ApplyBatchItem) (cmdline.ApplyExpandedCommand, error) {
 	if err := ctx.Err(); err != nil {
-		return applyExpandedCommand{}, err
+		return cmdline.ApplyExpandedCommand{}, err
 	}
 	expansion, err := s.template.Expand(s.contextFor(item.Name), s.values)
 	if err != nil {
-		return applyExpandedCommand{}, err
+		return cmdline.ApplyExpandedCommand{}, err
 	}
-	paths, release, err := materializeApplyCommandResources(ctx, s.active.vfs, s.active.dir, s.info.Dialect, expansion.Resources)
+	paths, release, err := cmdline.MaterializeApplyCommandResources(ctx, s.active.vfs, s.active.dir, s.info.Dialect, expansion.Resources)
 	if err != nil {
-		return applyExpandedCommand{}, err
+		return cmdline.ApplyExpandedCommand{}, err
 	}
 	command, err := expansion.Render(paths)
 	if err != nil {
 		if release != nil {
 			release(false)
 		}
-		return applyExpandedCommand{}, err
+		return cmdline.ApplyExpandedCommand{}, err
 	}
-	return applyExpandedCommand{Command: command, Silent: s.silent, Cleanup: release}, nil
+	return cmdline.ApplyExpandedCommand{Command: command, Silent: s.silent, Cleanup: release}, nil
 }
 
-func effectiveApplyCommandWorkers(mode ApplyCommandMode, configured, count, providerCap int) int {
-	if mode != ApplyCommandParallel {
+func effectiveApplyCommandWorkers(mode cmdline.ApplyCommandMode, configured, count, providerCap int) int {
+	if mode != cmdline.ApplyCommandParallel {
 		return 1
 	}
 	workers := configured
@@ -730,7 +732,7 @@ func effectiveApplyCommandWorkers(mode ApplyCommandMode, configured, count, prov
 	return workers
 }
 
-func (s *applyCommandSession) postItemFinished(result applyBatchItemResult) {
+func (s *applyCommandSession) postItemFinished(result cmdline.ApplyBatchItemResult) {
 	if !s.explicit || len(result.AffectedNames) == 0 {
 		return
 	}
@@ -780,7 +782,7 @@ func (s *applyCommandSession) refreshCapturedPanels() {
 	}
 }
 
-func (s *applyCommandSession) enqueue(request applyBatchRequest, model *applyBatchViewModel) {
+func (s *applyCommandSession) enqueue(request cmdline.ApplyBatchRequest, model *cmdline.ApplyBatchViewModel) {
 	preconditions := s.queuePreconditions()
 	task := &fileops.QueueTask{
 		Type: i18n.Msg("ApplyCommand.QueueType"), Desc: fmt.Sprintf(i18n.Msg("ApplyCommand.QueueDescriptionFmt"), len(s.targets)),
@@ -789,15 +791,15 @@ func (s *applyCommandSession) enqueue(request applyBatchRequest, model *applyBat
 	task.Run = func(ctx context.Context, reporter fileops.TaskReporter, _ vtui.Frame) error {
 		defer s.releaseCapturedVFSes()
 		originalObserve := request.Observe
-		request.Observe = func(event applyBatchEvent) {
+		request.Observe = func(event cmdline.ApplyBatchEvent) {
 			originalObserve(event)
-			if event.Kind == applyBatchItemFinished {
+			if event.Kind == cmdline.ApplyBatchItemFinished {
 				completed := event.Index + 1
 				pct := completed * 100 / len(request.Items)
 				reporter.UpdateTransfer(i18n.Msg("ApplyCommand.QueueType"), event.Name, pct, fmt.Sprintf("%d/%d", completed, len(request.Items)), pct, "")
 			}
 		}
-		result := runApplyCommandBatch(ctx, request)
+		result := cmdline.RunApplyCommandBatch(ctx, request)
 		model.Finish(result)
 		if err := ctx.Err(); err != nil {
 			return err
@@ -808,19 +810,19 @@ func (s *applyCommandSession) enqueue(request applyBatchRequest, model *applyBat
 		return nil
 	}
 	task.OpenDetails = func(anchor vtui.Frame) {
-		showApplyOutputDialog(anchor, model, func() { fileops.GlobalQueueManager.Cancel(task.ID) })
+		cmdline.ShowApplyOutputDialog(anchor, model, func() { fileops.GlobalQueueManager.Cancel(task.ID) })
 	}
 	task.Finalize = s.releaseCapturedVFSes
 	task.OnComplete = func() {
 		s.releaseCapturedVFSes()
 		if !model.IsDone() {
 			state, _, taskErr := task.Status()
-			fallback := applyBatchResult{Items: make([]applyBatchItemResult, len(request.Items)), NotStarted: len(request.Items)}
+			fallback := cmdline.ApplyBatchResult{Items: make([]cmdline.ApplyBatchItemResult, len(request.Items)), NotStarted: len(request.Items)}
 			if state == "Cancelled" {
-				model.transcript.Add(i18n.Msg("ApplyCommand.ResultCancelled"))
+				model.AddTranscript(i18n.Msg("ApplyCommand.ResultCancelled"))
 			} else {
 				if taskErr != nil {
-					model.transcript.Add(fmt.Sprintf(i18n.Msg("ApplyCommand.ResultFailedFmt"), taskErr))
+					model.AddTranscript(fmt.Sprintf(i18n.Msg("ApplyCommand.ResultFailedFmt"), taskErr))
 				}
 			}
 			model.Finish(fallback)

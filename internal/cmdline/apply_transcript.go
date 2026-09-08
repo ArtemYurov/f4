@@ -1,4 +1,4 @@
-package main
+package cmdline
 
 import (
 	"github.com/unxed/f4/internal/i18n"

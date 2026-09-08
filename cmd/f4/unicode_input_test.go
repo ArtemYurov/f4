@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/cmdline"
 	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/vtinput"
@@ -34,7 +35,7 @@ func TestCommandLineUnicodeInputFollowsVisualCaret(t *testing.T) {
 	defer func() { vtui.DefaultBidiMode = oldMode }()
 	configureUnicodeInput()
 
-	line := NewCommandLine("")
+	line := cmdline.NewCommandLine("")
 	line.Edit.SetText("שלום")
 	line.Edit.ClearSelection()
 	line.ProcessKey(unicodeKey(vtinput.VK_RIGHT, 0))

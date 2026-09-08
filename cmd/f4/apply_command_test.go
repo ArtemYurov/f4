@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/cmdline"
 	"github.com/unxed/f4/internal/i18n"
-	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -136,15 +136,15 @@ func TestResolveApplyCommandRunnerNormalizesInvalidDialect(t *testing.T) {
 
 func TestEffectiveApplyCommandWorkers(t *testing.T) {
 	tests := []struct {
-		mode                        ApplyCommandMode
+		mode                        cmdline.ApplyCommandMode
 		configured, count, provider int
 		want                        int
 	}{
-		{ApplyCommandSequential, runtime.NumCPU(), 20, 0, 1},
-		{ApplyCommandQueued, 20, 20, 0, 1},
-		{ApplyCommandParallel, 3, 20, 0, 3},
-		{ApplyCommandParallel, 0, 7, 0, 7},
-		{ApplyCommandParallel, 99, 7, 4, 4},
+		{cmdline.ApplyCommandSequential, runtime.NumCPU(), 20, 0, 1},
+		{cmdline.ApplyCommandQueued, 20, 20, 0, 1},
+		{cmdline.ApplyCommandParallel, 3, 20, 0, 3},
+		{cmdline.ApplyCommandParallel, 0, 7, 0, 7},
+		{cmdline.ApplyCommandParallel, 99, 7, 4, 4},
 	}
 	for _, tc := range tests {
 		if got := effectiveApplyCommandWorkers(tc.mode, tc.configured, tc.count, tc.provider); got != tc.want {
@@ -291,7 +291,7 @@ func TestApplyCompletionDoesNotTouchClosedWorkspace(t *testing.T) {
 		pf: pf, explicit: true, tokens: map[string]panelSelectionToken{"one.txt": token},
 		active: applyPanelCapture{panel: panel, panelVFS: closedVFS, vfs: closedVFS, dir: "/captured"},
 	}
-	session.postItemFinished(applyBatchItemResult{AffectedNames: []string{"one.txt"}})
+	session.postItemFinished(cmdline.ApplyBatchItemResult{AffectedNames: []string{"one.txt"}})
 	drained := make(chan struct{})
 	vtui.FrameManager.PostTask(func() { close(drained) })
 	deadline := time.After(time.Second)
@@ -321,38 +321,9 @@ func TestCancelAllForegroundApplyCommands(t *testing.T) {
 	}
 }
 
-func TestApplyOutputDialogCanCloseWhileForegroundBatchRuns(t *testing.T) {
-	model := newApplyBatchViewModel(1)
-	dlg := showApplyOutputDialog(nil, model, nil)
-	defer vtui.FrameManager.RemoveFrame(dlg)
-
-	model.mu.Lock()
-	var view *applyOutputView
-	for candidate := range model.views {
-		view = candidate
-		break
-	}
-	model.mu.Unlock()
-	if view == nil || view.btnClose.IsDisabled() {
-		t.Fatal("foreground Close button is disabled while running")
-	}
-	if !dlg.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_ESCAPE}) || !dlg.IsDone() {
-		t.Fatal("foreground output dialog did not close while the batch was running")
-	}
-	if model.IsDone() {
-		t.Fatal("closing the output dialog completed the running batch")
-	}
-	model.mu.Lock()
-	_, stillObserved := model.views[view]
-	model.mu.Unlock()
-	if stillObserved {
-		t.Fatal("closed output dialog remained registered for refresh")
-	}
-}
-
 func TestApplyQueueDetailsConsumesCtrlWAndClosesOnlyDialog(t *testing.T) {
-	model := newApplyBatchViewModel(1)
-	dlg := showApplyOutputDialog(nil, model, nil)
+	model := cmdline.NewApplyBatchViewModel(1)
+	dlg := cmdline.ShowApplyOutputDialog(nil, model, nil)
 	defer vtui.FrameManager.RemoveFrame(dlg)
 	if !dlg.ProcessKey(&vtinput.InputEvent{
 		Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_W,
@@ -362,62 +333,6 @@ func TestApplyQueueDetailsConsumesCtrlWAndClosesOnlyDialog(t *testing.T) {
 	}
 	if !dlg.IsDone() {
 		t.Fatal("queue Details did not close its own dialog on Ctrl+W")
-	}
-}
-
-func TestApplyOutputDialogExpandsTranscript(t *testing.T) {
-	model := newApplyBatchViewModel(1)
-	for i := 0; i < 30; i++ {
-		model.transcript.Add(fmt.Sprintf("line %d", i))
-	}
-	dlg := showApplyOutputDialog(nil, model, nil)
-	defer vtui.FrameManager.RemoveFrame(dlg)
-	if !dlg.ShowZoom {
-		t.Fatal("Apply output dialog has no expand control")
-	}
-
-	model.mu.Lock()
-	var view *applyOutputView
-	for candidate := range model.views {
-		view = candidate
-		break
-	}
-	model.mu.Unlock()
-	if view == nil {
-		t.Fatal("Apply output view not registered")
-	}
-	if !view.output.ShowScrollBar || view.output.ScrollBar == nil {
-		t.Fatal("Apply output transcript has no scrollbar")
-	}
-	if view.output.ItemCount <= view.output.ViewHeight {
-		t.Fatalf("test transcript does not overflow: items=%d height=%d", view.output.ItemCount, view.output.ViewHeight)
-	}
-	if view.output.ColorTextIdx != theme.ColViewerText || view.output.ColorSelectedTextIdx != theme.ColViewerStatus {
-		t.Fatalf("transcript colors = %d/%d, want themed Viewer colors %d/%d",
-			view.output.ColorTextIdx, view.output.ColorSelectedTextIdx, theme.ColViewerText, theme.ColViewerStatus)
-	}
-	if view.output.ScrollBar.ColorIdx != theme.ColViewerScrollbar {
-		t.Fatalf("transcript scrollbar color = %d, want themed Viewer scrollbar %d", view.output.ScrollBar.ColorIdx, theme.ColViewerScrollbar)
-	}
-	_, _, oldX2, oldY2 := view.output.GetPosition()
-	dx1, dy1, dx2, dy2 := dlg.GetPosition()
-	dlg.ChangeSize(dx2-dx1+11, dy2-dy1+6)
-	_, _, newX2, newY2 := view.output.GetPosition()
-	if newX2 <= oldX2 || newY2 <= oldY2 {
-		t.Fatalf("transcript did not grow: delta = %dx%d", newX2-oldX2, newY2-oldY2)
-	}
-}
-
-func TestApplyTranscriptCanBeForwardedToEditor(t *testing.T) {
-	model := newApplyBatchViewModel(1)
-	model.transcript.Add("first line")
-	model.transcript.Add("second line")
-	editor := newApplyTranscriptEditor(model, 80, 25)
-	if got := editor.Pt.String(); got != "first line\nsecond line\n" {
-		t.Fatalf("editor transcript = %q", got)
-	}
-	if editor.DisplayTitle != i18n.Msg("ApplyCommand.OutputEditorTitle") {
-		t.Fatalf("editor title = %q", editor.DisplayTitle)
 	}
 }
 
@@ -524,12 +439,12 @@ func TestApplyCommandPromptCancellationKeepsHistoryAndSelection(t *testing.T) {
 }
 
 func TestApplyCommandPromptDialogPagesEveryField(t *testing.T) {
-	prompts := make([]ApplyCommandResolvedPrompt, 12)
+	prompts := make([]cmdline.ApplyCommandResolvedPrompt, 12)
 	for i := range prompts {
-		prompts[i] = ApplyCommandResolvedPrompt{Index: i, Title: fmt.Sprintf("Field %d", i+1), Initial: fmt.Sprintf("default-%d", i+1)}
+		prompts[i] = cmdline.ApplyCommandResolvedPrompt{Index: i, Title: fmt.Sprintf("Field %d", i+1), Initial: fmt.Sprintf("default-%d", i+1)}
 	}
-	var accepted ApplyCommandPromptValues
-	showApplyCommandPrompts(nil, prompts, func(values ApplyCommandPromptValues) { accepted = values })
+	var accepted cmdline.ApplyCommandPromptValues
+	showApplyCommandPrompts(nil, prompts, func(values cmdline.ApplyCommandPromptValues) { accepted = values })
 	dlg, ok := vtui.FrameManager.GetTopFrame().(*vtui.Window)
 	if !ok {
 		t.Fatalf("top frame = %T, want prompt dialog", vtui.FrameManager.GetTopFrame())

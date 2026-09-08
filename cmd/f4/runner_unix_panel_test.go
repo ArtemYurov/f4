@@ -7,6 +7,7 @@ import (
 
 	"context"
 	"errors"
+	"github.com/unxed/f4/internal/cmdline"
 	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/vfs"
 	"os"
@@ -20,7 +21,7 @@ func TestLocalCommandRunnerCancellationKillsProcessGroup(t *testing.T) {
 	t.Setenv("SHELL", "/bin/sh")
 	dir := t.TempDir()
 	pidPath := dir + "/child.pid"
-	quotedPIDPath, err := QuoteCommandPath(vfs.CommandDialectPOSIX, pidPath)
+	quotedPIDPath, err := cmdline.QuoteCommandPath(vfs.CommandDialectPOSIX, pidPath)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,4 +1,4 @@
-package main
+package cmdline
 
 import (
 	"bytes"
@@ -180,7 +180,7 @@ func TestEncodeApplyCommandListPortableFormats(t *testing.T) {
 
 func TestMaterializeLocalApplyCommandResource(t *testing.T) {
 	osvfs := vfs.NewOSVFS(t.TempDir())
-	paths, cleanup, err := materializeApplyCommandResources(t.Context(), osvfs, osvfs.GetPath(), vfs.CommandDialectPOSIX, []ApplyCommandResourceRequest{{
+	paths, cleanup, err := MaterializeApplyCommandResources(t.Context(), osvfs, osvfs.GetPath(), vfs.CommandDialectPOSIX, []ApplyCommandResourceRequest{{
 		ID: 3, Kind: ApplyCommandListFileResource, ListFile: ApplyCommandListFileSpec{Entries: []string{"one"}},
 	}})
 	if err != nil {
@@ -195,7 +195,7 @@ func TestMaterializeLocalApplyCommandResource(t *testing.T) {
 func TestMaterializeRemoteApplyCommandResourceUsesTargetVFS(t *testing.T) {
 	dir := t.TempDir()
 	target := &remoteApplyResourceVFS{OSVFS: vfs.NewOSVFS(dir)}
-	paths, cleanup, err := materializeApplyCommandResources(t.Context(), target, dir, vfs.CommandDialectPOSIX, []ApplyCommandResourceRequest{{
+	paths, cleanup, err := MaterializeApplyCommandResources(t.Context(), target, dir, vfs.CommandDialectPOSIX, []ApplyCommandResourceRequest{{
 		ID: 1, Kind: ApplyCommandListFileResource, ListFile: ApplyCommandListFileSpec{Entries: []string{"remote name"}},
 	}})
 	if err != nil {
@@ -217,7 +217,7 @@ func TestMaterializeRemoteApplyCommandResourceUsesTargetVFS(t *testing.T) {
 func TestMaterializeRemoteApplyCommandResourceUsesPrivateCreator(t *testing.T) {
 	dir := t.TempDir()
 	target := &privateCommandFileApplyResourceVFS{remoteApplyResourceVFS: &remoteApplyResourceVFS{OSVFS: vfs.NewOSVFS(dir)}}
-	paths, cleanup, err := materializeApplyCommandResources(t.Context(), target, dir, vfs.CommandDialectPOSIX, []ApplyCommandResourceRequest{{
+	paths, cleanup, err := MaterializeApplyCommandResources(t.Context(), target, dir, vfs.CommandDialectPOSIX, []ApplyCommandResourceRequest{{
 		ID: 2, Kind: ApplyCommandListFileResource, ListFile: ApplyCommandListFileSpec{Entries: []string{"private"}},
 	}})
 	if err != nil {
@@ -242,7 +242,7 @@ func TestMaterializeRemoteApplyCommandResourceUsesPrivateCreator(t *testing.T) {
 
 func TestMaterializeApplyResourceRejectsUnknownDialect(t *testing.T) {
 	target := &remoteApplyResourceVFS{OSVFS: vfs.NewOSVFS(t.TempDir())}
-	_, _, err := materializeApplyCommandResources(t.Context(), target, target.GetPath(), vfs.CommandDialectUnknown, []ApplyCommandResourceRequest{{
+	_, _, err := MaterializeApplyCommandResources(t.Context(), target, target.GetPath(), vfs.CommandDialectUnknown, []ApplyCommandResourceRequest{{
 		ID: 1, Kind: ApplyCommandListFileResource,
 	}})
 	if err == nil {
@@ -279,7 +279,7 @@ func TestEncodeApplyCommandListRejectsUnrepresentableNames(t *testing.T) {
 func TestRemoteApplyCommandResourceRequestsOnlyPrivateMode(t *testing.T) {
 	dir := t.TempDir()
 	target := &capturingAttributesApplyResourceVFS{remoteApplyResourceVFS: &remoteApplyResourceVFS{OSVFS: vfs.NewOSVFS(dir)}}
-	_, cleanup, err := materializeApplyCommandResources(t.Context(), target, dir, vfs.CommandDialectPOSIX, []ApplyCommandResourceRequest{{
+	_, cleanup, err := MaterializeApplyCommandResources(t.Context(), target, dir, vfs.CommandDialectPOSIX, []ApplyCommandResourceRequest{{
 		ID: 7, Kind: ApplyCommandListFileResource, ListFile: ApplyCommandListFileSpec{Entries: []string{"private"}},
 	}})
 	if err != nil {
@@ -296,7 +296,7 @@ func TestRemoteApplyCommandResourceRequestsOnlyPrivateMode(t *testing.T) {
 
 func TestActiveApplyCommandResourceIsFlushed(t *testing.T) {
 	osvfs := vfs.NewOSVFS(t.TempDir())
-	paths, release, err := materializeApplyCommandResources(t.Context(), osvfs, osvfs.GetPath(), vfs.CommandDialectPOSIX, []ApplyCommandResourceRequest{{
+	paths, release, err := MaterializeApplyCommandResources(t.Context(), osvfs, osvfs.GetPath(), vfs.CommandDialectPOSIX, []ApplyCommandResourceRequest{{
 		ID: 8, Kind: ApplyCommandListFileResource, ListFile: ApplyCommandListFileSpec{Entries: []string{"active"}},
 	}})
 	if err != nil {
@@ -306,7 +306,7 @@ func TestActiveApplyCommandResourceIsFlushed(t *testing.T) {
 	if _, err := os.Stat(path); err != nil {
 		t.Fatal(err)
 	}
-	cleanupAllApplyCommandResources()
+	CleanupAllApplyCommandResources()
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Fatalf("active list file still exists: %v", err)
 	}
@@ -321,7 +321,7 @@ func TestApplyCommandShutdownResourceCleanupIsBounded(t *testing.T) {
 		unblock:                make(chan struct{}),
 		finished:               make(chan struct{}),
 	}
-	_, release, err := materializeApplyCommandResources(t.Context(), target, dir, vfs.CommandDialectPOSIX, []ApplyCommandResourceRequest{{
+	_, release, err := MaterializeApplyCommandResources(t.Context(), target, dir, vfs.CommandDialectPOSIX, []ApplyCommandResourceRequest{{
 		ID: 9, Kind: ApplyCommandListFileResource, ListFile: ApplyCommandListFileSpec{Entries: []string{"blocked"}},
 	}})
 	if err != nil {
@@ -358,7 +358,7 @@ func TestApplyCommandResourceRemovalsStartConcurrently(t *testing.T) {
 			ListFile: ApplyCommandListFileSpec{Entries: []string{"blocked"}},
 		}
 	}
-	_, release, err := materializeApplyCommandResources(t.Context(), target, dir, vfs.CommandDialectPOSIX, requests)
+	_, release, err := MaterializeApplyCommandResources(t.Context(), target, dir, vfs.CommandDialectPOSIX, requests)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -394,7 +394,7 @@ func TestApplyCommandResourceFailureCleanupHonorsCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	result := make(chan error, 1)
 	go func() {
-		_, _, err := materializeApplyCommandResources(ctx, target, dir, vfs.CommandDialectPOSIX, []ApplyCommandResourceRequest{{
+		_, _, err := MaterializeApplyCommandResources(ctx, target, dir, vfs.CommandDialectPOSIX, []ApplyCommandResourceRequest{{
 			ID: 10, Kind: ApplyCommandListFileResource, ListFile: ApplyCommandListFileSpec{Entries: []string{"blocked"}},
 		}})
 		result <- err
@@ -432,7 +432,7 @@ func TestRemoteApplyCommandMaterializationHonorsCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	result := make(chan error, 1)
 	go func() {
-		_, _, err := materializeApplyCommandResources(ctx, target, dir, vfs.CommandDialectPOSIX, []ApplyCommandResourceRequest{{
+		_, _, err := MaterializeApplyCommandResources(ctx, target, dir, vfs.CommandDialectPOSIX, []ApplyCommandResourceRequest{{
 			ID: 11, Kind: ApplyCommandListFileResource, ListFile: ApplyCommandListFileSpec{Entries: []string{"blocked"}},
 		}})
 		result <- err
@@ -489,7 +489,7 @@ func TestRemoteApplyCommandMaterializationShieldsSameInstanceClone(t *testing.T)
 	ctx, cancel := context.WithCancel(t.Context())
 	result := make(chan error, 1)
 	go func() {
-		_, _, err := materializeApplyCommandResources(ctx, target, dir, vfs.CommandDialectPOSIX, []ApplyCommandResourceRequest{{
+		_, _, err := MaterializeApplyCommandResources(ctx, target, dir, vfs.CommandDialectPOSIX, []ApplyCommandResourceRequest{{
 			ID: 12, Kind: ApplyCommandListFileResource, ListFile: ApplyCommandListFileSpec{Entries: []string{"blocked"}},
 		}})
 		result <- err
@@ -527,7 +527,7 @@ func TestRemoteApplyCommandMaterializationShieldsSameInstanceClone(t *testing.T)
 func TestRemoteApplyCommandResourceRequiresPrivatePermissions(t *testing.T) {
 	dir := t.TempDir()
 	target := &permissionFailingApplyResourceVFS{remoteApplyResourceVFS: &remoteApplyResourceVFS{OSVFS: vfs.NewOSVFS(dir)}}
-	_, _, err := materializeApplyCommandResources(t.Context(), target, dir, vfs.CommandDialectPOSIX, []ApplyCommandResourceRequest{{
+	_, _, err := MaterializeApplyCommandResources(t.Context(), target, dir, vfs.CommandDialectPOSIX, []ApplyCommandResourceRequest{{
 		ID: 1, Kind: ApplyCommandListFileResource, ListFile: ApplyCommandListFileSpec{Entries: []string{"secret"}},
 	}})
 	if err == nil {

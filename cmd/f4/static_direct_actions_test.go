@@ -6,6 +6,7 @@ import (
 
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/appcmd"
+	"github.com/unxed/f4/internal/cmdline"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
@@ -244,7 +245,7 @@ func TestFixedSidePaletteEntriesUseLocalizedSideCategories(t *testing.T) {
 	}()
 	GlobalHotkeysMgr = NewHotkeyManager("")
 
-	pf := &PanelsFrame{cmdLine: NewCommandLine(""), panels: [2]Panel{&FileSystemPanel{}, &FileSystemPanel{}}}
+	pf := &PanelsFrame{cmdLine: cmdline.NewCommandLine(""), panels: [2]Panel{&FileSystemPanel{}, &FileSystemPanel{}}}
 	t.Cleanup(testutil.SetFrameManagerScreens(t, []*vtui.AppScreen{{Number: 1, Frames: []vtui.Frame{pf}}}, 0))
 
 	want := map[string]string{

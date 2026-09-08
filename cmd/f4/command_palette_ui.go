@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtinput"
@@ -109,7 +110,7 @@ func newCommandPaletteDialog(
 	}
 	description := vtui.NewText(0, 0, "", 0)
 
-	dialog := &commandPaletteDialog{
+	d := &commandPaletteDialog{
 		Window:      window,
 		query:       query,
 		queryPrompt: queryPrompt,
@@ -124,18 +125,18 @@ func newCommandPaletteDialog(
 		window.AddItem(item)
 	}
 
-	dialog.layoutControls()
+	d.layoutControls()
 
 	query.OnTextChange = func(text string) {
-		dialog.refilter(text)
+		d.refilter(text)
 	}
 	table.OnSelect = func(int) {
-		dialog.refreshDescription()
+		d.refreshDescription()
 	}
 
-	dialog.refilter("")
+	d.refilter("")
 	window.SetFocusedItem(query)
-	return dialog
+	return d
 }
 
 func commandPaletteDialogSize(entryCount int) (int, int) {
@@ -195,7 +196,7 @@ func commandPaletteDialogSizeForScreen(entryCount, screenWidth, screenHeight int
 
 func commandPaletteColumns(dialogWidth int) []vtui.TableColumn {
 	// Three columns, their separators, the command minimum and a scrollbar
-	// need 49 dialog cells. Narrow terminals keep the useful command column
+	// need 49 d cells. Narrow terminals keep the useful command column
 	// and expose the other metadata in the description line/search index.
 	if dialogWidth < 49 {
 		return []vtui.TableColumn{{Title: i18n.Msg("CommandPalette.ColumnCommand"), Width: 0, MinWidth: 1}}
@@ -207,179 +208,179 @@ func commandPaletteColumns(dialogWidth int) []vtui.TableColumn {
 	}
 }
 
-func (dialog *commandPaletteDialog) layoutControls() {
-	if dialog == nil || dialog.Window == nil {
+func (d *commandPaletteDialog) layoutControls() {
+	if d == nil || d.Window == nil {
 		return
 	}
-	width := dialog.X2 - dialog.X1 + 1
-	height := dialog.Y2 - dialog.Y1 + 1
+	width := d.X2 - d.X1 + 1
+	height := d.Y2 - d.Y1 + 1
 	inset := 2
-	left, right := dialog.X1+inset, dialog.X2-inset
+	left, right := d.X1+inset, d.X2-inset
 	if right < left {
 		right = left
 	}
 
-	queryY := dialog.Y1 + 2
-	tableY1, tableY2 := dialog.Y1+4, dialog.Y2-4
-	descriptionY := dialog.Y2 - 2
+	queryY := d.Y1 + 2
+	tableY1, tableY2 := d.Y1+4, d.Y2-4
+	descriptionY := d.Y2 - 2
 	showDescription := true
 	showQuery := true
 	if height < 10 {
-		queryY = dialog.Y1 + 2
-		tableY1 = dialog.Y1 + 3
-		descriptionY = dialog.Y2 - 2
-		tableY2 = dialog.Y2 - 3
+		queryY = d.Y1 + 2
+		tableY1 = d.Y1 + 3
+		descriptionY = d.Y2 - 2
+		tableY2 = d.Y2 - 3
 		showDescription = height >= 7
 		if !showDescription {
-			tableY2 = dialog.Y2 - 2
+			tableY2 = d.Y2 - 2
 		}
 		showQuery = height >= 6
 		if !showQuery {
-			tableY1 = dialog.Y1 + 2
+			tableY1 = d.Y1 + 2
 		}
 	}
-	if tableY1 > dialog.Y2-1 {
-		tableY1 = dialog.Y2 - 1
+	if tableY1 > d.Y2-1 {
+		tableY1 = d.Y2 - 1
 	}
 	if tableY2 < tableY1 {
 		tableY2 = tableY1
 	}
 
-	dialog.queryPrompt.SetVisible(showQuery && queryY > dialog.Y1 && queryY < dialog.Y2)
-	dialog.queryPrompt.SetPosition(left, queryY, left, queryY)
+	d.queryPrompt.SetVisible(showQuery && queryY > d.Y1 && queryY < d.Y2)
+	d.queryPrompt.SetPosition(left, queryY, left, queryY)
 	editLeft := left + 2
 	if editLeft > right {
 		editLeft = left
 	}
-	dialog.query.SetVisible(showQuery)
-	dialog.query.SetPosition(editLeft, queryY, right, queryY)
-	dialog.table.Columns = commandPaletteColumns(width)
-	dialog.table.ShowHeader = tableY2-tableY1+1 >= 2
-	dialog.table.SetPosition(left, tableY1, right, tableY2)
-	dialog.description.SetVisible(showDescription)
-	dialog.description.SetPosition(left, descriptionY, right, descriptionY)
+	d.query.SetVisible(showQuery)
+	d.query.SetPosition(editLeft, queryY, right, queryY)
+	d.table.Columns = commandPaletteColumns(width)
+	d.table.ShowHeader = tableY2-tableY1+1 >= 2
+	d.table.SetPosition(left, tableY1, right, tableY2)
+	d.description.SetVisible(showDescription)
+	d.description.SetPosition(left, descriptionY, right, descriptionY)
 }
 
-// ResizeConsole recomputes both the dialog and all child coordinates. The
+// ResizeConsole recomputes both the d and all child coordinates. The
 // embedded BaseWindow implementation only recenters the old rectangle, which
 // can leave a palette outside a newly narrowed terminal.
-func (dialog *commandPaletteDialog) ResizeConsole(screenWidth, screenHeight int) {
-	width, height := commandPaletteDialogSizeForScreen(len(dialog.entries), screenWidth, screenHeight)
+func (d *commandPaletteDialog) ResizeConsole(screenWidth, screenHeight int) {
+	width, height := commandPaletteDialogSizeForScreen(len(d.entries), screenWidth, screenHeight)
 	x1, y1 := (screenWidth-width)/2, (screenHeight-height)/2
-	dialog.SetPosition(x1, y1, x1+width-1, y1+height-1)
-	dialog.layoutControls()
+	d.SetPosition(x1, y1, x1+width-1, y1+height-1)
+	d.layoutControls()
 }
 
-func (dialog *commandPaletteDialog) refilter(query string) {
-	if dialog == nil || dialog.table == nil {
+func (d *commandPaletteDialog) refilter(query string) {
+	if d == nil || d.table == nil {
 		return
 	}
-	dialog.lastQuery = query
-	dialog.filtered = rankCommandPaletteEntries(dialog.entries, query, dialog.recent)
+	d.lastQuery = query
+	d.filtered = rankCommandPaletteEntries(d.entries, query, d.recent)
 
-	rows := make([]vtui.TableRow, 0, len(dialog.filtered))
-	for _, entry := range dialog.filtered {
+	rows := make([]vtui.TableRow, 0, len(d.filtered))
+	for _, entry := range d.filtered {
 		rows = append(rows, commandPaletteRow{entry: entry})
 	}
 	if len(rows) == 0 {
 		rows = append(rows, commandPaletteRow{empty: true})
 	}
-	dialog.table.SetRows(rows)
-	dialog.table.SetSelectPos(0)
-	dialog.refreshDescription()
+	d.table.SetRows(rows)
+	d.table.SetSelectPos(0)
+	d.refreshDescription()
 	if vtui.FrameManager != nil {
 		vtui.FrameManager.Redraw()
 	}
 }
 
-func (dialog *commandPaletteDialog) refreshDescription() {
-	if dialog == nil || dialog.description == nil {
+func (d *commandPaletteDialog) refreshDescription() {
+	if d == nil || d.description == nil {
 		return
 	}
 	index := 0
-	if dialog.table != nil {
-		index = dialog.table.SelectPos
+	if d.table != nil {
+		index = d.table.SelectPos
 	}
-	if index < 0 || index >= len(dialog.filtered) {
-		dialog.description.SetText(escapeAmpersand(i18n.Msg("CommandPalette.Empty")))
+	if index < 0 || index >= len(d.filtered) {
+		d.description.SetText(dialog.EscapeAmpersand(i18n.Msg("CommandPalette.Empty")))
 		return
 	}
-	dialog.description.SetText(escapeAmpersand(commandPaletteDisplayDescription(dialog.filtered[index])))
+	d.description.SetText(dialog.EscapeAmpersand(commandPaletteDisplayDescription(d.filtered[index])))
 }
 
-func (dialog *commandPaletteDialog) executeCurrent() bool {
-	if dialog == nil || dialog.table == nil {
+func (d *commandPaletteDialog) executeCurrent() bool {
+	if d == nil || d.table == nil {
 		return false
 	}
-	index := dialog.table.SelectPos
-	if index < 0 || index >= len(dialog.filtered) {
+	index := d.table.SelectPos
+	if index < 0 || index >= len(d.filtered) {
 		return false
 	}
-	entry := dialog.filtered[index]
-	dialog.Close()
-	if dialog.onExecute != nil {
-		dialog.onExecute(entry)
+	entry := d.filtered[index]
+	d.Close()
+	if d.onExecute != nil {
+		d.onExecute(entry)
 	}
 	return true
 }
 
-func (dialog *commandPaletteDialog) ProcessKey(event *vtinput.InputEvent) bool {
+func (d *commandPaletteDialog) ProcessKey(event *vtinput.InputEvent) bool {
 	if event == nil {
 		return false
 	}
 	if event.KeyDown {
 		switch event.VirtualKeyCode {
 		case vtinput.VK_ESCAPE:
-			dialog.Close()
+			d.Close()
 			return true
 		case vtinput.VK_RETURN:
-			dialog.executeCurrent()
+			d.executeCurrent()
 			return true
 		case vtinput.VK_UP, vtinput.VK_DOWN,
 			vtinput.VK_PRIOR, vtinput.VK_NEXT,
 			vtinput.VK_HOME, vtinput.VK_END:
 			// Consume navigation even at a boundary so it never escapes the
 			// result view and changes focus away from the query editor.
-			dialog.table.ProcessKey(event)
-			dialog.refreshDescription()
+			d.table.ProcessKey(event)
+			d.refreshDescription()
 			return true
 		}
 	}
 
-	before := dialog.query.GetText()
-	handled := dialog.Window.ProcessKey(event)
-	after := dialog.query.GetText()
+	before := d.query.GetText()
+	handled := d.Window.ProcessKey(event)
+	after := d.query.GetText()
 	// Edit normally calls OnTextChange itself. This comparison also covers
 	// edit operations such as cutting a selection whose vtui path currently
 	// changes the value without notifying OnTextChange.
-	if after != before && after != dialog.lastQuery {
-		dialog.refilter(after)
+	if after != before && after != d.lastQuery {
+		d.refilter(after)
 	}
 	return handled
 }
 
-func (dialog *commandPaletteDialog) ProcessMouse(event *vtinput.InputEvent) bool {
+func (d *commandPaletteDialog) ProcessMouse(event *vtinput.InputEvent) bool {
 	if event == nil || event.Type != vtinput.MouseEventType {
 		return false
 	}
 	mx, my := int(event.MouseX), int(event.MouseY)
-	tableHit := dialog.table != nil && dialog.table.HitTest(mx, my)
-	captured := dialog.tableMouseCaptured
+	tableHit := d.table != nil && d.table.HitTest(mx, my)
+	captured := d.tableMouseCaptured
 	if tableHit || captured {
-		before := dialog.table.SelectPos
+		before := d.table.SelectPos
 		clickedIndex := -1
-		if tableHit && mx < dialog.table.X1+dialog.table.GetContentWidth() {
-			clickedIndex = dialog.table.GetClickIndex(my)
+		if tableHit && mx < d.table.X1+d.table.GetContentWidth() {
+			clickedIndex = d.table.GetClickIndex(my)
 		}
-		handled := dialog.table.ProcessMouse(event)
+		handled := d.table.ProcessMouse(event)
 		if event.KeyDown && event.ButtonState != 0 && tableHit {
-			dialog.tableMouseCaptured = true
+			d.tableMouseCaptured = true
 		}
 		if event.ButtonState == 0 {
-			dialog.tableMouseCaptured = false
+			d.tableMouseCaptured = false
 		}
-		if dialog.table.SelectPos != before {
-			dialog.refreshDescription()
+		if d.table.SelectPos != before {
+			d.refreshDescription()
 			if vtui.FrameManager != nil {
 				vtui.FrameManager.Redraw()
 			}
@@ -387,13 +388,13 @@ func (dialog *commandPaletteDialog) ProcessMouse(event *vtinput.InputEvent) bool
 		isLeftDoubleClick := event.KeyDown &&
 			event.ButtonState == vtinput.FromLeft1stButtonPressed &&
 			(event.MouseEventFlags&vtinput.DoubleClick) != 0
-		if isLeftDoubleClick && clickedIndex >= 0 && clickedIndex < len(dialog.filtered) {
-			dialog.executeCurrent()
+		if isLeftDoubleClick && clickedIndex >= 0 && clickedIndex < len(d.filtered) {
+			d.executeCurrent()
 			return true
 		}
 		// Header and empty-row clicks must not fall through to BaseWindow,
-		// where they would begin dragging the dialog. Middle click only selects.
+		// where they would begin dragging the d. Middle click only selects.
 		return handled || tableHit || captured
 	}
-	return dialog.Window.ProcessMouse(event)
+	return d.Window.ProcessMouse(event)
 }

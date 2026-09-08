@@ -1,4 +1,4 @@
-package main
+package cmdline
 
 import (
 	"context"
@@ -30,7 +30,7 @@ const (
 	applyItemCancelled
 )
 
-type applyExpandedCommand struct {
+type ApplyExpandedCommand struct {
 	Command string
 	Silent  bool
 	// Cleanup releases resources created while expanding this item.  completed
@@ -39,12 +39,12 @@ type applyExpandedCommand struct {
 	Cleanup func(completed bool)
 }
 
-type applyBatchItem struct {
+type ApplyBatchItem struct {
 	Name          string
 	AffectedNames []string
 }
 
-type applyBatchItemResult struct {
+type ApplyBatchItemResult struct {
 	Index         int
 	Name          string
 	AffectedNames []string
@@ -54,8 +54,8 @@ type applyBatchItemResult struct {
 	Err           error
 }
 
-type applyBatchResult struct {
-	Items                          []applyBatchItemResult
+type ApplyBatchResult struct {
+	Items                          []ApplyBatchItemResult
 	Succeeded, Failed, Cancelled   int
 	Started, Completed, NotStarted int
 }
@@ -66,34 +66,34 @@ const (
 	applyBatchItemStarted applyBatchEventKind = iota
 	applyBatchCommandReady
 	applyBatchOutput
-	applyBatchItemFinished
+	ApplyBatchItemFinished
 )
 
-type applyBatchEvent struct {
+type ApplyBatchEvent struct {
 	Kind   applyBatchEventKind
 	Index  int
 	Total  int
 	Name   string
 	Line   string
 	Silent bool
-	Result applyBatchItemResult
+	Result ApplyBatchItemResult
 }
 
-type applyBatchRequest struct {
+type ApplyBatchRequest struct {
 	Dir         string
-	Items       []applyBatchItem
+	Items       []ApplyBatchItem
 	Runner      vfs.CommandRunner
 	Parallelism int
-	Expand      func(ctx context.Context, index int, item applyBatchItem) (applyExpandedCommand, error)
-	Observe     func(applyBatchEvent)
+	Expand      func(ctx context.Context, index int, item ApplyBatchItem) (ApplyExpandedCommand, error)
+	Observe     func(ApplyBatchEvent)
 }
 
 // runApplyCommandBatch contains no UI or panel access.  Callers may run it in
 // vtui.RunAsync, the operation queue, or directly from tests.
-func runApplyCommandBatch(ctx context.Context, req applyBatchRequest) applyBatchResult {
-	result := applyBatchResult{Items: make([]applyBatchItemResult, len(req.Items))}
+func RunApplyCommandBatch(ctx context.Context, req ApplyBatchRequest) ApplyBatchResult {
+	result := ApplyBatchResult{Items: make([]ApplyBatchItemResult, len(req.Items))}
 	for i, item := range req.Items {
-		result.Items[i] = applyBatchItemResult{
+		result.Items[i] = ApplyBatchItemResult{
 			Index:         i,
 			Name:          item.Name,
 			AffectedNames: append([]string(nil), item.AffectedNames...),
@@ -127,7 +127,7 @@ func runApplyCommandBatch(ctx context.Context, req applyBatchRequest) applyBatch
 		next int
 		wg   sync.WaitGroup
 	)
-	emit := func(ev applyBatchEvent) {
+	emit := func(ev ApplyBatchEvent) {
 		if req.Observe != nil {
 			req.Observe(ev)
 		}
@@ -148,9 +148,9 @@ func runApplyCommandBatch(ctx context.Context, req applyBatchRequest) applyBatch
 			result.Started++
 			mu.Unlock()
 
-			emit(applyBatchEvent{Kind: applyBatchItemStarted, Index: idx, Total: len(req.Items), Name: item.Name})
+			emit(ApplyBatchEvent{Kind: applyBatchItemStarted, Index: idx, Total: len(req.Items), Name: item.Name})
 			expanded, expandErr := req.Expand(ctx, idx, item)
-			itemResult := applyBatchItemResult{
+			itemResult := ApplyBatchItemResult{
 				Index:         idx,
 				Name:          item.Name,
 				AffectedNames: append([]string(nil), item.AffectedNames...),
@@ -169,12 +169,12 @@ func runApplyCommandBatch(ctx context.Context, req applyBatchRequest) applyBatch
 				itemResult.Err = errors.New("apply command: expansion produced an empty command")
 			} else {
 				itemResult.Command = expanded.Command
-				emit(applyBatchEvent{
+				emit(ApplyBatchEvent{
 					Kind: applyBatchCommandReady, Index: idx, Total: len(req.Items), Name: item.Name,
 					Line: expanded.Command, Silent: expanded.Silent,
 				})
 				code, runErr := req.Runner.RunCommand(ctx, req.Dir, expanded.Command, func(line string) {
-					emit(applyBatchEvent{Kind: applyBatchOutput, Index: idx, Total: len(req.Items), Name: item.Name, Line: line})
+					emit(ApplyBatchEvent{Kind: applyBatchOutput, Index: idx, Total: len(req.Items), Name: item.Name, Line: line})
 				})
 				itemResult.ExitCode = code
 				cancelled := errors.Is(runErr, context.Canceled) || ctx.Err() != nil
@@ -217,7 +217,7 @@ func runApplyCommandBatch(ctx context.Context, req applyBatchRequest) applyBatch
 				result.Failed++
 			}
 			mu.Unlock()
-			emit(applyBatchEvent{Kind: applyBatchItemFinished, Index: idx, Total: len(req.Items), Name: item.Name, Result: itemResult})
+			emit(ApplyBatchEvent{Kind: ApplyBatchItemFinished, Index: idx, Total: len(req.Items), Name: item.Name, Result: itemResult})
 		}
 	}
 
@@ -231,4 +231,11 @@ func runApplyCommandBatch(ctx context.Context, req applyBatchRequest) applyBatch
 	defer mu.Unlock()
 	result.NotStarted = len(req.Items) - result.Started
 	return result
+}
+
+// AddTranscript appends one line to the run's transcript. The transcript
+// itself stays private: it is written from the worker goroutine as well, and a
+// caller holding it could write without the model's ordering.
+func (m *ApplyBatchViewModel) AddTranscript(line string) {
+	m.transcript.Add(line)
 }

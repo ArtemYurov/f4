@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unxed/f4/internal/cmdline"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/editor"
@@ -1930,7 +1931,7 @@ func actionExecute(pf *PanelsFrame, v vfs.VFS, dir, name, path string) {
 					}
 					pf.writePTY(activePty, []byte(cmdToWire))
 					if isWindowsShell {
-						if isBatchCommand(historyCmd) {
+						if cmdline.IsBatchCommand(historyCmd) {
 							pf.cmdSession.noteBatchExecution()
 						}
 						pf.noteLocalShellLineSent(activePty)

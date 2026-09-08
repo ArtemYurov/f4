@@ -3,6 +3,7 @@ package main
 import (
 	"time"
 
+	"github.com/unxed/f4/internal/cmdline"
 	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/f4/internal/terminal"
@@ -30,7 +31,7 @@ func cancelOperationsForShutdown() {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	cleanupAllApplyCommandResources()
+	cmdline.CleanupAllApplyCommandResources()
 	// FUSE mounts created from the panels belong to this process, and the
 	// kernel connection dies with it: leaving them up would strand a mount
 	// point that hangs every program walking into it. Mounts started with

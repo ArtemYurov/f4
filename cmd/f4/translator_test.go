@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/cmdline"
+
 	"strings"
 	"testing"
 
@@ -74,7 +76,7 @@ func TestTranslatorVMenuTarget(t *testing.T) {
 }
 
 func TestTranslatorPanelsFrameCommandLineTarget(t *testing.T) {
-	prompt := NewCommandLine("> ")
+	prompt := cmdline.NewCommandLine("> ")
 	prompt.SetPosition(0, 4, 30, 4)
 	prompt.Edit.SetText("dir")
 

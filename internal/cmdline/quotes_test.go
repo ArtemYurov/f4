@@ -1,4 +1,4 @@
-package main
+package cmdline
 
 import "testing"
 
@@ -27,8 +27,8 @@ func TestCommandHasUnmatchedQuote(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if got := commandHasUnmatchedQuote(test.command, test.windowsShell); got != test.want {
-				t.Fatalf("commandHasUnmatchedQuote(%q, windows=%v) = %v, want %v", test.command, test.windowsShell, got, test.want)
+			if got := CommandHasUnmatchedQuote(test.command, test.windowsShell); got != test.want {
+				t.Fatalf("CommandHasUnmatchedQuote(%q, windows=%v) = %v, want %v", test.command, test.windowsShell, got, test.want)
 			}
 		})
 	}
