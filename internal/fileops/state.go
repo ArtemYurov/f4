@@ -95,7 +95,9 @@ func (fs *F4FileStateProvider) save() {
 	os.MkdirAll(filepath.Dir(statePath), 0755)
 	File, err := json.MarshalIndent(df, "", "  ")
 	if err == nil {
-		os.WriteFile(statePath, File, 0644)
+		// A state file that cannot be written costs the next session its
+		// remembered positions and nothing else; there is no one to tell.
+		_ = os.WriteFile(statePath, File, 0600)
 	}
 }
 

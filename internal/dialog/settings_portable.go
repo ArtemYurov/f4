@@ -66,6 +66,8 @@ func SetPortableMode(iniPath string, enable bool) error {
 	// Trim the blank line config.UpdateIniValues puts before a brand new section so
 	// a freshly created file does not start with an empty line.
 	updated = []byte(strings.TrimLeft(string(updated), "\r\n"))
+	// #nosec G703 -- iniPath is currentPortableIniPath()'s answer, built from
+	// the executable's own directory; no user input reaches it.
 	return os.WriteFile(iniPath, updated, 0600)
 }
 

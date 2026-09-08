@@ -146,7 +146,9 @@ func (hp *F4HistoryProvider) save() {
 	}
 	File, err := json.MarshalIndent(wrapper, "", "  ")
 	if err == nil {
-		os.WriteFile(hp.path, File, 0644)
+		// Same as the file states: a history that cannot be written is lost
+		// at exit, and the user is not in a position to act on the error.
+		_ = os.WriteFile(hp.path, File, 0600)
 	}
 }
 

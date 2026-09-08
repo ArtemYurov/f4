@@ -193,7 +193,7 @@ func decodeImageExternally(ctx context.Context, data []byte) (*vtui.ImageSurface
 	name := File.Name()
 	defer os.Remove(name)
 	if _, err := File.Write(data); err != nil {
-		File.Close()
+		_ = File.Close()
 		return nil, err
 	}
 	if err := File.Close(); err != nil {

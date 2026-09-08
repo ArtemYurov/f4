@@ -3,7 +3,6 @@ package main
 import (
 	"path/filepath"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/i18n"
@@ -336,13 +335,6 @@ func sortModeName(mode SortMode) string {
 	}
 }
 
-func cellRune(ch uint64) rune {
-	if ch == 0 || ch > utf8.MaxRune || (ch >= 0xD800 && ch <= 0xDFFF) {
-		return ' '
-	}
-	return rune(ch)
-}
-
 func semanticBaseName(v interface{ Base(string) string }, path string) string {
 	if path == "" {
 		return ""
@@ -405,41 +397,4 @@ func semanticBool(v any) bool {
 		return f != 0
 	}
 	return false
-}
-
-func semanticRunsFromCells(cells []vtui.CharInfo) []extui.RunModel {
-	if len(cells) == 0 {
-		return nil
-	}
-	var runs []extui.RunModel
-	var b strings.Builder
-	var attr uint64
-	haveRun := false
-	flush := func() {
-		if !haveRun {
-			return
-		}
-		runs = append(runs, extui.RunModel{
-			Text: b.String(),
-			Attr: attr,
-		})
-		b.Reset()
-	}
-	for _, cell := range cells {
-		if cell.Char == vtui.WideCharFiller {
-			continue
-		}
-		ch := cellRune(cell.Char)
-		if !haveRun {
-			attr = cell.Attributes
-			haveRun = true
-		} else if cell.Attributes != attr {
-			flush()
-			attr = cell.Attributes
-			haveRun = true
-		}
-		b.WriteRune(ch)
-	}
-	flush()
-	return runs
 }
