@@ -542,10 +542,6 @@ func (pf *PanelsFrame) insertSelectedFileName() bool {
 			name = "'" + strings.ReplaceAll(name, "'", "'\\''") + "'"
 		}
 	}
-	txt := pf.cmdLine.Edit.GetText()
-	if len(txt) > 0 && txt[len(txt)-1] != ' ' {
-		pf.cmdLine.InsertString(" ")
-	}
 	pf.cmdLine.InsertString(name)
 	return true
 }
