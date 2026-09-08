@@ -8,6 +8,7 @@ import (
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/theme"
+	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/vtui"
 )
 
@@ -197,7 +198,7 @@ func TestViewerSearchDialog_AttachesHistory(t *testing.T) {
 	store := useStubHistory(t)
 	store["SearchText"] = []string{"previous search"}
 
-	vv := &ViewerView{}
+	vv := &viewer.ViewerView{}
 	actionViewerSearchDirection(vv, false)
 	dlg := vtui.FrameManager.GetTopFrame().(vtui.Container)
 	defer vtui.FrameManager.Pop()
@@ -216,7 +217,7 @@ func TestViewerSearchDialog_OffersEditorSearchOptions(t *testing.T) {
 	theme.SetDefaultF4Palette()
 	useStubHistory(t)
 
-	actionViewerSearchDirection(&ViewerView{}, false)
+	actionViewerSearchDirection(&viewer.ViewerView{}, false)
 	dlg := vtui.FrameManager.GetTopFrame().(vtui.Container)
 	defer vtui.FrameManager.Pop()
 	vtui.AssertLayout(t, dlg)

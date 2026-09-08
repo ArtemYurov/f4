@@ -9,8 +9,10 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -73,11 +75,11 @@ func issue875WriteSamples(t *testing.T, dir string) []issue875Sample {
 
 // viewerText reads everything the viewer would render, running whatever the
 // backend posted to the UI thread until the data is there.
-func viewerText(t *testing.T, vv *ViewerView) string {
+func viewerText(t *testing.T, vv *viewer.ViewerView) string {
 	t.Helper()
 	deadline := time.Now().Add(2 * time.Second)
 	for {
-		data, err := vv.backend.ReadAt(0, int(vv.backend.Size()))
+		data, err := vv.Backend.ReadAt(0, int(vv.Backend.Size()))
 		if err == nil {
 			return string(data)
 		}
@@ -102,11 +104,11 @@ func TestViewer_Issue875_OpensEverySample(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	testutil.DrainPendingTasks()
 
-	oldState, oldAuto, oldDefault := GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage
+	oldState, oldAuto, oldDefault := fileops.GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage
 	defer func() {
-		GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage = oldState, oldAuto, oldDefault
+		fileops.GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage = oldState, oldAuto, oldDefault
 	}()
-	GlobalFileState = nil
+	fileops.GlobalFileState = nil
 	config.App.ViewerAutodetectCodePage = true
 	config.App.ViewerDefaultCodePage = 65001
 
@@ -114,7 +116,7 @@ func TestViewer_Issue875_OpensEverySample(t *testing.T) {
 	v := vfs.NewOSVFS(dir)
 	for _, s := range issue875WriteSamples(t, dir) {
 		path := filepath.Join(dir, s.name)
-		vv, err := NewViewerView(context.Background(), v, path)
+		vv, err := viewer.NewViewerView(context.Background(), v, path)
 		if err != nil {
 			t.Fatalf("%s: %v", s.name, err)
 		}
@@ -159,11 +161,11 @@ func TestViewer_Issue875_ManualCodepageLeavesGuessedHex(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	testutil.DrainPendingTasks()
 
-	oldState, oldAuto, oldDefault := GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage
+	oldState, oldAuto, oldDefault := fileops.GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage
 	defer func() {
-		GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage = oldState, oldAuto, oldDefault
+		fileops.GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage = oldState, oldAuto, oldDefault
 	}()
-	GlobalFileState = nil
+	fileops.GlobalFileState = nil
 	config.App.ViewerAutodetectCodePage = true
 	config.App.ViewerDefaultCodePage = 65001
 
@@ -180,13 +182,13 @@ func TestViewer_Issue875_ManualCodepageLeavesGuessedHex(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	vv, err := NewViewerView(context.Background(), vfs.NewOSVFS(dir), path)
+	vv, err := viewer.NewViewerView(context.Background(), vfs.NewOSVFS(dir), path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer vv.Close()
-	if !vv.HexMode || !vv.hexAuto {
-		t.Fatalf("expected a guessed hex view, got hex = %v, auto = %v", vv.HexMode, vv.hexAuto)
+	if !vv.HexMode || !vv.HexAuto {
+		t.Fatalf("expected a guessed hex view, got hex = %v, auto = %v", vv.HexMode, vv.HexAuto)
 	}
 
 	vv.ReloadWithCodepage(1200)
@@ -200,7 +202,7 @@ func TestViewer_Issue875_ManualCodepageLeavesGuessedHex(t *testing.T) {
 	// Once the user takes over the view mode, a codepage switch must leave
 	// it alone.
 	vv.HexMode = true
-	vv.hexAuto = false
+	vv.HexAuto = false
 	vv.ReloadWithCodepage(65001)
 	if !vv.HexMode {
 		t.Error("a codepage switch dropped the hex view the user asked for")
@@ -298,13 +300,13 @@ func newIssue875EditorRig(t *testing.T) *issue875EditorRig {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	testutil.DrainPendingTasks()
 
-	oldState := GlobalFileState
+	oldState := fileops.GlobalFileState
 	oldAuto, oldDefault := config.App.EditorAutodetectCodePage, config.App.EditorDefaultCodePage
 	t.Cleanup(func() {
-		GlobalFileState = oldState
+		fileops.GlobalFileState = oldState
 		config.App.EditorAutodetectCodePage, config.App.EditorDefaultCodePage = oldAuto, oldDefault
 	})
-	GlobalFileState = nil
+	fileops.GlobalFileState = nil
 	config.App.EditorAutodetectCodePage = true
 	config.App.EditorDefaultCodePage = 65001
 

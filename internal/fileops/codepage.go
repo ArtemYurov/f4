@@ -1,11 +1,11 @@
-package main
+package fileops
 
 import "github.com/unxed/f4/vfs"
 
-// rememberedCodepage returns only valid explicit overrides. Older or manually
+// RememberedCodepage returns only valid explicit overrides. Older or manually
 // edited file_states.json files must not be able to make a view use an
 // unsupported decoder forever.
-func rememberedCodepage(owner vfs.VFS, path string) (int, bool) {
+func RememberedCodepage(owner vfs.VFS, path string) (int, bool) {
 	if GlobalFileState == nil || path == "" {
 		return 0, false
 	}
@@ -19,7 +19,7 @@ func rememberedCodepage(owner vfs.VFS, path string) (int, bool) {
 	return state.Codepage, true
 }
 
-func saveCodepageOverride(owner vfs.VFS, path string, cp int) {
+func SaveCodepageOverride(owner vfs.VFS, path string, cp int) {
 	if GlobalFileState == nil || path == "" {
 		return
 	}

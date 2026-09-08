@@ -114,7 +114,6 @@ var commandPaletteTargetPackage = map[string]string{
 	"user_menu_ui.go":             "panel",
 	"viewer_editor_history.go":    "panel",
 	"plugin_hotkeys.go":           "app",
-	"viewer_view.go":              "viewer",
 }
 
 var commandPaletteProcessKeyAudit = map[string]commandPaletteSurfaceAudit{

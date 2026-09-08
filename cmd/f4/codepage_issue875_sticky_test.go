@@ -6,7 +6,9 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -22,11 +24,11 @@ func TestViewer_Issue875_MenuChoiceDoesNotStickToNextFile(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	testutil.DrainPendingTasks()
 
-	oldState, oldAuto, oldDefault := GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage
+	oldState, oldAuto, oldDefault := fileops.GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage
 	defer func() {
-		GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage = oldState, oldAuto, oldDefault
+		fileops.GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage = oldState, oldAuto, oldDefault
 	}()
-	GlobalFileState = nil // no per-file memory in this test: the point is the globals
+	fileops.GlobalFileState = nil // no per-file memory in this test: the point is the globals
 	config.App.ViewerAutodetectCodePage = true
 	config.App.ViewerDefaultCodePage = 65001
 
@@ -47,11 +49,11 @@ func TestViewer_Issue875_MenuChoiceDoesNotStickToNextFile(t *testing.T) {
 	}
 
 	// Open the CP1251 file and switch it, through the menu, to CP866.
-	first, err := NewViewerView(context.Background(), v, filepath.Join(dir, cp1251.name))
+	first, err := viewer.NewViewerView(context.Background(), v, filepath.Join(dir, cp1251.name))
 	if err != nil {
 		t.Fatal(err)
 	}
-	first.showCodepageDialog()
+	first.ShowCodepageDialog()
 	menu, ok := vtui.FrameManager.GetTopFrame().(*vtui.VMenu)
 	if !ok {
 		t.Fatalf("top frame is %T, want the codepage menu", vtui.FrameManager.GetTopFrame())
@@ -79,7 +81,7 @@ func TestViewer_Issue875_MenuChoiceDoesNotStickToNextFile(t *testing.T) {
 	}
 
 	// The next file must still be detected, not opened in 866.
-	second, err := NewViewerView(context.Background(), v, filepath.Join(dir, cp866.name))
+	second, err := viewer.NewViewerView(context.Background(), v, filepath.Join(dir, cp866.name))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +89,7 @@ func TestViewer_Issue875_MenuChoiceDoesNotStickToNextFile(t *testing.T) {
 	if second.Codepage != 866 {
 		t.Errorf("second file detected as %d, want 866", second.Codepage)
 	}
-	third, err := NewViewerView(context.Background(), v, filepath.Join(dir, cp1251.name))
+	third, err := viewer.NewViewerView(context.Background(), v, filepath.Join(dir, cp1251.name))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,11 +105,11 @@ func TestViewer_Issue875_MenuAutoDetectDetectsRegardlessOfGlobalSwitch(t *testin
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	testutil.DrainPendingTasks()
 
-	oldState, oldAuto, oldDefault := GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage
+	oldState, oldAuto, oldDefault := fileops.GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage
 	defer func() {
-		GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage = oldState, oldAuto, oldDefault
+		fileops.GlobalFileState, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage = oldState, oldAuto, oldDefault
 	}()
-	GlobalFileState = nil
+	fileops.GlobalFileState = nil
 	config.App.ViewerAutodetectCodePage = false
 	config.App.ViewerDefaultCodePage = 1252
 
@@ -119,7 +121,7 @@ func TestViewer_Issue875_MenuAutoDetectDetectsRegardlessOfGlobalSwitch(t *testin
 			cp866 = s
 		}
 	}
-	vv, err := NewViewerView(context.Background(), v, filepath.Join(dir, cp866.name))
+	vv, err := viewer.NewViewerView(context.Background(), v, filepath.Join(dir, cp866.name))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -111,6 +111,14 @@ var architectureLayers = map[string]int{
 
 	"internal/macro": 3,
 
+	"internal/viewer": 3,
+
+	// fileops starts here with the per-file state store, which the viewer and
+	// the editor both read; Task 32 brings the rest.
+	"internal/fileops": 1,
+
+	"internal/textsearch": 0,
+
 	"internal/dialog": 3,
 
 	// Test scaffolding, placed by what it may import: testutil imports no

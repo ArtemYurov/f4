@@ -1,4 +1,4 @@
-package main
+package viewer
 
 import (
 	"path/filepath"
@@ -7,11 +7,11 @@ import (
 	"github.com/unxed/f4/vfs"
 )
 
-// displayFileTitle returns the file identity used by the Editor and Viewer
+// DisplayFileTitle returns the file identity used by the Editor and Viewer
 // title bars. VFS paths are kept opaque: a remote or virtual filesystem owns
 // the separator and any scheme prefix in its path, so the full-path setting
 // must not run the value through the host filepath package.
-func displayFileTitle(filesystem vfs.VFS, filePath string) string {
+func DisplayFileTitle(filesystem vfs.VFS, filePath string) string {
 	if filePath == "" {
 		return ""
 	}

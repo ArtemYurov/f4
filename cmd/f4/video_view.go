@@ -14,6 +14,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ttyx"
+	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -21,7 +22,7 @@ import (
 
 type VideoView struct {
 	vtui.BaseFrame
-	topBar *TopBar
+	topBar *viewer.TopBar
 
 	vfs    vfs.VFS
 	path   string
@@ -37,7 +38,7 @@ type VideoView struct {
 // NewVideoView starts the player and hands back the frame it lives in.
 func NewVideoView(v vfs.VFS, path string) (*VideoView, error) {
 	vv := &VideoView{vfs: v, path: path}
-	vv.topBar = NewTopBar(
+	vv.topBar = viewer.NewTopBar(
 		func() string {
 			base := filepath.Base(vv.path)
 			if vv.vfs != nil {

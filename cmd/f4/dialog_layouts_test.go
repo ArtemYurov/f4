@@ -15,6 +15,7 @@ import (
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -125,7 +126,7 @@ func TestAllDialogs_LayoutValidation(t *testing.T) {
 		"panel.insertleftpath":             true, // no dialog
 		"panel.insertrightpath":            true, // no dialog
 		"debug.dummyoperation":             true, // async queue
-		"macro.reload":                     true, // no dialog; owns an asynchronous toast
+		"macro.Reload":                     true, // no dialog; owns an asynchronous toast
 		"panel.infopanel":                  true, // no dialog
 		"panel.quickview":                  true, // no dialog
 	}
@@ -262,9 +263,9 @@ func (rig *dialogLayoutRig) validateAction(t *testing.T, act action.Action, name
 	if strings.HasPrefix(name, "Editor.") {
 		showEditor(rig.panels, rig.localVFS, srcFile, &vfs.MemoryReadAtCloser{Data: []byte("dummy")})
 	} else if strings.HasPrefix(name, "Viewer.") {
-		viewer, err := NewViewerView(context.Background(), rig.localVFS, srcFile)
+		vv, err := viewer.NewViewerView(context.Background(), rig.localVFS, srcFile)
 		if err == nil {
-			showViewer(rig.panels, viewer, srcFile)
+			showViewer(rig.panels, vv, srcFile)
 		}
 	}
 

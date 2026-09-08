@@ -1,13 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"path/filepath"
 	"strings"
 	"unicode/utf8"
 
-	"github.com/mattn/go-runewidth"
-	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/numeric"
@@ -50,36 +47,6 @@ func (pf *PanelsFrame) SemanticNode(ctx *vtui.SemanticContext) map[string]any {
 	}
 
 	return shell.ToMap()
-}
-
-// HandleSemanticAction обрабатывает нативные GUI-действия для ViewerView
-func (vv *ViewerView) HandleSemanticAction(action map[string]any) bool {
-	target := semanticString(action["target"])
-	if vtui.SemanticID(vv) != target {
-		return false
-	}
-
-	switch semanticString(action["action"]) {
-	case "viewer.scroll":
-		offset := int64(semanticInt(action["offset"]))
-		if offset < 0 {
-			offset = 0
-		}
-		if offset > vv.backend.Size() {
-			offset = vv.backend.Size()
-		}
-		if vv.HexMode {
-			offset &= ^int64(0xF)
-		} else {
-			offset = vv.backend.FindLineStart(offset)
-		}
-		vv.TopOffset = offset
-		return true
-	case "control.focus":
-		vv.SetFocus(true)
-		return true
-	}
-	return false
 }
 
 // HandleSemanticAction глобально маршрутизирует семантические действия из внешнего GUI
@@ -432,145 +399,6 @@ func (tv *TerminalView) semanticModel(ctx *vtui.SemanticContext) *extui.Terminal
 		CursorY:   tv.CursorY + offset,
 		Rows:      rows,
 	}
-}
-
-func (vv *ViewerView) SemanticNode(ctx *vtui.SemanticContext) map[string]any {
-	rows := vv.semanticRows()
-	mode := "text"
-	if vv.HexMode {
-		mode = "hex"
-	}
-
-	surface := extui.SurfaceModel{
-		ID:        vtui.SemanticID(vv),
-		Kind:      "viewer",
-		Title:     vv.GetTitle(),
-		Path:      vv.path,
-		BaseName:  semanticBaseName(vv.vfs, vv.path),
-		Mode:      mode,
-		HexMode:   vv.HexMode,
-		WrapMode:  vv.WrapMode,
-		Busy:      vv.Busy,
-		TopOffset: vv.TopOffset,
-		Size:      vv.backend.Size(),
-		Rows:      rows,
-	}
-	return surface.ToMap()
-}
-
-func (vv *ViewerView) semanticRows() []extui.TextRowModel {
-	if vv.backend == nil {
-		return nil
-	}
-	width := vv.X2 - vv.X1 + 1
-	if vv.scrollBar != nil {
-		width--
-	}
-	contentHeight := vv.Y2 - vv.Y1
-	if width <= 0 || contentHeight <= 0 {
-		return nil
-	}
-	if vv.Busy {
-		return []extui.TextRowModel{{Index: 0, Text: " [ Loading... ] "}}
-	}
-	var rows []extui.TextRowModel
-	if vv.HexMode {
-		currOffset := vv.TopOffset &^ 0xF
-		for y := 0; y < contentHeight && currOffset < vv.backend.Size(); y++ {
-			data, err := vv.backend.ReadAt(currOffset, 16)
-			if err != nil && err != piecetable.ErrLoading {
-				break
-			}
-			rows = append(rows, extui.TextRowModel{
-				Index:  y,
-				Offset: currOffset,
-				Text:   semanticHexLine(currOffset, data),
-			})
-			currOffset += 16
-		}
-		return rows
-	}
-
-	currOffset := vv.TopOffset
-	for y := 0; y < contentHeight; y++ {
-		if currOffset >= vv.backend.Size() {
-			break
-		}
-		data, err := vv.backend.ReadAt(currOffset, width*4)
-		if err == piecetable.ErrLoading {
-			rows = append(rows, extui.TextRowModel{Index: y, Offset: currOffset, Text: " [ Loading... ] "})
-			break
-		}
-		if err != nil || len(data) == 0 {
-			break
-		}
-		lineLen, textLen := semanticViewerLineLen(data, width, vv.WrapMode)
-		rows = append(rows, extui.TextRowModel{Index: y, Offset: currOffset, Text: string(data[:textLen])})
-		if lineLen <= 0 {
-			break
-		}
-		currOffset += int64(lineLen)
-	}
-	return rows
-}
-
-func semanticHexLine(offset int64, data []byte) string {
-	hexPart := ""
-	asciiPart := ""
-	for i := 0; i < 16; i++ {
-		if i < len(data) {
-			hexPart += fmt.Sprintf("%02X ", data[i])
-			r := rune(data[i])
-			if r < 32 || r > 126 {
-				r = '.'
-			}
-			asciiPart += string(r)
-		} else {
-			hexPart += "   "
-		}
-		if i == 7 {
-			hexPart += " "
-		}
-	}
-	return fmt.Sprintf("%010X: %s | %s", offset, hexPart, asciiPart)
-}
-
-func semanticViewerLineLen(data []byte, width int, wrap bool) (lineLen int, textLen int) {
-	visualWidth := 0
-	tabSize := 8
-	if config.App.EditorTabSize > 0 {
-		tabSize = config.App.EditorTabSize
-	}
-	for lineLen < len(data) {
-		r, size := utf8.DecodeRune(data[lineLen:])
-		if r == '\n' {
-			lineLen += size
-			return lineLen, textLen
-		}
-		if r == '\r' {
-			lineLen += size
-			continue
-		}
-		var rw int
-		if r == '\t' {
-			rw = tabSize - (visualWidth % tabSize)
-		} else {
-			rw = runewidth.RuneWidth(r)
-			if rw <= 0 {
-				rw = 1
-			}
-		}
-		if wrap && visualWidth+rw > width {
-			return lineLen, textLen
-		}
-		visualWidth += rw
-		lineLen += size
-		textLen = lineLen
-		if !wrap && visualWidth >= width {
-			return lineLen, textLen
-		}
-	}
-	return lineLen, textLen
 }
 
 func (ev *EditorView) SemanticNode(ctx *vtui.SemanticContext) map[string]any {

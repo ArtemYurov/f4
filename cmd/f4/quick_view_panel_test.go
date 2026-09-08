@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -339,15 +341,15 @@ func TestQuickView_MouseWheelScrolls(t *testing.T) {
 	}
 }
 
-// TestQuickView_BinaryDetection ensures a NUL byte flips looksBinary.
+// TestQuickView_BinaryDetection ensures a NUL byte flips viewer.LooksBinary.
 func TestQuickView_BinaryDetection(t *testing.T) {
-	if !looksBinary([]byte{'A', 0, 'B'}) {
+	if !viewer.LooksBinary([]byte{'A', 0, 'B'}) {
 		t.Error("NUL byte should mark buffer as binary")
 	}
-	if looksBinary([]byte("plain ascii text\n")) {
+	if viewer.LooksBinary([]byte("plain ascii text\n")) {
 		t.Error("plain ascii must not be flagged as binary")
 	}
-	if looksBinary(nil) {
+	if viewer.LooksBinary(nil) {
 		t.Error("empty buffer is not binary")
 	}
 }
@@ -415,10 +417,10 @@ func TestQuickView_RestoresRememberedCodepage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	oldState := GlobalFileState
-	GlobalFileState = &F4FileStateProvider{Limit: 10, Data: make(map[string]*FileState)}
-	t.Cleanup(func() { GlobalFileState = oldState })
-	GlobalFileState.SaveQuickViewCodepage(FileStateKey(v, path), 866)
+	oldState := fileops.GlobalFileState
+	fileops.GlobalFileState = &fileops.F4FileStateProvider{Limit: 10, Data: make(map[string]*fileops.FileState)}
+	t.Cleanup(func() { fileops.GlobalFileState = oldState })
+	fileops.GlobalFileState.SaveQuickViewCodepage(fileops.FileStateKey(v, path), 866)
 
 	q := &QuickViewPanel{
 		src:       &FileSystemPanel{vfs: v},

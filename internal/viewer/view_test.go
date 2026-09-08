@@ -1,4 +1,4 @@
-package main
+package viewer
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/internal/theme"
@@ -72,11 +73,11 @@ func TestViewer_UsesDedicatedScrollbarPaletteSlot(t *testing.T) {
 	}
 	defer vv.Close()
 
-	if vv.scrollBar == nil {
+	if vv.ScrollBar == nil {
 		t.Fatal("viewer scrollbar was not initialized")
 	}
-	if vv.scrollBar.ColorIdx != theme.ColViewerScrollbar {
-		t.Fatalf("viewer scrollbar color index = %d, want %d", vv.scrollBar.ColorIdx, theme.ColViewerScrollbar)
+	if vv.ScrollBar.ColorIdx != theme.ColViewerScrollbar {
+		t.Fatalf("viewer scrollbar color index = %d, want %d", vv.ScrollBar.ColorIdx, theme.ColViewerScrollbar)
 	}
 }
 
@@ -93,11 +94,11 @@ func TestViewerRenderHighlightsCurrentSearchResult(t *testing.T) {
 	defer func() { _ = backend.Close() }()
 
 	vv := &ViewerView{
-		backend:          backend,
+		Backend:          backend,
 		WrapMode:         false,
-		lastSearch:       "needle",
-		lastSearchOffset: 0,
-		lastSearchFound:  true,
+		LastSearch:       "needle",
+		LastSearchOffset: 0,
+		LastSearchFound:  true,
 	}
 	vv.SetPosition(0, 0, 79, 3)
 	vv.SetVisible(true)
@@ -162,12 +163,12 @@ func (v *singleFileVFS) Open(context.Context, string) (vfs.ReadAtCloser, error) 
 func TestViewerLargeBinaryOpensLazilyInHexMode(t *testing.T) {
 	file := &largeBinaryFile{size: 300 * 1024 * 1024}
 	base := vfs.NewOSVFS(t.TempDir())
-	viewer, err := NewViewerView(context.Background(), &singleFileVFS{VFS: base, file: file}, "large.7z")
+	vv, err := NewViewerView(context.Background(), &singleFileVFS{VFS: base, file: file}, "large.7z")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer viewer.Close()
-	if !viewer.HexMode {
+	defer vv.Close()
+	if !vv.HexMode {
 		t.Fatal("large binary file did not open in hex mode")
 	}
 	file.mu.Lock()
@@ -338,7 +339,7 @@ func TestViewerView_EndJumpReadsOnlyTailOfLargeFile(t *testing.T) {
 				ctx:          ctx,
 				cancelCtx:    cancel,
 			}
-			vv := &ViewerView{backend: backend, WrapMode: tc.wrap}
+			vv := &ViewerView{Backend: backend, WrapMode: tc.wrap}
 			defer vv.Close()
 			vv.SetPosition(0, 0, 120, 40)
 
@@ -376,7 +377,7 @@ func TestViewerView_EndJumpReadsOnlyTailOfLargeFile(t *testing.T) {
 }
 
 func TestViewerView_MouseScrollbar(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(testutil.SwapFrameManager(t))
 	vtui.SetDefaultPalette()
 	// Create a file with enough content to scroll
 	content := "L1\nL2\nL3\nL4\nL5\nL6\nL7\nL8\nL9\nL10\n" // 10 lines, 33 bytes (3 per line + 1 for last \n)
@@ -524,7 +525,7 @@ func TestViewerBar_Content(t *testing.T) {
 	scr.AllocBuf(41, 11)
 
 	vv.HexMode = true
-	vv.topBar.Show(scr)
+	vv.TopBar.Show(scr)
 
 	// Проверяем, что в баре есть путь к файлу и режим "Hex"
 	// Проверяем всю доступную ширину буфера (40 колонок)
@@ -626,12 +627,12 @@ func TestViewerTitle_FullPathSetting(t *testing.T) {
 	defer vv.Close()
 
 	config.App.DisplayFullPathInTitle = false
-	if got, want := vv.topBar.GetLeft(), " doc.txt"; got != want {
+	if got, want := vv.TopBar.GetLeft(), " doc.txt"; got != want {
 		t.Fatalf("short viewer title = %q, want %q", got, want)
 	}
 
 	config.App.DisplayFullPathInTitle = true
-	if got, want := vv.topBar.GetLeft(), " "+path; got != want {
+	if got, want := vv.TopBar.GetLeft(), " "+path; got != want {
 		t.Fatalf("full viewer title = %q, want %q", got, want)
 	}
 	if got, want := vv.GetWorkspaceTabTitle(), "doc.txt"; got != want {
@@ -667,54 +668,6 @@ func TestLayout_ViewerSearchDialog_Validity(t *testing.T) {
 	vbox.Apply()
 
 	vtui.AssertLayout(t, dlg)
-}
-
-func TestViewerView_HexModeToggle(t *testing.T) {
-	vtui.SetDefaultPalette()
-	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	tmpDir := t.TempDir()
-	tmp := filepath.Join(tmpDir, "hex.txt")
-	// 32 bytes of data
-	data := make([]byte, 32)
-	for i := range data {
-		data[i] = byte(i)
-	}
-	if err := os.WriteFile(tmp, data, 0600); err != nil {
-		t.Fatal(err)
-	}
-
-	v := vfs.NewOSVFS(tmpDir)
-	vv, err := NewViewerView(context.Background(), v, tmp)
-	if err != nil {
-		t.Fatalf("Failed to create ViewerView: %v", err)
-	}
-	defer vv.Close()
-	vtui.FrameManager.Push(vv)
-
-	// Binary detection may open this fixture in hex mode already. Exercise the
-	// toggle itself from a deterministic text-mode starting state.
-	vv.HexMode = false
-	// Set an offset that is NOT aligned to 16
-	vv.TopOffset = 10
-
-	// Toggle Hex Mode
-	pressKey(vv, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_F4})
-
-	if !vv.HexMode {
-		t.Error("F4 failed to toggle HexMode")
-	}
-
-	// Hex mode MUST align TopOffset to 16-byte boundary
-	if vv.TopOffset != 0 {
-		t.Errorf("Hex mode failed to align offset: expected 0, got %d", vv.TopOffset)
-	}
-
-	// Toggle back to Text
-	pressKey(vv, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_F4})
-	if vv.HexMode {
-		t.Error("F4 failed to toggle back to TextMode")
-	}
-
 }
 
 func TestViewerView_TabRendering(t *testing.T) {
@@ -813,8 +766,8 @@ func TestViewerView_EndJump_BusyState(t *testing.T) {
 	}
 }
 func TestViewerView_StateRestoration_Modes(t *testing.T) {
-	oldFileState := GlobalFileState
-	t.Cleanup(func() { GlobalFileState = oldFileState })
+	oldFileState := fileops.GlobalFileState
+	t.Cleanup(func() { fileops.GlobalFileState = oldFileState })
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	tmp := filepath.Join(t.TempDir(), "test.txt")
 	if err := os.WriteFile(tmp, []byte("data"), 0600); err != nil {
@@ -822,8 +775,8 @@ func TestViewerView_StateRestoration_Modes(t *testing.T) {
 	}
 	v := vfs.NewOSVFS(t.TempDir())
 
-	GlobalFileState = &F4FileStateProvider{Data: make(map[string]*FileState), Limit: 10}
-	GlobalFileState.SaveViewerState(tmp, 0, false, true) // Wrap OFF, Hex ON
+	fileops.GlobalFileState = &fileops.F4FileStateProvider{Data: make(map[string]*fileops.FileState), Limit: 10}
+	fileops.GlobalFileState.SaveViewerState(tmp, 0, false, true) // Wrap OFF, Hex ON
 
 	// Имитируем открытие (логика из actions.go)
 	vv, err := NewViewerView(context.Background(), v, tmp)
@@ -832,7 +785,7 @@ func TestViewerView_StateRestoration_Modes(t *testing.T) {
 	}
 	defer vv.Close()
 
-	if state := GlobalFileState.GetState(tmp); state != nil {
+	if state := fileops.GlobalFileState.GetState(tmp); state != nil {
 		vv.WrapMode = state.ViewerWrap
 		vv.HexMode = state.ViewerHex
 	}
@@ -842,76 +795,6 @@ func TestViewerView_StateRestoration_Modes(t *testing.T) {
 	}
 	if vv.WrapMode {
 		t.Error("WrapMode was not restored (should be false)")
-	}
-}
-func TestViewerView_ScrollbarEOFAlignment(t *testing.T) {
-	vtui.SetDefaultPalette()
-	fm := vtui.FrameManager
-	fm.Init(vtui.NewSilentScreenBuf())
-
-	tmpDir := t.TempDir()
-	tmp := filepath.Join(tmpDir, "scroll_test.txt")
-	// Создаем файл из 50 строк
-	content := ""
-	for i := 0; i < 50; i++ {
-		content += "this is a test line for scrollbar alignment\n"
-	}
-	if err := os.WriteFile(tmp, []byte(content), 0600); err != nil {
-		t.Fatal(err)
-	}
-
-	v := vfs.NewOSVFS(tmpDir)
-	vv, err := NewViewerView(context.Background(), v, tmp)
-	if err != nil {
-		t.Fatalf("Failed to create ViewerView: %v", err)
-	}
-	defer vv.Close()
-
-	// Viewport: 1 строка статус, 10 строк контент.
-	vv.SetPosition(0, 0, 40, 10)
-
-	scr := vtui.NewSilentScreenBuf()
-	scr.AllocBuf(41, 11)
-
-	// --- 1. Проверка в текстовом режиме ---
-	// Прыгаем в конец
-	vv.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_END})
-
-	// Ждем завершения асинхронного расчета jumpToEnd.
-	// jumpToEnd устанавливает TopOffset через ctx.RunOnUI, которая ставит задачу
-	// в FrameManager.TaskChan. Задача "Busy = false" (defer) и задача установки
-	// TopOffset могут быть в канале в любом порядке. Поэтому не выходим из цикла,
-	// пока vv.Busy не станет false И TopOffset не изменится с начального 0.
-	timeout := time.After(2 * time.Second)
-	for vv.Busy || vv.TopOffset == 0 {
-		select {
-		case task := <-fm.TaskChan:
-			task()
-		case <-timeout:
-			t.Fatal("Timeout waiting for Text jumpToEnd")
-		}
-	}
-
-	// Вызываем Show, чтобы сработала логика SetParams внутри DisplayObject
-	vv.Show(scr)
-
-	if vv.scrollBar.Max != int(vv.backend.Size()) {
-		t.Errorf("Text Mode: ScrollBar.Max (%d) != Size (%d) at EOF", vv.scrollBar.Max, vv.backend.Size())
-	}
-
-	// --- 2. Проверка в Hex режиме ---
-	pressKey(vv, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_F4})
-	// В Hex режиме jumpToEnd отрабатывает мгновенно, если данные в кэше
-	vv.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_END})
-	vv.Show(scr)
-
-	if int(vv.TopOffset) != vv.scrollBar.Max {
-		t.Errorf("Hex Mode: TopOffset (%d) != ScrollBar.Max (%d) at EOF", vv.TopOffset, vv.scrollBar.Max)
-	}
-
-	// Дополнительно: проверяем, что TopOffset в Hex выровнен по 16 байт
-	if vv.TopOffset%16 != 0 {
-		t.Errorf("Hex Mode: TopOffset (%d) is not aligned to 16 bytes", vv.TopOffset)
 	}
 }
 func TestViewerView_ScrollbarStability(t *testing.T) {
@@ -944,7 +827,7 @@ func TestViewerView_ScrollbarStability(t *testing.T) {
 
 	// Pump tasks to wait for background fetch to complete and scrollbar to initialize
 	timeout := time.After(2 * time.Second)
-	for vv.scrollBar.Max == 0 {
+	for vv.ScrollBar.Max == 0 {
 		select {
 		case task := <-fm.TaskChan:
 			task()
@@ -954,8 +837,8 @@ func TestViewerView_ScrollbarStability(t *testing.T) {
 		}
 	}
 
-	if vv.scrollBar.Max != int(vv.backend.Size()) {
-		t.Errorf("Expected scrollbar Max to remain stable at %d even when eofVisible is true, got %d", vv.backend.Size(), vv.scrollBar.Max)
+	if vv.ScrollBar.Max != int(vv.Backend.Size()) {
+		t.Errorf("Expected scrollbar Max to remain stable at %d even when eofVisible is true, got %d", vv.Backend.Size(), vv.ScrollBar.Max)
 	}
 }
 func TestViewerView_Codepages_Load(t *testing.T) {
@@ -984,7 +867,7 @@ func TestViewerView_Codepages_Load(t *testing.T) {
 		t.Errorf("Expected detected codepage 866, got %d", vv.Codepage)
 	}
 
-	_, err = vv.backend.ReadAt(0, 12)
+	_, err = vv.Backend.ReadAt(0, 12)
 	if err != piecetable.ErrLoading {
 		t.Fatalf("Expected ErrLoading on first read, got %v", err)
 	}
@@ -1002,7 +885,7 @@ func TestViewerView_Codepages_Load(t *testing.T) {
 			time.Sleep(10 * time.Millisecond)
 		}
 
-		data, err = vv.backend.ReadAt(0, 12)
+		data, err = vv.Backend.ReadAt(0, 12)
 		if err == nil {
 			break
 		}
@@ -1028,10 +911,10 @@ func TestViewerView_UTF8BOMIsNotDisplayed(t *testing.T) {
 	}
 	defer vv.Close()
 
-	if vv.backend.dataOffset != vfs.UTF8BOMSize {
-		t.Fatalf("viewer data offset = %d, want %d", vv.backend.dataOffset, vfs.UTF8BOMSize)
+	if vv.Backend.DataOffset != vfs.UTF8BOMSize {
+		t.Fatalf("viewer data offset = %d, want %d", vv.Backend.DataOffset, vfs.UTF8BOMSize)
 	}
-	if got, want := vv.backend.Size(), int64(len(text)); got != want {
+	if got, want := vv.Backend.Size(), int64(len(text)); got != want {
 		t.Fatalf("viewer logical size = %d, want %d", got, want)
 	}
 
@@ -1041,7 +924,7 @@ func TestViewerView_UTF8BOMIsNotDisplayed(t *testing.T) {
 		if time.Now().After(deadline) {
 			t.Fatal("timeout waiting for BOM-stripped viewer data")
 		}
-		data, err = vv.backend.ReadAt(0, len(text))
+		data, err = vv.Backend.ReadAt(0, len(text))
 		if err == nil {
 			break
 		}
@@ -1057,7 +940,7 @@ func TestViewerView_UTF8BOMIsNotDisplayed(t *testing.T) {
 	if string(data) != text {
 		t.Fatalf("viewer text = %q, want %q", string(data), text)
 	}
-	if got, ok := vv.backend.LineStart(context.Background(), 2); !ok || got != int64(len("first line\n")) {
+	if got, ok := vv.Backend.LineStart(context.Background(), 2); !ok || got != int64(len("first line\n")) {
 		t.Fatalf("LineStart(2) = %d, %v; want %d, true", got, ok, len("first line\n"))
 	}
 }
@@ -1098,16 +981,16 @@ func TestViewerView_Codepages_RestoresPerFileOverride(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	oldState := GlobalFileState
+	oldState := fileops.GlobalFileState
 	oldAuto, oldDefault := config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage
 	defer func() {
-		GlobalFileState = oldState
+		fileops.GlobalFileState = oldState
 		config.App.ViewerAutodetectCodePage = oldAuto
 		config.App.ViewerDefaultCodePage = oldDefault
 	}()
-	GlobalFileState = &F4FileStateProvider{Limit: 10, Data: make(map[string]*FileState)}
+	fileops.GlobalFileState = &fileops.F4FileStateProvider{Limit: 10, Data: make(map[string]*fileops.FileState)}
 	v := vfs.NewOSVFS(tmpDir)
-	GlobalFileState.SaveCodepage(FileStateKey(v, path), 1251)
+	fileops.GlobalFileState.SaveCodepage(fileops.FileStateKey(v, path), 1251)
 	config.App.ViewerAutodetectCodePage = true
 	config.App.ViewerDefaultCodePage = 65001
 

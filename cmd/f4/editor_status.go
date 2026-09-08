@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/f4/vfs"
 )
 
@@ -100,7 +101,7 @@ func (ev *EditorView) editorStatusText() string {
 
 	if ev.DecodeMode {
 		absPos := ev.li.GetLineOffset(ev.CursorLine) + ev.CursorPos
-		return fmt.Sprintf("%s%s │ 0x%08X     ", prefix, disasmModeLabel(ev.disasmMode()), absPos)
+		return fmt.Sprintf("%s%s │ 0x%08X     ", prefix, viewer.DisasmModeLabel(ev.disasmMode()), absPos)
 	}
 	if ev.HexMode {
 		absPos := ev.li.GetLineOffset(ev.CursorLine) + ev.CursorPos

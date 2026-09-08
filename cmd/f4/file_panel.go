@@ -21,6 +21,7 @@ import (
 	"golang.org/x/text/language"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
@@ -633,7 +634,7 @@ func NewFileSystemPanel(x, y, w, h int, vfs vfs.VFS) *FileSystemPanel {
 }
 
 func directoryCacheKey(fs vfs.VFS, path string) dirCacheKey {
-	key := dirCacheKey{qualifiedPath: FileStateKey(fs, path)}
+	key := dirCacheKey{qualifiedPath: fileops.FileStateKey(fs, path)}
 	if stable, ok := fs.(vfs.DirectoryCacheIdentity); ok {
 		if cacheKey := stable.DirectoryCacheKey(); cacheKey != nil {
 			if cacheType := reflect.TypeOf(cacheKey); cacheType != nil && cacheType.Comparable() {

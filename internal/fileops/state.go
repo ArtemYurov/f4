@@ -1,4 +1,4 @@
-package main
+package fileops
 
 import (
 	"encoding/json"
@@ -35,7 +35,7 @@ type F4FileStateProvider struct {
 	mu      sync.Mutex
 	writeMu sync.Mutex
 	saveWG  sync.WaitGroup
-	path    string
+	Path    string
 	Limit   int
 	Order   []string
 	Data    map[string]*FileState
@@ -44,7 +44,7 @@ type F4FileStateProvider struct {
 func NewF4FileStateProvider() *F4FileStateProvider {
 	p := filepath.Join(config.GetF4ConfigDir(), "file_states.json")
 	fs := &F4FileStateProvider{
-		path:  p,
+		Path:  p,
 		Limit: 1000,
 		Data:  make(map[string]*FileState),
 	}
@@ -55,7 +55,7 @@ func NewF4FileStateProvider() *F4FileStateProvider {
 func (fs *F4FileStateProvider) load() {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
-	file, err := os.ReadFile(fs.path)
+	file, err := os.ReadFile(fs.Path)
 	if err == nil {
 		type DiskFormat struct {
 			Order []string
@@ -89,7 +89,7 @@ func (fs *F4FileStateProvider) save() {
 		copy := *state
 		df.Data[path] = &copy
 	}
-	statePath := fs.path
+	statePath := fs.Path
 	fs.mu.Unlock()
 
 	os.MkdirAll(filepath.Dir(statePath), 0755)

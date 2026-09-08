@@ -12,10 +12,12 @@ import (
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/dialog"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/f4/internal/toast"
+	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -141,12 +143,12 @@ func init() {
 		})
 	}
 
-	withViewer := func(fn func(vv *ViewerView)) func() bool {
+	withViewer := func(fn func(vv *viewer.ViewerView)) func() bool {
 		return func() bool {
 			if vtui.FrameManager == nil {
 				return false
 			}
-			if vv, ok := vtui.FrameManager.GetTopFrame().(*ViewerView); ok {
+			if vv, ok := vtui.FrameManager.GetTopFrame().(*viewer.ViewerView); ok {
 				fn(vv)
 				return true
 			}
@@ -166,12 +168,12 @@ func init() {
 		}
 	}
 
-	viewerState := func(fn func(vv *ViewerView) bool) func() bool {
+	viewerState := func(fn func(vv *viewer.ViewerView) bool) func() bool {
 		return func() bool {
 			if vtui.FrameManager == nil {
 				return false
 			}
-			if vv, ok := vtui.FrameManager.GetTopFrame().(*ViewerView); ok {
+			if vv, ok := vtui.FrameManager.GetTopFrame().(*viewer.ViewerView); ok {
 				return fn(vv)
 			}
 			return false
@@ -2401,7 +2403,7 @@ func init() {
 		MenuPath:    "Options",
 		Handler: withEditor(func(ev *EditorView) {
 			next := vfs.GetNextFastSwitchCodepage(ev.Codepage)
-			saveCodepageOverride(ev.vfs, ev.filePath, next)
+			fileops.SaveCodepageOverride(ev.vfs, ev.filePath, next)
 			ev.ReloadWithCodepage(next)
 			toast.Show(fmt.Sprintf("Codepage: %s", vfs.DisplayCodepageName(next)), time.Second)
 		}),
@@ -2494,7 +2496,7 @@ func init() {
 		DescKey:     "Action.Viewer.SwitchToEditor.Desc",
 		DefaultKeys: []string{"F6"},
 		MenuPath:    "File",
-		Handler:     withViewer(func(vv *ViewerView) { actionSwitchViewerToEditor(vv) }),
+		Handler:     withViewer(func(vv *viewer.ViewerView) { actionSwitchViewerToEditor(vv) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Viewer.Reload",
@@ -2505,7 +2507,7 @@ func init() {
 		DescKey:     "Action.Viewer.Reload.Desc",
 		DefaultKeys: []string{"CtrlR"},
 		MenuPath:    "File",
-		Handler:     withViewer(func(vv *ViewerView) { vv.reload() }),
+		Handler:     withViewer(func(vv *viewer.ViewerView) { vv.Reload() }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Viewer.Quit",
@@ -2516,7 +2518,7 @@ func init() {
 		DescKey:     "Action.Viewer.Quit.Desc",
 		DefaultKeys: []string{"Esc", "F10", "F3"},
 		MenuPath:    "File",
-		Handler:     withViewer(func(vv *ViewerView) { vv.Close() }),
+		Handler:     withViewer(func(vv *viewer.ViewerView) { vv.Close() }),
 	})
 
 	action.RegisterAction(action.Action{
@@ -2528,8 +2530,8 @@ func init() {
 		DescKey:     "Action.Viewer.WrapMode.Desc",
 		DefaultKeys: []string{"F2"},
 		MenuPath:    "View",
-		Checked:     viewerState(func(vv *ViewerView) bool { return vv.WrapMode }),
-		Handler:     withViewer(func(vv *ViewerView) { vv.WrapMode = !vv.WrapMode }),
+		Checked:     viewerState(func(vv *viewer.ViewerView) bool { return vv.WrapMode }),
+		Handler:     withViewer(func(vv *viewer.ViewerView) { vv.WrapMode = !vv.WrapMode }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Viewer.HexMode",
@@ -2540,11 +2542,11 @@ func init() {
 		DescKey:     "Action.Viewer.HexMode.Desc",
 		DefaultKeys: []string{"F4"},
 		MenuPath:    "View",
-		Checked:     viewerState(func(vv *ViewerView) bool { return vv.HexMode || vv.DecodeMode }),
-		Handler: withViewer(func(vv *ViewerView) {
+		Checked:     viewerState(func(vv *viewer.ViewerView) bool { return vv.HexMode || vv.DecodeMode }),
+		Handler: withViewer(func(vv *viewer.ViewerView) {
 			// Whichever way this goes, the view mode is now the user's and
 			// a later codepage switch must not second-guess it.
-			vv.hexAuto = false
+			vv.HexAuto = false
 			if !vv.HexMode && !vv.DecodeMode {
 				vv.HexMode = true
 				vv.TopOffset &= ^int64(0xF)
@@ -2566,8 +2568,8 @@ func init() {
 		DescKey:     "Action.Viewer.DisasmMode.Desc",
 		DefaultKeys: []string{"ShiftF4"},
 		MenuPath:    "View",
-		Handler: withViewer(func(vv *ViewerView) {
-			mode := vv.cycleDisasmMode()
+		Handler: withViewer(func(vv *viewer.ViewerView) {
+			mode := vv.CycleDisasmMode()
 			toast.Show(fmt.Sprintf(i18n.Msg("Viewer.DisasmBits"), mode), time.Second)
 			vtui.FrameManager.Redraw()
 		}),
@@ -2582,7 +2584,7 @@ func init() {
 		DescKey:     "Action.Viewer.Search.Desc",
 		DefaultKeys: []string{"F7"},
 		MenuPath:    "Search",
-		Handler:     withViewer(func(vv *ViewerView) { vtui.FrameManager.EmitCommand(CmSearch, nil) }),
+		Handler:     withViewer(func(vv *viewer.ViewerView) { vtui.FrameManager.EmitCommand(CmSearch, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Viewer.SearchNext",
@@ -2593,7 +2595,7 @@ func init() {
 		DescKey:     "Action.Viewer.SearchNext.Desc",
 		DefaultKeys: []string{"CtrlEnter"},
 		MenuPath:    "Search",
-		Handler:     withViewer(func(vv *ViewerView) { actionViewerSearchAgain(vv, false) }),
+		Handler:     withViewer(func(vv *viewer.ViewerView) { actionViewerSearchAgain(vv, false) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Viewer.SearchPrevious",
@@ -2604,7 +2606,7 @@ func init() {
 		DescKey:     "Action.Viewer.SearchPrevious.Desc",
 		DefaultKeys: []string{"CtrlShiftEnter"},
 		MenuPath:    "Search",
-		Handler:     withViewer(func(vv *ViewerView) { actionViewerSearchAgain(vv, true) }),
+		Handler:     withViewer(func(vv *viewer.ViewerView) { actionViewerSearchAgain(vv, true) }),
 	})
 
 	action.RegisterAction(action.Action{
@@ -2616,9 +2618,9 @@ func init() {
 		DescKey:     "Action.Viewer.CodepageNext.Desc",
 		DefaultKeys: []string{"F8"},
 		MenuPath:    "Options",
-		Handler: withViewer(func(vv *ViewerView) {
+		Handler: withViewer(func(vv *viewer.ViewerView) {
 			next := vfs.GetNextFastSwitchCodepage(vv.Codepage)
-			saveCodepageOverride(vv.vfs, vv.path, next)
+			fileops.SaveCodepageOverride(vv.VFS, vv.Path, next)
 			vv.ReloadWithCodepage(next)
 			toast.Show(fmt.Sprintf("Codepage: %s", vfs.DisplayCodepageName(next)), time.Second)
 		}),
@@ -2632,7 +2634,7 @@ func init() {
 		DescKey:     "Action.Viewer.CodepageMenu.Desc",
 		DefaultKeys: []string{"ShiftF8"},
 		MenuPath:    "Options",
-		Handler:     withViewer(func(vv *ViewerView) { vv.showCodepageDialog() }),
+		Handler:     withViewer(func(vv *viewer.ViewerView) { vv.ShowCodepageDialog() }),
 	})
 	// The shell menu is not present while an Editor or Viewer owns the
 	// workspace. Mirror the settings commands into those area menus so the

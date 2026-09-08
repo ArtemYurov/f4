@@ -1,4 +1,4 @@
-package main
+package viewer
 
 import (
 	"bytes"
@@ -13,27 +13,27 @@ import (
 // golang.org/x/arch/x86/x86asm, and one notion of processor mode: the
 // DisasmMode field of either view holds 16, 32 or 64, the mode Decode is
 // told to assume. Zero means the mode has not been decided yet. It is set
-// from the file header when a file is opened (detectX86Mode), decided the
+// from the file header when a file is opened (DetectX86Mode), decided the
 // same way on first use for a view built without a header, and cycled by
 // the user with Editor.DisasmMode / Viewer.DisasmMode, the way Hiew
 // switches its disassembler between 16, 32 and 64 bits.
 
-// disasmMaxInstLen is the longest x86 instruction there is, and so the
+// DisasmMaxInstLen is the longest x86 instruction there is, and so the
 // read window every decode step asks for.
-const disasmMaxInstLen = 15
+const DisasmMaxInstLen = 15
 
 // disasmModeDefault is what bytes with no recognisable header decode as.
 const disasmModeDefault = 64
 
-// disasmModeValid reports whether mode is one of the three x86asm accepts.
-func disasmModeValid(mode int) bool {
+// DisasmModeValid reports whether mode is one of the three x86asm accepts.
+func DisasmModeValid(mode int) bool {
 	return mode == 16 || mode == 32 || mode == 64
 }
 
-// nextDisasmMode returns the mode that follows mode in the 64 -> 32 -> 16
+// NextDisasmMode returns the mode that follows mode in the 64 -> 32 -> 16
 // -> 64 cycle. Anything that is not a valid mode restarts the cycle at 64,
 // so a stale or hand-edited value cannot leave the view stuck.
-func nextDisasmMode(mode int) int {
+func NextDisasmMode(mode int) int {
 	switch mode {
 	case 64:
 		return 32
@@ -44,10 +44,10 @@ func nextDisasmMode(mode int) int {
 	}
 }
 
-// detectX86Mode picks the processor mode for a file from its header: the
+// DetectX86Mode picks the processor mode for a file from its header: the
 // class of an ELF or the machine of a PE. Anything else, a raw code blob or
 // a DOS .com included, gets the default; the user can switch from there.
-func detectX86Mode(data []byte) int {
+func DetectX86Mode(data []byte) int {
 	if len(data) >= 6 && bytes.HasPrefix(data, []byte("\x7fELF")) {
 		if data[4] == 1 {
 			return 32
@@ -69,12 +69,12 @@ func detectX86Mode(data []byte) int {
 	return disasmModeDefault
 }
 
-// disasmInstruction decodes the instruction at the start of data in the
+// DisasmInstruction decodes the instruction at the start of data in the
 // given processor mode and returns its Intel-syntax text and the number of
 // bytes it occupies. A byte the decoder rejects is shown as a one-byte
 // "db", so a walk over code always makes progress and resynchronises on
 // the next byte, as Hiew's does. Empty input decodes to nothing.
-func disasmInstruction(data []byte, mode int, pc int64) (text string, length int) {
+func DisasmInstruction(data []byte, mode int, pc int64) (text string, length int) {
 	if len(data) == 0 {
 		return "", 0
 	}
@@ -85,9 +85,9 @@ func disasmInstruction(data []byte, mode int, pc int64) (text string, length int
 	return x86asm.IntelSyntax(inst, numeric.NonNegativeUint64(pc), nil), inst.Len
 }
 
-// disasmInstLen is the length half of disasmInstruction, for the callers
+// DisasmInstLen is the length half of DisasmInstruction, for the callers
 // that only walk instruction boundaries: cursor and page movement.
-func disasmInstLen(data []byte, mode int) int {
+func DisasmInstLen(data []byte, mode int) int {
 	if len(data) == 0 {
 		return 0
 	}
@@ -98,8 +98,8 @@ func disasmInstLen(data []byte, mode int) int {
 	return inst.Len
 }
 
-// disasmModeLabel is the status-line form of a mode, "Dec:64", shared by
+// DisasmModeLabel is the status-line form of a mode, "Dec:64", shared by
 // the viewer's top bar and the editor's status line.
-func disasmModeLabel(mode int) string {
+func DisasmModeLabel(mode int) string {
 	return fmt.Sprintf("Dec:%d", mode)
 }

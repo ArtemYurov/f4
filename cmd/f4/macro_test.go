@@ -131,7 +131,7 @@ func TestMacro_GetCurrentArea(t *testing.T) {
 	}
 	vtui.FrameManager.Pop()
 
-	// 5. ViewerView -> "Viewer"
+	// 5. viewer.ViewerView -> "Viewer"
 	fViewer := &mockAreaFrame{typ: vtui.TypeUser + 3}
 	vtui.FrameManager.Push(fViewer)
 	if area := macroCurrentArea(); area != "Viewer" {

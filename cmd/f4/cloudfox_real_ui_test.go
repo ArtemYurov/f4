@@ -19,6 +19,7 @@ import (
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/theme"
+	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/f4/plugins/cloudfox"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -555,41 +556,41 @@ func runRealCloudFoxViewer(t *testing.T, filesystem vfs.VFS, path string, expect
 	defer pf.Close()
 
 	actionOpenViewer(pf, filesystem, path)
-	var viewer *ViewerView
+	var vv *viewer.ViewerView
 	realCloudFoxUIWait(t, 3*time.Minute, "F3 viewer to open", func() bool {
-		viewer, _ = findOpenedViewer(filesystem, path)
-		return viewer != nil
+		vv, _ = findOpenedViewer(filesystem, path)
+		return vv != nil
 	})
-	defer viewer.Close()
-	if viewer.backend.Size() != int64(len(expected)) {
-		t.Fatalf("F3 viewer size=%d, want=%d", viewer.backend.Size(), len(expected))
+	defer vv.Close()
+	if vv.Backend.Size() != int64(len(expected)) {
+		t.Fatalf("F3 viewer size=%d, want=%d", vv.Backend.Size(), len(expected))
 	}
 
-	head := realCloudFoxUIViewerRead(t, viewer, 0, 257)
+	head := realCloudFoxUIViewerRead(t, vv, 0, 257)
 	if !bytes.Equal(head, expected[:len(head)]) {
 		t.Fatal("F3 viewer returned unexpected leading content")
 	}
 	offset := int64(len(expected)/2 + 31)
-	middle := realCloudFoxUIViewerRead(t, viewer, offset, 4093)
+	middle := realCloudFoxUIViewerRead(t, vv, offset, 4093)
 	if !bytes.Equal(middle, expected[offset:int(offset)+len(middle)]) {
 		t.Fatal("F3 viewer returned unexpected content after an arbitrary seek")
 	}
 
-	viewer.SetPosition(0, 0, 119, 38)
-	if !viewer.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_END}) {
+	vv.SetPosition(0, 0, 119, 38)
+	if !vv.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_END}) {
 		t.Fatal("F3 viewer did not handle End navigation")
 	}
 	realCloudFoxUIWait(t, 2*time.Minute, "F3 viewer tail seek", func() bool {
-		return !viewer.Busy && viewer.TopOffset > 0
+		return !vv.Busy && vv.TopOffset > 0
 	})
 }
 
-func realCloudFoxUIViewerRead(t *testing.T, viewer *ViewerView, offset int64, length int) []byte {
+func realCloudFoxUIViewerRead(t *testing.T, vv *viewer.ViewerView, offset int64, length int) []byte {
 	t.Helper()
 	var data []byte
 	realCloudFoxUIWait(t, 2*time.Minute, "F3 viewer range read", func() bool {
 		var err error
-		data, err = viewer.backend.ReadAt(offset, length)
+		data, err = vv.Backend.ReadAt(offset, length)
 		if err == nil || errors.Is(err, io.EOF) {
 			return true
 		}

@@ -15,6 +15,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/dialog"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/gui"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
@@ -23,6 +24,7 @@ import (
 	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/toast"
+	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -862,7 +864,7 @@ func showEditor(pf *PanelsFrame, v vfs.VFS, path string, f vfs.ReadAtCloser) {
 		header = header[:n]
 
 		cpID = vfs.DetectEncoding(header, config.App.EditorAutodetectCodePage, config.App.EditorDefaultCodePage)
-		if remembered, ok := rememberedCodepage(v, path); ok {
+		if remembered, ok := fileops.RememberedCodepage(v, path); ok {
 			cpID = remembered
 		}
 
@@ -925,14 +927,14 @@ func showEditor(pf *PanelsFrame, v vfs.VFS, path string, f vfs.ReadAtCloser) {
 	// The decode view's processor mode comes off the header read above,
 	// like the codepage: the buffer behind a lazily loaded file may not
 	// have its first bytes when the mode is first wanted.
-	editor.DisasmMode = detectX86Mode(header)
+	editor.DisasmMode = viewer.DetectX86Mode(header)
 	// StartIndexing skips hex, so binary files open without a line scan.
 	if _, isDisks := v.(*vfs.DisksVFS); isDisks || binary {
 		editor.HexMode = true
 	}
 	// A saved position is a line number, meaningless for a hex view.
-	if GlobalFileState != nil && path != "" && !binary {
-		if state := GlobalFileState.GetState(FileStateKey(v, path)); state != nil {
+	if fileops.GlobalFileState != nil && path != "" && !binary {
+		if state := fileops.GlobalFileState.GetState(fileops.FileStateKey(v, path)); state != nil {
 			editor.applyRememberedWordWrap(state.EditorWrap)
 			editor.targetLine = state.EditorLine
 			editor.targetPos = state.EditorPos
@@ -1108,7 +1110,7 @@ func openEditorInternal(pf *PanelsFrame, v vfs.VFS, path string) {
 	})
 }
 
-func findOpenedViewer(v vfs.VFS, path string) (*ViewerView, int) {
+func findOpenedViewer(v vfs.VFS, path string) (*viewer.ViewerView, int) {
 	var absPath string
 	isLocal := false
 	if osvfs, ok := v.(*vfs.OSVFS); ok {
@@ -1122,16 +1124,16 @@ func findOpenedViewer(v vfs.VFS, path string) (*ViewerView, int) {
 
 	for i, s := range vtui.FrameManager.Screens {
 		for _, f := range s.Frames {
-			if vv, ok := f.(*ViewerView); ok && !vv.IsDone() {
-				if isLocal && vv.vfs != nil {
-					if vvOSVFS, evOk := vv.vfs.(*vfs.OSVFS); evOk {
-						vvAbsPath, _ := vvOSVFS.Abs(vv.path)
+			if vv, ok := f.(*viewer.ViewerView); ok && !vv.IsDone() {
+				if isLocal && vv.VFS != nil {
+					if vvOSVFS, evOk := vv.VFS.(*vfs.OSVFS); evOk {
+						vvAbsPath, _ := vvOSVFS.Abs(vv.Path)
 						if vvAbsPath == absPath {
 							return vv, i
 						}
 					}
 				} else {
-					if vv.path == path {
+					if vv.Path == path {
 						return vv, i
 					}
 				}
@@ -1141,25 +1143,25 @@ func findOpenedViewer(v vfs.VFS, path string) (*ViewerView, int) {
 	return nil, -1
 }
 
-func showViewer(pf *PanelsFrame, viewer *ViewerView, path string) {
-	if GlobalFileState != nil && path != "" {
-		if state := GlobalFileState.GetState(FileStateKey(viewer.vfs, path)); state != nil {
-			viewer.TopOffset = state.ViewerOffset
-			if viewer.TopOffset > viewer.backend.Size() {
-				viewer.TopOffset = viewer.backend.Size() - 1
+func showViewer(pf *PanelsFrame, vv *viewer.ViewerView, path string) {
+	if fileops.GlobalFileState != nil && path != "" {
+		if state := fileops.GlobalFileState.GetState(fileops.FileStateKey(vv.VFS, path)); state != nil {
+			vv.TopOffset = state.ViewerOffset
+			if vv.TopOffset > vv.Backend.Size() {
+				vv.TopOffset = vv.Backend.Size() - 1
 			}
-			if viewer.TopOffset < 0 {
-				viewer.TopOffset = 0
+			if vv.TopOffset < 0 {
+				vv.TopOffset = 0
 			}
-			viewer.WrapMode = state.ViewerWrap
+			vv.WrapMode = state.ViewerWrap
 			// The saved flag is what the user left the file in last time,
 			// so it outranks the binary check the same way an F4 does.
-			viewer.HexMode = state.ViewerHex
-			viewer.hexAuto = false
+			vv.HexMode = state.ViewerHex
+			vv.HexAuto = false
 		}
 	}
-	viewer.ResizeConsole(pf.lastW, pf.lastH)
-	vtui.FrameManager.AddScreen(viewer)
+	vv.ResizeConsole(pf.lastW, pf.lastH)
+	vtui.FrameManager.AddScreen(vv)
 }
 
 func actionOpenViewer(pf *PanelsFrame, v vfs.VFS, path string) {
@@ -1207,30 +1209,30 @@ func actionSwitchEditorToViewer(ev *EditorView) {
 		}
 
 		ctx := context.Background()
-		viewer, err := NewViewerView(ctx, ev.vfs, ev.filePath)
+		vv, err := viewer.NewViewerView(ctx, ev.vfs, ev.filePath)
 		if err != nil {
-			vtui.ShowMessage(" Error ", fmt.Sprintf("Failed to open file in viewer:\n%v", err), []string{"&Ok"})
+			vtui.ShowMessage(" Error ", fmt.Sprintf("Failed to open file in vv:\n%v", err), []string{"&Ok"})
 			return
 		}
 
-		// NewViewerView normally follows the saved per-file override, but the
+		// viewer.NewViewerView normally follows the saved per-file override, but the
 		// editor can have a just-selected or conversion codepage that is not in
-		// file_states yet. Rebuild the viewer backend so the displayed bytes and
+		// file_states yet. Rebuild the vv backend so the displayed bytes and
 		// the Codepage label cannot diverge.
-		viewer.ReloadWithCodepage(ev.Codepage)
-		viewer.HexMode = ev.HexMode
-		viewer.DecodeMode = ev.DecodeMode
+		vv.ReloadWithCodepage(ev.Codepage)
+		vv.HexMode = ev.HexMode
+		vv.DecodeMode = ev.DecodeMode
 		// A decided mode travels with the switch, whether the header or
 		// the user decided it; an undecided one must not undo the
-		// viewer's own detection.
+		// vv's own detection.
 		if ev.DisasmMode != 0 {
-			viewer.DisasmMode = ev.DisasmMode
+			vv.DisasmMode = ev.DisasmMode
 		}
-		viewer.WrapMode = ev.WordWrap
-		if viewer.HexMode {
-			viewer.TopOffset = targetOffset &^ 0xF
+		vv.WrapMode = ev.WordWrap
+		if vv.HexMode {
+			vv.TopOffset = targetOffset &^ 0xF
 		} else {
-			viewer.TopOffset = targetOffset
+			vv.TopOffset = targetOffset
 		}
 
 		w := vtui.FrameManager.GetScreenSize()
@@ -1241,7 +1243,7 @@ func actionSwitchEditorToViewer(ev *EditorView) {
 		if h <= 0 {
 			h = 25
 		}
-		viewer.ResizeConsole(w, h)
+		vv.ResizeConsole(w, h)
 
 		screenIdx := -1
 		if vtui.FrameManager != nil {
@@ -1261,7 +1263,7 @@ func actionSwitchEditorToViewer(ev *EditorView) {
 		ev.Close()
 		if screenIdx != -1 && screenIdx < len(vtui.FrameManager.Screens) {
 			// SwitchScreen() is a no-op when idx == ActiveIdx (the common case
-			// here, since switching to the viewer normally happens from the
+			// here, since switching to the vv normally happens from the
 			// editor screen currently on-screen). Writing straight into
 			// Screens[screenIdx].Frames wouldn't be picked up by GetTopFrame(),
 			// which reads the live fm.frames slice. Go through
@@ -1271,13 +1273,13 @@ func actionSwitchEditorToViewer(ev *EditorView) {
 			// SwitchScreen() does perform the swap.
 			if screenIdx == vtui.FrameManager.ActiveIdx {
 				vtui.FrameManager.RemoveFrame(ev)
-				vtui.FrameManager.Push(viewer)
+				vtui.FrameManager.Push(vv)
 			} else {
-				vtui.FrameManager.Screens[screenIdx].Frames = []vtui.Frame{viewer}
+				vtui.FrameManager.Screens[screenIdx].Frames = []vtui.Frame{vv}
 				vtui.FrameManager.SwitchScreen(screenIdx)
 			}
 		} else if vtui.FrameManager != nil {
-			vtui.FrameManager.AddScreen(viewer)
+			vtui.FrameManager.AddScreen(vv)
 		}
 		if vtui.FrameManager != nil {
 			vtui.FrameManager.Redraw()
@@ -1304,18 +1306,18 @@ func actionSwitchEditorToViewer(ev *EditorView) {
 	doSwitch()
 }
 
-func actionSwitchViewerToEditor(vv *ViewerView) {
-	if vv == nil || vv.path == "" || vv.vfs == nil {
+func actionSwitchViewerToEditor(vv *viewer.ViewerView) {
+	if vv == nil || vv.Path == "" || vv.VFS == nil {
 		return
 	}
 
-	if stat, err := vv.vfs.Stat(context.Background(), vv.path); err == nil && stat.IsDir {
+	if stat, err := vv.VFS.Stat(context.Background(), vv.Path); err == nil && stat.IsDir {
 		vtui.ShowMessage(" Error ", "Cannot edit a directory.", []string{"&Ok"})
 		return
 	}
 
 	ctx := context.Background()
-	f, err := vv.vfs.Open(ctx, vv.path)
+	f, err := vv.VFS.Open(ctx, vv.Path)
 	if err != nil {
 		if err == os.ErrInvalid {
 			vtui.ShowMessage(" Error ", "Cannot open special files (Named Pipes, Sockets).", []string{"&Ok"})
@@ -1330,16 +1332,16 @@ func actionSwitchViewerToEditor(vv *ViewerView) {
 	var mapped *MappedFile
 	cpID := vv.Codepage
 	dataOffset := int64(0)
-	if vv.backend != nil {
-		dataOffset = vv.backend.dataOffset
+	if vv.Backend != nil {
+		dataOffset = vv.Backend.DataOffset
 	}
 
 	if cpID == 65001 {
 		if config.App.EditorMemoryMap {
 			var mapErr error
-			mapped, mapErr = MapEditorFileWithOffset(vv.vfs, f, dataOffset)
+			mapped, mapErr = MapEditorFileWithOffset(vv.VFS, f, dataOffset)
 			if mapErr != nil && mapErr != errNotMappable {
-				vtui.DebugLog("EDITOR: memory mapping %s failed, reading lazily instead: %v", vv.path, mapErr)
+				vtui.DebugLog("EDITOR: memory mapping %s failed, reading lazily instead: %v", vv.Path, mapErr)
 			}
 		}
 		if mapped != nil {
@@ -1367,16 +1369,16 @@ func actionSwitchViewerToEditor(vv *ViewerView) {
 	// 8 GB test file.
 	var editor *EditorView
 	if mapped != nil || buf != nil {
-		editor = NewEditorViewIndexedLater(pt, vv.vfs, vv.path)
+		editor = NewEditorViewIndexedLater(pt, vv.VFS, vv.Path)
 	} else {
-		editor = NewEditorView(pt, vv.vfs, vv.path)
+		editor = NewEditorView(pt, vv.VFS, vv.Path)
 	}
 	editor.file = f
 	editor.asyncBuf = buf
 	editor.mapped = mapped
 	editor.Codepage = cpID
 	editor.binaryFile = vv.HexMode
-	editor.utf8BOM = cpID == 65001 && vv.backend != nil && vv.backend.dataOffset != 0
+	editor.utf8BOM = cpID == 65001 && vv.Backend != nil && vv.Backend.DataOffset != 0
 	editor.applyRememberedWordWrap(vv.WrapMode)
 	editor.HexMode = vv.HexMode
 	editor.DecodeMode = vv.DecodeMode
@@ -1454,7 +1456,7 @@ func actionSwitchViewerToEditor(vv *ViewerView) {
 	if vtui.FrameManager != nil {
 		vtui.FrameManager.Redraw()
 	}
-	rememberViewerEditorHistory(vv.vfs, vv.path, historyModeEdit)
+	rememberViewerEditorHistory(vv.VFS, vv.Path, historyModeEdit)
 }
 
 // tryOpenImageViewer opens the picture viewer when the file looks like an
@@ -1586,12 +1588,12 @@ func openViewerInternal(pf *PanelsFrame, v vfs.VFS, path string) {
 				}
 			}
 
-			viewer, err := NewViewerView(ctx.Context, v, path)
+			vv, err := viewer.NewViewerView(ctx.Context, v, path)
 			ctx.RunOnUI(func() {
 				if err == nil {
-					showViewer(pf, viewer, path)
+					showViewer(pf, vv, path)
 				} else {
-					vtui.DebugLog("PANELS: Failed to open viewer for %s: %v", path, err)
+					vtui.DebugLog("PANELS: Failed to open vv for %s: %v", path, err)
 					if err == os.ErrInvalid {
 						vtui.ShowMessage(" Error ", "Cannot open special files (Named Pipes, Sockets).", []string{"&Ok"})
 					} else {
@@ -1603,12 +1605,12 @@ func openViewerInternal(pf *PanelsFrame, v vfs.VFS, path string) {
 		return
 	}
 
-	var viewer *ViewerView
+	var vv *viewer.ViewerView
 	pf.runProgressTaskAfter(openingProgressDelay, " Opening... ", "Preparing to open file...", false, func(ctx context.Context, update func(msg string, percent int)) error {
 		update("Opening file...", -1)
 		ctx = context.WithValue(ctx, vfs.ProgressKey, vfs.ProgressCallback(update))
 		var err error
-		viewer, err = NewViewerView(ctx, v, path)
+		vv, err = viewer.NewViewerView(ctx, v, path)
 		return err
 	}, func(err error) {
 		if err != nil {
@@ -1621,40 +1623,40 @@ func openViewerInternal(pf *PanelsFrame, v vfs.VFS, path string) {
 			}
 			return
 		}
-		showViewer(pf, viewer, path)
+		showViewer(pf, vv, path)
 	})
 }
 
-func actionViewerSearch(vv *ViewerView) {
+func actionViewerSearch(vv *viewer.ViewerView) {
 	actionViewerSearchDirection(vv, false)
 }
 
-func actionViewerSearchDirection(vv *ViewerView, reverse bool) {
+func actionViewerSearchDirection(vv *viewer.ViewerView, reverse bool) {
 	dlgW, dlgH := 66, 15
 	dlg := vtui.NewCenteredDialog(dlgW, dlgH, i18n.Msg("Viewer.SearchTitle"))
 	dlg.ShowClose = true
 
 	lblPrompt := vtui.NewLabel(0, 0, i18n.Msg("Search.Prompt"), nil)
-	editPattern := vtui.NewEdit(0, 0, 40, vv.lastSearch)
+	editPattern := vtui.NewEdit(0, 0, 40, vv.LastSearch)
 	history.AttachHistoryUseLast(editPattern, history.SearchTextHistoryID)
 	editPattern.SelectAll()
 	lblPrompt.FocusLink = editPattern
 	dlg.SetFocusedItem(editPattern)
 
 	chkCase := vtui.NewCheckbox(0, 0, i18n.Msg("Search.CaseSensitive"), false)
-	if vv.lastSearchCase {
+	if vv.LastSearchCase {
 		chkCase.State = 1
 	}
 	chkWholeWord := vtui.NewCheckbox(0, 0, i18n.Msg("Search.WholeWords"), false)
-	if vv.lastSearchWholeWord {
+	if vv.LastSearchWholeWord {
 		chkWholeWord.State = 1
 	}
 	chkReverse := vtui.NewCheckbox(0, 0, i18n.Msg("Search.Reverse"), false)
-	if vv.lastSearchReverse || reverse {
+	if vv.LastSearchReverse || reverse {
 		chkReverse.State = 1
 	}
 	chkRegexp := vtui.NewCheckbox(0, 0, i18n.Msg("Search.Regex"), false)
-	if vv.lastSearchRegexp {
+	if vv.LastSearchRegexp {
 		chkRegexp.State = 1
 	}
 
@@ -1705,20 +1707,20 @@ func actionViewerSearchDirection(vv *ViewerView, reverse bool) {
 		wholeWord := chkWholeWord.State == 1
 		searchReverse := chkReverse.State == 1
 		useRegexp := chkRegexp.State == 1
-		optionsChanged := pattern != vv.lastSearch ||
-			caseSensitive != vv.lastSearchCase ||
-			searchReverse != vv.lastSearchReverse ||
-			useRegexp != vv.lastSearchRegexp ||
-			wholeWord != vv.lastSearchWholeWord
+		optionsChanged := pattern != vv.LastSearch ||
+			caseSensitive != vv.LastSearchCase ||
+			searchReverse != vv.LastSearchReverse ||
+			useRegexp != vv.LastSearchRegexp ||
+			wholeWord != vv.LastSearchWholeWord
 		if optionsChanged {
-			vv.lastSearchFound = false
+			vv.LastSearchFound = false
 		}
 		history.CommitHistory(editPattern, pattern)
-		vv.lastSearch = pattern
-		vv.lastSearchCase = caseSensitive
-		vv.lastSearchReverse = searchReverse
-		vv.lastSearchRegexp = useRegexp
-		vv.lastSearchWholeWord = wholeWord
+		vv.LastSearch = pattern
+		vv.LastSearchCase = caseSensitive
+		vv.LastSearchReverse = searchReverse
+		vv.LastSearchRegexp = useRegexp
+		vv.LastSearchWholeWord = wholeWord
 		dlg.Close()
 		runViewerSearch(vv, pattern, searchReverse)
 	}
@@ -1727,32 +1729,32 @@ func actionViewerSearchDirection(vv *ViewerView, reverse bool) {
 	vtui.FrameManager.Push(dlg)
 }
 
-func actionViewerSearchAgain(vv *ViewerView, reverse bool) {
-	if vv.lastSearch == "" {
+func actionViewerSearchAgain(vv *viewer.ViewerView, reverse bool) {
+	if vv.LastSearch == "" {
 		actionViewerSearchDirection(vv, reverse)
 		return
 	}
-	runViewerSearch(vv, vv.lastSearch, reverse)
+	runViewerSearch(vv, vv.LastSearch, reverse)
 }
 
-func runViewerSearch(vv *ViewerView, pattern string, reverse bool) {
+func runViewerSearch(vv *viewer.ViewerView, pattern string, reverse bool) {
 	vtui.FrameManager.PostTask(func() {
 		runSearchWithProgress(pattern, func(ctx *vtui.TaskContext, dlg *vtui.Window) {
 			start := vv.TopOffset + 1
 			if reverse {
 				start = vv.TopOffset
 			}
-			if vv.lastSearchFound && vv.TopOffset == vv.lastSearchTopOffset {
-				start = vv.lastSearchOffset + 1
+			if vv.LastSearchFound && vv.TopOffset == vv.LastSearchTopOffset {
+				start = vv.LastSearchOffset + 1
 				if reverse {
-					start = vv.lastSearchOffset
+					start = vv.LastSearchOffset
 				}
 			}
-			foundOffset, matchLen, searchErr := viewerSearchMatch(ctx.Context, vv.backend, pattern, start, viewerSearchOptions{
-				caseSensitive: vv.lastSearchCase,
-				reverse:       reverse,
-				regexp:        vv.lastSearchRegexp,
-				wholeWord:     vv.lastSearchWholeWord,
+			foundOffset, matchLen, searchErr := viewer.SearchMatch(ctx.Context, vv.Backend, pattern, start, viewer.SearchOptions{
+				CaseSensitive: vv.LastSearchCase,
+				Reverse:       reverse,
+				Regexp:        vv.LastSearchRegexp,
+				WholeWord:     vv.LastSearchWholeWord,
 			}, func(percent int) {
 				ctx.RunOnUI(func() { dlg.SetProgress(percent) })
 			})
@@ -1764,7 +1766,7 @@ func runViewerSearch(vv *ViewerView, pattern string, reverse bool) {
 					return
 				}
 				if searchErr != nil {
-					if vv.lastSearchRegexp {
+					if vv.LastSearchRegexp {
 						vtui.ShowMessage(" Error ", fmt.Sprintf("Invalid regular expression:\n%v", searchErr), []string{"&Ok"})
 					} else {
 						vtui.ShowMessage(" Error ", "Failed to read file buffer.", []string{"&Ok"})
@@ -1772,11 +1774,11 @@ func runViewerSearch(vv *ViewerView, pattern string, reverse bool) {
 					return
 				}
 				if foundOffset != -1 {
-					vv.TopOffset = vv.backend.FindLineStart(foundOffset)
-					vv.lastSearchOffset = foundOffset
-					vv.lastSearchTopOffset = vv.TopOffset
-					vv.lastSearchMatchLen = int64(matchLen)
-					vv.lastSearchFound = true
+					vv.TopOffset = vv.Backend.FindLineStart(foundOffset)
+					vv.LastSearchOffset = foundOffset
+					vv.LastSearchTopOffset = vv.TopOffset
+					vv.LastSearchMatchLen = int64(matchLen)
+					vv.LastSearchFound = true
 					vtui.FrameManager.Redraw()
 				} else {
 					vtui.ShowMessage(" Search ", "Pattern not found.", []string{"&Ok"})
@@ -1784,170 +1786,6 @@ func runViewerSearch(vv *ViewerView, pattern string, reverse bool) {
 			})
 		})
 	})
-}
-
-func viewerSearchOffset(ctx context.Context, backend *ViewerBackend, pattern string, start int64, reverse bool, progress func(int)) int64 {
-	offset, _, _ := viewerSearchMatch(ctx, backend, pattern, start, viewerSearchOptions{reverse: reverse}, progress)
-	return offset
-}
-
-type viewerSearchOptions struct {
-	caseSensitive bool
-	reverse       bool
-	regexp        bool
-	wholeWord     bool
-}
-
-// viewerSearchMatch returns the byte offset and byte length of the next match.
-// Literal searches retain the viewer's streaming behavior; regex and
-// whole-word searches use one snapshot so matches crossing read boundaries
-// have the same semantics as editor search.
-func viewerSearchMatch(ctx context.Context, backend *ViewerBackend, pattern string, start int64, options viewerSearchOptions, progress func(int)) (int64, int, error) {
-	if backend == nil || pattern == "" {
-		return -1, 0, nil
-	}
-	fileSize := backend.Size()
-	if fileSize <= 0 {
-		return -1, 0, nil
-	}
-	if start < 0 {
-		start = 0
-	}
-	if start > fileSize {
-		start = fileSize
-	}
-
-	if options.regexp || options.wholeWord {
-		data, err := readViewerSearchData(ctx, backend, progress)
-		if err != nil {
-			return -1, 0, err
-		}
-		if int64(len(data)) < start {
-			start = int64(len(data))
-		}
-		found, matchLen, err := findMatch(data, pattern, options.caseSensitive, options.reverse, options.regexp, options.wholeWord, false, int(start))
-		return int64(found), matchLen, err
-	}
-
-	patternLower := strings.ToLower(pattern)
-	chunkSize := int64(256 * 1024)
-	if int64(len(patternLower)) > chunkSize {
-		chunkSize = int64(len(patternLower))
-	}
-	overlap := int64(len(patternLower) - 1)
-
-	if options.reverse {
-		if !options.caseSensitive {
-			if at, searched := backend.SearchBefore(ctx, pattern, start); searched {
-				return at, len(pattern), nil
-			}
-		}
-		end := start
-		for end > 0 {
-			if ctx.Err() != nil {
-				return -1, 0, ctx.Err()
-			}
-			begin := end - chunkSize
-			if begin < 0 {
-				begin = 0
-			}
-			if progress != nil {
-				progress(int(((fileSize - end) * 100) / fileSize))
-			}
-			data, err := backend.ReadAt(begin, int(end-begin))
-			if err == piecetable.ErrLoading {
-				time.Sleep(20 * time.Millisecond)
-				continue
-			}
-			if err != nil || len(data) == 0 {
-				return -1, 0, nil
-			}
-			if idx, matchLen, matchErr := findMatch(data, pattern, options.caseSensitive, true, false, false, false, len(data)); matchErr != nil {
-				return -1, 0, matchErr
-			} else if idx >= 0 {
-				return begin + int64(idx), matchLen, nil
-			}
-			if begin == 0 {
-				break
-			}
-			end = begin + overlap
-		}
-		return -1, 0, nil
-	}
-
-	if !options.caseSensitive {
-		if at, searched := backend.SearchFrom(ctx, pattern, start); searched {
-			return at, len(pattern), nil
-		}
-	}
-	current := start
-	for current < fileSize {
-		if ctx.Err() != nil {
-			return -1, 0, ctx.Err()
-		}
-		if progress != nil {
-			progress(int((current * 100) / fileSize))
-		}
-		data, err := backend.ReadAt(current, int(chunkSize))
-		if err == piecetable.ErrLoading {
-			time.Sleep(20 * time.Millisecond)
-			continue
-		}
-		if err != nil || len(data) == 0 {
-			break
-		}
-		if idx, matchLen, matchErr := findMatch(data, pattern, options.caseSensitive, false, false, false, false, 0); matchErr != nil {
-			return -1, 0, matchErr
-		} else if idx >= 0 {
-			return current + int64(idx), matchLen, nil
-		}
-		advance := int64(len(data)) - overlap
-		if advance < 1 {
-			advance = 1
-		}
-		current += advance
-	}
-	return -1, 0, nil
-}
-
-// readViewerSearchData materializes the decoded viewer stream for searches
-// whose match rules can span arbitrary read boundaries. ViewerBackend still
-// fetches it in bounded windows, so remote VFSes remain cancelable and do not
-// allocate one request per file chunk.
-func readViewerSearchData(ctx context.Context, backend *ViewerBackend, progress func(int)) ([]byte, error) {
-	fileSize := backend.Size()
-	capacity := 0
-	if fileSize <= int64(int(^uint(0)>>1)) {
-		capacity = int(fileSize)
-	}
-	data := make([]byte, 0, capacity)
-	const chunkSize = int64(256 * 1024)
-	for current := int64(0); current < fileSize; {
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-		length := chunkSize
-		if remaining := fileSize - current; remaining < length {
-			length = remaining
-		}
-		chunk, err := backend.ReadAt(current, int(length))
-		if err == piecetable.ErrLoading {
-			time.Sleep(20 * time.Millisecond)
-			continue
-		}
-		if err != nil && err != io.EOF {
-			return nil, err
-		}
-		if len(chunk) == 0 {
-			break
-		}
-		data = append(data, chunk...)
-		current += int64(len(chunk))
-		if progress != nil {
-			progress(int((current * 100) / fileSize))
-		}
-	}
-	return data, nil
 }
 
 // openPlayerPanel is the player when it is open on the passive side, which

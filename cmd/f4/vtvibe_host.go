@@ -16,6 +16,7 @@ import (
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/sysinfo"
+	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/f4/internal/vtvibe"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -381,8 +382,8 @@ func aiAskAction() bool {
 		if f.selActive || f.rectSelActive {
 			ctxParts = append(ctxParts, "[Text is selected]")
 		}
-	case *ViewerView:
-		ctxParts = append(ctxParts, "Viewer: "+f.vfs.Base(f.path))
+	case *viewer.ViewerView:
+		ctxParts = append(ctxParts, "Viewer: "+f.VFS.Base(f.Path))
 		ctxParts = append(ctxParts, fmt.Sprintf("Offset: %d", f.TopOffset))
 	}
 

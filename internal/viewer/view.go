@@ -1,4 +1,4 @@
-package main
+package viewer
 
 import (
 	"context"
@@ -11,8 +11,8 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/dialog"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/i18n"
-	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/theme"
@@ -24,17 +24,17 @@ import (
 // ViewerView is a high-performance file viewer component.
 type ViewerView struct {
 	vtui.BaseFrame
-	topBar  *TopBar
+	TopBar  *TopBar
 	menuBar *vtui.MenuBar
-	backend *ViewerBackend
-	vfs     vfs.VFS
-	path    string
+	Backend *ViewerBackend
+	VFS     vfs.VFS
+	Path    string
 
 	HexMode bool
-	// hexAuto records that hex mode came from the binary check rather than
+	// HexAuto records that hex mode came from the binary check rather than
 	// from the user. Only an automatic verdict may be revisited when the
 	// codepage changes: a hex view the user asked for has to survive an F8.
-	hexAuto    bool
+	HexAuto    bool
 	DecodeMode bool
 	WrapMode   bool
 	// DisasmMode is the processor mode the decode view disassembles in:
@@ -45,21 +45,21 @@ type ViewerView struct {
 	// For Text mode: offsets of lines currently on screen
 	lineOffsets         []int64
 	rowCells            []vtui.CharInfo
-	visibleURLRows      [][]urlCellRange
+	visibleURLRows      [][]UrlCellRange
 	hoverURL            string
 	eofVisible          bool
 	lastKnownSize       int64
-	lastSearch          string
-	lastSearchOffset    int64
-	lastSearchTopOffset int64
-	lastSearchFound     bool
-	lastSearchMatchLen  int64
-	lastSearchCase      bool
-	lastSearchReverse   bool
-	lastSearchRegexp    bool
-	lastSearchWholeWord bool
+	LastSearch          string
+	LastSearchOffset    int64
+	LastSearchTopOffset int64
+	LastSearchFound     bool
+	LastSearchMatchLen  int64
+	LastSearchCase      bool
+	LastSearchReverse   bool
+	LastSearchRegexp    bool
+	LastSearchWholeWord bool
 
-	scrollBar *vtui.ScrollBar
+	ScrollBar *vtui.ScrollBar
 
 	// tailStop closes when the viewer stops watching the file for changes.
 	// Nil means nothing is watching -- a ViewerView built directly, as the
@@ -83,7 +83,7 @@ func NewViewerView(ctx context.Context, v vfs.VFS, path string) (*ViewerView, er
 	}
 
 	cpID := vfs.DetectEncoding(header, config.App.ViewerAutodetectCodePage, config.App.ViewerDefaultCodePage)
-	if remembered, ok := rememberedCodepage(v, path); ok {
+	if remembered, ok := fileops.RememberedCodepage(v, path); ok {
 		cpID = remembered
 	}
 	binary := viewerHeaderLooksBinary(header, cpID)
@@ -92,35 +92,35 @@ func NewViewerView(ctx context.Context, v vfs.VFS, path string) (*ViewerView, er
 		// handle lets the hex viewer fetch only its small visible windows.
 		cpID = 65001
 	}
-	dataOffset := int64(0)
+	DataOffset := int64(0)
 	if cpID == 65001 && !binary && vfs.HasUTF8BOM(header) {
-		dataOffset = vfs.UTF8BOMSize
+		DataOffset = vfs.UTF8BOMSize
 	}
 
-	backend, err := newViewerBackend(ctx, v, path, f, cpID, dataOffset)
+	backend, err := newViewerBackend(ctx, v, path, f, cpID, DataOffset)
 	if err != nil {
 		_ = f.Close()
 		return nil, err
 	}
 
 	vv := &ViewerView{
-		backend:  backend,
-		vfs:      v,
-		path:     path,
+		Backend:  backend,
+		VFS:      v,
+		Path:     path,
 		HexMode:  binary,
-		hexAuto:  binary,
+		HexAuto:  binary,
 		WrapMode: true,
 		// The decode view's processor mode is read off the same header the
 		// binary check used, here where the whole header is in hand: the
 		// backend serves the decode view through a moving cache window,
 		// which need not cover offset 0 by the time the mode is wanted.
-		DisasmMode: detectX86Mode(header),
+		DisasmMode: DetectX86Mode(header),
 		Codepage:   cpID,
 	}
-	vv.scrollBar = vtui.NewScrollBar(0, 0, 0)
-	vv.scrollBar.ColorIdx = theme.ColViewerScrollbar
-	vv.scrollBar.SetOwner(vv)
-	vv.scrollBar.OnScroll = func(v int) {
+	vv.ScrollBar = vtui.NewScrollBar(0, 0, 0)
+	vv.ScrollBar.ColorIdx = theme.ColViewerScrollbar
+	vv.ScrollBar.SetOwner(vv)
+	vv.ScrollBar.OnScroll = func(v int) {
 		newOff := int64(v)
 		if vv.HexMode {
 			newOff &= ^int64(0xF)
@@ -128,14 +128,14 @@ func NewViewerView(ctx context.Context, v vfs.VFS, path string) (*ViewerView, er
 			// Optimization: during fast drag, don't FindLineStart every pixel
 			// unless we are close to the target or moving slowly.
 			// For now, simple snap.
-			newOff = vv.backend.FindLineStart(newOff)
+			newOff = vv.Backend.FindLineStart(newOff)
 		}
 		if newOff != vv.TopOffset {
 			vv.TopOffset = newOff
 			vtui.FrameManager.Redraw()
 		}
 	}
-	vv.scrollBar.OnStep = func(step int) {
+	vv.ScrollBar.OnStep = func(step int) {
 		// Used for arrows and track clicks: perform logical steps
 		switch step {
 		case -1:
@@ -150,14 +150,14 @@ func NewViewerView(ctx context.Context, v vfs.VFS, path string) (*ViewerView, er
 		vtui.FrameManager.Redraw()
 	}
 	vv.menuBar = vtui.NewMenuBar(nil)
-	vv.topBar = NewTopBar(
+	vv.TopBar = NewTopBar(
 		func() string {
-			base := displayFileTitle(vv.vfs, vv.path)
+			base := DisplayFileTitle(vv.VFS, vv.Path)
 			return " " + base
 		},
 		func() string {
 			percent := 0
-			size := vv.backend.Size()
+			size := vv.Backend.Size()
 			if size > 0 {
 				viewHeightBytes := int64(vv.Y2 - vv.Y1)
 				if vv.HexMode {
@@ -180,7 +180,7 @@ func NewViewerView(ctx context.Context, v vfs.VFS, path string) (*ViewerView, er
 			}
 			mode := i18n.Msg("Viewer.ModeText")
 			if vv.DecodeMode {
-				mode = disasmModeLabel(vv.disasmMode())
+				mode = DisasmModeLabel(vv.disasmMode())
 			} else if vv.HexMode {
 				mode = i18n.Msg("Viewer.ModeHex")
 			}
@@ -188,7 +188,7 @@ func NewViewerView(ctx context.Context, v vfs.VFS, path string) (*ViewerView, er
 			return fmt.Sprintf(" %s │ %s │ %d%%     ", cpName, mode, percent)
 		},
 	)
-	vv.topBar.SetVisible(true)
+	vv.TopBar.SetVisible(true)
 	vv.SetCanFocus(true)
 	vv.SetFocus(true)
 	vv.startTailWatch()
@@ -253,13 +253,13 @@ func (vv *ViewerView) stopTailWatch() {
 // the file follows it, and one parked further up stays exactly where the
 // reader left it and only gets an honest scrollbar and percentage.
 func (vv *ViewerView) refreshFromFile() {
-	if vv.backend == nil || vv.Busy {
+	if vv.Backend == nil || vv.Busy {
 		return
 	}
-	if !vv.backend.Refresh(context.Background()) {
+	if !vv.Backend.Refresh(context.Background()) {
 		return
 	}
-	if size := vv.backend.Size(); vv.TopOffset > size {
+	if size := vv.Backend.Size(); vv.TopOffset > size {
 		// The file was truncated or rotated away under the viewport, and the
 		// offset it was showing no longer exists.
 		vv.TopOffset = 0
@@ -269,16 +269,16 @@ func (vv *ViewerView) refreshFromFile() {
 	vtui.FrameManager.Redraw()
 }
 
-// reload rereads the file on demand. Unlike the poll it drops the window cache
+// Reload rereads the file on demand. Unlike the poll it drops the window cache
 // even when the length did not change, so a file rewritten in place -- same
 // size, different bytes -- also shows its new contents.
-func (vv *ViewerView) reload() {
-	if vv.backend == nil {
+func (vv *ViewerView) Reload() {
+	if vv.Backend == nil {
 		return
 	}
-	vv.backend.Refresh(context.Background())
-	vv.backend.DropCache()
-	if size := vv.backend.Size(); vv.TopOffset > size {
+	vv.Backend.Refresh(context.Background())
+	vv.Backend.DropCache()
+	if size := vv.Backend.Size(); vv.TopOffset > size {
 		vv.TopOffset = 0
 		vv.eofVisible = false
 	}
@@ -313,19 +313,19 @@ func viewerHeaderLooksBinary(header []byte, cpID int) bool {
 			decoded = converted
 		}
 	}
-	return looksBinary(decoded)
+	return LooksBinary(decoded)
 }
 
 func (vv *ViewerView) SetPosition(x1, y1, x2, y2 int) {
 	vv.ScreenObject.SetPosition(x1, y1, x2, y2)
-	if vv.topBar != nil {
-		vv.topBar.SetPosition(x1, y1, x2, y1)
+	if vv.TopBar != nil {
+		vv.TopBar.SetPosition(x1, y1, x2, y1)
 	}
 	if vv.menuBar != nil {
 		vv.menuBar.SetPosition(x1, y1, x2, y1)
 	}
-	if vv.scrollBar != nil {
-		vv.scrollBar.SetPosition(x2, y1+1, x2, y2)
+	if vv.ScrollBar != nil {
+		vv.ScrollBar.SetPosition(x2, y1+1, x2, y2)
 	}
 }
 
@@ -333,7 +333,9 @@ func (vv *ViewerView) SetPosition(x1, y1, x2, y2 int) {
 // the action registry on every call, so shortcuts and toggle states are
 // always current.
 func (vv *ViewerView) GetMenuBar() *vtui.MenuBar {
-	vv.menuBar.Items = BuildMenuBarItems("Viewer")
+	if App != nil {
+		vv.menuBar.Items = App.MenuBarItems("Viewer")
+	}
 	return vv.menuBar
 }
 
@@ -342,15 +344,7 @@ func (vv *ViewerView) HandleCommand(cmd int, args any) bool {
 		vv.Close()
 		return true
 	}
-	if cmd == CmSwitchToEditor {
-		actionSwitchViewerToEditor(vv)
-		return true
-	}
-	if cmd == CmSearch {
-		actionViewerSearch(vv)
-		return true
-	}
-	if handleWorkspaceForkCommand(cmd, args) {
+	if App != nil && App.HandleCommand(vv, cmd, args) {
 		return true
 	}
 	return vv.BaseFrame.HandleCommand(cmd, args)
@@ -358,8 +352,8 @@ func (vv *ViewerView) HandleCommand(cmd int, args any) bool {
 
 func (vv *ViewerView) Show(scr *vtui.ScreenBuf) {
 	vv.ScreenObject.Show(scr)
-	if vv.topBar != nil {
-		vv.topBar.Show(scr)
+	if vv.TopBar != nil {
+		vv.TopBar.Show(scr)
 	}
 	vv.DisplayObject(scr)
 }
@@ -370,7 +364,7 @@ func (vv *ViewerView) DisplayObject(scr *vtui.ScreenBuf) {
 	}
 
 	// AUTO-SCROLL LOGIC (tail -f)
-	currentSize := vv.backend.Size()
+	currentSize := vv.Backend.Size()
 	if vv.eofVisible && currentSize > vv.lastKnownSize && !vv.Busy {
 		vv.lastKnownSize = currentSize
 		vv.jumpToEnd()
@@ -379,7 +373,7 @@ func (vv *ViewerView) DisplayObject(scr *vtui.ScreenBuf) {
 	vv.lastKnownSize = currentSize
 
 	width := vv.X2 - vv.X1 + 1
-	if vv.scrollBar != nil {
+	if vv.ScrollBar != nil {
 		width-- // Не рисуем текст поверх скроллбара
 	}
 	height := vv.Y2 - vv.Y1 + 1
@@ -405,20 +399,20 @@ func (vv *ViewerView) DisplayObject(scr *vtui.ScreenBuf) {
 		}
 	}
 
-	if vv.scrollBar != nil && vv.backend.Size() > 0 {
-		maxOffset := int(vv.backend.Size())
+	if vv.ScrollBar != nil && vv.Backend.Size() > 0 {
+		maxOffset := int(vv.Backend.Size())
 		if vv.HexMode {
 			contentHeight := vv.Y2 - vv.Y1
 			if contentHeight > 0 {
-				lastLineOffset := int((vv.backend.Size() - 1) &^ 0xF)
+				lastLineOffset := int((vv.Backend.Size() - 1) &^ 0xF)
 				maxOffset = lastLineOffset - (contentHeight-1)*16
 				if maxOffset < 0 {
 					maxOffset = 0
 				}
 			}
 		}
-		vv.scrollBar.SetParams(int(vv.TopOffset), 0, maxOffset)
-		vv.scrollBar.Show(scr)
+		vv.ScrollBar.SetParams(int(vv.TopOffset), 0, maxOffset)
+		vv.ScrollBar.Show(scr)
 	}
 }
 
@@ -430,12 +424,12 @@ func (vv *ViewerView) renderHex(scr *vtui.ScreenBuf, width, contentHeight int) {
 	//lastRowWasEOF := false
 
 	for y := 0; y < contentHeight; y++ {
-		if currOffset >= vv.backend.Size() {
+		if currOffset >= vv.Backend.Size() {
 			//lastRowWasEOF = true
 			break
 		}
 
-		data, err := vv.backend.ReadAt(currOffset, 16)
+		data, err := vv.Backend.ReadAt(currOffset, 16)
 		if err == piecetable.ErrLoading {
 			scr.Write(vv.X1, vv.Y1+1+y, vtui.StringToCharInfo(" [ Loading... ] ", attr))
 			break
@@ -475,7 +469,7 @@ func (vv *ViewerView) renderHex(scr *vtui.ScreenBuf, width, contentHeight int) {
 
 		currOffset += 16
 	}
-	vv.eofVisible = (currOffset >= vv.backend.Size())
+	vv.eofVisible = (currOffset >= vv.Backend.Size())
 }
 func (vv *ViewerView) renderDecode(scr *vtui.ScreenBuf, width, contentHeight int) {
 	attr := vtui.Palette[theme.ColViewerText]
@@ -483,11 +477,11 @@ func (vv *ViewerView) renderDecode(scr *vtui.ScreenBuf, width, contentHeight int
 	currOffset := vv.TopOffset
 
 	for y := 0; y < contentHeight; y++ {
-		if currOffset >= vv.backend.Size() {
+		if currOffset >= vv.Backend.Size() {
 			break
 		}
 
-		data, err := vv.backend.ReadAt(currOffset, disasmMaxInstLen)
+		data, err := vv.Backend.ReadAt(currOffset, DisasmMaxInstLen)
 		if err == piecetable.ErrLoading {
 			scr.Write(vv.X1, vv.Y1+1+y, vtui.StringToCharInfo(" [ Loading... ] ", attr))
 			break
@@ -497,7 +491,7 @@ func (vv *ViewerView) renderDecode(scr *vtui.ScreenBuf, width, contentHeight int
 			break
 		}
 
-		asmStr, instLen := disasmInstruction(data, vv.disasmMode(), currOffset)
+		asmStr, instLen := DisasmInstruction(data, vv.disasmMode(), currOffset)
 
 		line := fmt.Sprintf("%010X: ", currOffset)
 		scr.Write(vv.X1, vv.Y1+1+y, vtui.StringToCharInfo(line, offAttr))
@@ -511,24 +505,24 @@ func (vv *ViewerView) renderDecode(scr *vtui.ScreenBuf, width, contentHeight int
 
 		currOffset += int64(instLen)
 	}
-	vv.eofVisible = (currOffset >= vv.backend.Size())
+	vv.eofVisible = (currOffset >= vv.Backend.Size())
 }
 
 // disasmMode returns the processor mode the decode view uses. A view built
 // without a header (NewViewerView reads one) decides it here, from the
 // file's first bytes, the first time an instruction is needed.
 func (vv *ViewerView) disasmMode() int {
-	if !disasmModeValid(vv.DisasmMode) {
-		header, _ := vv.backend.ReadAt(0, 1024)
-		vv.DisasmMode = detectX86Mode(header)
+	if !DisasmModeValid(vv.DisasmMode) {
+		header, _ := vv.Backend.ReadAt(0, 1024)
+		vv.DisasmMode = DetectX86Mode(header)
 	}
 	return vv.DisasmMode
 }
 
-// cycleDisasmMode switches the decode view to the next processor mode in
+// CycleDisasmMode switches the decode view to the next processor mode in
 // the 64 -> 32 -> 16 -> 64 cycle and returns the mode now in effect.
-func (vv *ViewerView) cycleDisasmMode() int {
-	vv.DisasmMode = nextDisasmMode(vv.disasmMode())
+func (vv *ViewerView) CycleDisasmMode() int {
+	vv.DisasmMode = NextDisasmMode(vv.disasmMode())
 	return vv.DisasmMode
 }
 
@@ -536,8 +530,8 @@ func (vv *ViewerView) cycleDisasmMode() int {
 // current mode: the distance to the next line of the decode view. It is
 // zero while the bytes at off are still being fetched.
 func (vv *ViewerView) decodeStep(off int64) int64 {
-	data, _ := vv.backend.ReadAt(off, disasmMaxInstLen)
-	return int64(disasmInstLen(data, vv.disasmMode()))
+	data, _ := vv.Backend.ReadAt(off, DisasmMaxInstLen)
+	return int64(DisasmInstLen(data, vv.disasmMode()))
 }
 
 func (vv *ViewerView) renderText(scr *vtui.ScreenBuf, width, contentHeight int) {
@@ -550,7 +544,7 @@ func (vv *ViewerView) renderText(scr *vtui.ScreenBuf, width, contentHeight int) 
 
 	for y := 0; y < contentHeight; y++ {
 		vv.lineOffsets = append(vv.lineOffsets, currOffset)
-		if currOffset >= vv.backend.Size() {
+		if currOffset >= vv.Backend.Size() {
 			vv.visibleURLRows = append(vv.visibleURLRows, nil)
 			//lastRowWasEOF = true
 			break
@@ -558,7 +552,7 @@ func (vv *ViewerView) renderText(scr *vtui.ScreenBuf, width, contentHeight int) 
 
 		// Read a generous chunk to handle wrapping. The row helper keeps
 		// combining sequences and script conjuncts atomic.
-		data, err := vv.backend.ReadAt(currOffset, width*4)
+		data, err := vv.Backend.ReadAt(currOffset, width*4)
 		if err == piecetable.ErrLoading {
 			vv.visibleURLRows = append(vv.visibleURLRows, nil)
 			scr.Write(vv.X1, vv.Y1+1+y, vtui.StringToCharInfo(" [ Loading... ] ", attr))
@@ -583,13 +577,13 @@ func (vv *ViewerView) renderText(scr *vtui.ScreenBuf, width, contentHeight int) 
 		// Build []vtui.CharInfo for the line
 		var cellByteOffsets []int
 		vv.rowCells, cellByteOffsets = viewerTextCells(string(data[:row.textLen]), attr, tabSize, width)
-		if vv.lastSearchFound && vv.lastSearch != "" {
-			matchStart := vv.lastSearchOffset
-			matchLen := vv.lastSearchMatchLen
+		if vv.LastSearchFound && vv.LastSearch != "" {
+			matchStart := vv.LastSearchOffset
+			matchLen := vv.LastSearchMatchLen
 			// Keep manually constructed ViewerViews and old sessions safe: a
 			// literal match used to derive its end from the pattern itself.
 			if matchLen <= 0 {
-				matchLen = int64(len(vv.lastSearch))
+				matchLen = int64(len(vv.LastSearch))
 			}
 			matchEnd := matchStart + matchLen
 			rowStart := currOffset
@@ -607,7 +601,7 @@ func (vv *ViewerView) renderText(scr *vtui.ScreenBuf, width, contentHeight int) 
 		}
 
 		rowLinks := urlCellRanges(string(data[:row.textLen]), cellByteOffsets)
-		applyURLHoverAttr(vv.rowCells, rowLinks, vv.hoverURL)
+		ApplyURLHoverAttr(vv.rowCells, rowLinks, vv.hoverURL)
 		vv.visibleURLRows = append(vv.visibleURLRows, rowLinks)
 		scr.Write(vv.X1, vv.Y1+1+y, vv.rowCells)
 		currOffset += int64(row.lineLen)
@@ -616,7 +610,7 @@ func (vv *ViewerView) renderText(scr *vtui.ScreenBuf, width, contentHeight int) 
 			// In no-wrap mode, we must consume until the actual newline
 			tempOff := currOffset
 			for {
-				b, err := vv.backend.ReadAt(tempOff, 1024)
+				b, err := vv.Backend.ReadAt(tempOff, 1024)
 				if err != nil || len(b) == 0 {
 					break
 				}
@@ -636,7 +630,7 @@ func (vv *ViewerView) renderText(scr *vtui.ScreenBuf, width, contentHeight int) 
 			currOffset = tempOff
 		}
 	}
-	vv.eofVisible = (currOffset >= vv.backend.Size())
+	vv.eofVisible = (currOffset >= vv.Backend.Size())
 }
 
 func (vv *ViewerView) ProcessKey(e *vtinput.InputEvent) bool {
@@ -666,7 +660,7 @@ func (vv *ViewerView) ProcessKey(e *vtinput.InputEvent) bool {
 		if vv.DecodeMode {
 			vv.TopOffset += vv.decodeStep(vv.TopOffset)
 		} else if vv.HexMode {
-			if vv.TopOffset+16 < vv.backend.Size() {
+			if vv.TopOffset+16 < vv.Backend.Size() {
 				vv.TopOffset += 16
 			}
 		} else if len(vv.lineOffsets) > 1 {
@@ -675,10 +669,10 @@ func (vv *ViewerView) ProcessKey(e *vtinput.InputEvent) bool {
 			// Fail-safe: if lineOffsets not populated (e.g. before first render),
 			// try to proactively find the next line start from current offset.
 			width := vv.X2 - vv.X1 + 1
-			if vv.scrollBar != nil {
+			if vv.ScrollBar != nil {
 				width--
 			}
-			data, err := vv.backend.ReadAt(vv.TopOffset, width*4)
+			data, err := vv.Backend.ReadAt(vv.TopOffset, width*4)
 			if err == nil && len(data) > 0 {
 				tabSize := 8
 				if config.App.EditorTabSize > 0 {
@@ -698,7 +692,7 @@ func (vv *ViewerView) ProcessKey(e *vtinput.InputEvent) bool {
 		} else if vv.HexMode {
 			vv.TopOffset -= step
 		} else {
-			vv.TopOffset = vv.backend.FindLineStart(vv.TopOffset - 1)
+			vv.TopOffset = vv.Backend.FindLineStart(vv.TopOffset - 1)
 		}
 		if vv.TopOffset < 0 {
 			vv.TopOffset = 0
@@ -710,13 +704,13 @@ func (vv *ViewerView) ProcessKey(e *vtinput.InputEvent) bool {
 			for i := 0; i < int(contentHeight); i++ {
 				vv.TopOffset += vv.decodeStep(vv.TopOffset)
 			}
-			if vv.TopOffset >= vv.backend.Size() {
-				vv.TopOffset = vv.backend.Size() - 1
+			if vv.TopOffset >= vv.Backend.Size() {
+				vv.TopOffset = vv.Backend.Size() - 1
 			}
 		} else if vv.HexMode {
 			vv.TopOffset += 16 * contentHeight
-			if vv.TopOffset >= vv.backend.Size() {
-				vv.TopOffset = (vv.backend.Size() - 1) &^ 0xF
+			if vv.TopOffset >= vv.Backend.Size() {
+				vv.TopOffset = (vv.Backend.Size() - 1) &^ 0xF
 				if vv.TopOffset < 0 {
 					vv.TopOffset = 0
 				}
@@ -733,7 +727,7 @@ func (vv *ViewerView) ProcessKey(e *vtinput.InputEvent) bool {
 			vv.TopOffset -= step * contentHeight
 		} else {
 			for i := 0; i < int(contentHeight); i++ {
-				vv.TopOffset = vv.backend.FindLineStart(vv.TopOffset - 1)
+				vv.TopOffset = vv.Backend.FindLineStart(vv.TopOffset - 1)
 			}
 		}
 		if vv.TopOffset < 0 {
@@ -751,7 +745,7 @@ func (vv *ViewerView) ProcessKey(e *vtinput.InputEvent) bool {
 
 	case vtinput.VK_F8:
 		if alt {
-			vv.askGoto()
+			vv.AskGoto()
 			return true
 		}
 	}
@@ -760,17 +754,17 @@ func (vv *ViewerView) ProcessKey(e *vtinput.InputEvent) bool {
 	// InjectEvents, which skips FrameManager.EventFilter and therefore the
 	// hotkey manager. Route them through the same lookup so clicking F2/F5/
 	// F7/… on the bottom bar triggers the configured Viewer action.
-	if macroLookupHotkey(macro.MacroMgr, e) {
+	if App != nil && App.LookupHotkey(e) {
 		return true
 	}
 
 	return false
 }
 
-// askGoto prompts for a position. In text mode that is a line number, which
+// AskGoto prompts for a position. In text mode that is a line number, which
 // only means something once someone has counted the newlines; in hex mode it
 // is a byte offset, which needs no counting at all.
-func (vv *ViewerView) askGoto() {
+func (vv *ViewerView) AskGoto() {
 	if vv.HexMode || vv.DecodeMode {
 		title, prompt := dialog.GotoText("Viewer.GotoOffsetTitle", " Go to offset "), dialog.GotoText("Viewer.GotoOffsetPrompt", "Byte offset:")
 		dialog.ShowGotoOffset(vv, title, prompt, vv.TopOffset, func(offset int64) {
@@ -790,7 +784,7 @@ func (vv *ViewerView) askGoto() {
 
 func (vv *ViewerView) gotoPosition(n int64) {
 	if vv.HexMode || vv.DecodeMode {
-		size := vv.backend.Size()
+		size := vv.Backend.Size()
 		if size == 0 {
 			n = 0
 		}
@@ -814,7 +808,7 @@ func (vv *ViewerView) gotoPosition(n int64) {
 	// thread and the user can cancel it.
 	vv.Busy = true
 	vtui.RunAsync(func(ctx *vtui.TaskContext) {
-		off, ok := vv.backend.LineStart(ctx.Context, n)
+		off, ok := vv.Backend.LineStart(ctx.Context, n)
 		ctx.RunOnUI(func() {
 			vv.Busy = false
 			if !ok {
@@ -836,16 +830,16 @@ func (vv *ViewerView) jumpToEnd() {
 	// way to catch up with a growing log even where the automatic follow does
 	// not apply -- after scrolling up, say, or on a file system whose handles
 	// cannot re-measure themselves.
-	if vv.backend != nil {
-		vv.backend.Refresh(context.Background())
+	if vv.Backend != nil {
+		vv.Backend.Refresh(context.Background())
 	}
 
 	contentHeight := int64(vv.Y2 - vv.Y1)
 	if vv.HexMode {
-		if vv.backend.Size() == 0 {
+		if vv.Backend.Size() == 0 {
 			vv.TopOffset = 0
 		} else {
-			lastLineOffset := (vv.backend.Size() - 1) &^ 0xF
+			lastLineOffset := (vv.Backend.Size() - 1) &^ 0xF
 			vv.TopOffset = lastLineOffset - (contentHeight-1)*16
 			if vv.TopOffset < 0 {
 				vv.TopOffset = 0
@@ -854,7 +848,7 @@ func (vv *ViewerView) jumpToEnd() {
 		return
 	}
 
-	if vv.backend.Size() == 0 {
+	if vv.Backend.Size() == 0 {
 		vv.TopOffset = 0
 		return
 	}
@@ -863,7 +857,7 @@ func (vv *ViewerView) jumpToEnd() {
 	vtui.RunAsync(func(ctx *vtui.TaskContext) {
 		defer ctx.RunOnUI(func() { vv.Busy = false })
 		width := vv.X2 - vv.X1 + 1
-		if vv.scrollBar != nil {
+		if vv.ScrollBar != nil {
 			width--
 		}
 
@@ -882,7 +876,7 @@ func (vv *ViewerView) jumpToEnd() {
 		if chunkSize < tailWindow {
 			chunkSize = tailWindow
 		}
-		startOff := vv.backend.Size() - chunkSize
+		startOff := vv.Backend.Size() - chunkSize
 		if startOff < 0 {
 			startOff = 0
 		}
@@ -891,7 +885,7 @@ func (vv *ViewerView) jumpToEnd() {
 			if ctx.Err() != nil {
 				return
 			}
-			_, err := vv.backend.ReadAt(startOff, 1024)
+			_, err := vv.Backend.ReadAt(startOff, 1024)
 			if err != piecetable.ErrLoading {
 				break
 			}
@@ -904,11 +898,11 @@ func (vv *ViewerView) jumpToEnd() {
 		if config.App.EditorTabSize > 0 {
 			tabSize = config.App.EditorTabSize
 		}
-		for currOff < vv.backend.Size() {
+		for currOff < vv.Backend.Size() {
 			if ctx.Err() != nil {
 				return
 			}
-			data, err := vv.backend.ReadAt(currOff, 64*1024)
+			data, err := vv.Backend.ReadAt(currOff, 64*1024)
 			if err == piecetable.ErrLoading {
 				time.Sleep(20 * time.Millisecond)
 				continue
@@ -954,7 +948,7 @@ func (vv *ViewerView) ReloadWithCodepage(cpID int) {
 		return
 	}
 
-	f, err := vv.vfs.Open(context.Background(), vv.path)
+	f, err := vv.VFS.Open(context.Background(), vv.Path)
 	if err != nil {
 		return
 	}
@@ -966,7 +960,7 @@ func (vv *ViewerView) ReloadWithCodepage(cpID int) {
 	}
 
 	hexMode := vv.HexMode
-	if vv.hexAuto {
+	if vv.HexAuto {
 		// The hex view was the binary check's guess, so the codepage the
 		// user just picked gets to overturn it. Without this, a file the
 		// check misread -- UTF-16 with no byte-order mark, say -- had no way
@@ -981,27 +975,27 @@ func (vv *ViewerView) ReloadWithCodepage(cpID int) {
 		// those bytes with a decoded text stream.
 		backendCP = 65001
 	}
-	dataOffset := int64(0)
+	DataOffset := int64(0)
 	if backendCP == 65001 && !hexMode &&
 		!viewerHeaderLooksBinary(header, backendCP) && vfs.HasUTF8BOM(header) {
-		dataOffset = vfs.UTF8BOMSize
+		DataOffset = vfs.UTF8BOMSize
 	}
-	backend, err := newViewerBackend(context.Background(), vv.vfs, vv.path, f, backendCP, dataOffset)
+	backend, err := newViewerBackend(context.Background(), vv.VFS, vv.Path, f, backendCP, DataOffset)
 	if err != nil {
 		_ = f.Close()
 		return
 	}
 
-	oldBackend := vv.backend
+	oldBackend := vv.Backend
 	oldOffset := vv.TopOffset
 	oldSize := int64(0)
 	if oldBackend != nil {
 		oldSize = oldBackend.Size()
 	}
-	vv.backend = backend
+	vv.Backend = backend
 	vv.Codepage = cpID
 	vv.HexMode = hexMode
-	newSize := vv.backend.Size()
+	newSize := vv.Backend.Size()
 	if newSize <= 0 {
 		vv.TopOffset = 0
 	} else {
@@ -1021,7 +1015,7 @@ func (vv *ViewerView) ReloadWithCodepage(cpID int) {
 		if vv.HexMode {
 			vv.TopOffset = oldOffset &^ 0xF
 		} else {
-			vv.TopOffset = vv.backend.FindLineStart(oldOffset)
+			vv.TopOffset = vv.Backend.FindLineStart(oldOffset)
 		}
 	}
 
@@ -1039,7 +1033,7 @@ func (vv *ViewerView) ReloadWithCodepage(cpID int) {
 // followed by an F8 switch. Non-UTF-8 files are materialized into the same
 // memory-backed stream that the old viewer used, while UTF-8 keeps the lazy
 // windowed backend for large files and remote VFSes.
-func newViewerBackend(ctx context.Context, owner vfs.VFS, path string, f vfs.ReadAtCloser, cpID int, dataOffset int64) (*ViewerBackend, error) {
+func newViewerBackend(ctx context.Context, owner vfs.VFS, path string, f vfs.ReadAtCloser, cpID int, DataOffset int64) (*ViewerBackend, error) {
 	if cpID != 65001 {
 		size := f.Size()
 		maxInt := int64(int(^uint(0) >> 1))
@@ -1068,7 +1062,7 @@ func newViewerBackend(ctx context.Context, owner vfs.VFS, path string, f vfs.Rea
 		}, nil
 	}
 
-	logicalSize := f.Size() - dataOffset
+	logicalSize := f.Size() - DataOffset
 	if logicalSize < 0 {
 		logicalSize = 0
 	}
@@ -1079,7 +1073,7 @@ func newViewerBackend(ctx context.Context, owner vfs.VFS, path string, f vfs.Rea
 		path:         path,
 		owner:        owner,
 		codepage:     cpID,
-		dataOffset:   dataOffset,
+		DataOffset:   DataOffset,
 		totalLines:   -1,
 		totalForSize: -1,
 		ctx:          bCtx,
@@ -1092,7 +1086,7 @@ func newViewerBackend(ctx context.Context, owner vfs.VFS, path string, f vfs.Rea
 }
 
 func (vv *ViewerView) ReloadWithAutoDetect() {
-	f, err := vv.vfs.Open(context.Background(), vv.path)
+	f, err := vv.VFS.Open(context.Background(), vv.Path)
 	if err != nil {
 		return
 	}
@@ -1106,12 +1100,12 @@ func (vv *ViewerView) ReloadWithAutoDetect() {
 	// The user asked for this file to be detected, so detect it -- the
 	// global switch decides what happens at open, not here (#875).
 	cpID := vfs.DetectEncoding(header, true, config.App.ViewerDefaultCodePage)
-	saveCodepageOverride(vv.vfs, vv.path, 0)
+	fileops.SaveCodepageOverride(vv.VFS, vv.Path, 0)
 	vv.ReloadWithCodepage(cpID)
 }
 
-func (vv *ViewerView) showCodepageDialog() {
-	_, overridden := rememberedCodepage(vv.vfs, vv.path)
+func (vv *ViewerView) ShowCodepageDialog() {
+	_, overridden := fileops.RememberedCodepage(vv.VFS, vv.Path)
 	items, currIdx := vfs.BuildCodepageMenuItems(vv.Codepage, !overridden)
 	menu := dialog.NewCodepageMenu(i18n.Msg("Codepage.Title"), items)
 
@@ -1128,7 +1122,7 @@ func (vv *ViewerView) showCodepageDialog() {
 				if cpID == vfs.CodepageAutoDetect {
 					vv.ReloadWithAutoDetect()
 				} else {
-					saveCodepageOverride(vv.vfs, vv.path, cpID)
+					fileops.SaveCodepageOverride(vv.VFS, vv.Path, cpID)
 					vv.ReloadWithCodepage(cpID)
 				}
 			}
@@ -1146,14 +1140,14 @@ func (vv *ViewerView) ProcessMouse(e *vtinput.InputEvent) bool {
 		if changed := vv.updateURLHover(int(e.MouseX), int(e.MouseY)); changed {
 			vtui.FrameManager.Redraw()
 		}
-		if ctrlMouseClick(e) {
+		if CtrlMouseClick(e) {
 			if link, ok := vv.urlLinkAtMouse(int(e.MouseX), int(e.MouseY)); ok {
-				openExternalURLAsync(link.URL)
+				OpenExternalURLAsync(link.URL)
 				return true
 			}
 		}
 	}
-	if vv.scrollBar != nil && vv.scrollBar.ProcessMouse(e) {
+	if vv.ScrollBar != nil && vv.ScrollBar.ProcessMouse(e) {
 		return true
 	}
 	if e.WheelDirection != 0 {
@@ -1172,13 +1166,13 @@ func (vv *ViewerView) ProcessMouse(e *vtinput.InputEvent) bool {
 	return false
 }
 
-func (vv *ViewerView) urlLinkAtMouse(mx, my int) (urlCellRange, bool) {
+func (vv *ViewerView) urlLinkAtMouse(mx, my int) (UrlCellRange, bool) {
 	if vv.HexMode || vv.DecodeMode || mx < vv.X1 || mx > vv.X2 || my < vv.Y1+1 || my > vv.Y2 {
-		return urlCellRange{}, false
+		return UrlCellRange{}, false
 	}
 	row := my - (vv.Y1 + 1)
 	if row < 0 || row >= len(vv.visibleURLRows) {
-		return urlCellRange{}, false
+		return UrlCellRange{}, false
 	}
 	col := mx - vv.X1
 	for _, link := range vv.visibleURLRows[row] {
@@ -1186,7 +1180,7 @@ func (vv *ViewerView) urlLinkAtMouse(mx, my int) (urlCellRange, bool) {
 			return link, true
 		}
 	}
-	return urlCellRange{}, false
+	return UrlCellRange{}, false
 }
 
 func (vv *ViewerView) updateURLHover(mx, my int) bool {
@@ -1206,17 +1200,18 @@ func (vv *ViewerView) ResizeConsole(w, h int) {
 
 func (vv *ViewerView) Close() {
 	vv.stopTailWatch()
-	if GlobalFileState != nil && vv.path != "" {
-		GlobalFileState.SaveViewerStateAsync(FileStateKey(vv.vfs, vv.path), vv.TopOffset, vv.WrapMode, vv.HexMode)
+	if fileops.GlobalFileState != nil && vv.Path != "" {
+		fileops.GlobalFileState.SaveViewerStateAsync(fileops.FileStateKey(vv.VFS, vv.Path), vv.TopOffset, vv.WrapMode, vv.HexMode)
 	}
 	var size int64
-	if vv.backend != nil {
-		size = vv.backend.Size()
-		vv.backend.Close()
+	if vv.Backend != nil {
+		size = vv.Backend.Size()
+		// Closing on the way out; a failure here has nothing left to report to.
+		_ = vv.Backend.Close()
 	}
 	vv.lineOffsets = nil
 	vv.rowCells = nil
-	vv.scrollBar = nil
+	vv.ScrollBar = nil
 	vv.BaseFrame.Close()
 	if vv.OnClose != nil {
 		vv.OnClose()
@@ -1237,19 +1232,20 @@ func (vv *ViewerView) GetKeyLabels() *vtui.KeySet {
 			"", "", "", "", "", "", "", i18n.Msg("KeyBar.ViewerAltF8"), "", "",
 		},
 	}
-	res := KeyBarLabelsForArea("Viewer", fallbacks)
-	if hm := GlobalHotkeysMgr; hm != nil {
-		if hm.GetAction("Viewer", "F8") == "Viewer.CodepageNext" {
-			res.Normal[7] = nextCpName
-		}
+	if App == nil {
+		return fallbacks
+	}
+	res := App.KeyBarLabels("Viewer", fallbacks)
+	if App.ActionForKey("Viewer", "F8") == "Viewer.CodepageNext" {
+		res.Normal[7] = nextCpName
 	}
 	return res
 }
 
 func (vv *ViewerView) GetType() vtui.FrameType { return vtui.TypeUser + 3 }
 func (vv *ViewerView) GetTitle() string {
-	if vv.path != "" {
-		return "View: " + filepath.Base(vv.path)
+	if vv.Path != "" {
+		return "View: " + filepath.Base(vv.Path)
 	}
 	return "Viewer"
 }
@@ -1258,8 +1254,8 @@ func (vv *ViewerView) GetTitle() string {
 // tab bar while leaving GetTitle available for contexts that need the fuller
 // textual description.
 func (vv *ViewerView) GetWorkspaceTabTitle() string {
-	if vv.path != "" {
-		return filepath.Base(vv.path)
+	if vv.Path != "" {
+		return filepath.Base(vv.Path)
 	}
 	return "Viewer"
 }

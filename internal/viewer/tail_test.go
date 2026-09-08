@@ -1,4 +1,4 @@
-package main
+package viewer
 
 import (
 	"context"
@@ -184,11 +184,11 @@ func TestViewerFollowsGrowingFileFromEnd(t *testing.T) {
 		pumpTasks(vv, scr, 20*time.Millisecond)
 	}
 
-	sizeAtEnd := vv.backend.Size()
+	sizeAtEnd := vv.Backend.Size()
 	appendTo(t, path, "line three\n")
 
 	deadline = time.Now().Add(3 * time.Second)
-	for vv.backend.Size() == sizeAtEnd {
+	for vv.Backend.Size() == sizeAtEnd {
 		if time.Now().After(deadline) {
 			t.Fatal("the viewer never noticed the file grew")
 		}
@@ -200,7 +200,7 @@ func TestViewerFollowsGrowingFileFromEnd(t *testing.T) {
 	deadline = time.Now().Add(3 * time.Second)
 	for !screenContains(scr, "line three") {
 		if time.Now().After(deadline) {
-			t.Fatalf("appended line never reached the screen; TopOffset=%d size=%d", vv.TopOffset, vv.backend.Size())
+			t.Fatalf("appended line never reached the screen; TopOffset=%d size=%d", vv.TopOffset, vv.Backend.Size())
 		}
 		pumpTasks(vv, scr, 20*time.Millisecond)
 	}

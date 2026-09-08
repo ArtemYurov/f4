@@ -175,6 +175,15 @@ and `TestMain` — the waves would otherwise strand.
     unbuilt. Note also that a commit touching only `.md` and `docs/` skips CI
     entirely on a PR (`paths-ignore`), which is why the documentation phases
     cannot be checked this way at all.
+  - *Read the previous run before starting the next phase.* Launching does not
+    block — that half was written down — but a run nobody comes back to is a
+    check that was not performed. Run `34204074671` sat red for six hours with
+    the answer available ten minutes in, and it was red for exactly the reason
+    the local sweep could not see: a `//go:build linux` test naming a constant a
+    wave had moved. First thing at every phase boundary, before anything else:
+    ```
+    gh run list --repo ArtemYurov/f4 --workflow=build.yml --limit 3
+    ```
   - *Not after every commit in CI.* One run is ~30 jobs against 20 free-tier
     runners, and `concurrency` cancels the in-flight run on the same ref
     (`build.yml:29-31`), so consecutive pushes would queue up and kill each
@@ -366,7 +375,7 @@ titles, not the ordering.
 - [x] Task 28: Extract `internal/macro` ([details](phase-06-hosts-and-services.md#task-28-extract-internalmacro)) (depends on 27)
 
 ### Phase 7: Viewer, Terminal and Media
-- [ ] Task 29: Extract `internal/viewer`, removing the `editor ↔ viewer` cycle ([details](phase-07-view-and-terminal.md#task-29-extract-internalviewer)) (depends on 28)
+- [x] Task 29: Extract `internal/viewer`, removing the `editor ↔ viewer` cycle ([details](phase-07-view-and-terminal.md#task-29-extract-internalviewer)) (depends on 28)
 - [ ] Task 30: Extract `internal/term`, including eleven misfiled files ([details](phase-07-view-and-terminal.md#task-30-extract-internalterm)) (depends on 29)
 - [ ] Task 31: Extract `internal/media` ([details](phase-07-view-and-terminal.md#task-31-extract-internalmedia)) (depends on 30)
 

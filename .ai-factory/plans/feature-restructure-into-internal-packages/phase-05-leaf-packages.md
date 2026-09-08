@@ -93,9 +93,12 @@ each wave phase file so a task can be implemented from one file.
      `"CommandLine"`, `"CommandLine.Prefix"` and three more are colour slot
      names in a table, not the type. A score above zero is a reason to open the
      file, not a verdict — in either direction.
-   - **Locals shadowing the package.** 61 loops read `for _, action := range …`.
-     Rename the local inside the affected function; renaming the package
-     qualifier instead is how a wave loses a call it meant to keep.
+   - **Locals shadowing the package.** 61 loops read `for _, action := range …`,
+     and a plain assignment does the same thing while looking far more innocent:
+     `macro := engine.Find(…)` turned `macro.Description` into `Description` in
+     two of Task 28's test files. Rename the local inside the affected function;
+     renaming the package qualifier instead is how a wave loses a call it meant
+     to keep.
 
    - **A GOOS or GOARCH name at the end of a new filename.** Go reads
      `transport_wasm.go` as constrained to `GOARCH=wasm`: the package still

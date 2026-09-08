@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtinput"
@@ -13,24 +14,24 @@ import (
 
 // newWrapMemoryStore installs a file-state provider writing into a temporary
 // directory and returns it, so a test can read back what the editor recorded.
-func newWrapMemoryStore(t *testing.T) *F4FileStateProvider {
+func newWrapMemoryStore(t *testing.T) *fileops.F4FileStateProvider {
 	t.Helper()
-	fs := &F4FileStateProvider{
-		path:  filepath.Join(t.TempDir(), "file_states.json"),
+	fs := &fileops.F4FileStateProvider{
+		Path:  filepath.Join(t.TempDir(), "file_states.json"),
 		Limit: 10,
-		Data:  make(map[string]*FileState),
+		Data:  make(map[string]*fileops.FileState),
 	}
-	old := GlobalFileState
-	GlobalFileState = fs
-	t.Cleanup(func() { GlobalFileState = old })
+	old := fileops.GlobalFileState
+	fileops.GlobalFileState = fs
+	t.Cleanup(func() { fileops.GlobalFileState = old })
 	return fs
 }
 
 func TestF4FileStateProvider_SaveEditorWrapKeepsPosition(t *testing.T) {
-	fs := &F4FileStateProvider{
-		path:  filepath.Join(t.TempDir(), "file_states.json"),
+	fs := &fileops.F4FileStateProvider{
+		Path:  filepath.Join(t.TempDir(), "file_states.json"),
 		Limit: 10,
-		Data:  make(map[string]*FileState),
+		Data:  make(map[string]*fileops.FileState),
 	}
 
 	fs.SaveEditorState("main.go", 42, 7, 40, 3, false)
@@ -70,7 +71,7 @@ func TestEditorView_WordWrapToggleIsRemembered(t *testing.T) {
 	}
 	fs.Flush()
 
-	state := fs.GetState(FileStateKey(nil, "wrapped.txt"))
+	state := fs.GetState(fileops.FileStateKey(nil, "wrapped.txt"))
 	if state == nil || !state.EditorWrap {
 		t.Fatal("word wrap turned on with F3 was not remembered for the file")
 	}
@@ -85,7 +86,7 @@ func TestEditorView_WordWrapToggleIsRemembered(t *testing.T) {
 	}
 	fs.Flush()
 
-	if state = fs.GetState(FileStateKey(nil, "wrapped.txt")); state == nil || state.EditorWrap {
+	if state = fs.GetState(fileops.FileStateKey(nil, "wrapped.txt")); state == nil || state.EditorWrap {
 		t.Fatal("word wrap turned off again was not remembered for the file")
 	}
 }
@@ -112,7 +113,7 @@ func TestEditorView_UnsafeWordWrapKeepsRememberedChoice(t *testing.T) {
 	ev.Close()
 	fs.Flush()
 
-	state := fs.GetState(FileStateKey(nil, "wrapped.txt"))
+	state := fs.GetState(fileops.FileStateKey(nil, "wrapped.txt"))
 	if state == nil || !state.EditorWrap {
 		t.Fatal("closing a file whose wrapping was suppressed erased the remembered choice")
 	}

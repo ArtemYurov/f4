@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -28,9 +29,9 @@ func (filesystem *blockingTextEditorStatVFS) Stat(context.Context, string) (vfs.
 
 func TestOpenTextEditorCreatesUnsavedVFSBuffer(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldFileState := GlobalFileState
-	GlobalFileState = nil
-	t.Cleanup(func() { GlobalFileState = oldFileState })
+	oldFileState := fileops.GlobalFileState
+	fileops.GlobalFileState = nil
+	t.Cleanup(func() { fileops.GlobalFileState = oldFileState })
 
 	dir := t.TempDir()
 	filesystem := vfs.NewOSVFS(dir)
@@ -74,9 +75,9 @@ func TestOpenTextEditorCreatesUnsavedVFSBuffer(t *testing.T) {
 
 func TestOpenTextEditorTemporaryFileIsRemovedOnClose(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldFileState := GlobalFileState
-	GlobalFileState = nil
-	t.Cleanup(func() { GlobalFileState = oldFileState })
+	oldFileState := fileops.GlobalFileState
+	fileops.GlobalFileState = nil
+	t.Cleanup(func() { fileops.GlobalFileState = oldFileState })
 
 	pf := &PanelsFrame{lastW: 80, lastH: 25}
 	if err := pf.OpenTextEditor(vfs.TextEditorRequest{Temporary: true, Content: []byte("temporary")}); err != nil {
@@ -125,9 +126,9 @@ func TestTextEditorTargetCheckIsBoundedWhenVFSIgnoresContext(t *testing.T) {
 
 func TestOpenTextEditorSkipsRedundantCheckedTargetStat(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldFileState := GlobalFileState
-	GlobalFileState = nil
-	t.Cleanup(func() { GlobalFileState = oldFileState })
+	oldFileState := fileops.GlobalFileState
+	fileops.GlobalFileState = nil
+	t.Cleanup(func() { fileops.GlobalFileState = oldFileState })
 
 	release := make(chan struct{})
 	called := make(chan struct{}, 1)

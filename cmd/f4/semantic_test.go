@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/piecetable"
+	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -155,24 +156,24 @@ func TestSemantic_ViewerViewActions(t *testing.T) {
 	}
 
 	v := vfs.NewOSVFS(tmp)
-	viewer, err := NewViewerView(context.Background(), v, path)
+	vv, err := viewer.NewViewerView(context.Background(), v, path)
 	if err != nil {
-		t.Fatalf("failed to create viewer: %v", err)
+		t.Fatalf("failed to create vv: %v", err)
 	}
-	// The viewer holds the file open; without this Close Windows cannot
+	// The vv holds the file open; without this Close Windows cannot
 	// delete it during TempDir cleanup.
-	defer viewer.Close()
+	defer vv.Close()
 
 	// Test scroll action
 	actionScroll := map[string]any{
-		"target": vtui.SemanticID(viewer),
+		"target": vtui.SemanticID(vv),
 		"action": "viewer.scroll",
 		"offset": float64(6), // Starts 'line2'
 	}
-	if !viewer.HandleSemanticAction(actionScroll) {
+	if !vv.HandleSemanticAction(actionScroll) {
 		t.Fatal("viewer scroll action was not handled")
 	}
-	if viewer.TopOffset != 6 {
-		t.Errorf("expected TopOffset 6, got %d", viewer.TopOffset)
+	if vv.TopOffset != 6 {
+		t.Errorf("expected TopOffset 6, got %d", vv.TopOffset)
 	}
 }

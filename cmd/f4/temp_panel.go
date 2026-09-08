@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -77,7 +78,7 @@ func tempPanelDisplayName(source vfs.VFS, path string) string {
 }
 
 func tempPanelReferenceKey(source vfs.VFS, path string) string {
-	return FileStateKey(source, path)
+	return fileops.FileStateKey(source, path)
 }
 
 func (s *tempPanelStore) appendReferences(slot int, refs []tempPanelReference) {

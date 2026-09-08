@@ -19,6 +19,7 @@ import (
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/update"
+	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -1431,9 +1432,9 @@ func TestActionViewerSearch_EmptyFile(t *testing.T) {
 	}
 	v := vfs.NewOSVFS(t.TempDir())
 
-	vv, err := NewViewerView(context.Background(), v, tmp)
+	vv, err := viewer.NewViewerView(context.Background(), v, tmp)
 	if err != nil {
-		t.Fatalf("Failed to create ViewerView: %v", err)
+		t.Fatalf("Failed to create viewer.ViewerView: %v", err)
 	}
 	defer vv.Close()
 
@@ -1441,7 +1442,7 @@ func TestActionViewerSearch_EmptyFile(t *testing.T) {
 	// We manually call the inner logic of actionViewerSearch since InputBox is blocking in tests
 	foundOffset := int64(-1)
 	currOff := vv.TopOffset + 1
-	fileSize := vv.backend.Size() // 0
+	fileSize := vv.Backend.Size() // 0
 
 	if currOff < fileSize {
 		t.Error("Search loop should not even start for empty file")
@@ -3056,7 +3057,7 @@ func TestActionSwitchEditorToViewerAndBack(t *testing.T) {
 		switch top := vtui.FrameManager.GetTopFrame().(type) {
 		case *EditorView:
 			top.Close()
-		case *ViewerView:
+		case *viewer.ViewerView:
 			top.Close()
 		}
 	}()
@@ -3089,9 +3090,9 @@ func TestActionSwitchEditorToViewerAndBack(t *testing.T) {
 	}
 
 	timeout = time.After(2 * time.Second)
-	var vv *ViewerView
+	var vv *viewer.ViewerView
 	for vv == nil {
-		if top, ok := vtui.FrameManager.GetTopFrame().(*ViewerView); ok {
+		if top, ok := vtui.FrameManager.GetTopFrame().(*viewer.ViewerView); ok {
 			vv = top
 			break
 		}
@@ -3159,7 +3160,7 @@ func TestActionSwitchEditorToViewer_ModifiedFilePrompt(t *testing.T) {
 		switch top := vtui.FrameManager.GetTopFrame().(type) {
 		case *EditorView:
 			top.Close()
-		case *ViewerView:
+		case *viewer.ViewerView:
 			top.Close()
 		}
 	}()
@@ -3212,10 +3213,10 @@ func TestActionSwitchEditorToViewer_ModifiedFilePrompt(t *testing.T) {
 	// Click "Don't Save" button in confirmation dialog
 	clickDialogButton(t, confirmDlg, "Don't Save")
 
-	var vv *ViewerView
+	var vv *viewer.ViewerView
 	timeout = time.After(2 * time.Second)
 	for vv == nil {
-		if top, ok := vtui.FrameManager.GetTopFrame().(*ViewerView); ok {
+		if top, ok := vtui.FrameManager.GetTopFrame().(*viewer.ViewerView); ok {
 			vv = top
 			break
 		}
@@ -3230,8 +3231,8 @@ func TestActionSwitchEditorToViewer_ModifiedFilePrompt(t *testing.T) {
 	}
 	defer vv.Close()
 
-	if vv.path != filePath {
-		t.Errorf("Viewer opened path %q, want %q", vv.path, filePath)
+	if vv.Path != filePath {
+		t.Errorf("Viewer opened path %q, want %q", vv.Path, filePath)
 	}
 }
 
@@ -3256,7 +3257,7 @@ func TestActionSwitchEditorViewer_HeightPreserved(t *testing.T) {
 		switch top := vtui.FrameManager.GetTopFrame().(type) {
 		case *EditorView:
 			top.Close()
-		case *ViewerView:
+		case *viewer.ViewerView:
 			top.Close()
 		}
 	}()
@@ -3284,10 +3285,10 @@ func TestActionSwitchEditorViewer_HeightPreserved(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		RunAction("Editor.SwitchToViewer")
-		var vv *ViewerView
+		var vv *viewer.ViewerView
 		timeout = time.After(1 * time.Second)
 		for vv == nil {
-			if top, ok := vtui.FrameManager.GetTopFrame().(*ViewerView); ok {
+			if top, ok := vtui.FrameManager.GetTopFrame().(*viewer.ViewerView); ok {
 				vv = top
 				break
 			}

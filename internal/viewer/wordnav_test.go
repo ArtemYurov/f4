@@ -1,6 +1,8 @@
-package main
+package viewer
 
-import "testing"
+import (
+	"testing"
+)
 
 // nextWordStop replays the pure part of the editor jump loops: step once, then
 // keep going while no stop condition holds. Positions are rune indices.
@@ -11,7 +13,7 @@ func nextWordStop(s string, pos int, right, selecting bool) int {
 			return pos
 		}
 		pos++
-		for pos < len(r) && !stopBeforeRuneRight(r[pos-1], r[pos], selecting) {
+		for pos < len(r) && !StopBeforeRuneRight(r[pos-1], r[pos], selecting) {
 			pos++
 		}
 		return pos
@@ -20,7 +22,7 @@ func nextWordStop(s string, pos int, right, selecting bool) int {
 		return 0
 	}
 	pos--
-	for pos > 0 && !stopBeforeRuneLeft(r[pos-1], r[pos], selecting) {
+	for pos > 0 && !StopBeforeRuneLeft(r[pos-1], r[pos], selecting) {
 		pos--
 	}
 	return pos
@@ -36,17 +38,17 @@ func TestWordNav_CharCategories(t *testing.T) {
 		{'.', catDivider},
 		{'/', catDivider},
 		{'|', catDivider},
-		{'a', catWord},
-		{'0', catWord},
-		{'_', catWord},
-		{'$', catWord},
-		{'#', catWord},
-		{'@', catWord},
-		{'я', catWord},
+		{'a', CatWord},
+		{'0', CatWord},
+		{'_', CatWord},
+		{'$', CatWord},
+		{'#', CatWord},
+		{'@', CatWord},
+		{'я', CatWord},
 	}
 	for _, c := range cases {
-		if got := getCharCategory(c.r); got != c.want {
-			t.Errorf("getCharCategory(%q) = %d, want %d", c.r, got, c.want)
+		if got := GetCharCategory(c.r); got != c.want {
+			t.Errorf("GetCharCategory(%q) = %d, want %d", c.r, got, c.want)
 		}
 	}
 }

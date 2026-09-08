@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"github.com/charlievieth/strcase"
+	"github.com/unxed/f4/internal/textsearch"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -155,7 +156,7 @@ func (ev *EditorView) confirmMatchAt(off int, pattern string, caseSensitive bool
 		}
 		return 0, false
 	}
-	text := bytesToString(data)
+	text := textsearch.BytesToString(data)
 	after, ok := strcase.CutPrefix(text, pattern)
 	if !ok {
 		return 0, false

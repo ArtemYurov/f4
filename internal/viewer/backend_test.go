@@ -1,4 +1,4 @@
-package main
+package viewer
 
 import (
 	"bytes"
@@ -137,11 +137,11 @@ func TestViewerView_NonUTF8OffsetsUseDecodedStream(t *testing.T) {
 	if vv.Codepage != 866 {
 		t.Fatalf("codepage = %d, want 866", vv.Codepage)
 	}
-	if vv.backend.Size() <= int64(len(raw)) {
-		t.Fatalf("backend size = %d, want decoded UTF-8 stream larger than raw %d", vv.backend.Size(), len(raw))
+	if vv.Backend.Size() <= int64(len(raw)) {
+		t.Fatalf("backend size = %d, want decoded UTF-8 stream larger than raw %d", vv.Backend.Size(), len(raw))
 	}
-	data := make([]byte, int(vv.backend.Size()))
-	n, err := vv.backend.file.ReadAt(context.Background(), data, 0)
+	data := make([]byte, int(vv.Backend.Size()))
+	n, err := vv.Backend.file.ReadAt(context.Background(), data, 0)
 	if err != nil {
 		t.Fatalf("ReadAt decoded stream: %v", err)
 	}
@@ -151,10 +151,10 @@ func TestViewerView_NonUTF8OffsetsUseDecodedStream(t *testing.T) {
 
 	// Switching to raw UTF-8 must not leave the viewport beyond the new,
 	// shorter stream when the user was at the end of the decoded view.
-	vv.TopOffset = vv.backend.Size() - 1
+	vv.TopOffset = vv.Backend.Size() - 1
 	vv.ReloadWithCodepage(65001)
-	if vv.TopOffset < 0 || vv.TopOffset >= vv.backend.Size() {
-		t.Fatalf("TopOffset = %d after reload, backend size = %d", vv.TopOffset, vv.backend.Size())
+	if vv.TopOffset < 0 || vv.TopOffset >= vv.Backend.Size() {
+		t.Fatalf("TopOffset = %d after reload, backend size = %d", vv.TopOffset, vv.Backend.Size())
 	}
 
 	// Codepage labels are still allowed in hex mode, but the displayed bytes
@@ -162,7 +162,7 @@ func TestViewerView_NonUTF8OffsetsUseDecodedStream(t *testing.T) {
 	vv.HexMode = true
 	vv.ReloadWithCodepage(866)
 	data = make([]byte, len(raw))
-	n, err = vv.backend.file.ReadAt(context.Background(), data, 0)
+	n, err = vv.Backend.file.ReadAt(context.Background(), data, 0)
 	if err != nil && err != io.EOF {
 		t.Fatalf("ReadAt raw hex stream: %v", err)
 	}
@@ -363,16 +363,16 @@ func TestViewerSearchOffsetBothDirections(t *testing.T) {
 		totalForSize: -1,
 	}
 
-	if got := viewerSearchOffset(context.Background(), vb, "needle", 0, false, nil); got != 5 {
+	if got := SearchOffset(context.Background(), vb, "needle", 0, false, nil); got != 5 {
 		t.Fatalf("forward first offset = %d, want 5", got)
 	}
-	if got := viewerSearchOffset(context.Background(), vb, "needle", 6, false, nil); got != 19 {
+	if got := SearchOffset(context.Background(), vb, "needle", 6, false, nil); got != 19 {
 		t.Fatalf("forward next offset = %d, want 19", got)
 	}
-	if got := viewerSearchOffset(context.Background(), vb, "needle", int64(len(data)), true, nil); got != 19 {
+	if got := SearchOffset(context.Background(), vb, "needle", int64(len(data)), true, nil); got != 19 {
 		t.Fatalf("backward last offset = %d, want 19", got)
 	}
-	if got := viewerSearchOffset(context.Background(), vb, "needle", 19, true, nil); got != 5 {
+	if got := SearchOffset(context.Background(), vb, "needle", 19, true, nil); got != 5 {
 		t.Fatalf("backward previous offset = %d, want 5", got)
 	}
 }
@@ -400,7 +400,7 @@ func TestViewerBackend_UTF8BOMUsesLogicalOffsets(t *testing.T) {
 			t.Errorf("close viewer backend: %v", err)
 		}
 	}()
-	vb.dataOffset = vfs.UTF8BOMSize
+	vb.DataOffset = vfs.UTF8BOMSize
 	vb.size = int64(len(text))
 
 	if got := vb.Size(); got != int64(len(text)) {
@@ -427,7 +427,7 @@ func TestViewerBackend_UTF8BOMUsesLogicalOffsets(t *testing.T) {
 			t.Errorf("close viewer backend: %v", err)
 		}
 	}()
-	searchBackend.dataOffset = vfs.UTF8BOMSize
+	searchBackend.DataOffset = vfs.UTF8BOMSize
 	searchBackend.size = int64(len(text))
 	if got, ok := searchBackend.SearchFrom(context.Background(), "needle", 0); !ok || got != 13 {
 		t.Fatalf("SearchFrom = %d, %v; want 13, true", got, ok)
@@ -448,25 +448,25 @@ func TestViewerSearchMatchOptions(t *testing.T) {
 		name       string
 		pattern    string
 		start      int64
-		options    viewerSearchOptions
+		options    SearchOptions
 		wantOffset int64
 		wantLength int
 	}{
 		{name: "case insensitive", pattern: "needle", wantOffset: 0, wantLength: len("needle")},
-		{name: "case sensitive", pattern: "needle", options: viewerSearchOptions{caseSensitive: true}, wantOffset: 8, wantLength: len("needle")},
-		{name: "whole word", pattern: "needle", options: viewerSearchOptions{wholeWord: true}, wantOffset: 8, wantLength: len("needle")},
-		{name: "regex length", pattern: `needle\d+`, options: viewerSearchOptions{regexp: true}, wantOffset: 15, wantLength: len("NEEDLE42")},
-		{name: "reverse", pattern: "needle", start: int64(len(data)), options: viewerSearchOptions{reverse: true, caseSensitive: true}, wantOffset: 24, wantLength: len("needle")},
+		{name: "case sensitive", pattern: "needle", options: SearchOptions{CaseSensitive: true}, wantOffset: 8, wantLength: len("needle")},
+		{name: "whole word", pattern: "needle", options: SearchOptions{WholeWord: true}, wantOffset: 8, wantLength: len("needle")},
+		{name: "regex length", pattern: `needle\d+`, options: SearchOptions{Regexp: true}, wantOffset: 15, wantLength: len("NEEDLE42")},
+		{name: "reverse", pattern: "needle", start: int64(len(data)), options: SearchOptions{Reverse: true, CaseSensitive: true}, wantOffset: 24, wantLength: len("needle")},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			gotOffset, gotLength, err := viewerSearchMatch(context.Background(), vb, tc.pattern, tc.start, tc.options, nil)
+			gotOffset, gotLength, err := SearchMatch(context.Background(), vb, tc.pattern, tc.start, tc.options, nil)
 			if err != nil {
-				t.Fatalf("viewerSearchMatch: %v", err)
+				t.Fatalf("SearchMatch: %v", err)
 			}
 			if gotOffset != tc.wantOffset || gotLength != tc.wantLength {
-				t.Fatalf("viewerSearchMatch = (%d, %d), want (%d, %d)", gotOffset, gotLength, tc.wantOffset, tc.wantLength)
+				t.Fatalf("SearchMatch = (%d, %d), want (%d, %d)", gotOffset, gotLength, tc.wantOffset, tc.wantLength)
 			}
 		})
 	}
@@ -482,7 +482,7 @@ func TestViewerSearchMatchRejectsInvalidRegexp(t *testing.T) {
 	}
 	defer func() { _ = vb.Close() }()
 
-	if _, _, err := viewerSearchMatch(context.Background(), vb, "[", 0, viewerSearchOptions{regexp: true}, nil); err == nil {
+	if _, _, err := SearchMatch(context.Background(), vb, "[", 0, SearchOptions{Regexp: true}, nil); err == nil {
 		t.Fatal("invalid regular expression was accepted")
 	}
 }

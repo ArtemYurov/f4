@@ -1,4 +1,4 @@
-package main
+package viewer
 
 import (
 	"context"
@@ -15,7 +15,7 @@ type ViewerBackend struct {
 	file       vfs.ReadAtCloser
 	size       int64
 	codepage   int
-	dataOffset int64 // bytes skipped from the on-disk file (the UTF-8 BOM)
+	DataOffset int64 // bytes skipped from the on-disk file (the UTF-8 BOM)
 
 	path    string
 	owner   vfs.VFS
@@ -77,7 +77,7 @@ func (b *ViewerBackend) Size() int64 {
 	// refreshing the size -- jumpToEnd runs Size through RunAsync while Show
 	// is calling it too. Both go through the mutex now.
 	if b.file != nil {
-		newSize := b.file.Size() - b.dataOffset
+		newSize := b.file.Size() - b.DataOffset
 		if newSize < 0 {
 			newSize = 0
 		}
@@ -177,7 +177,7 @@ func (b *ViewerBackend) ReadAt(offset int64, length int) ([]byte, error) {
 		frames := vtui.FrameManager
 		go func() {
 			buf := make([]byte, fetchLen)
-			n, err := b.file.ReadAt(b.ctx, buf, b.dataOffset+fetchOff)
+			n, err := b.file.ReadAt(b.ctx, buf, b.DataOffset+fetchOff)
 
 			var cached []byte
 			if n > 0 {
@@ -229,7 +229,7 @@ func (b *ViewerBackend) SearchFrom(ctx context.Context, pattern string, off int6
 		return 0, false
 	}
 	for at := range matches {
-		logicalAt := at - b.dataOffset
+		logicalAt := at - b.DataOffset
 		if logicalAt >= off {
 			return logicalAt, true
 		}
@@ -249,7 +249,7 @@ func (b *ViewerBackend) SearchBefore(ctx context.Context, pattern string, off in
 	}
 	last := int64(-1)
 	for at := range matches {
-		logicalAt := at - b.dataOffset
+		logicalAt := at - b.DataOffset
 		if logicalAt < off && logicalAt > last {
 			last = logicalAt
 		}
@@ -273,7 +273,7 @@ func (b *ViewerBackend) LineStart(ctx context.Context, line int64) (int64, bool)
 		idx, err := b.indexer.LineIndex(ctx, b.path, line, 1)
 		if err == nil {
 			if len(idx.Offsets) > 0 {
-				start := idx.Offsets[0] - b.dataOffset
+				start := idx.Offsets[0] - b.DataOffset
 				if start < 0 {
 					start = 0
 				}
@@ -294,7 +294,7 @@ func (b *ViewerBackend) LineStart(ctx context.Context, line int64) (int64, bool)
 		if ctx.Err() != nil {
 			return 0, false
 		}
-		n, err := b.file.ReadAt(ctx, buf, b.dataOffset+off)
+		n, err := b.file.ReadAt(ctx, buf, b.DataOffset+off)
 		for i := 0; i < n; i++ {
 			if buf[i] != '\n' {
 				continue
@@ -359,7 +359,7 @@ func (b *ViewerBackend) LineStartFromEnd(ctx context.Context, n int64) (int64, b
 	if err != nil || len(idx.Offsets) == 0 {
 		return 0, false
 	}
-	start := idx.Offsets[0] - b.dataOffset
+	start := idx.Offsets[0] - b.DataOffset
 	if start < 0 {
 		start = 0
 	}

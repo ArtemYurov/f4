@@ -13,10 +13,12 @@ import (
 
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/theme"
+	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -282,7 +284,7 @@ func (q *QuickViewPanel) applyPreviewCodepage(cpID int, autoDetect bool) bool {
 	}
 	q.cacheCodepage = cpID
 	q.cacheAutoDetect = autoDetect
-	q.cacheBinary = looksBinary(decoded)
+	q.cacheBinary = viewer.LooksBinary(decoded)
 	if q.hexMode {
 		q.cacheLines = hexDumpLines(q.cacheRaw)
 	} else {
@@ -311,20 +313,20 @@ func (q *QuickViewPanel) switchToCodepage(cpID int) bool {
 }
 
 func (q *QuickViewPanel) persistCodepage(cpID int) {
-	if GlobalFileState == nil || q.src == nil || q.src.vfs == nil || q.cachePath == "" {
+	if fileops.GlobalFileState == nil || q.src == nil || q.src.vfs == nil || q.cachePath == "" {
 		return
 	}
-	GlobalFileState.SaveQuickViewCodepageAsync(FileStateKey(q.src.vfs, q.cachePath), cpID)
+	fileops.GlobalFileState.SaveQuickViewCodepageAsync(fileops.FileStateKey(q.src.vfs, q.cachePath), cpID)
 }
 
 func (q *QuickViewPanel) rememberedCodepage() (int, bool) {
 	if cpID, ok := q.codepages[q.cacheKey]; ok {
 		return cpID, true
 	}
-	if GlobalFileState == nil || q.src == nil || q.src.vfs == nil || q.cachePath == "" {
+	if fileops.GlobalFileState == nil || q.src == nil || q.src.vfs == nil || q.cachePath == "" {
 		return 0, false
 	}
-	state := GlobalFileState.GetState(FileStateKey(q.src.vfs, q.cachePath))
+	state := fileops.GlobalFileState.GetState(fileops.FileStateKey(q.src.vfs, q.cachePath))
 	if state == nil || state.QuickViewCodepage <= 0 {
 		return 0, false
 	}
@@ -1175,7 +1177,7 @@ func loadDefaultQuickView(parent context.Context, filesystem vfs.VFS, path strin
 		}
 	}
 
-	if looksBinary(decodedBuf) {
+	if viewer.LooksBinary(decodedBuf) {
 		return quickViewFileResult{raw: append([]byte{}, buf...), codepage: cpID, autoDetect: autoDetect, binary: true, lines: hexDumpLines(buf)}
 	}
 	decodedBuf = vfs.StripUTF8BOM(decodedBuf)
@@ -1189,23 +1191,9 @@ func loadDefaultQuickView(parent context.Context, filesystem vfs.VFS, path strin
 
 const previewMax = 16 * 1024
 
-// looksBinary returns true if the buffer contains a NUL byte or an
+// viewer.LooksBinary returns true if the buffer contains a NUL byte or an
 // unusually high proportion of non-printable / non-UTF-8 sequences.
 // Simple heuristic — same shape as Far/far2l's viewer classification.
-func looksBinary(b []byte) bool {
-	if len(b) == 0 {
-		return false
-	}
-	if !utf8.Valid(b) {
-		return true
-	}
-	for _, c := range b {
-		if c == 0 {
-			return true
-		}
-	}
-	return false
-}
 
 func hexDumpLines(b []byte) []string {
 	const perLine = 16

@@ -13,6 +13,7 @@ import (
 
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/textsearch"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -191,13 +192,13 @@ func TestFindAllMatchSpans_OverLazyBuffer(t *testing.T) {
 		t.Fatalf("span = {%d,%d}, want {%d,%d}", spans[0].Off, spans[0].Len, needleOff, len(needle))
 	}
 
-	// findMatch drives the plain Search path over the same snapshot.
-	off, mLen, err := findMatch(data, needle, true, false, false, false, false, 0)
+	// textsearch.FindMatch drives the plain Search path over the same snapshot.
+	off, mLen, err := textsearch.FindMatch(data, needle, true, false, false, false, false, 0)
 	if err != nil {
-		t.Fatalf("findMatch: %v", err)
+		t.Fatalf("textsearch.FindMatch: %v", err)
 	}
 	if off != needleOff || mLen != len(needle) {
-		t.Fatalf("findMatch = (%d,%d), want (%d,%d)", off, mLen, needleOff, len(needle))
+		t.Fatalf("textsearch.FindMatch = (%d,%d), want (%d,%d)", off, mLen, needleOff, len(needle))
 	}
 }
 

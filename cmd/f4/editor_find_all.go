@@ -21,6 +21,7 @@ import (
 	"github.com/charlievieth/strcase"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/piecetable"
+	"github.com/unxed/f4/internal/textsearch"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -373,7 +374,7 @@ func findAllMatchSpans(ctx context.Context, data []byte, pattern string, caseSen
 	// Only whole-word matching needs the regex engine (for the \b wrapping);
 	// literal search, case-sensitive or folded, is handled below without it.
 	if useRegex || wholeWord {
-		re, err := buildSearchRegex(pattern, caseSensitive, useRegex, wholeWord)
+		re, err := textsearch.BuildSearchRegex(pattern, caseSensitive, useRegex, wholeWord)
 		if err != nil {
 			return nil, err
 		}
@@ -413,7 +414,7 @@ func findAllMatchSpans(ctx context.Context, data []byte, pattern string, caseSen
 	// pattern (K U+212A matches "k"), hence CutPrefix per match. The string
 	// is a view, not a copy: on a mapped file, copying here would cost the
 	// whole file's size in heap for the most ordinary search there is.
-	text := bytesToString(data)
+	text := textsearch.BytesToString(data)
 	curr := 0
 	for {
 		if ctx != nil && len(spans)%1024 == 0 && ctx.Err() != nil {

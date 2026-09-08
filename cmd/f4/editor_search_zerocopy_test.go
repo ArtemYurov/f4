@@ -7,6 +7,7 @@ import (
 
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/textsearch"
 	"github.com/unxed/vtui"
 )
 
@@ -63,9 +64,9 @@ func TestSearchBuffer_ScansMemoryBufferInPlace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("searchBuffer: %v", err)
 	}
-	off, _, err := findMatch(data, "quick", true, false, false, false, true, 0)
+	off, _, err := textsearch.FindMatch(data, "quick", true, false, false, false, true, 0)
 	if err != nil {
-		t.Fatalf("findMatch: %v", err)
+		t.Fatalf("textsearch.FindMatch: %v", err)
 	}
 
 	runtime.ReadMemStats(&after)

@@ -15,6 +15,7 @@ import (
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/dialog"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/f4/internal/gui"
 	"github.com/unxed/f4/internal/history"
@@ -250,8 +251,8 @@ func main() {
 			plughost.GlobalPluginManager.CloseAll()
 		}
 		shutdownProcessEnvironmentRuntime()
-		if GlobalFileState != nil {
-			GlobalFileState.Flush()
+		if fileops.GlobalFileState != nil {
+			fileops.GlobalFileState.Flush()
 		}
 		if r := recover(); r != nil {
 			vtui.DebugLog("FATAL PANIC IN MAIN: %v", r)
@@ -794,7 +795,7 @@ func SetupUI() {
 	}
 	vtui.GlobalHistoryProvider = history.NewF4HistoryProvider(config.GetF4ConfigDir())
 	history.SamePath = sameFolderHistoryPath
-	GlobalFileState = NewF4FileStateProvider()
+	fileops.GlobalFileState = fileops.NewF4FileStateProvider()
 	StartQueueWorker()
 	// The registry is a leaf and cannot reach the message catalogue; the root
 	// hands it the lookup. Moves to internal/i18n's i18n.Msg when that package exists.

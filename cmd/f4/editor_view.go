@@ -19,20 +19,22 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
-	"unsafe"
 
 	"github.com/charlievieth/strcase"
 	"github.com/coregx/coregex"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/dialog"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/textlayout"
+	"github.com/unxed/f4/internal/textsearch"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/toast"
+	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -52,7 +54,7 @@ var GlobalLastClipboardWasRectangular bool
 // EditorView is a text editor component.
 type EditorView struct {
 	vtui.BaseFrame
-	topBar  *TopBar
+	topBar  *viewer.TopBar
 	menuBar *vtui.MenuBar
 	pt      *piecetable.PieceTable
 	li      *piecetable.LineIndex
@@ -350,8 +352,8 @@ func (ev *EditorView) ConfirmClose() bool {
 }
 
 func (ev *EditorView) Close() {
-	if GlobalFileState != nil && ev.filePath != "" {
-		GlobalFileState.SaveEditorStateAsync(FileStateKey(ev.vfs, ev.filePath), ev.CursorLine, ev.CursorPos, ev.ScrollTopRow, ev.ScrollLeft, ev.wordWrapWanted)
+	if fileops.GlobalFileState != nil && ev.filePath != "" {
+		fileops.GlobalFileState.SaveEditorStateAsync(fileops.FileStateKey(ev.vfs, ev.filePath), ev.CursorLine, ev.CursorPos, ev.ScrollTopRow, ev.ScrollLeft, ev.wordWrapWanted)
 	}
 	if ev.highlightCancel != nil {
 		ev.highlightCancel()
@@ -542,13 +544,13 @@ func newEditorView(pt *piecetable.PieceTable, v vfs.VFS, path string, useEditorC
 	}
 	ev.menuBar = vtui.NewMenuBar(nil)
 
-	ev.topBar = NewTopBar(
+	ev.topBar = viewer.NewTopBar(
 		func() string {
 			base := ""
 			if ev.DisplayTitle != "" {
 				base = ev.DisplayTitle
 			} else {
-				base = displayFileTitle(ev.vfs, ev.filePath)
+				base = viewer.DisplayFileTitle(ev.vfs, ev.filePath)
 			}
 			return " " + base
 		},
@@ -562,7 +564,7 @@ func newEditorView(pt *piecetable.PieceTable, v vfs.VFS, path string, useEditorC
 }
 
 // GetTopBar возвращает верхнюю панель для тестов
-func (ev *EditorView) GetTopBar() *TopBar {
+func (ev *EditorView) GetTopBar() *viewer.TopBar {
 	return ev.topBar
 }
 
@@ -1023,8 +1025,8 @@ func (ev *EditorView) ensureEngineWidth() {
 func (ev *EditorView) setWordWrap(on bool) {
 	ev.WordWrap = on
 	ev.wordWrapWanted = on
-	if GlobalFileState != nil && ev.filePath != "" {
-		GlobalFileState.SaveEditorWrapAsync(FileStateKey(ev.vfs, ev.filePath), on)
+	if fileops.GlobalFileState != nil && ev.filePath != "" {
+		fileops.GlobalFileState.SaveEditorWrapAsync(fileops.FileStateKey(ev.vfs, ev.filePath), on)
 	}
 }
 
@@ -1137,7 +1139,7 @@ func (ev *EditorView) renderDecode(scr *vtui.ScreenBuf, width, contentHeight int
 			}
 		}
 
-		data, err := ev.decodeBytes(currOffset, disasmMaxInstLen)
+		data, err := ev.decodeBytes(currOffset, viewer.DisasmMaxInstLen)
 		if err == piecetable.ErrLoading {
 			scr.Write(ev.X1, ev.Y1+1+y, vtui.StringToCharInfo(" [ Loading... ] ", bgAttr))
 			break
@@ -1152,7 +1154,7 @@ func (ev *EditorView) renderDecode(scr *vtui.ScreenBuf, width, contentHeight int
 		instLen := 1
 		asmStr := ""
 		if len(data) > 0 {
-			asmStr, instLen = disasmInstruction(data, ev.disasmMode(), int64(currOffset))
+			asmStr, instLen = viewer.DisasmInstruction(data, ev.disasmMode(), int64(currOffset))
 		}
 
 		line := fmt.Sprintf("%010X: ", currOffset)
@@ -1207,9 +1209,9 @@ func (ev *EditorView) decodeBytes(off, n int) ([]byte, error) {
 // opened without a header (showEditor reads one) decides it here, from the
 // buffer's first bytes, the first time an instruction is needed.
 func (ev *EditorView) disasmMode() int {
-	if !disasmModeValid(ev.DisasmMode) {
+	if !viewer.DisasmModeValid(ev.DisasmMode) {
 		header, _ := ev.decodeBytes(0, 1024)
-		ev.DisasmMode = detectX86Mode(header)
+		ev.DisasmMode = viewer.DetectX86Mode(header)
 	}
 	return ev.DisasmMode
 }
@@ -1219,7 +1221,7 @@ func (ev *EditorView) disasmMode() int {
 // cursor keeps its byte offset; the line it lands on is whatever
 // instruction the new mode reads there.
 func (ev *EditorView) cycleDisasmMode() int {
-	ev.DisasmMode = nextDisasmMode(ev.disasmMode())
+	ev.DisasmMode = viewer.NextDisasmMode(ev.disasmMode())
 	ev.ensureCursorVisible()
 	return ev.DisasmMode
 }
@@ -1229,8 +1231,8 @@ func (ev *EditorView) cycleDisasmMode() int {
 // zero at the end of the buffer or while the bytes at off are still being
 // fetched.
 func (ev *EditorView) decodeStep(off int) int {
-	data, _ := ev.decodeBytes(off, disasmMaxInstLen)
-	return disasmInstLen(data, ev.disasmMode())
+	data, _ := ev.decodeBytes(off, viewer.DisasmMaxInstLen)
+	return viewer.DisasmInstLen(data, ev.disasmMode())
 }
 
 func hexCharToByte(c rune) byte {
@@ -2286,7 +2288,7 @@ func (ev *EditorView) processKeyInner(e *vtinput.InputEvent) bool {
 					if vRow == startVRow {
 						for currRuneIdx > 0 {
 							prev, curr := runes[currRuneIdx-1], runes[currRuneIdx]
-							if stopBeforeRuneLeft(prev, curr, shift) {
+							if viewer.StopBeforeRuneLeft(prev, curr, shift) {
 								break
 							}
 							currRuneIdx--
@@ -2366,7 +2368,7 @@ func (ev *EditorView) processKeyInner(e *vtinput.InputEvent) bool {
 					if vRow == startVRow {
 						for currRuneIdx < len(runes) {
 							prev, curr := runes[currRuneIdx-1], runes[currRuneIdx]
-							if stopBeforeRuneRight(prev, curr, shift) {
+							if viewer.StopBeforeRuneRight(prev, curr, shift) {
 								break
 							}
 
@@ -2726,7 +2728,7 @@ func (ev *EditorView) fillCells(target []vtui.CharInfo, data []byte, defaultAttr
 	return ev.fillCellsWithLinks(target, data, defaultAttr, selAttr, offset, selActive, selMin, selMax, syntax, nil, startVisualCol, isCrossRow, crossVCol, horzCrossAttr, vertCrossAttr, visualRow)
 }
 
-func (ev *EditorView) fillCellsWithLinks(target []vtui.CharInfo, data []byte, defaultAttr, selAttr uint64, offset int, selActive bool, selMin, selMax int, syntax []uint64, links []urlLink, startVisualCol int, isCrossRow bool, crossVCol int, horzCrossAttr, vertCrossAttr uint64, visualRow int) []vtui.CharInfo {
+func (ev *EditorView) fillCellsWithLinks(target []vtui.CharInfo, data []byte, defaultAttr, selAttr uint64, offset int, selActive bool, selMin, selMax int, syntax []uint64, links []viewer.UrlLink, startVisualCol int, isCrossRow bool, crossVCol int, horzCrossAttr, vertCrossAttr uint64, visualRow int) []vtui.CharInfo {
 	target = target[:0]
 	text := string(data)
 	clusters := editorVisualClusters(text)
@@ -2770,7 +2772,7 @@ func (ev *EditorView) fillCellsWithLinks(target []vtui.CharInfo, data []byte, de
 			attr = syntax[cluster.runeStart]
 		}
 		if ev.hoverURL != "" {
-			if link, ok := urlLinkAt(links, offset+cluster.byteStart); ok && link.URL == ev.hoverURL {
+			if link, ok := viewer.UrlLinkAt(links, offset+cluster.byteStart); ok && link.URL == ev.hoverURL {
 				attr |= vtui.CommonLvbUnderscore
 			}
 		}
@@ -3112,9 +3114,9 @@ func (ev *EditorView) ProcessMouse(e *vtinput.InputEvent) bool {
 		if changed := ev.updateURLHover(int(e.MouseX), int(e.MouseY)); changed {
 			vtui.FrameManager.Redraw()
 		}
-		if ctrlMouseClick(e) {
+		if viewer.CtrlMouseClick(e) {
 			if link, ok := ev.urlLinkAtMouse(int(e.MouseX), int(e.MouseY)); ok {
-				openExternalURLAsync(link.URL)
+				viewer.OpenExternalURLAsync(link.URL)
 				return true
 			}
 		}
@@ -3297,21 +3299,21 @@ func (ev *EditorView) updateCursorFromMouse(mx, my int) bool {
 	return true
 }
 
-func (ev *EditorView) urlLinkAtMouse(mx, my int) (urlLink, bool) {
+func (ev *EditorView) urlLinkAtMouse(mx, my int) (viewer.UrlLink, bool) {
 	link, _, ok := ev.urlLinkLocationAtMouse(mx, my)
 	return link, ok
 }
 
-func (ev *EditorView) urlLinkLocationAtMouse(mx, my int) (urlLink, int, bool) {
+func (ev *EditorView) urlLinkLocationAtMouse(mx, my int) (viewer.UrlLink, int, bool) {
 	if ev.HexMode || ev.DecodeMode || mx < ev.X1 || mx > ev.X2 || my < ev.Y1+1 || my > ev.Y2 {
-		return urlLink{}, 0, false
+		return viewer.UrlLink{}, 0, false
 	}
 	width := ev.X2 - ev.X1 + 1
 	if ev.scrollBar != nil {
 		width--
 	}
 	if mx >= ev.X1+width {
-		return urlLink{}, 0, false
+		return viewer.UrlLink{}, 0, false
 	}
 	visualCol := mx - ev.X1 + ev.ScrollLeft
 	visualRow := my - (ev.Y1 + 1) + ev.ScrollTopRow
@@ -3324,15 +3326,15 @@ func (ev *EditorView) urlLinkLocationAtMouse(mx, my int) (urlLink, int, bool) {
 	}
 	rel := offset - lineStart
 	links := ev.urlLinksNearOffset(lineStart, lineEnd, rel)
-	if link, ok := urlLinkAt(links, rel); ok {
+	if link, ok := viewer.UrlLinkAt(links, rel); ok {
 		return link, lineStart + link.Start, true
 	}
 	if rel > 0 {
-		if link, ok := urlLinkAt(links, rel-1); ok {
+		if link, ok := viewer.UrlLinkAt(links, rel-1); ok {
 			return link, lineStart + link.Start, true
 		}
 	}
-	return urlLink{}, 0, false
+	return viewer.UrlLink{}, 0, false
 }
 
 func (ev *EditorView) updateURLHover(mx, my int) bool {
@@ -3351,20 +3353,20 @@ func (ev *EditorView) updateURLHover(mx, my int) bool {
 	return true
 }
 
-func (ev *EditorView) urlLinksNearOffset(lineStart, lineEnd, rel int) []urlLink {
+func (ev *EditorView) urlLinksNearOffset(lineStart, lineEnd, rel int) []viewer.UrlLink {
 	if lineEnd <= lineStart {
 		return nil
 	}
 	readStart, readEnd := lineStart, lineEnd
-	if readEnd-readStart > maxURLScanBytes {
+	if readEnd-readStart > viewer.MaxURLScanBytes {
 		readStart = lineStart + rel - 4096
 		if readStart < lineStart {
 			readStart = lineStart
 		}
-		readEnd = readStart + maxURLScanBytes
+		readEnd = readStart + viewer.MaxURLScanBytes
 		if readEnd > lineEnd {
 			readEnd = lineEnd
-			readStart = readEnd - maxURLScanBytes
+			readStart = readEnd - viewer.MaxURLScanBytes
 			if readStart < lineStart {
 				readStart = lineStart
 			}
@@ -3374,7 +3376,7 @@ func (ev *EditorView) urlLinksNearOffset(lineStart, lineEnd, rel int) []urlLink 
 	if err != nil {
 		return nil
 	}
-	links := findURLLinks(string(data))
+	links := viewer.FindURLLinks(string(data))
 	base := readStart - lineStart
 	for i := range links {
 		links[i].Start += base
@@ -3383,7 +3385,7 @@ func (ev *EditorView) urlLinksNearOffset(lineStart, lineEnd, rel int) []urlLink 
 	return links
 }
 
-func (ev *EditorView) urlLinksForLine(lineStart, lineEnd int) []urlLink {
+func (ev *EditorView) urlLinksForLine(lineStart, lineEnd int) []viewer.UrlLink {
 	if ev.hoverURL == "" || ev.hoverURLStart < lineStart || ev.hoverURLStart >= lineEnd {
 		return nil
 	}
@@ -4103,7 +4105,7 @@ func (ev *EditorView) Replace(pattern, replacement string, caseSensitive, revers
 	var re *coregex.Regex
 	if regexp || wholeWord {
 		var err error
-		re, err = buildSearchRegex(searchPattern, caseSensitive, regexp, wholeWord)
+		re, err = textsearch.BuildSearchRegex(searchPattern, caseSensitive, regexp, wholeWord)
 		if err != nil {
 			vtui.ShowMessage(" Error ", fmt.Sprintf("Invalid regular expression:\n%v", err), []string{"&Ok"})
 			return
@@ -4127,7 +4129,7 @@ func (ev *EditorView) Replace(pattern, replacement string, caseSensitive, revers
 				})
 				return
 			}
-			text := bytesToString(bytes)
+			text := textsearch.BytesToString(bytes)
 			var newText string
 			switch {
 			case re != nil:
@@ -4718,12 +4720,12 @@ func (ev *EditorView) ReloadWithAutoDetect() {
 	// The user asked for this file to be detected, so detect it -- the
 	// global switch decides what happens at open, not here (#875).
 	cpID := vfs.DetectEncoding(header, true, config.App.EditorDefaultCodePage)
-	saveCodepageOverride(ev.vfs, ev.filePath, 0)
+	fileops.SaveCodepageOverride(ev.vfs, ev.filePath, 0)
 	ev.ReloadWithCodepage(cpID)
 }
 
 func (ev *EditorView) showCodepageDialog() {
-	_, overridden := rememberedCodepage(ev.vfs, ev.filePath)
+	_, overridden := fileops.RememberedCodepage(ev.vfs, ev.filePath)
 	items, currIdx := vfs.BuildCodepageMenuItems(ev.Codepage, !overridden)
 	menu := dialog.NewCodepageMenu(i18n.Msg("Codepage.Title"), items)
 
@@ -4736,7 +4738,7 @@ func (ev *EditorView) showCodepageDialog() {
 				if cpID == vfs.CodepageAutoDetect {
 					ev.ReloadWithAutoDetect()
 				} else {
-					saveCodepageOverride(ev.vfs, ev.filePath, cpID)
+					fileops.SaveCodepageOverride(ev.vfs, ev.filePath, cpID)
 					ev.ReloadWithCodepage(cpID)
 				}
 			}
@@ -4961,11 +4963,11 @@ func (ev *EditorView) selectWordUnderCursor() {
 
 	if runeIdx >= 0 && runeIdx < len(lineRunes) {
 		startIdx := runeIdx
-		for startIdx > 0 && getCharCategory(lineRunes[startIdx-1]) == catWord {
+		for startIdx > 0 && viewer.GetCharCategory(lineRunes[startIdx-1]) == viewer.CatWord {
 			startIdx--
 		}
 		endIdx := runeIdx
-		for endIdx < len(lineRunes) && getCharCategory(lineRunes[endIdx]) == catWord {
+		for endIdx < len(lineRunes) && viewer.GetCharCategory(lineRunes[endIdx]) == viewer.CatWord {
 			endIdx++
 		}
 
@@ -6403,24 +6405,6 @@ func (ev *EditorView) GetWorkspaceTabTitle() string {
 
 func (ev *EditorView) GetWorkspaceTabMarker() string { return "E" }
 
-// buildSearchRegex compiles an editor search pattern with the rules shared
-// by Find, Find All and Replace: non-regex input is quoted literally, case
-// insensitivity becomes an (?i) prefix and whole-word wraps the pattern in
-// word boundaries.
-func buildSearchRegex(pattern string, caseSensitive, useRegex, wholeWord bool) (*coregex.Regex, error) {
-	finalPattern := pattern
-	if !useRegex {
-		finalPattern = coregex.QuoteMeta(pattern)
-	}
-	if !caseSensitive {
-		finalPattern = "(?i)" + finalPattern
-	}
-	if wholeWord {
-		finalPattern = `\b(?:` + finalPattern + `)\b`
-	}
-	return coregex.Compile(finalPattern)
-}
-
 // showSearchProgressDialog shows the cancelable " Searching... " popup used
 // by Find and Find All while the buffer scan runs in the background.
 func showSearchProgressDialog(pattern string) (dlg *vtui.Window, btnCancel *vtui.Button) {
@@ -6602,115 +6586,6 @@ func (ev *EditorView) dropSearchSnapshot() {
 	ev.searchSnapMu.Unlock()
 }
 
-// bytesToString views bytes as a string without copying them. Every caller
-// here only reads, and the bytes are either a private snapshot or a window
-// into a buffer nothing writes through.
-func bytesToString(b []byte) string {
-	if len(b) == 0 {
-		return ""
-	}
-	// #nosec G103 -- the returned string is read-only and every caller retains b for the full lifetime of the synchronous search.
-	return unsafe.String(unsafe.SliceData(b), len(b))
-}
-
-// findMatch locates one occurrence of pattern in data: forward from
-// startOff, or backward from just before it when reverse is set; next
-// additionally skips a match starting exactly at startOff. The offset is
-// -1 when nothing matches. The returned length is the matched byte length,
-// which for regex or case-folded matches can differ from len(pattern).
-func findMatch(data []byte, pattern string, caseSensitive, reverse, regexp, wholeWord, next bool, startOff int) (int, int, error) {
-	foundOffset := -1
-	matchLen := len(pattern)
-	totalSize := len(data)
-
-	// Only whole-word matching needs the regex engine (for the \b
-	// wrapping); literal search, case-sensitive or folded, is handled
-	// below without it.
-	if regexp || wholeWord {
-		re, err := buildSearchRegex(pattern, caseSensitive, regexp, wholeWord)
-		if err != nil {
-			return -1, 0, err
-		}
-
-		if !reverse {
-			currOff := startOff
-			if next {
-				currOff++
-			}
-			if currOff < totalSize {
-				loc := re.FindIndex(data[currOff:])
-				if loc != nil {
-					foundOffset = currOff + loc[0]
-					matchLen = loc[1] - loc[0]
-				}
-			}
-		} else {
-			currOff := startOff
-			if next {
-				currOff--
-			}
-			if currOff > totalSize {
-				currOff = totalSize
-			}
-			if currOff > 0 {
-				// FindAllIndex scans left-to-right without overlap, so for
-				// self-overlapping patterns (e.g. "яя" in "яяя") this can
-				// land left of the true rightmost hit. Accepted: unlike the
-				// old ToLower+LastIndex path it cannot corrupt byte offsets.
-				locs := re.FindAllIndex(data[:currOff], -1)
-				if len(locs) > 0 {
-					last := locs[len(locs)-1]
-					foundOffset = last[0]
-					matchLen = last[1] - last[0]
-				}
-			}
-		}
-		return foundOffset, matchLen, nil
-	}
-
-	text := bytesToString(data)
-	index, lastIndex := strings.Index, strings.LastIndex
-	if !caseSensitive {
-		// strcase folds while scanning the original text, so the offsets
-		// it returns need no translation.
-		index, lastIndex = strcase.Index, strcase.LastIndex
-	}
-	if !reverse {
-		currOff := startOff
-		if next {
-			currOff++
-		}
-		if currOff < len(text) {
-			idx := index(text[currOff:], pattern)
-			if idx != -1 {
-				foundOffset = currOff + idx
-			}
-		}
-	} else {
-		currOff := startOff
-		if next {
-			currOff--
-		}
-		if currOff > len(text) {
-			currOff = len(text)
-		}
-		if currOff > 0 {
-			idx := lastIndex(text[:currOff], pattern)
-			if idx != -1 {
-				foundOffset = idx
-			}
-		}
-	}
-	// A folded match can differ in byte length from the pattern
-	// (K U+212A matches "k"), so measure what it consumed.
-	if foundOffset != -1 && !caseSensitive {
-		if after, ok := strcase.CutPrefix(text[foundOffset:], pattern); ok {
-			matchLen = len(text) - foundOffset - len(after)
-		}
-	}
-	return foundOffset, matchLen, nil
-}
-
 // searchSeedOffset returns the offset a buffer scan starts from. An active
 // selection — typically the previously found or confirmed match — takes
 // precedence over the raw cursor: a replace scan (includeSelection) starts
@@ -6835,7 +6710,7 @@ func (ev *EditorView) Search(pattern string, caseSensitive, reverse, regexp, who
 				return
 			}
 
-			foundOffset, matchLen, err := findMatch(bytes, pattern, caseSensitive, reverse, regexp, wholeWord, next, startOff)
+			foundOffset, matchLen, err := textsearch.FindMatch(bytes, pattern, caseSensitive, reverse, regexp, wholeWord, next, startOff)
 			if err != nil {
 				ctx.RunOnUI(func() {
 					dlg.Close()

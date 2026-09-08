@@ -1,0 +1,48 @@
+package main
+
+import (
+	"github.com/unxed/f4/internal/macro"
+	"github.com/unxed/f4/internal/viewer"
+	"github.com/unxed/vtinput"
+	"github.com/unxed/vtui"
+)
+
+// viewerApplication is the application side of viewer.Application: the action
+// registry, the hotkey manager and the frame commands the viewer itself does
+// not own.
+type viewerApplication struct{}
+
+func (viewerApplication) MenuBarItems(area string) []vtui.MenuBarItem {
+	return BuildMenuBarItems(area)
+}
+
+func (viewerApplication) KeyBarLabels(area string, fallbacks *vtui.KeySet) *vtui.KeySet {
+	return KeyBarLabelsForArea(area, fallbacks)
+}
+
+func (viewerApplication) ActionForKey(area, key string) string {
+	if GlobalHotkeysMgr == nil {
+		return ""
+	}
+	return GlobalHotkeysMgr.GetAction(area, key)
+}
+
+func (viewerApplication) HandleCommand(v *viewer.ViewerView, cmd int, args any) bool {
+	switch cmd {
+	case CmSwitchToEditor:
+		actionSwitchViewerToEditor(v)
+		return true
+	case CmSearch:
+		actionViewerSearch(v)
+		return true
+	}
+	return handleWorkspaceForkCommand(cmd, args)
+}
+
+func (viewerApplication) LookupHotkey(e *vtinput.InputEvent) bool {
+	return macroLookupHotkey(macro.MacroMgr, e)
+}
+
+var _ viewer.Application = viewerApplication{}
+
+func init() { viewer.App = viewerApplication{} }

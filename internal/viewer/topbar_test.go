@@ -1,4 +1,4 @@
-package main
+package viewer
 
 import (
 	"github.com/mattn/go-runewidth"
@@ -54,9 +54,12 @@ func TestTopBar_AttributeCallback(t *testing.T) {
 	tb.SetPosition(0, 0, 39, 0)
 	tb.SetVisible(true)
 
-	tb.GetAttr = func() uint64 { return imageTilePickedAttr }
+	// Any attribute distinct from the default will do; the test is that the
+	// callback's colour reaches the cell.
+	picked := vtui.SetRGBBoth(0, 0xFFFF00, 0x101010)
+	tb.GetAttr = func() uint64 { return picked }
 	tb.Show(scr)
-	if got := scr.GetCell(0, 0).Attributes; got != imageTilePickedAttr {
+	if got := scr.GetCell(0, 0).Attributes; got != picked {
 		t.Errorf("the callback colour must win, got %016X", got)
 	}
 

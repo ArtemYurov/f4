@@ -61,7 +61,7 @@ func NewGrabberFrame() *GrabberFrame {
 
 // OpenGrabber pushes a fresh grabber onto the active screen's stack.
 // Callers wire this to Alt+Ins in every frame that could hold input
-// focus (PanelsFrame, EditorView, ViewerView, …).
+// focus (PanelsFrame, EditorView, viewer.ViewerView, …).
 func OpenGrabber() {
 	vtui.FrameManager.Push(NewGrabberFrame())
 	vtui.FrameManager.Redraw()

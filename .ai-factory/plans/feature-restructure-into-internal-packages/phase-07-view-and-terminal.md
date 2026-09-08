@@ -176,6 +176,60 @@ go test -race ./internal/viewer/...
 
 ---
 
+## What the viewer wave actually found
+
+**The interface is five methods, and folding the command dispatch is what made
+it five.** The viewer named seven things above it, but `HandleCommand` was
+three of them — switch-to-editor, search, workspace fork — so it delegates any
+command it does not own upward as one call. That also removed its only use of
+`commands.go`, which matters: see below.
+
+**Two packages the plan did not name, both forced.**
+
+- **`internal/fileops` starts here**, at layer 1 with `state.go` and
+  `codepage.go`. The viewer reads a remembered codepage, which reads
+  `GlobalFileState`; Task 24 had already recorded that `codepage_state.go`
+  could not move without `file_state.go`, and Task 32 is where the plan sends
+  both. It is the same destination, four tasks early, and the package fills up
+  in Task 32 as written.
+- **`internal/textsearch`** holds `FindMatch`, `BuildSearchRegex` and
+  `BytesToString`. Task 29 step 3 says the three viewer-search functions "take
+  `*ViewerBackend` and use nothing else"; they call `findMatch`, which lives in
+  `editor_view.go` and has four editor callers of its own. It belongs to
+  neither package, every argument is a byte slice or a flag, and two copies are
+  two sets of search semantics that drift.
+
+**`commands.go` cannot go to `internal/cmdline`, and Task 35 plans exactly
+that.** `panels_frame.go` names `CmSwitchToEditor`, so `internal/panel` would
+have to import `internal/cmdline` — the one edge Task 35 forbids by name. The
+constants are positional (`vtui.CmApp + iota`), so the file cannot be split
+either. This wave dodged it by delegating; Task 34 or 35 has to settle it, and
+the destination has to be a package the panel, the editor, the viewer and the
+dialogs can all reach.
+
+**Five test files split**, each keeping the half whose subject stayed: the
+disassembler's editor and action-table cases, the URL hover cases for the
+editor and the terminal, and the two viewer tests that press keys through the
+application's routing. `codepage_issue875_sticky_test.go` went back whole — its
+samples are declared in the editor half of the same fixture, and copying sixty
+lines of encoded text into a second package is how two fixtures start
+disagreeing.
+
+**`internal/viewer` needs its own `TestMain`.** The viewer draws through
+`vtui.Palette`, which is shorter than f4's until `theme.SetDefaultF4Palette`
+sizes it; in `cmd/f4` that happened once for the whole binary. Every render test
+panicked until the package got its own.
+
+**Three new hazards for step 5, all seen in this wave.** A local named for the
+package does not need a `range` clause — `viewer, err := viewer.NewViewerView(…)`
+in five files did the same damage. A receiver name is not unique either: `vv`
+belongs to `VideoView` as well, and every `vv.path` rewrite hit it. And
+`exportmethods.py` renames `.name` for *every* receiver, so exporting
+`ViewerView.showCodepageDialog` silently renamed `EditorView`'s and
+`QuickViewPanel`'s; `exportmethods2.py` takes the receiver names to rewrite.
+
+---
+
 ## Task 30: Extract `internal/term`
 
 ### Intent

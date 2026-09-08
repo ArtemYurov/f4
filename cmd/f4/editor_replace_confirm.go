@@ -15,6 +15,7 @@ import (
 
 	"github.com/coregx/coregex"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/textsearch"
 	"github.com/unxed/vtui"
 )
 
@@ -73,7 +74,7 @@ func (st *replaceLoop) renderReplacement(match []byte) []byte {
 }
 
 // selectionIsMatch reports whether sel is exactly one occurrence of the
-// search pattern, using the same matching rules as findMatch.
+// search pattern, using the same matching rules as textsearch.FindMatch.
 func selectionIsMatch(sel []byte, pattern string, caseSensitive bool, re *coregex.Regex) bool {
 	if re != nil {
 		loc := re.FindIndex(sel)
@@ -115,7 +116,7 @@ func (st *replaceLoop) findNext() {
 			off, mLen := -1, 0
 			var err error
 			for ctx.Err() == nil {
-				o, l, e := findMatch(data, st.pattern, st.caseSensitive, st.reverse, st.regexp, st.wholeWord, false, from)
+				o, l, e := textsearch.FindMatch(data, st.pattern, st.caseSensitive, st.reverse, st.regexp, st.wholeWord, false, from)
 				if e != nil || o == -1 {
 					err = e
 					break

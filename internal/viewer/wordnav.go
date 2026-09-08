@@ -1,4 +1,4 @@
-package main
+package viewer
 
 import "strings"
 
@@ -7,23 +7,23 @@ import "strings"
 const (
 	catSpace = iota
 	catDivider
-	catWord
+	CatWord
 )
 
 // DefaultWordDiv repeats the default value of Opt.strWordDiv in far2l.
 const DefaultWordDiv = "~!%^&*()+|{}:\"<>?`-=\\[];',./"
 
-func getCharCategory(r rune) int {
+func GetCharCategory(r rune) int {
 	if r == ' ' || r == '\t' {
 		return catSpace
 	}
 	if strings.ContainsRune(DefaultWordDiv, r) {
 		return catDivider
 	}
-	return catWord
+	return CatWord
 }
 
-// stopBeforeRuneLeft reports whether a leftward word jump must stop with the
+// StopBeforeRuneLeft reports whether a leftward word jump must stop with the
 // cursor on curr, prev being the rune right before it.
 //
 // When selecting is false this repeats the loop of Edit::ProcessKey for
@@ -31,22 +31,22 @@ func getCharCategory(r rune) int {
 // SkipSpace loop of Editor::ProcessKey for KEY_CTRLSHIFTLEFT in editor.cpp,
 // which treats dividers exactly like spaces so that a selection always covers
 // whole words.
-func stopBeforeRuneLeft(prev, curr rune, selecting bool) bool {
-	pCat, cCat := getCharCategory(prev), getCharCategory(curr)
+func StopBeforeRuneLeft(prev, curr rune, selecting bool) bool {
+	pCat, cCat := GetCharCategory(prev), GetCharCategory(curr)
 	if selecting {
-		return pCat != catWord && cCat == catWord
+		return pCat != CatWord && cCat == CatWord
 	}
 	return (pCat == catSpace && cCat != catSpace) ||
-		(pCat == catDivider && cCat == catWord)
+		(pCat == catDivider && cCat == CatWord)
 }
 
-// stopBeforeRuneRight is the rightward counterpart of stopBeforeRuneLeft,
+// StopBeforeRuneRight is the rightward counterpart of StopBeforeRuneLeft,
 // mirroring KEY_CTRLRIGHT and KEY_CTRLSHIFTRIGHT in far2l.
-func stopBeforeRuneRight(prev, curr rune, selecting bool) bool {
-	pCat, cCat := getCharCategory(prev), getCharCategory(curr)
+func StopBeforeRuneRight(prev, curr rune, selecting bool) bool {
+	pCat, cCat := GetCharCategory(prev), GetCharCategory(curr)
 	if selecting {
-		return pCat == catWord && cCat != catWord
+		return pCat == CatWord && cCat != CatWord
 	}
 	return (pCat == catSpace && cCat != catSpace) ||
-		(pCat == catWord && cCat == catDivider)
+		(pCat == CatWord && cCat == catDivider)
 }

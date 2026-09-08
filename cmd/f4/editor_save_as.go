@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
@@ -358,7 +359,7 @@ func (ev *EditorView) applySaveAs(target string, cpID int, bom bool, eol saveAsE
 				if override == 65001 {
 					override = 0
 				}
-				saveCodepageOverride(ev.vfs, ev.filePath, override)
+				fileops.SaveCodepageOverride(ev.vfs, ev.filePath, override)
 			}
 			vtui.DebugLog("EDITOR: Saved %s as %s", previousPath, ev.filePath)
 		}, fullWrite)

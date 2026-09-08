@@ -22,6 +22,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/theme"
+	"github.com/unxed/f4/internal/viewer"
 	archiveplugin "github.com/unxed/f4/plugins/archive"
 	"github.com/unxed/f4/plugins/cloudfox"
 	"github.com/unxed/f4/vfs"
@@ -646,17 +647,17 @@ func runRealCloudFoxArchiveViewer(t *testing.T, archiveVFS vfs.VFS, markerPath s
 	pf := realCloudFoxUIBarePanels(t)
 	defer pf.Close()
 	actionOpenViewer(pf, archiveVFS, markerPath)
-	var viewer *ViewerView
+	var vv *viewer.ViewerView
 	realCloudFoxUIWait(t, 10*time.Minute, "remote archive marker F3 viewer to open", func() bool {
-		viewer, _ = findOpenedViewer(archiveVFS, markerPath)
-		return viewer != nil
+		vv, _ = findOpenedViewer(archiveVFS, markerPath)
+		return vv != nil
 	})
-	defer viewer.Close()
-	if viewer.backend.Size() != fixture.markerSize {
-		t.Fatalf("archive marker F3 viewer size=%d want=%d", viewer.backend.Size(), fixture.markerSize)
+	defer vv.Close()
+	if vv.Backend.Size() != fixture.markerSize {
+		t.Fatalf("archive marker F3 viewer size=%d want=%d", vv.Backend.Size(), fixture.markerSize)
 	}
 	for _, probe := range fixture.probes {
-		got := realCloudFoxUIViewerRead(t, viewer, probe.offset, len(probe.data))
+		got := realCloudFoxUIViewerRead(t, vv, probe.offset, len(probe.data))
 		if !equalRealCloudFoxArchiveProbes(
 			[]realCloudFoxArchiveProbe{{offset: probe.offset, data: got}},
 			[]realCloudFoxArchiveProbe{probe},
@@ -664,14 +665,14 @@ func runRealCloudFoxArchiveViewer(t *testing.T, archiveVFS vfs.VFS, markerPath s
 			t.Fatalf("archive marker F3 viewer changed bytes at offset %d", probe.offset)
 		}
 	}
-	viewer.SetPosition(0, 0, 119, 38)
-	if !viewer.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_END}) {
+	vv.SetPosition(0, 0, 119, 38)
+	if !vv.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_END}) {
 		t.Fatal("archive marker F3 viewer did not handle End navigation")
 	}
 	realCloudFoxUIWait(t, 5*time.Minute, "archive marker F3 viewer End navigation", func() bool {
-		return !viewer.Busy
+		return !vv.Busy
 	})
-	if fixture.markerSize >= 256<<10 && viewer.TopOffset == 0 {
+	if fixture.markerSize >= 256<<10 && vv.TopOffset == 0 {
 		t.Error("archive marker F3 viewer handled End but did not move in a large member")
 	}
 }

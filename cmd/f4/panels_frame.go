@@ -28,6 +28,7 @@ import (
 	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/f4/internal/theme"
+	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/f4/vfs/hostmode"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -3055,9 +3056,9 @@ func (pf *PanelsFrame) ProcessMouse(e *vtinput.InputEvent) bool {
 			if changed := pf.termView.UpdateURLHover(mx, my); changed {
 				vtui.FrameManager.Redraw()
 			}
-			if ctrlMouseClick(e) {
+			if viewer.CtrlMouseClick(e) {
 				if rawURL, ok := pf.termView.URLAt(mx, my); ok {
-					openExternalURLAsync(rawURL)
+					viewer.OpenExternalURLAsync(rawURL)
 					return true
 				}
 			}
@@ -3407,9 +3408,9 @@ func (pf *PanelsFrame) HandleCommand(cmd int, args any) bool {
 		}
 		return false
 	case CmSwitchToEditor:
-		if vv, ok := args.(*ViewerView); ok {
-			path := vv.path
-			v := vv.vfs
+		if vv, ok := args.(*viewer.ViewerView); ok {
+			path := vv.Path
+			v := vv.VFS
 			vv.Close()
 			actionOpenEditor(pf, v, path)
 			return true
@@ -4611,7 +4612,7 @@ func executeCapturedCommand(pf *PanelsFrame, action string, cmdStr string) {
 			v := vfs.NewOSVFS(filepath.Dir(tmpPath))
 
 			if action == "view" {
-				vv, err := NewViewerView(context.Background(), v, tmpPath)
+				vv, err := viewer.NewViewerView(context.Background(), v, tmpPath)
 				if err == nil {
 					vv.OnClose = func() { os.Remove(tmpPath) }
 					showViewer(pf, vv, tmpPath)

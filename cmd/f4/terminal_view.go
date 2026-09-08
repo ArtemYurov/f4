@@ -13,6 +13,7 @@ import (
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/textlayout"
 	"github.com/unxed/f4/internal/theme"
+	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -983,7 +984,7 @@ func (tv *TerminalView) Show(scr *vtui.ScreenBuf) {
 		// Проверка выхода за пределы экрана
 		if drawY >= tv.Y1 && drawY <= tv.Y1+tv.Height-1 {
 			drawLine := append([]vtui.CharInfo(nil), line...)
-			applyURLHoverAttr(drawLine, urlCellRangesFromCells(line), tv.hoverURL)
+			viewer.ApplyURLHoverAttr(drawLine, viewer.UrlCellRangesFromCells(line), tv.hoverURL)
 			scr.Write(tv.X1, drawY, drawLine)
 		}
 	}
@@ -1313,28 +1314,28 @@ func (tv *TerminalView) InTerminalArea(x, y int) bool {
 	return x >= tv.X1 && x <= tv.X1+tv.Width-1 && y >= tv.Y1 && y <= tv.Y1+tv.Height-1
 }
 
-func (tv *TerminalView) urlAtScreenCell(x, y int) (urlCellRange, bool) {
+func (tv *TerminalView) urlAtScreenCell(x, y int) (viewer.UrlCellRange, bool) {
 	if !tv.InTerminalArea(x, y) {
-		return urlCellRange{}, false
+		return viewer.UrlCellRange{}, false
 	}
 	row := tv.gridRowForScreenY(y)
 	if row < 0 {
-		return urlCellRange{}, false
+		return viewer.UrlCellRange{}, false
 	}
 	buf := tv.Lines
 	if tv.UseAltScreen {
 		buf = tv.AltLines
 	}
 	if row >= len(buf) {
-		return urlCellRange{}, false
+		return viewer.UrlCellRange{}, false
 	}
 	col := x - tv.X1
-	for _, link := range urlCellRangesFromCells(buf[row]) {
+	for _, link := range viewer.UrlCellRangesFromCells(buf[row]) {
 		if col >= link.Start && col < link.End {
 			return link, true
 		}
 	}
-	return urlCellRange{}, false
+	return viewer.UrlCellRange{}, false
 }
 
 // UpdateURLHover tracks the URL under the pointer without changing terminal

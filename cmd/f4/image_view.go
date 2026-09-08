@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -37,7 +38,7 @@ var imageOverlayAttr = vtui.SetRGBBoth(0, 0xFFFFFF, 0x202020)
 // ImageView shows a single picture full screen.
 type ImageView struct {
 	vtui.BaseFrame
-	topBar *TopBar
+	topBar *viewer.TopBar
 
 	vfs     vfs.VFS
 	path    string
@@ -114,7 +115,7 @@ func NewImageView(ctx context.Context, v vfs.VFS, path string) (*ImageView, erro
 	iv.gfxKey = fmt.Sprintf("f4.imageview:%p", iv)
 
 	iv.index = -1
-	iv.topBar = NewTopBar(
+	iv.topBar = viewer.NewTopBar(
 		func() string {
 			var base string
 			if v != nil {

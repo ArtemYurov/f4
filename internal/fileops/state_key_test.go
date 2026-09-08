@@ -1,4 +1,4 @@
-package main
+package fileops
 
 import (
 	"path/filepath"
@@ -6,6 +6,15 @@ import (
 
 	"github.com/unxed/f4/vfs"
 )
+
+// A VFS whose title is what the state key is built from; the panel tests have
+// their own copy, because a mock is not scaffolding worth sharing.
+type mockTitleVFS struct {
+	vfs.OSVFS
+	title string
+}
+
+func (m *mockTitleVFS) GetTitle() string { return m.title }
 
 // TestFileStateKey_LocalPathStaysBare keeps the keys already written to
 // file_states.json working: a local file must go on being stored under its own

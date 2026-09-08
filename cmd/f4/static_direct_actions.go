@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/vtui"
 )
 
@@ -194,11 +195,11 @@ func actionViewerGoTo() bool {
 	if vtui.FrameManager == nil {
 		return false
 	}
-	vv, ok := vtui.FrameManager.GetTopFrame().(*ViewerView)
+	vv, ok := vtui.FrameManager.GetTopFrame().(*viewer.ViewerView)
 	if !ok || vv == nil {
 		return false
 	}
-	vv.askGoto()
+	vv.AskGoto()
 	return true
 }
 

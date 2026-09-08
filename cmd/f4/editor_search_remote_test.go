@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/piecetable"
+	"github.com/unxed/f4/internal/textsearch"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -143,7 +144,7 @@ func TestSearchDelegation_FallsBackWhenTheAnswerCouldBeShort(t *testing.T) {
 	}
 
 	// And the local scan, which is what the caller falls back to, does find it.
-	off, _, err := findMatch([]byte(content), "needle", false, false, false, false, false, after)
+	off, _, err := textsearch.FindMatch([]byte(content), "needle", false, false, false, false, false, after)
 	if err != nil || off < after {
 		t.Errorf("local scan from %d found %d (err=%v)", after, off, err)
 	}

@@ -1,4 +1,4 @@
-package main
+package fileops
 
 import (
 	"os"
@@ -36,7 +36,7 @@ func TestF4FileStateProvider_SaveAndRestore(t *testing.T) {
 	dbPath := filepath.Join(tmpDir, "file_states_mru.json")
 
 	fs := &F4FileStateProvider{
-		path:  dbPath,
+		Path:  dbPath,
 		Limit: 10,
 		Data:  make(map[string]*FileState),
 	}
@@ -84,7 +84,7 @@ func TestF4FileStateProvider_SaveAndRestore(t *testing.T) {
 func TestF4FileStateProvider_AsyncSaveUpdatesMemoryAndDisk(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "file_states_async.json")
 	fs := &F4FileStateProvider{
-		path:  dbPath,
+		Path:  dbPath,
 		Limit: 10,
 		Data:  make(map[string]*FileState),
 	}

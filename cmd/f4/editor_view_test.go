@@ -10,7 +10,9 @@ import (
 	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/textsearch"
 	"github.com/unxed/f4/internal/theme"
+	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -1722,9 +1724,9 @@ func TestViewerView_CodepageSwitch_Crash(t *testing.T) {
 	}
 
 	v := vfs.NewOSVFS(filepath.Dir(tmpFile))
-	vv, err := NewViewerView(context.Background(), v, tmpFile)
+	vv, err := viewer.NewViewerView(context.Background(), v, tmpFile)
 	if err != nil {
-		t.Fatalf("Failed to create ViewerView: %v", err)
+		t.Fatalf("Failed to create viewer.ViewerView: %v", err)
 	}
 	defer vv.Close()
 	vv.SetPosition(0, 0, 80, 24)
@@ -5660,7 +5662,7 @@ func TestEditorView_Replace_RegexExpandsPerOccurrence(t *testing.T) {
 func TestReplacePrompt_RegexShowsExpandedReplacement(t *testing.T) {
 	// The prompt shows what will really be inserted for this occurrence,
 	// not the raw "$2$1" the user typed.
-	re, err := buildSearchRegex(`([a-z])(\d)`, true, true, false)
+	re, err := textsearch.BuildSearchRegex(`([a-z])(\d)`, true, true, false)
 	if err != nil {
 		t.Fatal(err)
 	}

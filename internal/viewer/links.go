@@ -1,4 +1,4 @@
-package main
+package viewer
 
 import (
 	"fmt"
@@ -14,28 +14,28 @@ import (
 	"github.com/unxed/vtui"
 )
 
-// urlLink is a byte range in the text that contains one externally
+// UrlLink is a byte range in the text that contains one externally
 // launchable URL. End is exclusive.
-type urlLink struct {
+type UrlLink struct {
 	Start int
 	End   int
 	URL   string
 }
 
-const maxURLScanBytes = 64 * 1024
+const MaxURLScanBytes = 64 * 1024
 
 // URL-looking text is deliberately limited to web links. Terminal output is
 // untrusted input, so accepting arbitrary schemes here would make a click a
 // way to invoke custom URI handlers unexpectedly.
 var urlLinkPattern = regexp.MustCompile(`(?i)(?:https?://|www\.)[^\s<>"']+`)
 
-func findURLLinks(text string) []urlLink {
+func FindURLLinks(text string) []UrlLink {
 	matches := urlLinkPattern.FindAllStringIndex(text, -1)
 	if len(matches) == 0 {
 		return nil
 	}
 
-	links := make([]urlLink, 0, len(matches))
+	links := make([]UrlLink, 0, len(matches))
 	for _, match := range matches {
 		start, end := match[0], match[1]
 		candidate := strings.TrimRight(text[start:end], ".,;:!?)]}")
@@ -52,7 +52,7 @@ func findURLLinks(text string) []urlLink {
 		if !validExternalURL(launchURL) {
 			continue
 		}
-		links = append(links, urlLink{Start: start, End: end, URL: launchURL})
+		links = append(links, UrlLink{Start: start, End: end, URL: launchURL})
 	}
 	return links
 }
@@ -70,30 +70,30 @@ func validExternalURL(raw string) bool {
 	}
 }
 
-func urlLinkAt(links []urlLink, byteOffset int) (urlLink, bool) {
+func UrlLinkAt(links []UrlLink, byteOffset int) (UrlLink, bool) {
 	for _, link := range links {
 		if byteOffset >= link.Start && byteOffset < link.End {
 			return link, true
 		}
 	}
-	return urlLink{}, false
+	return UrlLink{}, false
 }
 
-// urlCellRange maps a byte-range link to the cells that display it. The
+// UrlCellRange maps a byte-range link to the cells that display it. The
 // offsets slice has one entry per cell and points at that cell's byte offset
 // in text. It also works for tabs and wide-character filler cells.
-type urlCellRange struct {
+type UrlCellRange struct {
 	Start int
 	End   int
 	URL   string
 }
 
-func urlCellRanges(text string, cellByteOffsets []int) []urlCellRange {
-	links := findURLLinks(text)
+func urlCellRanges(text string, cellByteOffsets []int) []UrlCellRange {
+	links := FindURLLinks(text)
 	if len(links) == 0 || len(cellByteOffsets) == 0 {
 		return nil
 	}
-	ranges := make([]urlCellRange, 0, len(links))
+	ranges := make([]UrlCellRange, 0, len(links))
 	for _, link := range links {
 		first, last := -1, -1
 		for i, offset := range cellByteOffsets {
@@ -105,13 +105,13 @@ func urlCellRanges(text string, cellByteOffsets []int) []urlCellRange {
 			}
 		}
 		if first >= 0 {
-			ranges = append(ranges, urlCellRange{Start: first, End: last, URL: link.URL})
+			ranges = append(ranges, UrlCellRange{Start: first, End: last, URL: link.URL})
 		}
 	}
 	return ranges
 }
 
-func urlCellRangesFromCells(cells []vtui.CharInfo) []urlCellRange {
+func UrlCellRangesFromCells(cells []vtui.CharInfo) []UrlCellRange {
 	var text strings.Builder
 	offsets := make([]int, 0, len(cells))
 	for _, cell := range cells {
@@ -121,7 +121,7 @@ func urlCellRangesFromCells(cells []vtui.CharInfo) []urlCellRange {
 	return urlCellRanges(text.String(), offsets)
 }
 
-func applyURLHoverAttr(cells []vtui.CharInfo, ranges []urlCellRange, hoveredURL string) {
+func ApplyURLHoverAttr(cells []vtui.CharInfo, ranges []UrlCellRange, hoveredURL string) {
 	if hoveredURL == "" {
 		return
 	}
@@ -142,7 +142,7 @@ func applyURLHoverAttr(cells []vtui.CharInfo, ranges []urlCellRange, hoveredURL 
 	}
 }
 
-func ctrlMouseClick(e *vtinput.InputEvent) bool {
+func CtrlMouseClick(e *vtinput.InputEvent) bool {
 	return e != nil && e.Type == vtinput.MouseEventType &&
 		e.ButtonState&vtinput.FromLeft1stButtonPressed != 0 && e.KeyDown &&
 		e.MouseEventFlags&vtinput.MouseMoved == 0 &&
@@ -173,7 +173,7 @@ func launchExternalURLDefault(raw string) error {
 	return cmd.Start()
 }
 
-func openExternalURLAsync(raw string) {
+func OpenExternalURLAsync(raw string) {
 	go func() {
 		if err := openExternalURL(raw); err != nil {
 			toast.Show(fmt.Sprintf("Cannot open URL: %v", err), 3*time.Second)
