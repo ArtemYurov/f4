@@ -216,17 +216,26 @@ and `TestMain` — the waves would otherwise strand.
   git diff --name-only HEAD...upstream/main | grep '^cmd/f4/'
   ```
 
-  *Rebase on either of two triggers:* a **phase boundary**, with every task in
+  *Merge on either of two triggers:* a **phase boundary**, with every task in
   the phase closed and the tree consistent; or **upstream touching a file the
   next two or three tasks own**, which overrides the schedule. Merging a change
   into `cmd/f4/actions.go` while it is still one file is an ordinary three-way
   merge. Merging the same change once the file has been cut into six pieces
   across four packages is a hand reconstruction of somebody else's intent.
 
-  *Never mid-task*, and always behind a backup branch named with the date and
-  time — that is the user's standing rule for any rebase. Keep the two most
-  recent and delete the rest; twenty identically named branches are worth
-  nothing.
+  *`git merge upstream/main`, not rebase.* Rebase replays each of our commits
+  onto the new base separately, so one foreign edit to a file five of our commits
+  touch is reconciled five times — each against an intermediate state of that
+  file which does not exist in the result. A merge resolves it once, against the
+  branch as it actually stands. Rebase also rewrites every one of our commits on
+  every sync, which at two syncs a day is a great deal of rewriting of code we
+  did not write.
+
+  *Never mid-task*, and never with anything staged: `git commit` the current task
+  first, or the merge trips over the index. A merge rewrites no history, so it
+  needs no backup branch — `git merge --abort` before it lands, `git revert -m 1`
+  after. Keep the backup-branch rule for operations that do rewrite history, and
+  delete those branches in the same sitting.
 
   *After each rebase:* compare against the baseline, run the cross-compilation
   sweep, and **re-measure every number the next tasks stand on**. This is not
@@ -324,7 +333,7 @@ titles, not the ordering.
 - [x] Task 17: Move `fusefs`, `vtvibe` and `luaplug` under `internal/` ([details](phase-03-subsystems.md#task-17-move-fusefs-vtvibe-and-luaplug))
 
 ### Phase 4: The Shared Primitives Leave cmd/f4
-- [ ] Task 18: Split `action_registry.go` into mechanism and table, in place ([details](phase-04-shared-primitives.md#task-18-separate-the-action-registrys-mechanism-from-its-table)) (depends on 3, 17)
+- [x] Task 18: Split `action_registry.go` into mechanism and table, in place ([details](phase-04-shared-primitives.md#task-18-separate-the-action-registrys-mechanism-from-its-table)) (depends on 3, 17)
 - [ ] Task 19: Create `internal/numeric`; give sysinfo its private copy ([details](phase-04-shared-primitives.md#task-19-create-internalnumeric)) (depends on 9)
 - [ ] Task 20: Create `internal/toast` and `internal/history` ([details](phase-04-shared-primitives.md#task-20-create-internaltoast-and-internalhistory))
 - [ ] Task 21: Create `internal/action` with a localizer hook ([details](phase-04-shared-primitives.md#task-21-create-internalaction)) (depends on 18)

@@ -185,14 +185,27 @@ Finding this locally costs one run. Finding it in review costs the PR.
 6. Verify that **every commit** on the branch builds, not only `HEAD`. The
    plan's central invariant is that any commit can be checked out and built, and
    checking `HEAD` alone never tests it:
+   Walk the revisions in a scratch worktree, which reads and rewrites nothing:
    ```
-   git rebase --exec 'CGO_ENABLED=0 go build ./... && go vet ./...' upstream/main
+   git worktree add -q --detach /tmp/verify upstream/main
+   for c in $(git rev-list --reverse upstream/main..HEAD); do
+       git -C /tmp/verify checkout -q --detach "$c"
+       (cd /tmp/verify && CGO_ENABLED=0 go build ./... && go vet ./...) \
+           || echo "FAIL $c $(git log -1 --format=%s "$c")"
+   done
+   git worktree remove --force /tmp/verify
    ```
-   It replays the branch and stops at the first commit that fails. Note that a
-   rebase rewrites every commit id, so run it only after the last content commit
-   and before the branch is pushed for review — never under work in progress. To
-   check without rewriting anything, walk the same revisions in a scratch
-   worktree (`git worktree add --detach`) and build each one there.
+   Skip a commit that touches no `.go`, `go.mod` or `go.sum` — its result is the
+   previous commit's. Use `go vet` and not only `go build`: `build` ignores test
+   files, and the failure this catches is a helper deleted one commit before its
+   replacement arrives.
+
+   `git rebase --exec` would do the same job and rewrite every commit id doing
+   it. Worse, this branch merges upstream rather than rebasing onto it, so a
+   plain `git rebase` would flatten those merges and check a history that is not
+   the one being reviewed. If a rebase is used anyway it needs
+   `--rebase-merges`; the worktree walk needs nothing and changes nothing, which
+   is what a check should do.
 
    A broken commit in the middle of a 300-file restructuring is not cosmetic: it
    breaks `git bisect` for whoever debugs a regression a year from now, and it is
