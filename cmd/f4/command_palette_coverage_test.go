@@ -8,6 +8,7 @@ import (
 	"go/token"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -59,161 +60,217 @@ var commandPaletteAuditClasses = map[string]bool{
 	paletteAuditPluginDialogBridge: true,
 }
 
+// commandPaletteF4Surfaces is how many audited command surfaces belong to the f4
+// application itself, as opposed to a plugin. Restructuring moves a surface from
+// one package to another; it never removes one. A smaller number here means an
+// audit entry was dropped together with its subject, which the set comparison
+// below cannot see because both sides shrink at once.
+const commandPaletteF4Surfaces = 42
+
+// commandPaletteTargetPackage names the package each audited f4 file ends up in
+// once cmd/f4 is split, so an audit key survives the move that carries its
+// subject. Keys are bare basenames and the map is consulted for cmd/f4 files
+// only; every other file is keyed by the directory it already sits in. An entry
+// is deleted by the wave that actually moves its file — at that point the
+// fallback returns the same name — so the map empties itself and no key ever
+// changes.
+//
+// Keys stay unique without the path because the files sharing a target package
+// share one Go package today, and Go already forbids two functions there under
+// the same name.
+var commandPaletteTargetPackage = map[string]string{
+	"actions.go":                  "app",
+	"ai_chat_panel.go":            "app",
+	"arkanoid.go":                 "app",
+	"sheet_frame.go":              "app",
+	"apply_command_output.go":     "cmdline",
+	"command_line.go":             "cmdline",
+	"bookmarks_dialog.go":         "dialog",
+	"codepage_settings.go":        "dialog",
+	"command_palette_ui.go":       "dialog",
+	"find_file.go":                "dialog",
+	"grabber.go":                  "dialog",
+	"hotkeys_ui.go":               "dialog",
+	"editor_base64.go":            "editor",
+	"editor_find_all.go":          "editor",
+	"editor_view.go":              "editor",
+	"fuse_mount_list.go":          "fileops",
+	"queue_manager.go":            "fileops",
+	"macro.go":                    "macro",
+	"image_view.go":               "media",
+	"player_panel.go":             "media",
+	"video_view.go":               "media",
+	"drive_bookmarks_ui.go":       "panel",
+	"file_associations_editor.go": "panel",
+	"file_associations_ui.go":     "panel",
+	"file_panel.go":               "panel",
+	"info_panel.go":               "panel",
+	"panel_plugins.go":            "panel",
+	"panels_frame.go":             "panel",
+	"quick_view_panel.go":         "panel",
+	"temp_panel.go":               "panel",
+	"user_menu_ui.go":             "panel",
+	"viewer_editor_history.go":    "panel",
+	"plugin_hotkeys.go":           "plughost",
+	"rpc_panel.go":                "plughost",
+	"viewer_view.go":              "viewer",
+}
+
 var commandPaletteProcessKeyAudit = map[string]commandPaletteSurfaceAudit{
-	"cmd/f4/ai_chat_panel.go:(*AIChatPanel).ProcessKey": {
+	"app.(*AIChatPanel).ProcessKey": {
 		class: paletteAuditPanelProvider, rationale: "focused AI panel commands are supplied by the panel-context palette provider; text and link navigation remain local",
 	},
-	"cmd/f4/arkanoid.go:(*ArkanoidFrame).ProcessKey": {
+	"app.(*ArkanoidFrame).ProcessKey": {
 		class: paletteAuditFrameProvider, rationale: "Arkanoid commands are supplied by commandPaletteArkanoidEntries",
 	},
-	"cmd/f4/apply_command_output.go:(*applyOutputDialog).ProcessKey": {
+	"cmdline.(*applyOutputDialog).ProcessKey": {
 		class: paletteAuditModalLocal, rationale: "the apply-output window is modal and only adds its local close key",
 	},
-	"cmd/f4/command_line.go:(*CommandLine).ProcessKey": {
+	"cmdline.(*CommandLine).ProcessKey": {
 		class: paletteAuditParentControl, rationale: "command-line editing primitives belong to PanelsFrame rather than being standalone commands",
 	},
-	"cmd/f4/command_palette_ui.go:(*commandPaletteDialog).ProcessKey": {
+	"dialog.(*commandPaletteDialog).ProcessKey": {
 		class: paletteAuditModalLocal, rationale: "the palette dialog owns query, navigation, execution, and cancellation while it is open",
 	},
-	"cmd/f4/editor_view.go:(*EditorView).ProcessKey": {
+	"editor.(*EditorView).ProcessKey": {
 		class: paletteAuditActionArea, rationale: "editor commands are registered actions; raw text and cursor editing remain local primitives",
 	},
-	"cmd/f4/find_file.go:(*SearchResultsWindow).ProcessKey": {
+	"dialog.(*SearchResultsWindow).ProcessKey": {
 		class: paletteAuditModalLocal, rationale: "find results are a modal result picker whose F3/F4/F5 buttons route to existing view/edit/temporary-panel operations",
 	},
-	"cmd/f4/file_panel.go:(*FileSystemPanel).ProcessKey": {
+	"panel.(*FileSystemPanel).ProcessKey": {
 		class: paletteAuditPanelProvider, rationale: "panel actions and audited transient panel keys are exposed by the action registry and panel-context provider",
 	},
-	"cmd/f4/grabber.go:(*GrabberFrame).ProcessKey": {
+	"dialog.(*GrabberFrame).ProcessKey": {
 		class: paletteAuditFrameProvider, rationale: "screen-grabber commands are supplied by commandPaletteGrabberEntries",
 	},
-	"cmd/f4/sheet_frame.go:(*SheetFrame).ProcessKey": {
+	"app.(*SheetFrame).ProcessKey": {
 		class: paletteAuditFrameProvider, rationale: "spreadsheet commands are supplied by commandPaletteSheetEntries; cell editing, cursor movement and block marking remain local primitives",
 	},
-	"cmd/f4/hotkeys_ui.go:(*HotkeyAssignFrame).ProcessKey": {
+	"dialog.(*HotkeyAssignFrame).ProcessKey": {
 		class: paletteAuditModalLocal, rationale: "the hotkey-capture dialog must consume the next key locally and is not a global command surface",
 	},
-	"cmd/f4/plugin_hotkeys.go:(*PluginHotkeyAssignFrame).ProcessKey": {
+	"plughost.(*PluginHotkeyAssignFrame).ProcessKey": {
 		class: paletteAuditModalLocal, rationale: "the plugin hotkey assignment dialog captures its next key locally and is not a global command surface",
 	},
-	"cmd/f4/image_view.go:(*ImageView).ProcessKey": {
+	"media.(*ImageView).ProcessKey": {
 		class: paletteAuditFrameProvider, rationale: "image-viewer commands are supplied by commandPaletteImageEntries",
 	},
-	"cmd/f4/video_view.go:(*VideoView).ProcessKey": {
+	"media.(*VideoView).ProcessKey": {
 		class: paletteAuditModalLocal, rationale: "the video player is a modal frame over a window of its own; play, seek and volume are local primitives sent down mpv's socket",
 	},
-	"cmd/f4/player_panel.go:(*PlayerPanel).ProcessKey": {
+	"media.(*PlayerPanel).ProcessKey": {
 		class: paletteAuditPanelProvider, rationale: "the player's transport, volume and playlist keys are navigation inside one panel; the panel toggle itself is the Panel.Player action",
 	},
-	"cmd/f4/info_panel.go:(*InfoPanel).ProcessKey": {
+	"panel.(*InfoPanel).ProcessKey": {
 		class: paletteAuditPanelProvider, rationale: "the focused information-panel command is supplied by the panel-context palette provider",
 	},
-	"cmd/f4/macro.go:(*MacroAssignFrame).ProcessKey": {
+	"macro.(*MacroAssignFrame).ProcessKey": {
 		class: paletteAuditModalLocal, rationale: "macro assignment intentionally captures the next key inside its modal dialog",
 	},
-	"cmd/f4/panels_frame.go:(*PanelsFrame).ProcessKey": {
+	"panel.(*PanelsFrame).ProcessKey": {
 		class: paletteAuditPanelProvider, rationale: "PanelsFrame combines registered actions with audited transient panel-context entries",
 	},
-	"cmd/f4/panels_frame.go:(*menuKeyLabelsFrame).ProcessKey": {
+	"panel.(*menuKeyLabelsFrame).ProcessKey": {
 		class: paletteAuditModalLocal, rationale: "the key-label menu wrapper only forwards menu navigation and local cancellation handling",
 	},
-	"cmd/f4/drive_bookmarks_ui.go:(*driveBookmarkEditDialog).ProcessKey": {
+	"panel.(*driveBookmarkEditDialog).ProcessKey": {
 		class: paletteAuditModalLocal, rationale: "the drive-bookmark editor captures its optional hotkey and delegates the remaining field and button handling locally",
 	},
-	"cmd/f4/drive_bookmarks_ui.go:(*driveMenuFrame).ProcessKey": {
+	"panel.(*driveMenuFrame).ProcessKey": {
 		class: paletteAuditDynamicProvider, rationale: "the drive menu wrapper preserves local menu handling while its runtime drive and bookmark entries come from dynamic providers",
 	},
-	"cmd/f4/panel_plugins.go:(*pluginPanelInstance).ProcessKey": {
+	"panel.(*pluginPanelInstance).ProcessKey": {
 		class: paletteAuditPanelProvider, rationale: "native panel plugins receive raw input inside their registered panel surface; their semantic commands are plugin-owned",
 	},
-	"cmd/f4/quick_view_panel.go:(*QuickViewPanel).ProcessKey": {
+	"panel.(*QuickViewPanel).ProcessKey": {
 		class: paletteAuditPanelProvider, rationale: "the focused Quick View toggle is supplied by the panel-context palette provider",
 	},
-	"cmd/f4/queue_manager.go:(*QueueFrame).ProcessKey": {
+	"fileops.(*QueueFrame).ProcessKey": {
 		class: paletteAuditFrameProvider, rationale: "queue commands are supplied by commandPaletteQueueEntries",
 	},
-	"cmd/f4/viewer_view.go:(*ViewerView).ProcessKey": {
+	"viewer.(*ViewerView).ProcessKey": {
 		class: paletteAuditActionArea, rationale: "viewer commands are registered actions; scrolling and selection remain local primitives",
 	},
-	"plugins/dummy_rpc/main.go:(*DummyPlugin).ProcessKey": {
+	"dummy_rpc.(*DummyPlugin).ProcessKey": {
 		class: paletteAuditTransportHook, rationale: "this is the RPC plugin ProcessKey protocol hook, not an in-process frame",
 	},
-	"plugins/envman/manager_frame.go:(*managerWindow).ProcessKey": {
+	"envman.(*managerWindow).ProcessKey": {
 		class: paletteAuditPluginLocal, rationale: "Environment Manager owns these keys inside its plugin window, reached through its rich command",
 	},
-	"plugins/mediainfo/dialog.go:(*reportWindow).ProcessKey": {
+	"mediainfo.(*reportWindow).ProcessKey": {
 		class: paletteAuditPluginLocal, rationale: "MediaInfo owns its F4 editor handoff while the modal report window is open",
 	},
-	"plugins/mediainfo/report_view.go:(*reportTextView).ProcessKey": {
+	"mediainfo.(*reportTextView).ProcessKey": {
 		class: paletteAuditPluginLocal, rationale: "the MediaInfo report view consumes scrolling and navigation keys as an embedded dialog control",
 	},
-	"plugins/netfox/dialog.go:(*protoUIContainer).ProcessKey": {
+	"netfox.(*protoUIContainer).ProcessKey": {
 		class: paletteAuditPluginLocal, rationale: "NetFox protocol controls consume keys inside the connection dialog",
 	},
-	"plugins/sqlite/ui.go:(*browserWindow).ProcessKey": {
+	"sqlite.(*browserWindow).ProcessKey": {
 		class: paletteAuditPluginLocal, rationale: "the SQLite client owns F9 inside its modal browser window, which is reached through its own command",
 	},
-	"plugins/visren/dialog.go:(*Dialog).ProcessKey": {
+	"visren.(*Dialog).ProcessKey": {
 		class: paletteAuditPluginLocal, rationale: "VisRen owns these keys inside the rename dialog, reached through its rich command",
 	},
-	"plugins/visren/dialog.go:(*previewList).ProcessKey": {
+	"visren.(*previewList).ProcessKey": {
 		class: paletteAuditPluginLocal, rationale: "the preview list is an embedded VisRen dialog control",
 	},
-	"plugins/visren/dialog.go:(*tokenButton).ProcessKey": {
+	"visren.(*tokenButton).ProcessKey": {
 		class: paletteAuditPluginLocal, rationale: "the token button is an embedded VisRen dialog control",
 	},
-	"cmd/f4/rpc_panel.go:(*rpcVUIPanel).ProcessKey": {
+	"plughost.(*rpcVUIPanel).ProcessKey": {
 		class: paletteAuditTransportHook, rationale: "RPC panel input is forwarded to the remote plugin, whose .vui document owns its semantic commands",
 	},
 }
 
 var commandPaletteNewVMenuAudit = map[string]commandPaletteSurfaceAudit{
-	"cmd/f4/actions.go:actionFoldersHistory#1": {
+	"app.actionFoldersHistory#1": {
 		class: paletteAuditDynamicAction, rationale: "the registered folder-history action opens a runtime history list",
 	},
-	"cmd/f4/actions.go:actionCommandHistory#1": {
+	"app.actionCommandHistory#1": {
 		class: paletteAuditDynamicAction, rationale: "the registered command-history action opens a runtime history list",
 	},
-	"cmd/f4/actions.go:actionSortMenuForPanel#1": {
+	"app.actionSortMenuForPanel#1": {
 		class: paletteAuditDynamicAction, rationale: "the registered sort-menu action opens choices that are also backed by sort actions",
 	},
-	"cmd/f4/bookmarks_dialog.go:(*bookmarksDialog).open#1": {
+	"dialog.(*bookmarksDialog).open#1": {
 		class: paletteAuditDynamicProvider, rationale: "bookmark slots are runtime data and live slots are exposed by commandPaletteBookmarkEntries",
 	},
-	"cmd/f4/editor_find_all.go:(*EditorView).showFindAllMenu#1": {
+	"editor.(*EditorView).showFindAllMenu#1": {
 		class: paletteAuditModalLocal, rationale: "Find All results are a query-local result selector reached through the registered editor search action",
 	},
-	"cmd/f4/codepage_settings.go:newCodepageMenu#1": {
+	"dialog.newCodepageMenu#1": {
 		class: paletteAuditDynamicAction, rationale: "the registered viewer, editor and convert-codepage actions all open the runtime codepage list through this builder",
 	},
-	"cmd/f4/editor_base64.go:(*EditorView).showBase64Menu#1": {
+	"editor.(*EditorView).showBase64Menu#1": {
 		class: paletteAuditDynamicAction, rationale: "the registered editor Base64 action opens its two fixed transformations",
 	},
-	"cmd/f4/file_associations_editor.go:(*assocEditorState).openList#1": {
+	"panel.(*assocEditorState).openList#1": {
 		class: paletteAuditModalLocal, rationale: "association rows are edited inside the file-association settings workflow",
 	},
-	"cmd/f4/file_associations_ui.go:showAssociationPicker#1": {
+	"panel.showAssociationPicker#1": {
 		class: paletteAuditDynamicAction, rationale: "matching file associations are runtime choices reached through the registered file operation",
 	},
-	"cmd/f4/fuse_mount_list.go:showMountList#1": {
+	"fileops.showMountList#1": {
 		class: paletteAuditDynamicAction, rationale: "the registered mount-list action opens the current mount inventory",
 	},
-	"cmd/f4/panels_frame.go:(*PanelsFrame).menuItemsWithKeyLabels#1": {
+	"panel.(*PanelsFrame).menuItemsWithKeyLabels#1": {
 		class: paletteAuditPluginDialogBridge, rationale: "the generic callback-based plugin menu bridge adds runtime plugin rows and optional key labels that are not globally enumerable commands",
 	},
-	"cmd/f4/panels_frame.go:(*PanelsFrame).showDriveMenuAt#1": {
+	"panel.(*PanelsFrame).showDriveMenuAt#1": {
 		class: paletteAuditDynamicProvider, rationale: "registered drives are mirrored by commandPaletteDriveEntries with live factory re-resolution",
 	},
-	"cmd/f4/user_menu_ui.go:(*userMenuState).pushLevel#1": {
+	"panel.(*userMenuState).pushLevel#1": {
 		class: paletteAuditDynamicProvider, rationale: "executable user-menu leaves are flattened by commandPaletteUserMenuEntries",
 	},
-	"cmd/f4/viewer_editor_history.go:actionViewerEditorHistory#1": {
+	"panel.actionViewerEditorHistory#1": {
 		class: paletteAuditDynamicAction, rationale: "the registered viewer/editor history action opens runtime history entries",
 	},
-	"cmd/f4/quick_view_panel.go:(*QuickViewPanel).showCodepageDialog#1": {
+	"panel.(*QuickViewPanel).showCodepageDialog#1": {
 		class: paletteAuditDynamicAction, rationale: "the focused Quick View codepage action opens the runtime codepage list",
 	},
-	"cmd/f4/temp_panel.go:showTempPanelSlots#1": {
+	"panel.showTempPanelSlots#1": {
 		class: paletteAuditModalLocal, rationale: "the temporary-panel slot picker is a local modal menu; its entries are dynamic panel state, not standalone actions",
 	},
 }
@@ -361,14 +418,14 @@ func TestCommandPaletteProductionCommandSurfaceInventory(t *testing.T) {
 						return true
 					}
 					packageOrdinal++
-					newVMenus[source.path+":package-init#"+strconv.Itoa(packageOrdinal)] = true
+					newVMenus[source.pkg+".package-init#"+strconv.Itoa(packageOrdinal)] = true
 					return true
 				})
 				continue
 			}
 			identity := commandPaletteFunctionIdentity(t, source.fset, function)
 			if function.Recv != nil && function.Name.Name == "ProcessKey" {
-				processKeys[source.path+":"+identity] = true
+				processKeys[source.pkg+"."+identity] = true
 			}
 			if function.Body == nil {
 				continue
@@ -380,7 +437,7 @@ func TestCommandPaletteProductionCommandSurfaceInventory(t *testing.T) {
 					return true
 				}
 				ordinal++
-				newVMenus[source.path+":"+identity+"#"+strconv.Itoa(ordinal)] = true
+				newVMenus[source.pkg+"."+identity+"#"+strconv.Itoa(ordinal)] = true
 				return true
 			})
 		}
@@ -388,10 +445,17 @@ func TestCommandPaletteProductionCommandSurfaceInventory(t *testing.T) {
 
 	commandPaletteAssertSurfaceInventory(t, "ProcessKey receiver", processKeys, commandPaletteProcessKeyAudit)
 	commandPaletteAssertSurfaceInventory(t, "vtui.NewVMenu call", newVMenus, commandPaletteNewVMenuAudit)
+
+	if got := commandPaletteCountF4Surfaces(commandPaletteProcessKeyAudit, commandPaletteNewVMenuAudit); got != commandPaletteF4Surfaces {
+		t.Fatalf("f4 command surfaces under audit = %d, want %d: a surface and its audit entry were removed together", got, commandPaletteF4Surfaces)
+	}
 }
 
 type commandPaletteParsedGo struct {
+	// path is module-relative and reported to a human; pkg is what audit keys
+	// are built from, so that moving a file does not rewrite them.
 	path string
+	pkg  string
 	file *ast.File
 	fset *token.FileSet
 }
@@ -446,13 +510,32 @@ func commandPaletteParseProductionGo(t *testing.T) []commandPaletteParsedGo {
 		if relErr != nil {
 			t.Fatal(relErr)
 		}
+		slashed := filepath.ToSlash(relative)
 		files = append(files, commandPaletteParsedGo{
-			path: filepath.ToSlash(relative),
+			path: slashed,
+			pkg:  commandPalettePackageOf(slashed),
 			file: parsed,
 			fset: fset,
 		})
 	}
 	return files
+}
+
+// commandPalettePackageOf answers which package a module-relative source path
+// will belong to. Everything outside cmd/f4 is already where it will stay, so
+// its directory is the answer; a cmd/f4 file is asked of the target map first,
+// and falling through to "f4" is how an unaudited new surface announces itself.
+func commandPalettePackageOf(relative string) string {
+	if strings.HasPrefix(relative, "cmd/f4/") {
+		if target, ok := commandPaletteTargetPackage[path.Base(relative)]; ok {
+			return target
+		}
+		return "f4"
+	}
+	if directory := path.Dir(relative); directory != "." {
+		return path.Base(directory)
+	}
+	return "f4"
 }
 
 func commandPaletteFunctionIdentity(t *testing.T, fset *token.FileSet, function *ast.FuncDecl) string {
@@ -500,6 +583,25 @@ func commandPaletteIsNewVMenuCall(call *ast.CallExpr, aliases map[string]bool, d
 	default:
 		return false
 	}
+}
+
+// commandPaletteCountF4Surfaces counts audited surfaces that belong to f4 rather
+// than to a plugin, by the package half of their key.
+func commandPaletteCountF4Surfaces(audits ...map[string]commandPaletteSurfaceAudit) int {
+	packages := map[string]bool{"f4": true}
+	for _, target := range commandPaletteTargetPackage {
+		packages[target] = true
+	}
+	total := 0
+	for _, audit := range audits {
+		for key := range audit {
+			name, _, _ := strings.Cut(key, ".")
+			if packages[name] {
+				total++
+			}
+		}
+	}
+	return total
 }
 
 func commandPaletteAssertSurfaceInventory(t *testing.T, name string, discovered map[string]bool, audited map[string]commandPaletteSurfaceAudit) {

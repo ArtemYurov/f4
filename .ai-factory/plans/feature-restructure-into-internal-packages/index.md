@@ -248,7 +248,7 @@ titles, not the ordering.
 ### Phase 1: Upstream Sync, Baseline and Barrier Removal
 - [x] Task 0: Rebase onto `upstream/main` behind a backup branch, re-verify the plan's counts ([details](phase-01-baseline-and-barriers.md#task-0-synchronize-with-upstreammain))
 - [x] Task 1: Record the immutable pre-restructuring baseline across all six modules ([details](phase-01-baseline-and-barriers.md#task-1-record-the-pre-restructuring-test-baseline)) (depends on 0)
-- [ ] Task 2: Re-key the command-palette auditor's 42 entries to qualified symbols ([details](phase-01-baseline-and-barriers.md#task-2-re-key-the-command-palette-auditor-to-qualified-symbols))
+- [x] Task 2: Re-key the command-palette auditor's 42 entries to qualified symbols ([details](phase-01-baseline-and-barriers.md#task-2-re-key-the-command-palette-auditor-to-qualified-symbols))
 - [ ] Task 3: Make action registration order explicit and golden-tested ([details](phase-01-baseline-and-barriers.md#task-3-make-action-registration-order-explicit))
 - [ ] Task 4: Move `F4Config`'s three stray field types into `config.go` ([details](phase-01-baseline-and-barriers.md#task-4-move-f4configs-field-types-into-configgo))
 - [ ] Task 5: Stop `queue_manager.go` starting a goroutine from `init()` ([details](phase-01-baseline-and-barriers.md#task-5-stop-starting-a-goroutine-from-init))
