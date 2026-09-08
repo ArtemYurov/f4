@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/i18n"
 )
 
 // infoUsageMeter is the reusable two-line capacity element used by provider
@@ -28,8 +29,8 @@ func (meter infoUsageMeter) rowsWithWidth(section string, innerW, y, requestedMe
 	used := panelInfoUsedBytes(meter.Total, meter.Available)
 	usedText := formatBytes(used)
 	totalText := formatBytes(meter.Total)
-	usedLabel := Msg("InfoPanel.UsedShort")
-	totalLabel := Msg("InfoPanel.TotalShort")
+	usedLabel := i18n.Msg("InfoPanel.UsedShort")
+	totalLabel := i18n.Msg("InfoPanel.TotalShort")
 	copyValue := fmt.Sprintf("%s: %s; %s: %s", usedLabel, usedText, totalLabel, totalText)
 
 	labelPad := " " + meter.Label

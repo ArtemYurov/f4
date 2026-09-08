@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtui"
 )
 
@@ -110,8 +111,8 @@ func fileInputBox(title, prompt, defaultText string, onOk func(string)) *fileDia
 
 	edit := vtui.NewEdit(0, 0, 10, defaultText)
 	lbl := vtui.NewLabel(0, 0, prompt, edit)
-	btnOk := vtui.NewButton(0, 0, Msg("vtui.Ok"))
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnOk := vtui.NewButton(0, 0, i18n.Msg("vtui.Ok"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 
 	btnOk.OnClick = func() {
 		if onOk != nil {

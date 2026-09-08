@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/testutil"
@@ -3403,10 +3404,10 @@ func TestFileSystemPanel_SortColumnIndicators(t *testing.T) {
 		{name: "detailed size descending", viewMode: ViewModeDetailed, sortMode: SortSize, column: 1, wantSuffix: " ↓"},
 		{name: "detailed size ascending", viewMode: ViewModeDetailed, sortMode: SortSize, reverse: true, column: 1, wantSuffix: " ↑"},
 		{name: "wide time descending", viewMode: ViewModeWide, sortMode: SortTime, column: 2, wantSuffix: " ↓"},
-		{name: "brief hidden size", viewMode: ViewModeBrief, sortMode: SortSize, column: 0, wantSuffix: "[" + Msg("Menu.SortSize") + "]↓", rightAligned: true},
-		{name: "medium hidden time", viewMode: ViewModeMedium, sortMode: SortTime, reverse: true, column: 0, wantSuffix: "[" + Msg("Menu.SortTime") + "]↑", rightAligned: true},
-		{name: "detailed hidden extension", viewMode: ViewModeDetailed, sortMode: SortExt, column: 0, wantSuffix: "[" + Msg("Menu.SortExt") + "]↑", rightAligned: true},
-		{name: "wide hidden extension reversed", viewMode: ViewModeWide, sortMode: SortExt, reverse: true, column: 0, wantSuffix: "[" + Msg("Menu.SortExt") + "]↓", rightAligned: true},
+		{name: "brief hidden size", viewMode: ViewModeBrief, sortMode: SortSize, column: 0, wantSuffix: "[" + i18n.Msg("Menu.SortSize") + "]↓", rightAligned: true},
+		{name: "medium hidden time", viewMode: ViewModeMedium, sortMode: SortTime, reverse: true, column: 0, wantSuffix: "[" + i18n.Msg("Menu.SortTime") + "]↑", rightAligned: true},
+		{name: "detailed hidden extension", viewMode: ViewModeDetailed, sortMode: SortExt, column: 0, wantSuffix: "[" + i18n.Msg("Menu.SortExt") + "]↑", rightAligned: true},
+		{name: "wide hidden extension reversed", viewMode: ViewModeWide, sortMode: SortExt, reverse: true, column: 0, wantSuffix: "[" + i18n.Msg("Menu.SortExt") + "]↓", rightAligned: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			fp := newPanelScrollTestFixture(tc.viewMode, 1)

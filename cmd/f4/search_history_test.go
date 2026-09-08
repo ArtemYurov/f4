@@ -5,6 +5,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/history"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/vtui"
 )
@@ -220,10 +221,10 @@ func TestViewerSearchDialog_OffersEditorSearchOptions(t *testing.T) {
 	vtui.AssertLayout(t, dlg)
 
 	want := map[string]bool{
-		Msg("Search.CaseSensitive"): true,
-		Msg("Search.WholeWords"):    true,
-		Msg("Search.Reverse"):       true,
-		Msg("Search.Regex"):         true,
+		i18n.Msg("Search.CaseSensitive"): true,
+		i18n.Msg("Search.WholeWords"):    true,
+		i18n.Msg("Search.Reverse"):       true,
+		i18n.Msg("Search.Regex"):         true,
 	}
 	got := make(map[string]bool)
 	for _, child := range dlg.GetChildren() {

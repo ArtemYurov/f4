@@ -22,6 +22,7 @@ import (
 	"github.com/mattn/go-runewidth"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs/hostmode"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -403,7 +404,7 @@ func NewPanelsFrame() *PanelsFrame {
 	pf.menuBar.SetOwner(pf)
 	pf.menuBar.Items = pf.buildMenuItems()
 	// We no longer need pf.menuBar.OnCommand for routing!
-	pf.cmdLine = NewCommandLine(Msg("Panels.Prompt"))
+	pf.cmdLine = NewCommandLine(i18n.Msg("Panels.Prompt"))
 	if config.App.NavigationMode == config.NavigationSearchFirst {
 		pf.cmdLine.SetFocus(false)
 	}
@@ -562,70 +563,70 @@ func isAIPanel(panel Panel) bool {
 // command-routed rather than generated from the action registry.
 func (pf *PanelsFrame) leftMenu() vtui.MenuBarItem {
 	if isAIPanel(pf.panels[0]) {
-		return vtui.MenuBarItem{Label: "&" + Msg("Menu.Left"), SubItems: []vtui.MenuItem{
-			{Text: "&1. " + Msg("Action.AI.ViewContext"), Command: CmLeftAIContext, Shortcut: "Ctrl+1"},
-			{Text: "&2. " + Msg("Action.AI.ViewChat"), Command: CmLeftAIChat, Shortcut: "Ctrl+2"},
-			{Text: "&3. " + Msg("Action.AI.ViewOut"), Command: CmLeftAIOut, Shortcut: "Ctrl+3"},
-			{Text: "&4. " + Msg("Action.AI.ViewMem"), Command: CmLeftAIMem, Shortcut: "Ctrl+4"},
+		return vtui.MenuBarItem{Label: "&" + i18n.Msg("Menu.Left"), SubItems: []vtui.MenuItem{
+			{Text: "&1. " + i18n.Msg("Action.AI.ViewContext"), Command: CmLeftAIContext, Shortcut: "Ctrl+1"},
+			{Text: "&2. " + i18n.Msg("Action.AI.ViewChat"), Command: CmLeftAIChat, Shortcut: "Ctrl+2"},
+			{Text: "&3. " + i18n.Msg("Action.AI.ViewOut"), Command: CmLeftAIOut, Shortcut: "Ctrl+3"},
+			{Text: "&4. " + i18n.Msg("Action.AI.ViewMem"), Command: CmLeftAIMem, Shortcut: "Ctrl+4"},
 			{Separator: true},
-			{Text: Msg("Menu.Left.DriveMenu"), Command: CmLeftDriveMenu, Shortcut: "Alt+F1"},
+			{Text: i18n.Msg("Menu.Left.DriveMenu"), Command: CmLeftDriveMenu, Shortcut: "Alt+F1"},
 			{Separator: true},
-			{Text: Msg("FileOp.BtnBackground"), Command: CmBackground},
-			{Text: Msg("Action.Workspace.New"), Command: CmWorkspaceNew, Shortcut: "Ctrl+N"},
-			{Text: Msg("Action.Workspace.NewTerminal"), Command: CmWorkspaceNewTerminal, Shortcut: "Ctrl+Shift+O"},
-			{Text: Msg("Action.Workspace.Close"), Command: CmWorkspaceClose, Shortcut: "Ctrl+W"},
-			{Text: Msg("Menu.Exit"), Command: vtui.CmQuit},
+			{Text: i18n.Msg("FileOp.BtnBackground"), Command: CmBackground},
+			{Text: i18n.Msg("Action.Workspace.New"), Command: CmWorkspaceNew, Shortcut: "Ctrl+N"},
+			{Text: i18n.Msg("Action.Workspace.NewTerminal"), Command: CmWorkspaceNewTerminal, Shortcut: "Ctrl+Shift+O"},
+			{Text: i18n.Msg("Action.Workspace.Close"), Command: CmWorkspaceClose, Shortcut: "Ctrl+W"},
+			{Text: i18n.Msg("Menu.Exit"), Command: vtui.CmQuit},
 		}}
 	}
-	return vtui.MenuBarItem{Label: "&" + Msg("Menu.Left"), SubItems: []vtui.MenuItem{
-		{Text: "&" + Msg("Menu.Left.Brief"), Command: CmLeftBrief},
-		{Text: "&" + Msg("Menu.Left.Medium"), Command: CmLeftMedium},
-		{Text: "&" + Msg("Menu.Left.Detailed"), Command: CmLeftDetailed},
-		{Text: "&" + Msg("Menu.Left.Wide"), Command: CmLeftWide},
+	return vtui.MenuBarItem{Label: "&" + i18n.Msg("Menu.Left"), SubItems: []vtui.MenuItem{
+		{Text: "&" + i18n.Msg("Menu.Left.Brief"), Command: CmLeftBrief},
+		{Text: "&" + i18n.Msg("Menu.Left.Medium"), Command: CmLeftMedium},
+		{Text: "&" + i18n.Msg("Menu.Left.Detailed"), Command: CmLeftDetailed},
+		{Text: "&" + i18n.Msg("Menu.Left.Wide"), Command: CmLeftWide},
 		{Separator: true},
-		{Text: "&" + Msg("Menu.SortName"), Command: CmLeftSortName},
-		{Text: "&" + Msg("Menu.SortExt"), Command: CmLeftSortExt},
-		{Text: "&" + Msg("Menu.SortTime"), Command: CmLeftSortTime},
-		{Text: "&" + Msg("Menu.SortSize"), Command: CmLeftSortSize},
-		{Text: "&" + Msg("Menu.SortUnsorted"), Command: CmLeftSortUnsorted},
-		{Text: "&" + Msg("Menu.SortUseGroups"), Command: CmLeftSortGroups},
+		{Text: "&" + i18n.Msg("Menu.SortName"), Command: CmLeftSortName},
+		{Text: "&" + i18n.Msg("Menu.SortExt"), Command: CmLeftSortExt},
+		{Text: "&" + i18n.Msg("Menu.SortTime"), Command: CmLeftSortTime},
+		{Text: "&" + i18n.Msg("Menu.SortSize"), Command: CmLeftSortSize},
+		{Text: "&" + i18n.Msg("Menu.SortUnsorted"), Command: CmLeftSortUnsorted},
+		{Text: "&" + i18n.Msg("Menu.SortUseGroups"), Command: CmLeftSortGroups},
 		{Separator: true},
-		{Text: Msg("Menu.Left.DriveMenu"), Command: CmLeftDriveMenu, Shortcut: "Alt+F1"},
+		{Text: i18n.Msg("Menu.Left.DriveMenu"), Command: CmLeftDriveMenu, Shortcut: "Alt+F1"},
 		{Separator: true},
-		{Text: Msg("FileOp.BtnBackground"), Command: CmBackground},
-		{Text: Msg("Action.Workspace.New"), Command: CmWorkspaceNew, Shortcut: "Ctrl+N"},
-		{Text: Msg("Action.Workspace.NewTerminal"), Command: CmWorkspaceNewTerminal, Shortcut: "Ctrl+Shift+O"},
-		{Text: Msg("Action.Workspace.Close"), Command: CmWorkspaceClose, Shortcut: "Ctrl+W"},
-		{Text: Msg("Menu.Exit"), Command: vtui.CmQuit},
+		{Text: i18n.Msg("FileOp.BtnBackground"), Command: CmBackground},
+		{Text: i18n.Msg("Action.Workspace.New"), Command: CmWorkspaceNew, Shortcut: "Ctrl+N"},
+		{Text: i18n.Msg("Action.Workspace.NewTerminal"), Command: CmWorkspaceNewTerminal, Shortcut: "Ctrl+Shift+O"},
+		{Text: i18n.Msg("Action.Workspace.Close"), Command: CmWorkspaceClose, Shortcut: "Ctrl+W"},
+		{Text: i18n.Msg("Menu.Exit"), Command: vtui.CmQuit},
 	}}
 }
 
 // rightMenu builds the custom side menu for the right panel.
 func (pf *PanelsFrame) rightMenu() vtui.MenuBarItem {
 	if isAIPanel(pf.panels[1]) {
-		return vtui.MenuBarItem{Label: "&" + Msg("Menu.Right"), SubItems: []vtui.MenuItem{
-			{Text: "&1. " + Msg("Action.AI.ViewContext"), Command: CmRightAIContext, Shortcut: "Ctrl+1"},
-			{Text: "&2. " + Msg("Action.AI.ViewChat"), Command: CmRightAIChat, Shortcut: "Ctrl+2"},
-			{Text: "&3. " + Msg("Action.AI.ViewOut"), Command: CmRightAIOut, Shortcut: "Ctrl+3"},
-			{Text: "&4. " + Msg("Action.AI.ViewMem"), Command: CmRightAIMem, Shortcut: "Ctrl+4"},
+		return vtui.MenuBarItem{Label: "&" + i18n.Msg("Menu.Right"), SubItems: []vtui.MenuItem{
+			{Text: "&1. " + i18n.Msg("Action.AI.ViewContext"), Command: CmRightAIContext, Shortcut: "Ctrl+1"},
+			{Text: "&2. " + i18n.Msg("Action.AI.ViewChat"), Command: CmRightAIChat, Shortcut: "Ctrl+2"},
+			{Text: "&3. " + i18n.Msg("Action.AI.ViewOut"), Command: CmRightAIOut, Shortcut: "Ctrl+3"},
+			{Text: "&4. " + i18n.Msg("Action.AI.ViewMem"), Command: CmRightAIMem, Shortcut: "Ctrl+4"},
 			{Separator: true},
-			{Text: Msg("Menu.Right.DriveMenu"), Command: CmRightDriveMenu, Shortcut: "Alt+F2"},
+			{Text: i18n.Msg("Menu.Right.DriveMenu"), Command: CmRightDriveMenu, Shortcut: "Alt+F2"},
 		}}
 	}
-	return vtui.MenuBarItem{Label: "&" + Msg("Menu.Right"), SubItems: []vtui.MenuItem{
-		{Text: "&" + Msg("Menu.Left.Brief"), Command: CmRightBrief},
-		{Text: "&" + Msg("Menu.Left.Medium"), Command: CmRightMedium},
-		{Text: "&" + Msg("Menu.Left.Detailed"), Command: CmRightDetailed},
-		{Text: "&" + Msg("Menu.Left.Wide"), Command: CmRightWide},
+	return vtui.MenuBarItem{Label: "&" + i18n.Msg("Menu.Right"), SubItems: []vtui.MenuItem{
+		{Text: "&" + i18n.Msg("Menu.Left.Brief"), Command: CmRightBrief},
+		{Text: "&" + i18n.Msg("Menu.Left.Medium"), Command: CmRightMedium},
+		{Text: "&" + i18n.Msg("Menu.Left.Detailed"), Command: CmRightDetailed},
+		{Text: "&" + i18n.Msg("Menu.Left.Wide"), Command: CmRightWide},
 		{Separator: true},
-		{Text: "&" + Msg("Menu.SortName"), Command: CmRightSortName},
-		{Text: "&" + Msg("Menu.SortExt"), Command: CmRightSortExt},
-		{Text: "&" + Msg("Menu.SortTime"), Command: CmRightSortTime},
-		{Text: "&" + Msg("Menu.SortSize"), Command: CmRightSortSize},
-		{Text: "&" + Msg("Menu.SortUnsorted"), Command: CmRightSortUnsorted},
-		{Text: "&" + Msg("Menu.SortUseGroups"), Command: CmRightSortGroups},
+		{Text: "&" + i18n.Msg("Menu.SortName"), Command: CmRightSortName},
+		{Text: "&" + i18n.Msg("Menu.SortExt"), Command: CmRightSortExt},
+		{Text: "&" + i18n.Msg("Menu.SortTime"), Command: CmRightSortTime},
+		{Text: "&" + i18n.Msg("Menu.SortSize"), Command: CmRightSortSize},
+		{Text: "&" + i18n.Msg("Menu.SortUnsorted"), Command: CmRightSortUnsorted},
+		{Text: "&" + i18n.Msg("Menu.SortUseGroups"), Command: CmRightSortGroups},
 		{Separator: true},
-		{Text: Msg("Menu.Right.DriveMenu"), Command: CmRightDriveMenu, Shortcut: "Alt+F2"},
+		{Text: i18n.Msg("Menu.Right.DriveMenu"), Command: CmRightDriveMenu, Shortcut: "Alt+F2"},
 	}}
 }
 
@@ -638,7 +639,7 @@ func appendTerminalMenuItems(items []vtui.MenuBarItem) []vtui.MenuBarItem {
 		return items
 	}
 
-	filesLabel := Msg("Menu.Shell.Files")
+	filesLabel := i18n.Msg("Menu.Shell.Files")
 	for i := range items {
 		if items[i].Label != filesLabel {
 			continue
@@ -812,21 +813,21 @@ func (pf *PanelsFrame) updateMenuCheckmarks() {
 		key  string
 	}{{ViewModeBrief, "Brief"}, {ViewModeMedium, "Medium"}, {ViewModeDetailed, "Detailed"}, {ViewModeWide, "Wide"}}
 	for i, item := range modeItems {
-		pf.menuBar.Items[0].SubItems[i].Text = getMenuText(lMode, item.mode, "&"+Msg("Menu.Left."+item.key))
-		pf.menuBar.Items[4].SubItems[i].Text = getMenuText(rMode, item.mode, "&"+Msg("Menu.Left."+item.key))
+		pf.menuBar.Items[0].SubItems[i].Text = getMenuText(lMode, item.mode, "&"+i18n.Msg("Menu.Left."+item.key))
+		pf.menuBar.Items[4].SubItems[i].Text = getMenuText(rMode, item.mode, "&"+i18n.Msg("Menu.Left."+item.key))
 	}
 	for i, item := range []struct {
 		mode SortMode
 		key  string
 	}{{SortName, "SortName"}, {SortExt, "SortExt"}, {SortTime, "SortTime"}, {SortSize, "SortSize"}, {SortUnsorted, "SortUnsorted"}} {
-		pf.menuBar.Items[0].SubItems[i+5].Text = getSortMenuText(lSort, item.mode, "&"+Msg("Menu."+item.key))
-		pf.menuBar.Items[4].SubItems[i+5].Text = getSortMenuText(rSort, item.mode, "&"+Msg("Menu."+item.key))
+		pf.menuBar.Items[0].SubItems[i+5].Text = getSortMenuText(lSort, item.mode, "&"+i18n.Msg("Menu."+item.key))
+		pf.menuBar.Items[4].SubItems[i+5].Text = getSortMenuText(rSort, item.mode, "&"+i18n.Msg("Menu."+item.key))
 	}
 
 	// The sort-group toggle sits right after the sort modes; a mock menu bar
 	// built with fewer rows (tests) simply keeps its own text.
 	if len(pf.menuBar.Items[0].SubItems) > 10 && len(pf.menuBar.Items[4].SubItems) > 10 {
-		groupLabel := "&" + Msg("Menu.SortUseGroups")
+		groupLabel := "&" + i18n.Msg("Menu.SortUseGroups")
 		pf.menuBar.Items[0].SubItems[10].Text = getToggleMenuText(lGroups, groupLabel)
 		pf.menuBar.Items[4].SubItems[10].Text = getToggleMenuText(rGroups, groupLabel)
 	}
@@ -1245,7 +1246,7 @@ func (pf *PanelsFrame) displayLocalOutput(shouldProcess bool, data []byte) {
 // empty terminal and no error anywhere the person could see without
 // starting f4 with --debug.
 func localPTYFailureMessage(err error) string {
-	return fmt.Sprintf(Msg("Terminal.PTYAllocFailed"), err)
+	return fmt.Sprintf(i18n.Msg("Terminal.PTYAllocFailed"), err)
 }
 
 func (pf *PanelsFrame) reportLocalPTYFailure(err error) {
@@ -3297,11 +3298,11 @@ func (pf *PanelsFrame) HandleCommand(cmd int, args any) bool {
 			active = GlobalQueueManager.ActiveTasksCount()
 		}
 		if config.App.ConfirmExit || active > 0 {
-			msg := Msg("Quit.Confirm")
+			msg := i18n.Msg("Quit.Confirm")
 			if active > 0 {
 				msg = fmt.Sprintf("There are %d active background operations!\nIf you exit, they will be aborted.\n\n%s", active, msg)
 			}
-			dlg := vtui.ShowMessage(Msg("Quit.Title"), msg, []string{Msg("Quit.Btn"), Msg("vtui.Cancel")})
+			dlg := vtui.ShowMessage(i18n.Msg("Quit.Title"), msg, []string{i18n.Msg("Quit.Btn"), i18n.Msg("vtui.Cancel")})
 			// When background operations would be aborted the exit is
 			// genuinely destructive — flip to the WarnDialog palette.
 			// Plain "confirm on exit" stays on the neutral palette.
@@ -3646,40 +3647,40 @@ func (pf *PanelsFrame) HandleCommand(cmd int, args any) bool {
 func (pf *PanelsFrame) GetKeyLabels() *vtui.KeySet {
 	area := MacroMgr.GetCurrentArea()
 
-	f2 := Msg("KeyBar.F2")
-	f7 := Msg("KeyBar.F7")
+	f2 := i18n.Msg("KeyBar.F2")
+	f7 := i18n.Msg("KeyBar.F7")
 	overrideF2 := false
 	if pf.showPanels && pf.activeIdx >= 0 && pf.activeIdx < len(pf.altPanels) {
 		if q, ok := pf.altPanels[pf.activeIdx].(*QuickViewPanel); ok && q != nil && q.IsFocused() {
 			nextCP := vfs.DisplayCodepageName(vfs.GetNextFastSwitchCodepage(q.cacheCodepage))
 			return &vtui.KeySet{
 				Normal: vtui.KeyBarLabels{
-					Msg("KeyBar.ViewerF1"),
+					i18n.Msg("KeyBar.ViewerF1"),
 					func() string {
 						if q.wrap {
-							return Msg("KeyBar.ViewerF2")
+							return i18n.Msg("KeyBar.ViewerF2")
 						}
-						return Msg("KeyBar.F2Wrap")
+						return i18n.Msg("KeyBar.F2Wrap")
 					}(),
-					Msg("KeyBar.ViewerF3"), Msg("KeyBar.ViewerF4"),
-					"", "", Msg("KeyBar.ViewerF7"), nextCP, "", Msg("KeyBar.ViewerF10"),
+					i18n.Msg("KeyBar.ViewerF3"), i18n.Msg("KeyBar.ViewerF4"),
+					"", "", i18n.Msg("KeyBar.ViewerF7"), nextCP, "", i18n.Msg("KeyBar.ViewerF10"),
 				},
-				Shift: vtui.KeyBarLabels{"", "", "", "", "", "", Msg("KeyBar.ViewerF7"), Msg("Codepage.Title"), "", "", "", ""},
+				Shift: vtui.KeyBarLabels{"", "", "", "", "", "", i18n.Msg("KeyBar.ViewerF7"), i18n.Msg("Codepage.Title"), "", "", "", ""},
 			}
 		}
 	}
 	if pf.showPanels && pf.activeIdx >= 0 && pf.activeIdx < len(pf.altPanels) {
 		if fsp := pf.getActivePanel(); fsp != nil {
 			if _, ok := fsp.vfs.(*TempPanelVFS); ok {
-				f7 = Msg("TempPanel.Remove")
+				f7 = i18n.Msg("TempPanel.Remove")
 			}
 		}
 		if a := pf.altPanels[pf.activeIdx]; a != nil && a.IsFocused() && a.Kind() == "quick_view" {
 			if q, ok := a.(*QuickViewPanel); ok {
 				if q.wrap {
-					f2 = Msg("KeyBar.F2Unwrap")
+					f2 = i18n.Msg("KeyBar.F2Unwrap")
 				} else {
-					f2 = Msg("KeyBar.F2Wrap")
+					f2 = i18n.Msg("KeyBar.F2Wrap")
 				}
 				overrideF2 = true
 			}
@@ -3688,17 +3689,17 @@ func (pf *PanelsFrame) GetKeyLabels() *vtui.KeySet {
 
 	fallbacks := &vtui.KeySet{
 		Normal: vtui.KeyBarLabels{
-			Msg("KeyBar.F1"), f2, Msg("KeyBar.F3"), Msg("KeyBar.F4"),
-			Msg("KeyBar.F5"), Msg("KeyBar.F6"), f7, Msg("KeyBar.F8"),
-			Msg("KeyBar.F9"), Msg("KeyBar.F10"), Msg("KeyBar.F11"), Msg("KeyBar.F12"),
+			i18n.Msg("KeyBar.F1"), f2, i18n.Msg("KeyBar.F3"), i18n.Msg("KeyBar.F4"),
+			i18n.Msg("KeyBar.F5"), i18n.Msg("KeyBar.F6"), f7, i18n.Msg("KeyBar.F8"),
+			i18n.Msg("KeyBar.F9"), i18n.Msg("KeyBar.F10"), i18n.Msg("KeyBar.F11"), i18n.Msg("KeyBar.F12"),
 		},
 		Shift: vtui.KeyBarLabels{"", "", "", "", "", "Rename", "", "", "Save", "", "", ""},
 		Alt: vtui.KeyBarLabels{
-			Msg("KeyBar.AltF1"), Msg("KeyBar.AltF2"), Msg("KeyBar.AltF3"), "",
-			"", "", Msg("KeyBar.AltF7"), Msg("KeyBar.AltF8"), "", "", "", Msg("KeyBar.AltF12"),
+			i18n.Msg("KeyBar.AltF1"), i18n.Msg("KeyBar.AltF2"), i18n.Msg("KeyBar.AltF3"), "",
+			"", "", i18n.Msg("KeyBar.AltF7"), i18n.Msg("KeyBar.AltF8"), "", "", "", i18n.Msg("KeyBar.AltF12"),
 		},
 		Ctrl: vtui.KeyBarLabels{
-			Msg("KeyBar.CtrlF1"), Msg("KeyBar.CtrlF2"), Msg("KeyBar.CtrlF3"), Msg("KeyBar.CtrlF4"), Msg("KeyBar.CtrlF5"), Msg("KeyBar.CtrlF6"), Msg("KeyBar.CtrlF7"), "", "", "", "Fork", "Close",
+			i18n.Msg("KeyBar.CtrlF1"), i18n.Msg("KeyBar.CtrlF2"), i18n.Msg("KeyBar.CtrlF3"), i18n.Msg("KeyBar.CtrlF4"), i18n.Msg("KeyBar.CtrlF5"), i18n.Msg("KeyBar.CtrlF6"), i18n.Msg("KeyBar.CtrlF7"), "", "", "", "Fork", "Close",
 		},
 	}
 	res := KeyBarLabelsForArea(area, fallbacks)
@@ -3712,10 +3713,10 @@ func (pf *PanelsFrame) GetType() vtui.FrameType { return vtui.TypeUser + 1 }
 
 func (pf *PanelsFrame) SetExitCode(code int) { pf.Done = true; pf.ExitCode = code }
 func (pf *PanelsFrame) showDummyOpDialog() {
-	msg := Msg("Op.DummyText")
+	msg := i18n.Msg("Op.DummyText")
 	lines := vtui.WrapText(msg, 50-4)
 
-	dlg := vtui.NewCenteredDialog(50, 11+len(lines)-1, Msg("Op.DummyTitle"))
+	dlg := vtui.NewCenteredDialog(50, 11+len(lines)-1, i18n.Msg("Op.DummyTitle"))
 	vbox := vtui.NewVBoxLayout(dlg.X1+2, dlg.Y1+2, 50-4, (11+len(lines)-1)-4)
 
 	for _, l := range lines {
@@ -3724,14 +3725,14 @@ func (pf *PanelsFrame) showDummyOpDialog() {
 		vbox.Add(t, vtui.Margins{}, vtui.AlignLeft)
 	}
 
-	modes := []string{Msg("Op.DummyQueue"), Msg("Op.DummyBackground"), Msg("Op.DummyForeground")}
+	modes := []string{i18n.Msg("Op.DummyQueue"), i18n.Msg("Op.DummyBackground"), i18n.Msg("Op.DummyForeground")}
 	comboMode := vtui.NewComboBox(0, 0, 32, modes)
 	comboMode.DropdownOnly = true
 	comboMode.Menu.SetSelectPos(0)
 	comboMode.Edit.SetText(comboMode.Menu.Items[0].Text)
 
-	btnStart := vtui.NewButton(0, 0, Msg("Op.BtnStart"))
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnStart := vtui.NewButton(0, 0, i18n.Msg("Op.BtnStart"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 	dlg.AddItem(btnStart)
 	dlg.AddItem(btnCancel)
 	dlg.AddItem(comboMode)
@@ -3787,10 +3788,10 @@ func (pf *PanelsFrame) runProgressTaskAfter(delay time.Duration, title, startMsg
 	pb := vtui.NewProgressBar(0, 0, 46)
 	dlg.AddItem(pb)
 
-	lblHint := vtui.NewText(0, 0, Msg("Op.SwitchHint"), vtui.Palette[vtui.ColDialogText])
+	lblHint := vtui.NewText(0, 0, i18n.Msg("Op.SwitchHint"), vtui.Palette[vtui.ColDialogText])
 	dlg.AddItem(lblHint)
 
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 	dlg.AddItem(btnCancel)
 
 	vbox := vtui.NewVBoxLayout(dlg.X1+2, dlg.Y1+2, 50-4, 10-4)
@@ -4791,8 +4792,8 @@ func (pf *PanelsFrame) showPluginMenu() {
 				return true
 			}
 			question := pluginHotkeyDeleteQuestion(key, entries[idx].Label)
-			buttons := []string{Msg("Plugins.HotkeyRemoveBtn"), Msg("Plugins.HotkeyKeepBtn")}
-			vtui.ShowMessageOn(menu, Msg("Plugins.HotkeyRemoveTitle"), question, buttons).OnResult = func(choice int) {
+			buttons := []string{i18n.Msg("Plugins.HotkeyRemoveBtn"), i18n.Msg("Plugins.HotkeyKeepBtn")}
+			vtui.ShowMessageOn(menu, i18n.Msg("Plugins.HotkeyRemoveTitle"), question, buttons).OnResult = func(choice int) {
 				if choice != 0 || GlobalHotkeysMgr == nil {
 					return
 				}
@@ -4869,13 +4870,13 @@ func driveMatchesPath(drv sysinfo.DriveEntry, cur string) bool {
 // bookmark keys reopen the menu at the row they acted on, the way far2l
 // loops ChangeDiskMenu around its own Pos (panels/panel.cpp:168).
 func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
-	menu := vtui.NewVMenu(Msg("Drive.Title"))
+	menu := vtui.NewVMenu(i18n.Msg("Drive.Title"))
 
 	usedHotkeys := make(map[rune]bool)
 	usedHotkeys['o'] = true // "Other panel"
 
 	// 1. Other panel (focused by default)
-	menu.AddItem(vtui.MenuItem{Text: Msg("Panel.Other"), UserData: func(fsp *FileSystemPanel) {
+	menu.AddItem(vtui.MenuItem{Text: i18n.Msg("Panel.Other"), UserData: func(fsp *FileSystemPanel) {
 		otherFsp := pf.panels[1-panelIdx].(*FileSystemPanel)
 		fsp.cancelProviderOpen()
 		if fsp.vfs != nil {
@@ -4889,7 +4890,7 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 
 	// TempPanel is a native VFS panel, so it is available from the same
 	// Alt+F1/Alt+F2 drive menu as far2l's plugin panels.
-	menu.AddItem(vtui.MenuItem{Text: Msg("TempPanel.Drive"), UserData: func(fsp *FileSystemPanel) {
+	menu.AddItem(vtui.MenuItem{Text: i18n.Msg("TempPanel.Drive"), UserData: func(fsp *FileSystemPanel) {
 		pf.switchToVFS(fsp, newTempPanelVFS(nil, globalTempPanelStore, 0))
 	}})
 
@@ -5025,7 +5026,7 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 		}
 		menu.AddSeparator()
 		headerRow = menu.GetItemCount()
-		menu.AddItem(vtui.MenuItem{Text: Msg("Drive.Links"), Command: CmDriveBookmarksHeader})
+		menu.AddItem(vtui.MenuItem{Text: i18n.Msg("Drive.Links"), Command: CmDriveBookmarksHeader})
 		for index, bookmark := range driveBookmarks {
 			bookmark := bookmark
 			driveBookmarkRows[menu.GetItemCount()] = index
@@ -5178,7 +5179,7 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 			action(fsp)
 		}
 	}
-	vtui.FrameManager.Push(&driveMenuFrame{VMenu: menu, bottomHint: Msg("Drive.BottomHint")})
+	vtui.FrameManager.Push(&driveMenuFrame{VMenu: menu, bottomHint: i18n.Msg("Drive.BottomHint")})
 }
 
 // clearBookmarkSlot empties one slot straight from the drive menu, which

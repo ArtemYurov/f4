@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -717,7 +718,7 @@ func TestExecuteFileOp_OptimizedRenameConflict(t *testing.T) {
 		case task := <-vtui.FrameManager.TaskChan:
 			task()
 			top := vtui.FrameManager.GetTopFrame()
-			if top != nil && top.GetTitle() == Msg("Warning.Title") {
+			if top != nil && top.GetTitle() == i18n.Msg("Warning.Title") {
 				foundDialog = true
 				goto done
 			}
@@ -1309,7 +1310,7 @@ func TestAskOverwriteUsesWarningPalette(t *testing.T) {
 		result <- choice
 	}()
 
-	container := waitForDialog(t, Msg("Warning.Title"))
+	container := waitForDialog(t, i18n.Msg("Warning.Title"))
 	dlg, ok := container.(*vtui.Window)
 	if !ok {
 		t.Fatalf("overwrite dialog is not a *vtui.Window, got %T", container)
@@ -1341,7 +1342,7 @@ func TestAskOverwriteUsesWarningPalette(t *testing.T) {
 
 func TestAskOverwriteLayout_AllLanguages(t *testing.T) {
 	vtui.SetDefaultPalette()
-	packs := LoadAllLanguagePacks()
+	packs := i18n.LoadAllLanguagePacks()
 	if len(packs) == 0 {
 		t.Fatal("no language packs bundled")
 	}
@@ -1363,7 +1364,7 @@ func TestAskOverwriteLayout_AllLanguages(t *testing.T) {
 				result <- choice
 			}()
 
-			container := waitForDialog(t, Msg("Warning.Title"))
+			container := waitForDialog(t, i18n.Msg("Warning.Title"))
 			dlg, ok := container.(*vtui.Window)
 			if !ok {
 				t.Fatalf("localized overwrite dialog is %T, want *vtui.Window", container)
@@ -1503,7 +1504,7 @@ func TestFileOps_UI_RememberOverwrite(t *testing.T) {
 	ExecuteFileOp(nil, vfs.NewOSVFS(tmpSrc), vfs.NewOSVFS(tmpDst), []string{"f1.txt", "f2.txt"}, tmpDst, false, 2, func() { close(done) })
 
 	// Wait for first warning (f1.txt)
-	dlg := waitForDialog(t, Msg("Warning.Title"))
+	dlg := waitForDialog(t, i18n.Msg("Warning.Title"))
 
 	// Check "Remember choice" and click "Overwrite"
 	setDialogCheckbox(t, dlg, "Remember choice", 1)
@@ -1521,7 +1522,7 @@ pump1:
 			if vtui.FrameManager.GetTopFrameType() == vtui.TypeDialog {
 				top := vtui.FrameManager.GetTopFrame()
 				// Only fail if a NEW active warning dialog appears
-				if top.GetTitle() == Msg("Warning.Title") && !top.IsDone() {
+				if top.GetTitle() == i18n.Msg("Warning.Title") && !top.IsDone() {
 					t.Fatalf("Dialog appeared again despite 'Remember choice'")
 				}
 			}
@@ -1555,7 +1556,7 @@ func TestFileOps_UI_RenameAndAppendUnsupported(t *testing.T) {
 	ExecuteFileOp(nil, vfs.NewOSVFS(tmpSrc), vfs.NewOSVFS(tmpDst), []string{"f1.txt"}, tmpDst, false, 2, func() { close(done) })
 
 	// 1. First warning (f1.txt)
-	dlg := waitForDialog(t, Msg("Warning.Title"))
+	dlg := waitForDialog(t, i18n.Msg("Warning.Title"))
 
 	// 2. Click Append -> should show "Unsupported"
 	clickDialogButton(t, dlg, "Append")
@@ -1563,7 +1564,7 @@ func TestFileOps_UI_RenameAndAppendUnsupported(t *testing.T) {
 	clickDialogButton(t, errDlg, "Ok")
 
 	// 3. Warning should reappear for f1.txt
-	dlg2 := waitForDialog(t, Msg("Warning.Title"))
+	dlg2 := waitForDialog(t, i18n.Msg("Warning.Title"))
 
 	// 4. Click Rename
 	clickDialogButton(t, dlg2, "Rename")
@@ -1571,7 +1572,7 @@ func TestFileOps_UI_RenameAndAppendUnsupported(t *testing.T) {
 	enterTextAndOk(t, renDlg, "f2.txt") // Rename to f2.txt, which ALSO exists
 
 	// 5. Warning should reappear for f2.txt
-	dlg3 := waitForDialog(t, Msg("Warning.Title"))
+	dlg3 := waitForDialog(t, i18n.Msg("Warning.Title"))
 
 	// 6. Click Overwrite
 	clickDialogButton(t, dlg3, "Overwrite")
@@ -1610,7 +1611,7 @@ func TestFileOps_UI_MoveSkip(t *testing.T) {
 	// isMove = true
 	ExecuteFileOp(nil, vfs.NewOSVFS(tmpSrc), vfs.NewOSVFS(tmpDst), []string{"f1.txt"}, tmpDst, true, 2, func() { close(done) })
 
-	dlg := waitForDialog(t, Msg("Warning.Title"))
+	dlg := waitForDialog(t, i18n.Msg("Warning.Title"))
 	clickDialogButton(t, dlg, "Skip")
 
 	timeout := time.After(2 * time.Second)
@@ -1710,7 +1711,7 @@ func TestFileOps_UI_ConcurrentConflicts(t *testing.T) {
 	// We expect TWO warning dialogs (processed sequentially by the TaskChan pump).
 	// Since operations are concurrent, we must check which dialog is which.
 	for i := 0; i < 2; i++ {
-		dlg := waitForDialog(t, Msg("Warning.Title"))
+		dlg := waitForDialog(t, i18n.Msg("Warning.Title"))
 
 		isOp1 := false
 		isOp2 := false
@@ -1782,7 +1783,7 @@ func TestFileOps_UI_CancelDuringMove(t *testing.T) {
 	ExecuteFileOp(nil, vfs.NewOSVFS(tmpSrc), vfs.NewOSVFS(tmpDst), []string{"f1.txt"}, tmpDst, true, 2, func() { close(done) })
 
 	// Wait for warning dialog
-	dlg := waitForDialog(t, Msg("Warning.Title"))
+	dlg := waitForDialog(t, i18n.Msg("Warning.Title"))
 
 	// Click Cancel (Button 6)
 	clickDialogButton(t, dlg, "Cancel")
@@ -1832,7 +1833,7 @@ func TestFileOps_UI_RenameToEmpty(t *testing.T) {
 	done := make(chan struct{})
 	ExecuteFileOp(nil, vfs.NewOSVFS(tmpSrc), vfs.NewOSVFS(tmpDst), []string{"f.txt"}, tmpDst, true, 2, func() { close(done) })
 
-	dlg := waitForDialog(t, Msg("Warning.Title"))
+	dlg := waitForDialog(t, i18n.Msg("Warning.Title"))
 	clickDialogButton(t, dlg, "Rename")
 
 	renDlg := waitForDialog(t, " Rename ")

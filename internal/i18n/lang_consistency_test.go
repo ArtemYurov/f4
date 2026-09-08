@@ -1,4 +1,4 @@
-package main
+package i18n
 
 import (
 	"bytes"
@@ -85,7 +85,7 @@ func TestLangConsistency(t *testing.T) {
 	}
 
 	enIni := ini.Parse(bytes.NewReader(enData))
-	enStrings := loadLangMapFromINI(enIni)
+	enStrings := LoadLangMapFromINI(enIni)
 
 	var enKeys []string
 	enRawStrings := make(map[string]string)
@@ -126,6 +126,11 @@ func TestLangConsistency(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to glob lang/*.lng: %v", err)
 	}
+	// Glob reports no error for zero matches, so a wrong directory would leave
+	// this test passing over an empty set.
+	if len(files) == 0 {
+		t.Fatal("no .lng files under lang/")
+	}
 
 	placeholderRe := regexp.MustCompile(`%[sdvq]`)
 	baselineData, err := os.ReadFile(langCoverageBaselinePath)
@@ -148,7 +153,7 @@ func TestLangConsistency(t *testing.T) {
 		}
 
 		ini := ini.Parse(bytes.NewReader(data))
-		stringsMap := loadLangMapFromINI(ini)
+		stringsMap := LoadLangMapFromINI(ini)
 
 		code := ini.GetString("Language", "Code", "")
 		expectedCode := strings.TrimSuffix(filepath.Base(file), ".lng")

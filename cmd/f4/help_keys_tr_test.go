@@ -14,10 +14,10 @@ func TestGenerateKeysHelpTopic_Turkish(t *testing.T) {
 	oldLang := config.App.Language
 	defer func() {
 		config.App.Language = oldLang
-		InitLang()
+		initLang()
 	}()
 	config.App.Language = "tr"
-	InitLang()
+	initLang()
 
 	topic := generateKeysHelpTopic("PanelNav", "t", []string{"Shell"}, "")
 	joined := strings.Join(topic.Lines, "\n")
@@ -39,10 +39,10 @@ func TestGenerateKeysHelpTopic_HelpLanguageOverridesUI_Turkish(t *testing.T) {
 	oldLang := config.App.Language
 	defer func() {
 		config.App.Language = oldLang
-		InitLang()
+		initLang()
 	}()
 	config.App.Language = "en"
-	InitLang()
+	initLang()
 
 	oldStrings := helpActionStrings
 	defer func() { helpActionStrings = oldStrings }()

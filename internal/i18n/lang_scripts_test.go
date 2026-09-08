@@ -1,4 +1,4 @@
-package main
+package i18n
 
 import (
 	"os"
@@ -13,7 +13,7 @@ import (
 func TestLanguageAlphabetsContamination(t *testing.T) {
 	testutil.SkipIfNoRelevantChanges(t, "lang_scripts",
 		"lang/*.lng",
-		"help/*.hlf",
+		"../../cmd/f4/help/*.hlf",
 		"lang_scripts_test.go",
 	)
 	// A map of scripts that are strictly bound to specific languages.
@@ -52,6 +52,7 @@ func TestLanguageAlphabetsContamination(t *testing.T) {
 
 	dirs := []string{"lang"}
 
+	scanned := 0
 	for _, dir := range dirs {
 		files, err := os.ReadDir(dir)
 		if err != nil {
@@ -76,6 +77,7 @@ func TestLanguageAlphabetsContamination(t *testing.T) {
 				t.Errorf("Failed to read %s: %v", path, err)
 				continue
 			}
+			scanned++
 
 			lines := strings.Split(string(content), "\n")
 			for i, line := range lines {
@@ -90,5 +92,9 @@ func TestLanguageAlphabetsContamination(t *testing.T) {
 				}
 			}
 		}
+	}
+
+	if scanned == 0 {
+		t.Fatalf("no .lng or .hlf files under %v", dirs)
 	}
 }

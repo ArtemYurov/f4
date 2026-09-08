@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/vfs"
@@ -174,11 +175,11 @@ func NewViewerView(ctx context.Context, v vfs.VFS, path string) (*ViewerView, er
 					percent = 100
 				}
 			}
-			mode := Msg("Viewer.ModeText")
+			mode := i18n.Msg("Viewer.ModeText")
 			if vv.DecodeMode {
 				mode = disasmModeLabel(vv.disasmMode())
 			} else if vv.HexMode {
-				mode = Msg("Viewer.ModeHex")
+				mode = i18n.Msg("Viewer.ModeHex")
 			}
 			cpName := vfs.DisplayCodepageName(vv.Codepage)
 			return fmt.Sprintf(" %s │ %s │ %d%%     ", cpName, mode, percent)
@@ -1109,7 +1110,7 @@ func (vv *ViewerView) ReloadWithAutoDetect() {
 func (vv *ViewerView) showCodepageDialog() {
 	_, overridden := rememberedCodepage(vv.vfs, vv.path)
 	items, currIdx := vfs.BuildCodepageMenuItems(vv.Codepage, !overridden)
-	menu := newCodepageMenu(Msg("Codepage.Title"), items)
+	menu := newCodepageMenu(i18n.Msg("Codepage.Title"), items)
 
 	// This menu is about the file on screen, as Shift+F8 is in Far: a
 	// codepage picked here is remembered for this file, and Auto-detect
@@ -1226,11 +1227,11 @@ func (vv *ViewerView) GetKeyLabels() *vtui.KeySet {
 
 	fallbacks := &vtui.KeySet{
 		Normal: vtui.KeyBarLabels{
-			Msg("KeyBar.ViewerF1"), Msg("KeyBar.ViewerF2"), Msg("KeyBar.ViewerF3"), Msg("KeyBar.ViewerF4"),
-			"", Msg("KeyBar.F4"), Msg("KeyBar.ViewerF7"), nextCpName, "", Msg("KeyBar.ViewerF10"),
+			i18n.Msg("KeyBar.ViewerF1"), i18n.Msg("KeyBar.ViewerF2"), i18n.Msg("KeyBar.ViewerF3"), i18n.Msg("KeyBar.ViewerF4"),
+			"", i18n.Msg("KeyBar.F4"), i18n.Msg("KeyBar.ViewerF7"), nextCpName, "", i18n.Msg("KeyBar.ViewerF10"),
 		},
 		Alt: vtui.KeyBarLabels{
-			"", "", "", "", "", "", "", Msg("KeyBar.ViewerAltF8"), "", "",
+			"", "", "", "", "", "", "", i18n.Msg("KeyBar.ViewerAltF8"), "", "",
 		},
 	}
 	res := KeyBarLabelsForArea("Viewer", fallbacks)

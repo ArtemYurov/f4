@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -9,19 +8,21 @@ import (
 	"sync"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/vtui"
 )
 
 var commandPaletteTranslationsCache struct {
 	sync.Mutex
-	loaded bool
-	byKey  map[string][]string
+	loaded     bool
+	generation uint64
+	byKey      map[string][]string
 }
 
-// resetCommandPaletteTranslations invalidates installed-pack aliases after a
-// language reload. Besides switching the UI language, InitLang is also the
-// point where newly installed/user-supplied packs become visible at runtime.
+// resetCommandPaletteTranslations invalidates installed-pack aliases. A
+// language reload does that on its own through i18n.Generation; this is for a
+// test that installs a pack behind the cache's back.
 func resetCommandPaletteTranslations() {
 	commandPaletteTranslationsCache.Lock()
 	commandPaletteTranslationsCache.loaded = false
@@ -34,11 +35,15 @@ func resetCommandPaletteTranslations() {
 // active UI language; aliases only make the same command discoverable by a
 // translation from any installed language pack.
 func commandPaletteTranslations(keys ...string) []string {
+	generation := i18n.Generation()
 	commandPaletteTranslationsCache.Lock()
-	if !commandPaletteTranslationsCache.loaded {
-		packs := LoadAllLanguagePacks()
+	// i18n.InitLang is also the point where newly installed or user-supplied packs
+	// become visible, so a language reload has to rebuild this index too.
+	if !commandPaletteTranslationsCache.loaded || commandPaletteTranslationsCache.generation != generation {
+		packs := i18n.LoadAllLanguagePacks()
 		packs = append(packs, loadInstalledCommandPaletteLanguagePacks()...)
 		commandPaletteTranslationsCache.byKey = buildCommandPaletteTranslationIndex(packs)
+		commandPaletteTranslationsCache.generation = generation
 		commandPaletteTranslationsCache.loaded = true
 	}
 	byKey := commandPaletteTranslationsCache.byKey
@@ -83,14 +88,9 @@ func buildCommandPaletteTranslationIndex(packs []vtui.LanguagePack) map[string][
 
 // Embedded packs cover every language shipped with f4. Disk packs extend the
 // index with installed updates and user-supplied languages, following the same
-// locations as InitLang and the language selector.
+// locations as i18n.InitLang and the language selector.
 func loadInstalledCommandPaletteLanguagePacks() []vtui.LanguagePack {
-	exeDir := filepath.Dir(os.Args[0])
-	directories := []string{
-		filepath.Join(config.GetF4ConfigDir(), "lang"),
-		filepath.Join(exeDir, "lang"),
-		"lang",
-	}
+	directories := i18n.SearchDirs(filepath.Join(config.GetF4ConfigDir(), "lang"))
 
 	seenPaths := make(map[string]bool)
 	var packs []vtui.LanguagePack
@@ -115,7 +115,7 @@ func loadInstalledCommandPaletteLanguagePacks() []vtui.LanguagePack {
 		sort.Strings(paths)
 		for _, path := range paths {
 			ini := ini.Load(path)
-			stringsMap := loadLangMapFromINI(ini)
+			stringsMap := i18n.LoadLangMapFromINI(ini)
 			if len(stringsMap) == 0 {
 				continue
 			}

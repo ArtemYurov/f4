@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/netproxy"
 	"github.com/unxed/vtui"
 )
@@ -14,10 +15,10 @@ var proxyModeOrder = []int{netproxy.ModeSystem, netproxy.ModeDirect, netproxy.Mo
 
 func proxyModeItems() []string {
 	return []string{
-		Msg("ProxySettings.ModeSystem"),
-		Msg("ProxySettings.ModeDirect"),
-		Msg("ProxySettings.ModeHTTP"),
-		Msg("ProxySettings.ModeSOCKS5"),
+		i18n.Msg("ProxySettings.ModeSystem"),
+		i18n.Msg("ProxySettings.ModeDirect"),
+		i18n.Msg("ProxySettings.ModeHTTP"),
+		i18n.Msg("ProxySettings.ModeSOCKS5"),
 	}
 }
 
@@ -38,7 +39,7 @@ func proxyModeIndex(mode int) int {
 // connection says otherwise — netfox sites.
 func actionProxySettings() {
 	width, height := 64, 15
-	dlg := vtui.NewCenteredDialog(width, height, Msg("ProxySettings.Title"))
+	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("ProxySettings.Title"))
 	dlg.ShowClose = true
 
 	modes := proxyModeItems()
@@ -47,21 +48,21 @@ func actionProxySettings() {
 	modeIdx := proxyModeIndex(config.App.ProxyMode)
 	comboMode.Menu.SetSelectPos(modeIdx)
 	comboMode.Edit.SetText(modes[modeIdx])
-	lblMode := vtui.NewLabel(0, 0, padProxyLabel(Msg("ProxySettings.Mode")), comboMode)
+	lblMode := vtui.NewLabel(0, 0, padProxyLabel(i18n.Msg("ProxySettings.Mode")), comboMode)
 
 	editHost := vtui.NewEdit(0, 0, 24, config.App.ProxyHost)
-	lblHost := vtui.NewLabel(0, 0, padProxyLabel(Msg("ProxySettings.Host")), editHost)
+	lblHost := vtui.NewLabel(0, 0, padProxyLabel(i18n.Msg("ProxySettings.Host")), editHost)
 	editPort := vtui.NewEdit(0, 0, 8, config.App.ProxyPort)
-	lblPort := vtui.NewLabel(0, 0, padProxyLabel(Msg("ProxySettings.Port")), editPort)
+	lblPort := vtui.NewLabel(0, 0, padProxyLabel(i18n.Msg("ProxySettings.Port")), editPort)
 	editUser := vtui.NewEdit(0, 0, 30, config.App.ProxyUser)
-	lblUser := vtui.NewLabel(0, 0, padProxyLabel(Msg("ProxySettings.User")), editUser)
+	lblUser := vtui.NewLabel(0, 0, padProxyLabel(i18n.Msg("ProxySettings.User")), editUser)
 	editPass := vtui.NewPasswordEdit(0, 0, 30, config.App.ProxyPass)
-	lblPass := vtui.NewLabel(0, 0, padProxyLabel(Msg("ProxySettings.Password")), editPass)
-	lblHint := vtui.NewLabel(0, 0, padProxyLabel(Msg("ProxySettings.Hint")), nil)
+	lblPass := vtui.NewLabel(0, 0, padProxyLabel(i18n.Msg("ProxySettings.Password")), editPass)
+	lblHint := vtui.NewLabel(0, 0, padProxyLabel(i18n.Msg("ProxySettings.Hint")), nil)
 
-	btnOk := vtui.NewButton(0, 0, Msg("vtui.Ok"))
+	btnOk := vtui.NewButton(0, 0, i18n.Msg("vtui.Ok"))
 	btnOk.IsDefault = true
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 
 	for _, it := range []vtui.UIElement{lblMode, comboMode, lblHost, editHost, lblPort, editPort,
 		lblUser, editUser, lblPass, editPass, lblHint, btnOk, btnCancel} {

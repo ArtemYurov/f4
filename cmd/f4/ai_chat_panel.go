@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/internal/vtvibe"
 	"github.com/unxed/vtinput"
@@ -43,7 +44,7 @@ func NewAIChatPanel(src *FileSystemPanel) *AIChatPanel {
 	x1, y1, x2, y2 := src.GetPosition()
 	cp := &AIChatPanel{
 		src:            src,
-		frame:          vtui.NewBorderedFrame(x1, y1, x2, y2, vtui.SingleBox, Msg("AI.ChatTitle")),
+		frame:          vtui.NewBorderedFrame(x1, y1, x2, y2, vtui.SingleBox, i18n.Msg("AI.ChatTitle")),
 		input:          vtui.NewMultiLineEdit(0, 0, 10, 3, ""),
 		focusedLinkIdx: -1,
 	}
@@ -501,9 +502,9 @@ func (cp *AIChatPanel) updateLines() {
 
 	for _, t := range turns {
 		if t.Role == "user" {
-			lines = append(lines, makePlainLine("▸ "+Msg("AI.ChatYou")+"  "+t.Time.Format("15:04"), headerAttr))
+			lines = append(lines, makePlainLine("▸ "+i18n.Msg("AI.ChatYou")+"  "+t.Time.Format("15:04"), headerAttr))
 		} else {
-			lines = append(lines, makePlainLine("▾ "+Msg("AI.ChatModel")+"  "+t.Time.Format("15:04"), headerAttr))
+			lines = append(lines, makePlainLine("▾ "+i18n.Msg("AI.ChatModel")+"  "+t.Time.Format("15:04"), headerAttr))
 		}
 
 		for _, p := range strings.Split(t.Text, "\n") {
@@ -618,7 +619,7 @@ func (cp *AIChatPanel) updateLines() {
 	}
 
 	if session.Busy() {
-		lines = append(lines, makePlainLine("▸ "+Msg("AI.ChatTyping"), headerAttr))
+		lines = append(lines, makePlainLine("▸ "+i18n.Msg("AI.ChatTyping"), headerAttr))
 	}
 
 	cp.lines = lines
@@ -719,7 +720,7 @@ func formatApplyPatchLabel(p *vtvibe.Patch, maxW int) string {
 	if p == nil {
 		return ""
 	}
-	head := " ⚡ " + Msg("AI.ApplyPatchBar")
+	head := " ⚡ " + i18n.Msg("AI.ApplyPatchBar")
 	label := formatBarLabel(head+" (RCtrl+P): ", p.Files, maxW)
 	if label == "" {
 		label = formatBarLabel(head+" ", nil, maxW)

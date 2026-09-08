@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtui"
 )
 
@@ -13,7 +14,7 @@ func commandPalettePanelsContextEntries(pf *PanelsFrame) []commandPaletteEntry {
 	if pf == nil || pf.closed || !pf.showPanels {
 		return nil
 	}
-	category := action.PlainLabel(Msg("Help.Area.Shell"))
+	category := action.PlainLabel(i18n.Msg("Help.Area.Shell"))
 	entries := []commandPaletteEntry{
 		commandPaletteLocalizedPanelKeyEntry(pf, "Panel.ActivateSelected", "CommandPalette.Panel.ActivateSelected", "Activate selected item", "CommandPalette.Panel.ActivateSelected.Desc", "Open the selected item or execute it", "Enter", "Enter", category, nil, "Menu.Files.View"),
 		commandPaletteLocalizedPanelKeyEntry(pf, "Panel.SwitchActive", "CommandPalette.Panel.SwitchActive", "Switch active panel", "CommandPalette.Panel.SwitchActive.Desc", "Move focus to the other panel", "Tab", "Tab", category, nil, "Panel.Other"),
@@ -106,7 +107,7 @@ func commandPalettePanelsContextEntries(pf *PanelsFrame) []commandPaletteEntry {
 					"Copy the focused information value or selected rows to the clipboard",
 					"C",
 					"C",
-					action.PlainLabel(Msg("InfoPanel.Title")),
+					action.PlainLabel(i18n.Msg("InfoPanel.Title")),
 					func() bool { return commandPaletteInfoPanelFocused(pf, panel) },
 					"InfoPanel.Title",
 				))
@@ -128,7 +129,7 @@ func commandPalettePanelsContextEntries(pf *PanelsFrame) []commandPaletteEntry {
 					"Toggle long-line wrapping in Quick View",
 					"F2",
 					"F2",
-					action.PlainLabel(Msg("QuickView.Title")),
+					action.PlainLabel(i18n.Msg("QuickView.Title")),
 					func() bool { return commandPaletteQuickViewPanelFocused(pf, panel) },
 					"QuickView.Title",
 				)
@@ -146,7 +147,7 @@ func commandPalettePanelsContextEntries(pf *PanelsFrame) []commandPaletteEntry {
 					"Copy the latest assistant response to the clipboard",
 					"Right Ctrl+C",
 					"RCtrlC",
-					action.PlainLabel(Msg("Action.AI.ViewChat")),
+					action.PlainLabel(i18n.Msg("Action.AI.ViewChat")),
 					func() bool { return commandPaletteAIChatPanelFocused(pf, panel) },
 					"Action.AI.ViewChat",
 				))
@@ -169,7 +170,7 @@ func commandPaletteLocalizedPanelKeyEntry(
 	valid func() bool,
 	aliasKeys ...string,
 ) commandPaletteEntry {
-	description := Msg(descKey)
+	description := i18n.Msg(descKey)
 	if description == "" || strings.HasPrefix(description, "{") {
 		description = englishDescription
 	}
@@ -222,7 +223,7 @@ func commandPaletteAIChatFocusedEntries(pf *PanelsFrame, panel *AIChatPanel, bar
 	if !commandPaletteAIChatPanelFocused(pf, panel) {
 		return nil
 	}
-	category := action.PlainLabel(Msg("Action.AI.ViewChat"))
+	category := action.PlainLabel(i18n.Msg("Action.AI.ViewChat"))
 	if panel.focusedLinkIdx == -1 {
 		draft := panel.input.GetText()
 		if strings.TrimSpace(draft) == "" {
@@ -337,7 +338,7 @@ func commandPaletteAIChatFocusedEntries(pf *PanelsFrame, panel *AIChatPanel, bar
 }
 
 func commandPalettePanelKeyEntry(pf *PanelsFrame, id, labelKey, englishLabel, description, shortcut, key, category string, aliasKeys ...string) commandPaletteEntry {
-	label := Msg(labelKey)
+	label := i18n.Msg(labelKey)
 	if label == "" || strings.HasPrefix(label, "{") {
 		label = englishLabel
 	}
@@ -362,7 +363,7 @@ func commandPalettePanelKeyEntry(pf *PanelsFrame, id, labelKey, englishLabel, de
 }
 
 func commandPaletteBookmarkEntries(pf *PanelsFrame) []commandPaletteEntry {
-	category := action.PlainLabel(Msg("Menu.Commands.Bookmarks"))
+	category := action.PlainLabel(i18n.Msg("Menu.Commands.Bookmarks"))
 	aliases := commandPaletteTranslations("Menu.Commands.Bookmarks", "Action.Panel.Bookmarks.Desc")
 	bookmarks, _ := LoadBookmarks(BookmarksFilePath())
 	entries := make([]commandPaletteEntry, 0, 21)
@@ -372,7 +373,7 @@ func commandPaletteBookmarkEntries(pf *PanelsFrame) []commandPaletteEntry {
 			path := bookmarks[slot].Path
 			entries = append(entries, commandPaletteEntry{
 				Key:                fmt.Sprintf("bookmark:goto:%d", slot),
-				Label:              fmt.Sprintf(Msg("CommandPalette.Bookmark.GoTo"), slot, path),
+				Label:              fmt.Sprintf(i18n.Msg("CommandPalette.Bookmark.GoTo"), slot, path),
 				EnglishLabel:       fmt.Sprintf("Go to bookmark %d: %s", slot, path),
 				Description:        path,
 				EnglishDescription: path,
@@ -387,9 +388,9 @@ func commandPaletteBookmarkEntries(pf *PanelsFrame) []commandPaletteEntry {
 		}
 		entries = append(entries, commandPaletteEntry{
 			Key:                fmt.Sprintf("bookmark:save:%d", slot),
-			Label:              fmt.Sprintf(Msg("CommandPalette.Bookmark.Save"), slot),
+			Label:              fmt.Sprintf(i18n.Msg("CommandPalette.Bookmark.Save"), slot),
 			EnglishLabel:       fmt.Sprintf("Save current folder to bookmark %d", slot),
-			Description:        Msg("CommandPalette.Bookmark.Save.Desc"),
+			Description:        i18n.Msg("CommandPalette.Bookmark.Save.Desc"),
 			EnglishDescription: "Store the active panel folder in this bookmark slot",
 			ID:                 fmt.Sprintf("Bookmark.Save.%d", slot),
 			Category:           category,
@@ -404,9 +405,9 @@ func commandPaletteBookmarkEntries(pf *PanelsFrame) []commandPaletteEntry {
 	}
 	entries = append(entries, commandPaletteEntry{
 		Key:                "bookmark:home",
-		Label:              Msg("CommandPalette.Bookmark.Home"),
+		Label:              i18n.Msg("CommandPalette.Bookmark.Home"),
 		EnglishLabel:       "Go to home folder",
-		Description:        Msg("CommandPalette.Bookmark.Home.Desc"),
+		Description:        i18n.Msg("CommandPalette.Bookmark.Home.Desc"),
 		EnglishDescription: "Open the home folder in the active panel",
 		ID:                 "Bookmark.Home",
 		Category:           category,

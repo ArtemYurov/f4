@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/i18n"
 	"strings"
 	"sync"
 	"unicode/utf8"
@@ -62,7 +63,7 @@ func (t *applyTranscript) Snapshot() []string {
 	}
 	lines := make([]string, 0, len(t.lines)+extra)
 	if t.omitted {
-		lines = append(lines, Msg("ApplyCommand.OutputOmitted"))
+		lines = append(lines, i18n.Msg("ApplyCommand.OutputOmitted"))
 	}
 	lines = append(lines, t.lines...)
 	return lines

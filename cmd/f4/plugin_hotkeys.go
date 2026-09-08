@@ -9,6 +9,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -419,7 +420,7 @@ func deletePluginHotkey(hm *HotkeyManager, area, key string) bool {
 
 func pluginHotkeyDeleteQuestion(key, label string) string {
 	cleanLabel, _, _ := vtui.ParseAmpersandString(label)
-	return fmt.Sprintf(Msg("Plugins.HotkeyRemoveQuestion"), FormatKeyForUI(key), cleanLabel)
+	return fmt.Sprintf(i18n.Msg("Plugins.HotkeyRemoveQuestion"), FormatKeyForUI(key), cleanLabel)
 }
 
 // pluginHotkeyEventRune reports the letter or digit a key event stands for, or
@@ -455,22 +456,22 @@ type PluginHotkeyAssignFrame struct {
 func NewPluginHotkeyAssignFrame(hm *HotkeyManager, actionName, label string, onComplete func()) *PluginHotkeyAssignFrame {
 	width, height := 48, 9
 	f := &PluginHotkeyAssignFrame{
-		Window:     vtui.NewCenteredDialog(width, height, Msg("Plugins.HotkeyTitle")),
+		Window:     vtui.NewCenteredDialog(width, height, i18n.Msg("Plugins.HotkeyTitle")),
 		hm:         hm,
 		actionName: actionName,
 		onComplete: onComplete,
 	}
 
 	cleanLabel, _, _ := vtui.ParseAmpersandString(label)
-	current := Msg("Plugins.HotkeyNone")
+	current := i18n.Msg("Plugins.HotkeyNone")
 	if _, key := configuredHotkeyBinding(hm, actionName); key != "" {
 		current = FormatKeyForUI(key)
 	}
 	lines := []string{
 		cleanLabel,
-		Msg("Plugins.HotkeyPrompt"),
-		fmt.Sprintf(Msg("Plugins.HotkeyCurrent"), current),
-		Msg("Plugins.HotkeyHelp"),
+		i18n.Msg("Plugins.HotkeyPrompt"),
+		fmt.Sprintf(i18n.Msg("Plugins.HotkeyCurrent"), current),
+		i18n.Msg("Plugins.HotkeyHelp"),
 	}
 
 	vbox := vtui.NewVBoxLayout(f.X1+2, f.Y1+2, width-4, height-4)

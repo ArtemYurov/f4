@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/i18n"
 	"os"
 	"path/filepath"
 	"strings"
@@ -105,7 +106,7 @@ func TestBookmarksDialog_RowTextShowsPathOrEmptyMarker(t *testing.T) {
 	if !strings.Contains(filled, "6") || !strings.Contains(filled, "/mnt/d/work && play") {
 		t.Errorf("row 6 = %q, want the slot digit and the escaped path", filled)
 	}
-	if empty := d.rowText(0); !strings.Contains(empty, Msg("Bookmarks.EmptySlot")) {
+	if empty := d.rowText(0); !strings.Contains(empty, i18n.Msg("Bookmarks.EmptySlot")) {
 		t.Errorf("row 0 = %q, want the empty marker", empty)
 	}
 }

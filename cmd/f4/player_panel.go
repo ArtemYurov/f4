@@ -11,6 +11,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	id3 "github.com/unxed/id3-go"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -102,7 +103,7 @@ func NewPlayerPanel(src *FileSystemPanel) *PlayerPanel {
 		stop:   make(chan struct{}),
 	}
 	pp.SetVisible(true)
-	pp.frame = vtui.NewBorderedFrame(x1, y1, x2, y2, vtui.SingleBox, Msg("Player.Title"))
+	pp.frame = vtui.NewBorderedFrame(x1, y1, x2, y2, vtui.SingleBox, i18n.Msg("Player.Title"))
 	pp.frame.ColorBoxIdx = ColPanelBox
 	pp.frame.ColorTitleIdx = ColPanelTitle
 	pp.frame.ColorBackgroundIdx = ColPanelText
@@ -382,10 +383,10 @@ func (pp *PlayerPanel) playItem(it *playlistItem) bool {
 		pp.status = err.Error()
 		pp.current = nil
 		if errors.Is(err, errNeedFFmpeg) {
-			pp.status = fmt.Sprintf(Msg("Player.NeedFFmpeg"), filepath.Ext(it.Path))
+			pp.status = fmt.Sprintf(i18n.Msg("Player.NeedFFmpeg"), filepath.Ext(it.Path))
 			if !pp.ffmpegWarned {
 				pp.ffmpegWarned = true
-				vtui.ShowMessage(Msg("Player.Title"), toolFFmpeg.MissingMessage(), []string{Msg("vtui.Ok")})
+				vtui.ShowMessage(i18n.Msg("Player.Title"), toolFFmpeg.MissingMessage(), []string{i18n.Msg("vtui.Ok")})
 			}
 		}
 		return false
@@ -774,7 +775,7 @@ func (pp *PlayerPanel) moveOut(it *playlistItem) {
 }
 
 func (pp *PlayerPanel) newFolder(after *playlistItem) {
-	vtui.InputBox(Msg("Player.NewFolderTitle"), Msg("Player.NewFolderPrompt"), "", func(name string) {
+	vtui.InputBox(i18n.Msg("Player.NewFolderTitle"), i18n.Msg("Player.NewFolderPrompt"), "", func(name string) {
 		name = strings.TrimSpace(name)
 		if name == "" {
 			return
@@ -824,13 +825,13 @@ func (pp *PlayerPanel) Show(scr *vtui.ScreenBuf) {
 	}
 
 	// Row 0: what is playing, scrolled when it does not fit.
-	title := Msg("Player.Idle")
+	title := i18n.Msg("Player.Idle")
 	if pp.status != "" {
 		title = pp.status
 	} else if pp.current != nil {
 		title = "♪ " + pp.current.Name
 		if pp.engine.IsLoaded() && !pp.engine.IsPlaying() && !pp.engine.Finished() {
-			title += " " + Msg("Player.PausedMark")
+			title += " " + i18n.Msg("Player.PausedMark")
 		}
 	}
 	if runewidth.StringWidth(title) > w && pp.engine.IsPlaying() {
@@ -844,9 +845,9 @@ func (pp *PlayerPanel) Show(scr *vtui.ScreenBuf) {
 	if pp.engine.IsLoaded() {
 		clock = fmtClock(pp.engine.Position()) + " / " + fmtClock(pp.engine.Duration())
 		info := pp.engine.Info()
-		mode := Msg("Player.Stereo")
+		mode := i18n.Msg("Player.Stereo")
 		if info.Mono {
-			mode = Msg("Player.Mono")
+			mode = i18n.Msg("Player.Mono")
 		}
 		facts = fmt.Sprintf("%dkbps %dkHz %s", info.BitrateKbps, info.SampleRate/1000, mode)
 		if info.Codec != "" {
@@ -924,7 +925,7 @@ func (pp *PlayerPanel) Show(scr *vtui.ScreenBuf) {
 		pp.top = max(0, len(pp.rows)-ph)
 	}
 	if len(pp.rows) == 0 {
-		put(py, Msg("Player.EmptyPlaylist"), text)
+		put(py, i18n.Msg("Player.EmptyPlaylist"), text)
 		return
 	}
 	for i := 0; i < ph; i++ {

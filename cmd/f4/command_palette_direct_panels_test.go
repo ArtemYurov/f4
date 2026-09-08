@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -195,7 +196,7 @@ func TestCommandPaletteAISendDraftOnlyForCurrentNonEmptyInput(t *testing.T) {
 	vtui.FrameManager.Push(pf)
 
 	entry, found := commandPaletteTestEntryByID(commandPalettePanelsContextEntries(pf), "AI.SendDraft")
-	if !found || entry.Description != Msg("CommandPalette.AI.SendDraft.Desc") {
+	if !found || entry.Description != i18n.Msg("CommandPalette.AI.SendDraft.Desc") {
 		t.Fatalf("AI.SendDraft entry = %#v", entry)
 	}
 	chat.input.SetText("newer draft")

@@ -16,10 +16,10 @@ func TestGenerateKeysHelpTopic_Russian(t *testing.T) {
 	oldLang := config.App.Language
 	defer func() {
 		config.App.Language = oldLang
-		InitLang()
+		initLang()
 	}()
 	config.App.Language = "ru"
-	InitLang()
+	initLang()
 
 	topic := generateKeysHelpTopic("PanelNav", "t", []string{"Shell"}, "")
 	joined := strings.Join(topic.Lines, "\n")
@@ -41,10 +41,10 @@ func TestGenerateKeysHelpTopicsFitHelpWidth(t *testing.T) {
 	oldLang := config.App.Language
 	t.Cleanup(func() {
 		config.App.Language = oldLang
-		InitLang()
+		initLang()
 	})
 	config.App.Language = "ru"
-	InitLang()
+	initLang()
 
 	for _, tc := range []struct {
 		name  string
@@ -73,10 +73,10 @@ func TestGenerateKeysHelpTopic_HelpLanguageOverridesUI(t *testing.T) {
 	oldLang := config.App.Language
 	defer func() {
 		config.App.Language = oldLang
-		InitLang()
+		initLang()
 	}()
 	config.App.Language = "en"
-	InitLang()
+	initLang()
 
 	oldStrings := helpActionStrings
 	defer func() { helpActionStrings = oldStrings }()

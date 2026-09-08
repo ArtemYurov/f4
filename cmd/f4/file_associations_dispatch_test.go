@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -366,7 +367,7 @@ func TestFileAssociation_EditorAddSavesAndReloads(t *testing.T) {
 }
 
 // TestFileAssociation_LangKeysResolve is the paranoia guard: every
-// menu string we added to en.lng must resolve (Msg returns something
+// menu string we added to en.lng must resolve (i18n.Msg returns something
 // that is not the fallback "{Key}" marker). Catches typos in either
 // the code or the lang file.
 func TestFileAssociation_LangKeysResolve(t *testing.T) {
@@ -387,9 +388,9 @@ func TestFileAssociation_LangKeysResolve(t *testing.T) {
 		"FileAssoc.DeleteTitle",
 		"FileAssoc.DeleteConfirm",
 	}
-	// Msg() returns "{key}" when the key is missing (see lang_packs.go).
+	// i18n.Msg() returns "{key}" when the key is missing (see lang_packs.go).
 	for _, k := range keys {
-		got := Msg(k)
+		got := i18n.Msg(k)
 		if strings.HasPrefix(got, "{") && strings.HasSuffix(got, "}") {
 			t.Errorf("lang key %q not defined: got %q", k, got)
 		}

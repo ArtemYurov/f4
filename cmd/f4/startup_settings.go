@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtui"
 )
 
@@ -13,7 +14,7 @@ func startupBackendLabels(choices []string) []string {
 	labels := make([]string, len(choices))
 	for i, choice := range choices {
 		if choice == "" {
-			labels[i] = Msg("StartupSettings.BackendAuto")
+			labels[i] = i18n.Msg("StartupSettings.BackendAuto")
 			continue
 		}
 		labels[i] = choice
@@ -27,20 +28,20 @@ func startupBackendLabels(choices []string) []string {
 // still overrides all three settings on any individual run.
 func actionStartupSettings(pf *PanelsFrame) {
 	width, height := 62, 14
-	dlg := vtui.NewCenteredDialog(width, height, Msg("StartupSettings.Title"))
+	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("StartupSettings.Title"))
 	dlg.ShowClose = true
 
 	modeLabels := []string{
-		Msg("StartupSettings.ModeAuto"),
-		Msg("StartupSettings.ModeTTY"),
-		Msg("StartupSettings.ModeGui"),
+		i18n.Msg("StartupSettings.ModeAuto"),
+		i18n.Msg("StartupSettings.ModeTTY"),
+		i18n.Msg("StartupSettings.ModeGui"),
 	}
 	comboMode := vtui.NewComboBox(0, 0, 28, modeLabels)
 	comboMode.DropdownOnly = true
 	modeIndex := startupModeChoiceIndex(config.App.StartupMode)
 	comboMode.Menu.SetSelectPos(modeIndex)
 	comboMode.Edit.SetText(modeLabels[modeIndex])
-	lblMode := vtui.NewLabel(0, 0, Msg("StartupSettings.Mode"), comboMode)
+	lblMode := vtui.NewLabel(0, 0, i18n.Msg("StartupSettings.Mode"), comboMode)
 
 	guiChoices := startupBackendChoices(startupGuiBackends)
 	guiLabels := startupBackendLabels(guiChoices)
@@ -49,7 +50,7 @@ func actionStartupSettings(pf *PanelsFrame) {
 	guiIndex := startupBackendChoiceIndex(guiChoices, config.App.GuiBackend)
 	comboGui.Menu.SetSelectPos(guiIndex)
 	comboGui.Edit.SetText(guiLabels[guiIndex])
-	lblGui := vtui.NewLabel(0, 0, Msg("StartupSettings.GuiBackend"), comboGui)
+	lblGui := vtui.NewLabel(0, 0, i18n.Msg("StartupSettings.GuiBackend"), comboGui)
 
 	ttyChoices := startupBackendChoices(startupTTYBackends)
 	ttyLabels := startupBackendLabels(ttyChoices)
@@ -58,13 +59,13 @@ func actionStartupSettings(pf *PanelsFrame) {
 	ttyIndex := startupBackendChoiceIndex(ttyChoices, config.App.TTYBackend)
 	comboTTY.Menu.SetSelectPos(ttyIndex)
 	comboTTY.Edit.SetText(ttyLabels[ttyIndex])
-	lblTTY := vtui.NewLabel(0, 0, Msg("StartupSettings.TTYBackend"), comboTTY)
+	lblTTY := vtui.NewLabel(0, 0, i18n.Msg("StartupSettings.TTYBackend"), comboTTY)
 
-	note := vtui.NewText(0, 0, Msg("StartupSettings.Note"), 0)
+	note := vtui.NewText(0, 0, i18n.Msg("StartupSettings.Note"), 0)
 
-	btnOk := vtui.NewButton(0, 0, Msg("vtui.Ok"))
+	btnOk := vtui.NewButton(0, 0, i18n.Msg("vtui.Ok"))
 	btnOk.IsDefault = true
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 
 	dlg.AddItem(lblMode)
 	dlg.AddItem(comboMode)

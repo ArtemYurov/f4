@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
@@ -4558,7 +4559,7 @@ func TestEditorView_Search_Reverse_StartAtZero(t *testing.T) {
 		select {
 		case task := <-vtui.FrameManager.TaskChan:
 			task()
-			if result := vtui.FrameManager.GetTopFrame(); result != nil && result.GetTitle() == Msg("Search.Title") {
+			if result := vtui.FrameManager.GetTopFrame(); result != nil && result.GetTitle() == i18n.Msg("Search.Title") {
 				vtui.FrameManager.RemoveFrame(result)
 				return
 			}
@@ -5516,7 +5517,7 @@ func pumpReplacePrompt(t *testing.T, prev *vtui.Window) *vtui.Window {
 	var dlg *vtui.Window
 	pumpFindAll(t, func() bool {
 		w, ok := vtui.FrameManager.GetTopFrame().(*vtui.Window)
-		if ok && w != prev && w.GetTitle() == Msg("Replace.ConfirmTitle") && countDialogButtons(w) == 4 {
+		if ok && w != prev && w.GetTitle() == i18n.Msg("Replace.ConfirmTitle") && countDialogButtons(w) == 4 {
 			dlg = w
 		}
 		return dlg != nil
@@ -5531,7 +5532,7 @@ func pumpReplaceSummary(t *testing.T) {
 	t.Helper()
 	pumpFindAll(t, func() bool {
 		w, ok := vtui.FrameManager.GetTopFrame().(*vtui.Window)
-		return ok && w.GetTitle() == Msg("Replace.ConfirmTitle") && countDialogButtons(w) == 1
+		return ok && w.GetTitle() == i18n.Msg("Replace.ConfirmTitle") && countDialogButtons(w) == 1
 	})
 }
 
@@ -5579,7 +5580,7 @@ func TestEditorView_Replace_InteractivePromptFlow(t *testing.T) {
 	dlg3.SetExitCode(replaceBtnCancel)
 	pumpFindAllFor(t, 300*time.Millisecond, func() (string, bool) {
 		w, ok := vtui.FrameManager.GetTopFrame().(*vtui.Window)
-		if ok && w != dlg3 && w.GetTitle() == Msg("Replace.ConfirmTitle") {
+		if ok && w != dlg3 && w.GetTitle() == i18n.Msg("Replace.ConfirmTitle") {
 			return "Cancel must end the loop, but another Replace dialog appeared", true
 		}
 		return "", false

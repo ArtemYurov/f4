@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/vtui"
 )
@@ -93,19 +94,19 @@ func driveMenuKindFor(name, path string) driveMenuKind {
 func driveMenuKindLabel(kind driveMenuKind) string {
 	switch kind {
 	case driveMenuKindFixed:
-		return Msg("Drive.TypeFixed")
+		return i18n.Msg("Drive.TypeFixed")
 	case driveMenuKindRemovable:
-		return Msg("Drive.TypeRemovable")
+		return i18n.Msg("Drive.TypeRemovable")
 	case driveMenuKindCD:
-		return Msg("Drive.TypeCD")
+		return i18n.Msg("Drive.TypeCD")
 	case driveMenuKindRemote:
-		return Msg("Drive.TypeRemote")
+		return i18n.Msg("Drive.TypeRemote")
 	case driveMenuKindPhysical:
 		// The row already says "Physical Disks"; repeating "physical" is
 		// noise and is not how Far presents this synthetic entry.
 		return ""
 	case driveMenuKindSubstitute:
-		return Msg("Drive.TypeSubstitute")
+		return i18n.Msg("Drive.TypeSubstitute")
 	default:
 		return ""
 	}
@@ -265,15 +266,15 @@ func driveMenuPlatformItemText(drv sysinfo.DriveEntry, options uint32) string {
 }
 
 func driveMenuOptionsDialogSize() (int, int) {
-	width := vtui.StringWidth(Msg("Drive.OptionsTitle")) + 6
+	width := vtui.StringWidth(i18n.Msg("Drive.OptionsTitle")) + 6
 	for _, spec := range driveMenuOptionSpecs {
-		label, _, _ := vtui.ParseAmpersandString(Msg(spec.label))
+		label, _, _ := vtui.ParseAmpersandString(i18n.Msg(spec.label))
 		// Four columns are the checkbox prefix and four are dialog chrome.
 		if candidate := vtui.StringWidth(label) + 8; candidate > width {
 			width = candidate
 		}
 	}
-	buttonWidth := vtui.StringWidth(Msg("vtui.Ok")) + vtui.StringWidth(Msg("vtui.Cancel")) + 8
+	buttonWidth := vtui.StringWidth(i18n.Msg("vtui.Ok")) + vtui.StringWidth(i18n.Msg("vtui.Cancel")) + 8
 	if buttonWidth > width {
 		width = buttonWidth
 	}
@@ -296,13 +297,13 @@ func driveMenuPlatformItemVisible(drv sysinfo.DriveEntry, options uint32) bool {
 
 func (pf *PanelsFrame) openDriveMenuOptions(panelIdx int, menu *vtui.VMenu) {
 	width, height := driveMenuOptionsDialogSize()
-	dlg := vtui.NewCenteredDialog(width, height, Msg("Drive.OptionsTitle"))
+	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("Drive.OptionsTitle"))
 	dlg.ShowClose = true
 
 	options := config.App.DriveMenuOptions
 	checks := make([]*vtui.Checkbox, 0, len(driveMenuOptionSpecs))
 	for _, spec := range driveMenuOptionSpecs {
-		check := vtui.NewCheckbox(0, 0, Msg(spec.label), false)
+		check := vtui.NewCheckbox(0, 0, i18n.Msg(spec.label), false)
 		if driveMenuOptionEnabled(options, spec.flag) {
 			check.State = 1
 		}
@@ -310,9 +311,9 @@ func (pf *PanelsFrame) openDriveMenuOptions(panelIdx int, menu *vtui.VMenu) {
 		dlg.AddItem(check)
 	}
 
-	ok := vtui.NewButton(0, 0, Msg("vtui.Ok"))
+	ok := vtui.NewButton(0, 0, i18n.Msg("vtui.Ok"))
 	ok.IsDefault = true
-	cancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	cancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 	dlg.AddItem(ok)
 	dlg.AddItem(cancel)
 

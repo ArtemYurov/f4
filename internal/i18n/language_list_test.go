@@ -1,4 +1,4 @@
-package main
+package i18n
 
 import "testing"
 
@@ -7,18 +7,18 @@ import "testing"
 // otherwise lists English alone while a configured non-English language
 // keeps working invisibly, with no way to see or change it from the UI.
 func TestListAvailableUILanguages_IncludesEmbedded(t *testing.T) {
-	langs := listAvailableUILanguages()
+	langs := ListAvailable("")
 
-	if len(langs) == 0 || langs[0].code != "en" {
+	if len(langs) == 0 || langs[0].Code != "en" {
 		t.Fatalf("English must stay the first entry, got %+v", langs)
 	}
 
 	byCode := make(map[string]string, len(langs))
 	for _, l := range langs {
-		if _, dup := byCode[l.code]; dup {
-			t.Errorf("duplicate language code %q", l.code)
+		if _, dup := byCode[l.Code]; dup {
+			t.Errorf("duplicate language code %q", l.Code)
 		}
-		byCode[l.code] = l.name
+		byCode[l.Code] = l.Name
 	}
 
 	for code, name := range map[string]string{"ru": "Русский", "ka": "ქართული"} {

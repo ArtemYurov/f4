@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtui"
 )
 
@@ -22,9 +23,9 @@ func commandPaletteHelpEntries(help commandPaletteHelpFrame) []commandPaletteEnt
 	if help == nil || ((value.Kind() == reflect.Pointer || value.Kind() == reflect.Interface) && value.IsNil()) {
 		return nil
 	}
-	category := Msg("CommandPalette.CategoryHelp")
+	category := i18n.Msg("CommandPalette.CategoryHelp")
 	newEntry := func(id, labelKey, english, description, shortcut string, visible func() bool, run func() bool) commandPaletteEntry {
-		label := Msg(labelKey)
+		label := i18n.Msg(labelKey)
 		if label == "" || strings.HasPrefix(label, "{") {
 			label = english
 		}

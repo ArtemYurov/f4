@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -34,13 +35,13 @@ func actionRunRemoteCommand(pf *PanelsFrame) {
 	}
 	runner, ok := fsp.vfs.(vfs.CommandRunner)
 	if !ok {
-		vtui.ShowMessage(Msg("RemoteCmd.Title"),
+		vtui.ShowMessage(i18n.Msg("RemoteCmd.Title"),
 			"This file system cannot run commands.", []string{"&Ok"})
 		return
 	}
 	dir := fsp.vfs.GetPath()
 
-	vtui.InputBoxOn(pf, Msg("RemoteCmd.Title"), Msg("RemoteCmd.Prompt"), "", func(command string) {
+	vtui.InputBoxOn(pf, i18n.Msg("RemoteCmd.Title"), i18n.Msg("RemoteCmd.Prompt"), "", func(command string) {
 		if command == "" {
 			return
 		}
@@ -50,11 +51,11 @@ func actionRunRemoteCommand(pf *PanelsFrame) {
 
 func showRemoteCommandOutput(pf *PanelsFrame, runner vfs.CommandRunner, dir, command string) {
 	width, height := 76, 20
-	dlg := vtui.NewCenteredDialog(width, height, Msg("RemoteCmd.Title")+": "+command)
+	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("RemoteCmd.Title")+": "+command)
 	dlg.ShowClose = true
 
 	lb := vtui.NewListBox(0, 0, width-4, height-6, nil)
-	btnClose := vtui.NewButton(0, 0, Msg("RemoteCmd.BtnClose"))
+	btnClose := vtui.NewButton(0, 0, i18n.Msg("RemoteCmd.BtnClose"))
 	dlg.AddItem(lb)
 	dlg.AddItem(btnClose)
 

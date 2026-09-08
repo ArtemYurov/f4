@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -69,8 +70,8 @@ func ShowBookmarksDialog(pf *PanelsFrame) {
 func ShowBookmarksDialogAt(pf *PanelsFrame, slot int, onClose func()) {
 	d, err := newBookmarksDialog(pf, BookmarksFilePath())
 	if err != nil {
-		vtui.ShowMessage(Msg("Bookmarks.Title"),
-			fmt.Sprintf(Msg("Bookmarks.LoadError"), err),
+		vtui.ShowMessage(i18n.Msg("Bookmarks.Title"),
+			fmt.Sprintf(i18n.Msg("Bookmarks.LoadError"), err),
 			[]string{"&Ok"})
 		if onClose != nil {
 			onClose()
@@ -99,7 +100,7 @@ func (d *bookmarksDialog) open(slot int, onClose func()) {
 	// menu uses this command, so it never needs re-enabling.
 	vtui.FrameManager.DisabledCommands.Disable(CmBookmarkEmptySlot)
 
-	d.menu = vtui.NewVMenu(Msg("Bookmarks.Title"))
+	d.menu = vtui.NewVMenu(i18n.Msg("Bookmarks.Title"))
 	d.render()
 	d.menu.SetSelectPos(slot)
 
@@ -188,7 +189,7 @@ func (d *bookmarksDialog) open(slot int, onClose func()) {
 
 	vtui.FrameManager.Push(&bookmarksFrame{
 		VMenu:      d.menu,
-		bottomHint: Msg("Bookmarks.BottomHint"),
+		bottomHint: i18n.Msg("Bookmarks.BottomHint"),
 		onClose:    onClose,
 	})
 }
@@ -215,9 +216,9 @@ func (d *bookmarksDialog) render() {
 func (d *bookmarksDialog) rowText(slot int) string {
 	path := d.set[slot].Path
 	if path == "" {
-		path = Msg("Bookmarks.EmptySlot")
+		path = i18n.Msg("Bookmarks.EmptySlot")
 	}
-	return fmt.Sprintf("%s %d   %s", Msg("Bookmarks.RowPrefix"), slot, escapeAmpersand(path))
+	return fmt.Sprintf("%s %d   %s", i18n.Msg("Bookmarks.RowPrefix"), slot, escapeAmpersand(path))
 }
 
 // size returns the menu box dimensions: wide enough for the longest row
@@ -230,7 +231,7 @@ func (d *bookmarksDialog) size() (int, int) {
 			w = rw
 		}
 	}
-	if minForHint := runewidth.StringWidth(Msg("Bookmarks.BottomHint")) + 2; w < minForHint {
+	if minForHint := runewidth.StringWidth(i18n.Msg("Bookmarks.BottomHint")) + 2; w < minForHint {
 		w = minForHint
 	}
 	if d.pf.lastW > 0 && w > d.pf.lastW-4 {
@@ -277,7 +278,7 @@ func (d *bookmarksDialog) editPath(slot int) {
 		return
 	}
 	current := d.set[slot].Path
-	vtui.InputBox(Msg("Bookmarks.EditTitle"), Msg("Bookmarks.EditPrompt"), current, func(text string) {
+	vtui.InputBox(i18n.Msg("Bookmarks.EditTitle"), i18n.Msg("Bookmarks.EditPrompt"), current, func(text string) {
 		text = strings.TrimSpace(text)
 		if text == "" {
 			return
@@ -306,8 +307,8 @@ func (d *bookmarksDialog) moveSlot(slot, delta int) {
 func (d *bookmarksDialog) persist() bool {
 	err := SaveBookmarks(d.file, d.set)
 	if err != nil {
-		vtui.ShowMessage(Msg("Bookmarks.Title"),
-			fmt.Sprintf(Msg("Bookmarks.SaveError"), err),
+		vtui.ShowMessage(i18n.Msg("Bookmarks.Title"),
+			fmt.Sprintf(i18n.Msg("Bookmarks.SaveError"), err),
 			[]string{"&Ok"})
 		if reloaded, lerr := LoadBookmarks(d.file); lerr == nil {
 			d.set = reloaded

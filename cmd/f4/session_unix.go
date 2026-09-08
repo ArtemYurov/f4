@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/vtinput"
@@ -764,7 +765,7 @@ func runSessionPicker(sessions []SessionInfo) *SessionInfo {
 
 	const dialogHeight = 15
 	dialogWidth := sessionPickerDialogWidth(screenWidth)
-	dlg := vtui.NewCenteredDialog(dialogWidth, dialogHeight, Msg("Session.Title"))
+	dlg := vtui.NewCenteredDialog(dialogWidth, dialogHeight, i18n.Msg("Session.Title"))
 
 	var items []string
 	for _, s := range sessions {
@@ -785,8 +786,8 @@ func runSessionPicker(sessions []SessionInfo) *SessionInfo {
 		dlg.SetExitCode(1)
 	}
 
-	btnOk := vtui.NewButton(0, 0, Msg("vtui.Ok"))
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnOk := vtui.NewButton(0, 0, i18n.Msg("vtui.Ok"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 	dlg.AddItem(btnOk)
 	dlg.AddItem(btnCancel)
 

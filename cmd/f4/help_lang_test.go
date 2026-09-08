@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtui"
 )
 
@@ -53,13 +54,18 @@ func TestHelpLanguageSwitch(t *testing.T) {
 }
 
 func TestHelpAndLangCompleteness(t *testing.T) {
-	langs, err := filepath.Glob("lang/*.lng")
+	langs, err := filepath.Glob(filepath.Join(testutil.ModuleRootDir(t), "internal", "i18n", "lang", "*.lng"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	helps, err := filepath.Glob("help/*.hlf")
 	if err != nil {
 		t.Fatal(err)
+	}
+	// Glob reports no error for zero matches: a wrong directory would leave
+	// this comparison passing over two empty sets.
+	if len(langs) == 0 || len(helps) == 0 {
+		t.Fatalf("found %d .lng and %d .hlf files, want both non-empty", len(langs), len(helps))
 	}
 
 	langSet := make(map[string]bool)

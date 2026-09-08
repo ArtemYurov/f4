@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -775,22 +776,22 @@ func NewQueueFrame() *QueueFrame {
 	}
 
 	qf := &QueueFrame{
-		BaseWindow: *vtui.NewBaseWindow(0, 2, scrW-1, scrH-1, " "+Msg("Queue.Title")+" "),
+		BaseWindow: *vtui.NewBaseWindow(0, 2, scrW-1, scrH-1, " "+i18n.Msg("Queue.Title")+" "),
 	}
 	qf.ShowClose = true
 	qf.ShowZoom = true
 	qf.SetGrowMode(vtui.GrowHiX | vtui.GrowHiY)
 
-	btnCancel := vtui.NewButton(0, 0, Msg("Queue.BtnCancel"))
-	btnClear := vtui.NewButton(0, 0, Msg("Queue.BtnClear"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("Queue.BtnCancel"))
+	btnClear := vtui.NewButton(0, 0, i18n.Msg("Queue.BtnClear"))
 
 	qf.table = vtui.NewTableWithButtons(&qf.BaseWindow, []vtui.TableColumn{
-		{Title: Msg("Queue.ColID"), Width: 4},
-		{Title: Msg("Queue.ColState"), Width: 10},
-		{Title: Msg("Queue.ColType"), Width: 8},
-		{Title: Msg("Queue.ColDescription"), MinWidth: 10},
-		{Title: Msg("Queue.ColProgress"), Width: 24},
-		{Title: Msg("Queue.ColSpeed"), Width: 12},
+		{Title: i18n.Msg("Queue.ColID"), Width: 4},
+		{Title: i18n.Msg("Queue.ColState"), Width: 10},
+		{Title: i18n.Msg("Queue.ColType"), Width: 8},
+		{Title: i18n.Msg("Queue.ColDescription"), MinWidth: 10},
+		{Title: i18n.Msg("Queue.ColProgress"), Width: 24},
+		{Title: i18n.Msg("Queue.ColSpeed"), Width: 12},
 	}, btnCancel, btnClear)
 	useDialogTableColors(qf.table)
 	qf.table.Sortable = true

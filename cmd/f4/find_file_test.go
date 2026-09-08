@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -123,7 +124,7 @@ func TestExecuteFindFile_MaskMatching(t *testing.T) {
 				// The title comes from the localization table, so comparing it
 				// with an English literal makes this test depend on both the
 				// active language and on how the INI parser trims the value.
-				if frame != nil && frame.GetTitle() == Msg("FindFile.SearchResultsTitle") {
+				if frame != nil && frame.GetTitle() == i18n.Msg("FindFile.SearchResultsTitle") {
 					isDone = true
 					// Search successfully finished and showed the results dialog
 				}

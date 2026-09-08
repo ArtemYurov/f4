@@ -10,6 +10,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
@@ -329,18 +330,18 @@ func TestInfoPanel_AuthoritativeProviderReplacesLocalHostStats(t *testing.T) {
 	if !infoPanelHasRow(ip, "Device memory", formatBytesHuman(4*1024*1024*1024)) {
 		t.Fatal("provider byte field did not use the information-panel formatter")
 	}
-	if infoPanelHasRow(ip, Msg("InfoPanel.Computer"), "") {
+	if infoPanelHasRow(ip, i18n.Msg("InfoPanel.Computer"), "") {
 		t.Fatal("authoritative provider must replace, not augment, local computer data")
 	}
 	for _, row := range ip.rows {
-		if row.label == Msg("InfoPanel.Computer") || row.label == Msg("InfoPanel.User") {
+		if row.label == i18n.Msg("InfoPanel.Computer") || row.label == i18n.Msg("InfoPanel.User") {
 			t.Fatalf("local host row %q leaked into authoritative provider view", row.label)
 		}
 	}
-	if infoPanelHasSection(ip, Msg("InfoPanel.MemoryTitle")) {
+	if infoPanelHasSection(ip, i18n.Msg("InfoPanel.MemoryTitle")) {
 		t.Fatal("local memory section leaked into authoritative provider view")
 	}
-	if !infoPanelHasRow(ip, Msg("InfoPanel.CurrentDir"), provider.GetPath()) {
+	if !infoPanelHasRow(ip, i18n.Msg("InfoPanel.CurrentDir"), provider.GetPath()) {
 		t.Fatal("remote current directory should remain visible")
 	}
 
@@ -717,7 +718,7 @@ func TestInfoPanel_ShortPanelScrollsToLowerProviderRows(t *testing.T) {
 		t.Fatalf("cursor %d is outside viewport [%d, %d)", ip.cursor, ip.scrollTop, ip.scrollTop+visibleRows)
 	}
 	got := ip.rows[ip.cursor]
-	if got.label != Msg("InfoPanel.CurrentDir") || got.y < ip.Y1+1 || got.y > ip.Y2-1 {
+	if got.label != i18n.Msg("InfoPanel.CurrentDir") || got.y < ip.Y1+1 || got.y > ip.Y2-1 {
 		t.Fatalf("last row after scroll = label %q, screen y %d", got.label, got.y)
 	}
 }
@@ -765,7 +766,7 @@ func TestInfoPanel_RendersUsageAsTwoLineMeter(t *testing.T) {
 			if strings.Contains(first.text, "[") || strings.Contains(first.text, "]") || !strings.Contains(first.text, "50%") {
 				t.Fatalf("meter line %q is not a bracketless 50%% progress bar", first.text)
 			}
-			if !strings.Contains(second.text, Msg("InfoPanel.UsedShort")) ||
+			if !strings.Contains(second.text, i18n.Msg("InfoPanel.UsedShort")) ||
 				!strings.Contains(second.text, used) || !strings.Contains(second.text, total) {
 				t.Fatalf("legend line %q does not contain used %q and total %q", second.text, used, total)
 			}
@@ -882,20 +883,20 @@ func TestInfoPanel_LocalResourcesUseUsageMeters(t *testing.T) {
 	ip.Show(scr)
 
 	if fs, ok := sysinfo.FS(tmp); ok && fs.Total > 0 {
-		if !infoPanelHasUsageMeter(ip, Msg("InfoPanel.Space")) {
+		if !infoPanelHasUsageMeter(ip, i18n.Msg("InfoPanel.Space")) {
 			t.Fatal("local filesystem capacity was not rendered with the reusable usage meter")
 		}
-		if infoPanelHasRow(ip, Msg("InfoPanel.Total"), formatBytes(fs.Total)) ||
-			infoPanelHasRow(ip, Msg("InfoPanel.Free"), formatBytes(fs.Free)) {
+		if infoPanelHasRow(ip, i18n.Msg("InfoPanel.Total"), formatBytes(fs.Total)) ||
+			infoPanelHasRow(ip, i18n.Msg("InfoPanel.Free"), formatBytes(fs.Free)) {
 			t.Fatal("legacy filesystem total/free rows remained alongside the usage meter")
 		}
 	}
 
 	if mem, ok := sysinfo.Mem(); ok && mem.Total > 0 {
-		if !infoPanelHasUsageMeter(ip, Msg("InfoPanel.Memory")) {
+		if !infoPanelHasUsageMeter(ip, i18n.Msg("InfoPanel.Memory")) {
 			t.Fatal("physical memory was not rendered with the reusable usage meter")
 		}
-		if mem.SwapTotal > 0 && !infoPanelHasUsageMeter(ip, Msg("InfoPanel.PagingFile")) {
+		if mem.SwapTotal > 0 && !infoPanelHasUsageMeter(ip, i18n.Msg("InfoPanel.PagingFile")) {
 			t.Fatal("paging space was not rendered with the reusable usage meter")
 		}
 	}
@@ -1442,7 +1443,7 @@ func TestFormatBytesCommas(t *testing.T) {
 // and the panel must render the sentence, not the key.
 func TestInfoPanelLocalizesGPUModelKey(t *testing.T) {
 	const key = "InfoPanel.GPUWSLVirt"
-	want := Msg(key)
+	want := i18n.Msg(key)
 	if strings.HasPrefix(want, "{") {
 		t.Fatalf("%s is missing from the message catalogue", key)
 	}

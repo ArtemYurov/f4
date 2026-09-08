@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -72,16 +73,16 @@ func (m *applyBatchViewModel) Observe(parallel bool, ev applyBatchEvent) {
 func applyResultSummary(result applyBatchItemResult) string {
 	switch result.State {
 	case applyItemSucceeded:
-		return Msg("ApplyCommand.ResultSuccess")
+		return i18n.Msg("ApplyCommand.ResultSuccess")
 	case applyItemCancelled:
-		return Msg("ApplyCommand.ResultCancelled")
+		return i18n.Msg("ApplyCommand.ResultCancelled")
 	case applyItemFailed:
 		if result.Err != nil {
-			return fmt.Sprintf(Msg("ApplyCommand.ResultFailedFmt"), result.Err)
+			return fmt.Sprintf(i18n.Msg("ApplyCommand.ResultFailedFmt"), result.Err)
 		}
-		return Msg("ApplyCommand.ResultFailed")
+		return i18n.Msg("ApplyCommand.ResultFailed")
 	default:
-		return Msg("ApplyCommand.ResultPending")
+		return i18n.Msg("ApplyCommand.ResultPending")
 	}
 }
 
@@ -98,7 +99,7 @@ func (m *applyBatchViewModel) Finish(result applyBatchResult) {
 	m.runningName = ""
 	m.mu.Unlock()
 	m.transcript.Add("")
-	m.transcript.Add(fmt.Sprintf(Msg("ApplyCommand.SummaryFmt"), result.Succeeded, result.Failed, result.Cancelled, result.NotStarted))
+	m.transcript.Add(fmt.Sprintf(i18n.Msg("ApplyCommand.SummaryFmt"), result.Succeeded, result.Failed, result.Cancelled, result.NotStarted))
 	m.requestRefresh()
 }
 
@@ -156,11 +157,11 @@ func (m *applyBatchViewModel) snapshotStatus() (status string, percent int, done
 		percent = m.completed * 100 / m.total
 	}
 	if m.done {
-		status = fmt.Sprintf(Msg("ApplyCommand.StatusDoneFmt"), m.completed, m.total, m.failed, m.cancelled)
+		status = fmt.Sprintf(i18n.Msg("ApplyCommand.StatusDoneFmt"), m.completed, m.total, m.failed, m.cancelled)
 	} else if m.cancelling {
-		status = Msg("ApplyCommand.StatusCancelling")
+		status = i18n.Msg("ApplyCommand.StatusCancelling")
 	} else {
-		status = fmt.Sprintf(Msg("ApplyCommand.StatusRunningFmt"), m.completed, m.total, escapeAmpersand(m.runningName))
+		status = fmt.Sprintf(i18n.Msg("ApplyCommand.StatusRunningFmt"), m.completed, m.total, escapeAmpersand(m.runningName))
 	}
 	return status, percent, m.done
 }
@@ -228,7 +229,7 @@ func newApplyTranscriptEditor(model *applyBatchViewModel, width, height int) *Ed
 		text += "\n"
 	}
 	editor := NewEditorView(piecetable.New([]byte(text)), nil, "")
-	editor.DisplayTitle = Msg("ApplyCommand.OutputEditorTitle")
+	editor.DisplayTitle = i18n.Msg("ApplyCommand.OutputEditorTitle")
 	editor.ResizeConsole(width, height)
 	return editor
 }
@@ -237,7 +238,7 @@ func newApplyTranscriptEditor(model *applyBatchViewModel, width, height int) *Ed
 // view only detaches the UI; the foreground or queued batch keeps running.
 func showApplyOutputDialog(anchor vtui.Frame, model *applyBatchViewModel, cancel func()) *applyOutputDialog {
 	const width, height = 86, 24
-	dlg := &applyOutputDialog{Window: vtui.NewCenteredDialog(width, height, Msg("ApplyCommand.OutputTitle"))}
+	dlg := &applyOutputDialog{Window: vtui.NewCenteredDialog(width, height, i18n.Msg("ApplyCommand.OutputTitle"))}
 	dlg.ShowClose = true
 	dlg.ShowZoom = true
 	dlg.SetHelp("ApplyCmd")
@@ -253,9 +254,9 @@ func showApplyOutputDialog(anchor vtui.Frame, model *applyBatchViewModel, cancel
 	if output.ScrollBar != nil {
 		output.ScrollBar.ColorIdx = ColViewerScrollbar
 	}
-	btnCancel := vtui.NewButton(0, 0, Msg("ApplyCommand.CancelTask"))
-	btnEditor := vtui.NewButton(0, 0, Msg("ApplyCommand.SendToEditor"))
-	btnClose := vtui.NewButton(0, 0, Msg("ApplyCommand.Close"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("ApplyCommand.CancelTask"))
+	btnEditor := vtui.NewButton(0, 0, i18n.Msg("ApplyCommand.SendToEditor"))
+	btnClose := vtui.NewButton(0, 0, i18n.Msg("ApplyCommand.Close"))
 
 	for _, item := range []vtui.UIElement{status, progress, output, btnCancel, btnEditor, btnClose} {
 		dlg.AddItem(item)

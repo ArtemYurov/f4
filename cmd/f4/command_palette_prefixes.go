@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtui"
 )
 
@@ -12,7 +13,7 @@ func commandPalettePrefixEntries(area string, pf *PanelsFrame) []commandPaletteE
 		(area == "Terminal" && !commandPaletteConditionTrue("TerminalQuiet")) {
 		return nil
 	}
-	category := Msg("CommandPalette.CategoryCommandPrefix")
+	category := i18n.Msg("CommandPalette.CategoryCommandPrefix")
 	aliases := commandPaletteTranslations(
 		"CommandPalette.CategoryCommandPrefix",
 		"CommandPalette.CommandPrefix.Desc",
@@ -26,7 +27,7 @@ func commandPalettePrefixEntries(area string, pf *PanelsFrame) []commandPaletteE
 			Key:                "command-prefix:" + strings.ToLower(prefix.id),
 			Label:              prefix.prefix + ":",
 			EnglishLabel:       prefix.prefix + ":",
-			Description:        fmt.Sprintf(Msg("CommandPalette.CommandPrefix.Desc"), prefix.id),
+			Description:        fmt.Sprintf(i18n.Msg("CommandPalette.CommandPrefix.Desc"), prefix.id),
 			EnglishDescription: "Insert a plugin command prefix",
 			ID:                 prefix.id,
 			Category:           category,

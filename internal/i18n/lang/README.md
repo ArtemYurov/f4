@@ -2,8 +2,8 @@ Formatting: a language file is grouped by key namespace, not chronological.
 Do not append new keys to the end of the file — put each one in the group its
 first key component names, then run the formatter from the repository root:
 
-    go run ./tools/langfmt -w cmd/f4/lang/*.lng
-    go run ./tools/langfmt -check cmd/f4/lang/*.lng
+    go run ./tools/langfmt -w internal/i18n/lang/*.lng
+    go run ./tools/langfmt -check internal/i18n/lang/*.lng
 
 CI runs the second form, so a file with a namespace split across two places
 fails the build. See ../../../docs/I18N.md for the full rules.
@@ -21,7 +21,7 @@ baseline and reports the complete missing-key list with `-v`.
 When a deliberate translation change establishes a new floor, regenerate the
 counts and inspect the diff before committing it:
 
-    F4_UPDATE_COVERAGE_BASELINE=1 go test -run '^TestLangConsistency$' ./cmd/f4
+    F4_UPDATE_COVERAGE_BASELINE=1 go test -run '^TestLangConsistency$' ./internal/i18n
 
 The command records the current coverage only; it does not translate missing
 keys. Review the resulting `coverage_baseline.txt` and commit it together with

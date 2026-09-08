@@ -12,6 +12,7 @@ import (
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/history"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -581,7 +582,7 @@ func init() {
 		Handler: withPF(func(pf *PanelsFrame) {
 			if fsp := pf.getActivePanel(); fsp != nil {
 				var maskEdit *vtui.Edit
-				dlg := vtui.InputBox(Msg("Select.Title"), Msg("Select.Mask"), "*", func(mask string) {
+				dlg := vtui.InputBox(i18n.Msg("Select.Title"), i18n.Msg("Select.Mask"), "*", func(mask string) {
 					history.CommitHistory(maskEdit, mask)
 					fsp.ApplyMaskSelection(mask, true)
 				})
@@ -603,7 +604,7 @@ func init() {
 		Handler: withPF(func(pf *PanelsFrame) {
 			if fsp := pf.getActivePanel(); fsp != nil {
 				var maskEdit *vtui.Edit
-				dlg := vtui.InputBox(Msg("Deselect.Title"), Msg("Select.Mask"), "*", func(mask string) {
+				dlg := vtui.InputBox(i18n.Msg("Deselect.Title"), i18n.Msg("Select.Mask"), "*", func(mask string) {
 					history.CommitHistory(maskEdit, mask)
 					fsp.ApplyMaskSelection(mask, false)
 				})
@@ -2204,7 +2205,7 @@ func init() {
 		MenuPath:    "Edit",
 		Handler: withEditor(func(ev *EditorView) {
 			if err := ev.transformBase64Selection(true); err != nil {
-				vtui.ShowMessage(Msg("Editor.Base64.Title"), err.Error(), []string{Msg("vtui.Ok")})
+				vtui.ShowMessage(i18n.Msg("Editor.Base64.Title"), err.Error(), []string{i18n.Msg("vtui.Ok")})
 			}
 		}),
 	})
@@ -2218,7 +2219,7 @@ func init() {
 		MenuPath:    "Edit",
 		Handler: withEditor(func(ev *EditorView) {
 			if err := ev.transformBase64Selection(false); err != nil {
-				vtui.ShowMessage(Msg("Editor.Base64.Title"), err.Error(), []string{Msg("vtui.Ok")})
+				vtui.ShowMessage(i18n.Msg("Editor.Base64.Title"), err.Error(), []string{i18n.Msg("vtui.Ok")})
 			}
 		}),
 	})
@@ -2371,7 +2372,7 @@ func init() {
 			// is switched wherever the editor is: the toast says what the
 			// decode view will read the bytes as.
 			mode := ev.cycleDisasmMode()
-			toast.Show(fmt.Sprintf(Msg("Viewer.DisasmBits"), mode), time.Second)
+			toast.Show(fmt.Sprintf(i18n.Msg("Viewer.DisasmBits"), mode), time.Second)
 			vtui.FrameManager.Redraw()
 		}),
 	})
@@ -2565,7 +2566,7 @@ func init() {
 		MenuPath:    "View",
 		Handler: withViewer(func(vv *ViewerView) {
 			mode := vv.cycleDisasmMode()
-			toast.Show(fmt.Sprintf(Msg("Viewer.DisasmBits"), mode), time.Second)
+			toast.Show(fmt.Sprintf(i18n.Msg("Viewer.DisasmBits"), mode), time.Second)
 			vtui.FrameManager.Redraw()
 		}),
 	})

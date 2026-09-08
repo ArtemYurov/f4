@@ -25,6 +25,7 @@ import (
 	"github.com/coregx/coregex"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/history"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/textlayout"
@@ -3906,10 +3907,10 @@ func (ev *EditorView) GetKeyLabels() *vtui.KeySet {
 
 	fallbacks := &vtui.KeySet{
 		Normal: vtui.KeyBarLabels{
-			Msg("KeyBar.EditorF1"), Msg("KeyBar.EditorF2"), Msg("KeyBar.EditorF3"),
-			"", Msg("KeyBar.EditorF5"), Msg("KeyBar.F3"), Msg("KeyBar.EditorF7"), nextCpName, "", Msg("KeyBar.EditorF10"),
+			i18n.Msg("KeyBar.EditorF1"), i18n.Msg("KeyBar.EditorF2"), i18n.Msg("KeyBar.EditorF3"),
+			"", i18n.Msg("KeyBar.EditorF5"), i18n.Msg("KeyBar.F3"), i18n.Msg("KeyBar.EditorF7"), nextCpName, "", i18n.Msg("KeyBar.EditorF10"),
 		},
-		Alt: vtui.KeyBarLabels{"", "", "", "", "", "", "", Msg("KeyBar.EditorAltF8"), "", "", "", ""},
+		Alt: vtui.KeyBarLabels{"", "", "", "", "", "", "", i18n.Msg("KeyBar.EditorAltF8"), "", "", "", ""},
 	}
 	res := KeyBarLabelsForArea("Editor", fallbacks)
 	if hm := GlobalHotkeysMgr; hm != nil {
@@ -3921,45 +3922,45 @@ func (ev *EditorView) GetKeyLabels() *vtui.KeySet {
 }
 func (ev *EditorView) showSearchDialog() {
 	dlgW, dlgH := 66, 15
-	dlg := vtui.NewCenteredDialog(dlgW, dlgH, Msg("Viewer.SearchTitle"))
+	dlg := vtui.NewCenteredDialog(dlgW, dlgH, i18n.Msg("Viewer.SearchTitle"))
 	dlg.ShowClose = true
 
-	lblPrompt := vtui.NewLabel(0, 0, Msg("Search.Prompt"), nil)
+	lblPrompt := vtui.NewLabel(0, 0, i18n.Msg("Search.Prompt"), nil)
 	editPattern := vtui.NewEdit(0, 0, 40, LastEditorSearch)
 	history.AttachHistoryUseLast(editPattern, history.SearchTextHistoryID)
 	editPattern.SelectAll()
 	lblPrompt.FocusLink = editPattern
 	dlg.SetFocusedItem(editPattern)
 
-	chkCase := vtui.NewCheckbox(0, 0, Msg("Search.CaseSensitive"), false)
+	chkCase := vtui.NewCheckbox(0, 0, i18n.Msg("Search.CaseSensitive"), false)
 	if LastEditorSearchCase {
 		chkCase.State = 1
 	}
 
-	chkWholeWord := vtui.NewCheckbox(0, 0, Msg("Search.WholeWords"), false)
+	chkWholeWord := vtui.NewCheckbox(0, 0, i18n.Msg("Search.WholeWords"), false)
 	if LastEditorSearchWholeWord {
 		chkWholeWord.State = 1
 	}
 
-	chkReverse := vtui.NewCheckbox(0, 0, Msg("Search.Reverse"), false)
+	chkReverse := vtui.NewCheckbox(0, 0, i18n.Msg("Search.Reverse"), false)
 	if LastEditorSearchReverse {
 		chkReverse.State = 1
 	}
 
-	chkRegexp := vtui.NewCheckbox(0, 0, Msg("Search.Regex"), false)
+	chkRegexp := vtui.NewCheckbox(0, 0, i18n.Msg("Search.Regex"), false)
 	if LastEditorSearchRegexp {
 		chkRegexp.State = 1
 	}
 
-	chkHex := vtui.NewCheckbox(0, 0, Msg("Search.HexPattern"), false)
+	chkHex := vtui.NewCheckbox(0, 0, i18n.Msg("Search.HexPattern"), false)
 	if LastEditorSearchHex {
 		chkHex.State = 1
 	}
 
-	btnFind := vtui.NewButton(0, 0, Msg("Search.BtnFind"))
+	btnFind := vtui.NewButton(0, 0, i18n.Msg("Search.BtnFind"))
 	btnFind.IsDefault = true
-	btnAll := vtui.NewButton(0, 0, Msg("Search.BtnAll"))
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnAll := vtui.NewButton(0, 0, i18n.Msg("Search.BtnAll"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 
 	dlg.AddItem(lblPrompt)
 	dlg.AddItem(editPattern)
@@ -4143,7 +4144,7 @@ func (ev *EditorView) Replace(pattern, replacement string, caseSensitive, revers
 				})
 			} else {
 				ctx.RunOnUI(func() {
-					vtui.ShowMessage(Msg("Replace.ConfirmTitle"), Msg("Search.NotFound"), []string{Msg("vtui.Ok")})
+					vtui.ShowMessage(i18n.Msg("Replace.ConfirmTitle"), i18n.Msg("Search.NotFound"), []string{i18n.Msg("vtui.Ok")})
 				})
 			}
 		})
@@ -4520,51 +4521,51 @@ func (ev *EditorView) replaceSpans(spans []matchSpan, renders [][]byte) {
 
 func (ev *EditorView) showReplaceDialog() {
 	dlgW, dlgH := 66, 19
-	dlg := vtui.NewCenteredDialog(dlgW, dlgH, Msg("Replace.Title"))
+	dlg := vtui.NewCenteredDialog(dlgW, dlgH, i18n.Msg("Replace.Title"))
 	dlg.ShowClose = true
 
-	lblPrompt := vtui.NewLabel(0, 0, Msg("Search.Prompt"), nil)
+	lblPrompt := vtui.NewLabel(0, 0, i18n.Msg("Search.Prompt"), nil)
 	editPattern := vtui.NewEdit(0, 0, 40, LastEditorSearch)
 	history.AttachHistoryUseLast(editPattern, history.SearchTextHistoryID)
 	editPattern.SelectAll()
 	lblPrompt.FocusLink = editPattern
 	dlg.SetFocusedItem(editPattern)
 
-	lblReplace := vtui.NewLabel(0, 0, Msg("Replace.Prompt"), nil)
+	lblReplace := vtui.NewLabel(0, 0, i18n.Msg("Replace.Prompt"), nil)
 	editReplace := vtui.NewEdit(0, 0, 40, LastEditorReplace)
 	// Plain DIF_HISTORY here, no DIF_USELASTHISTORY: silently pre-filling a
 	// replacement makes it far too easy to overwrite text with a stale string.
 	history.AttachHistory(editReplace, history.ReplaceTextHistoryID)
 	editReplace.SelectAll()
 
-	chkCase := vtui.NewCheckbox(0, 0, Msg("Search.CaseSensitive"), false)
+	chkCase := vtui.NewCheckbox(0, 0, i18n.Msg("Search.CaseSensitive"), false)
 	if LastEditorSearchCase {
 		chkCase.State = 1
 	}
 
-	chkWholeWord := vtui.NewCheckbox(0, 0, Msg("Search.WholeWords"), false)
+	chkWholeWord := vtui.NewCheckbox(0, 0, i18n.Msg("Search.WholeWords"), false)
 	if LastEditorSearchWholeWord {
 		chkWholeWord.State = 1
 	}
 
-	chkReverse := vtui.NewCheckbox(0, 0, Msg("Search.Reverse"), false)
+	chkReverse := vtui.NewCheckbox(0, 0, i18n.Msg("Search.Reverse"), false)
 	if LastEditorSearchReverse {
 		chkReverse.State = 1
 	}
 
-	chkRegexp := vtui.NewCheckbox(0, 0, Msg("Search.Regex"), false)
+	chkRegexp := vtui.NewCheckbox(0, 0, i18n.Msg("Search.Regex"), false)
 	if LastEditorSearchRegexp {
 		chkRegexp.State = 1
 	}
 
-	chkHex := vtui.NewCheckbox(0, 0, Msg("Search.HexPattern"), false)
+	chkHex := vtui.NewCheckbox(0, 0, i18n.Msg("Search.HexPattern"), false)
 	if LastEditorSearchHex {
 		chkHex.State = 1
 	}
 
-	btnReplace := vtui.NewButton(0, 0, Msg("Replace.BtnReplace"))
-	btnReplaceAll := vtui.NewButton(0, 0, Msg("Replace.BtnReplaceAll"))
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnReplace := vtui.NewButton(0, 0, i18n.Msg("Replace.BtnReplace"))
+	btnReplaceAll := vtui.NewButton(0, 0, i18n.Msg("Replace.BtnReplaceAll"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 	btnReplace.IsDefault = true
 
 	dlg.AddItem(lblPrompt)
@@ -4721,7 +4722,7 @@ func (ev *EditorView) ReloadWithAutoDetect() {
 func (ev *EditorView) showCodepageDialog() {
 	_, overridden := rememberedCodepage(ev.vfs, ev.filePath)
 	items, currIdx := vfs.BuildCodepageMenuItems(ev.Codepage, !overridden)
-	menu := newCodepageMenu(Msg("Codepage.Title"), items)
+	menu := newCodepageMenu(i18n.Msg("Codepage.Title"), items)
 
 	// Per file, as in Far's Shift+F8; the global editor settings are not
 	// touched from here (#875, see the viewer's dialog for why).
@@ -4750,7 +4751,7 @@ func (ev *EditorView) showConvertCodepageDialog() {
 		}
 		converts = append(converts, item)
 	}
-	menu := newCodepageMenu(Msg("Codepage.ConvertTitle"), converts)
+	menu := newCodepageMenu(i18n.Msg("Codepage.ConvertTitle"), converts)
 
 	menu.OnAction = func(idx int) {
 		menu.Close()
@@ -6420,10 +6421,10 @@ func buildSearchRegex(pattern string, caseSensitive, useRegex, wholeWord bool) (
 // showSearchProgressDialog shows the cancelable " Searching... " popup used
 // by Find and Find All while the buffer scan runs in the background.
 func showSearchProgressDialog(pattern string) (dlg *vtui.Window, btnCancel *vtui.Button) {
-	dlg = vtui.NewCenteredDialog(50, 8, Msg("Search.Searching"))
-	lbl := vtui.NewLabel(0, 0, fmt.Sprintf(Msg("Search.LookingFor"), pattern), nil)
+	dlg = vtui.NewCenteredDialog(50, 8, i18n.Msg("Search.Searching"))
+	lbl := vtui.NewLabel(0, 0, fmt.Sprintf(i18n.Msg("Search.LookingFor"), pattern), nil)
 	dlg.AddItem(lbl)
-	btnCancel = vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnCancel = vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 	dlg.AddItem(btnCancel)
 
 	vbox := vtui.NewVBoxLayout(dlg.X1+2, dlg.Y1+2, 50-4, 8-4)
@@ -6859,7 +6860,7 @@ func (ev *EditorView) Search(pattern string, caseSensitive, reverse, regexp, who
 				if foundOffset != -1 {
 					ev.selectFoundPattern(foundOffset, matchLen)
 				} else {
-					vtui.ShowMessage(Msg("Search.Title"), Msg("Search.NotFound"), []string{Msg("vtui.Ok")})
+					vtui.ShowMessage(i18n.Msg("Search.Title"), i18n.Msg("Search.NotFound"), []string{i18n.Msg("vtui.Ok")})
 				}
 			})
 		})

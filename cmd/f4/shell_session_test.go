@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -76,7 +77,7 @@ func TestPanelsFrame_ExitF4RequestsApplicationQuit(t *testing.T) {
 	})
 
 	top := vtui.FrameManager.GetTopFrame()
-	if top == nil || top.GetTitle() != Msg("Quit.Title") {
+	if top == nil || top.GetTitle() != i18n.Msg("Quit.Title") {
 		t.Fatalf("exit f4 did not open the application quit confirmation: top=%T title=%q", top, func() string {
 			if top == nil {
 				return ""

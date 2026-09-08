@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtui"
 )
 
@@ -52,7 +53,7 @@ func parseGotoOffset(text string, hexadecimal bool) (int64, error) {
 }
 
 func gotoText(key, fallback string) string {
-	value := Msg(key)
+	value := i18n.Msg(key)
 	if strings.HasPrefix(value, "{") {
 		return fallback
 	}
@@ -70,9 +71,9 @@ func showGotoOffsetDialog(anchor vtui.Frame, title, prompt string, current int64
 	lblOffset.FocusLink = editOffset
 	dlg.SetFocusedItem(editOffset)
 	chkHex := vtui.NewCheckbox(0, 0, gotoText("Goto.Hexadecimal", "Hexadecimal"), false)
-	btnOK := vtui.NewButton(0, 0, Msg("vtui.Ok"))
+	btnOK := vtui.NewButton(0, 0, i18n.Msg("vtui.Ok"))
 	btnOK.IsDefault = true
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 
 	dlg.AddItem(lblOffset)
 	dlg.AddItem(editOffset)
@@ -122,9 +123,9 @@ func showEditorPositionDialog(anchor vtui.Frame, line, position int, onOK func(l
 	lblPosition := vtui.NewLabel(0, 0, gotoText("Editor.GotoPosition", "Position:"), nil)
 	editPosition := vtui.NewEdit(0, 0, 18, strconv.Itoa(position))
 
-	btnOK := vtui.NewButton(0, 0, Msg("vtui.Ok"))
+	btnOK := vtui.NewButton(0, 0, i18n.Msg("vtui.Ok"))
 	btnOK.IsDefault = true
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 
 	dlg.AddItem(lblLine)
 	dlg.AddItem(editLine)

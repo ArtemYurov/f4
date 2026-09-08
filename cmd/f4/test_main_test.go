@@ -9,6 +9,7 @@ import (
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/fusefs"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/internal/update"
@@ -54,7 +55,7 @@ func installTestSeams() {
 
 	// SetupUI installs this in production; the test binary never runs it, and
 	// without it every action label falls back to its English spelling.
-	action.Localize = Msg
+	action.Localize = i18n.Msg
 
 	// Unit tests must never hand control to the user's desktop. Individual
 	// tests that exercise these routes install per-dialog/per-frame recorders.

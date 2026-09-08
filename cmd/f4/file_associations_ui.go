@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -172,10 +173,10 @@ func assocDisplayLabel(a FileAssoc) string {
 func assocPickerTitle(kind AssocKind) string {
 	switch kind {
 	case AssocView, AssocAltView:
-		return Msg("FileAssoc.PickTitle.View")
+		return i18n.Msg("FileAssoc.PickTitle.View")
 	case AssocEdit, AssocAltEdit:
-		return Msg("FileAssoc.PickTitle.Edit")
+		return i18n.Msg("FileAssoc.PickTitle.Edit")
 	default:
-		return Msg("FileAssoc.PickTitle.Open")
+		return i18n.Msg("FileAssoc.PickTitle.Open")
 	}
 }

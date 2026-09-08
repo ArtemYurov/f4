@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/vfs"
 )
@@ -40,7 +41,7 @@ func TestCommandPaletteDriveEntriesExposeRegistryNamesForBothPanels(t *testing.T
 		if entry.ID != "1. &NetFox" || !strings.Contains(entry.Label, "NetFox") || strings.Contains(entry.Label, "&") {
 			t.Errorf("drive entry did not retain a clean, searchable registry name: %#v", entry)
 		}
-		if entry.Category != Msg("CommandPalette.CategoryDrive") || entry.run == nil {
+		if entry.Category != i18n.Msg("CommandPalette.CategoryDrive") || entry.run == nil {
 			t.Errorf("drive entry lacks category or execution hook: %#v", entry)
 		}
 	}

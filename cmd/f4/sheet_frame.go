@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/sheet"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -55,14 +56,14 @@ func NewSheetFrame() *SheetFrame {
 		height = 10
 	}
 	sf := &SheetFrame{
-		BaseWindow: *vtui.NewBaseWindow(0, 0, width-1, height-1, Msg("Sheet.Title")),
+		BaseWindow: *vtui.NewBaseWindow(0, 0, width-1, height-1, i18n.Msg("Sheet.Title")),
 		doc:        sheet.New(),
 	}
 	sf.ShowClose = true
 	sf.ShowZoom = true
 	sf.MinW = 40
 	sf.MinH = 10
-	sf.status = Msg("Sheet.StatusReady")
+	sf.status = i18n.Msg("Sheet.StatusReady")
 	return sf
 }
 
@@ -93,14 +94,14 @@ func (sf *SheetFrame) SetPath(path string) { sf.path = path }
 func (sf *SheetFrame) GetType() vtui.FrameType { return vtui.TypeUser + 7 }
 
 func (sf *SheetFrame) GetTitle() string {
-	name := Msg("Sheet.Untitled")
+	name := i18n.Msg("Sheet.Untitled")
 	if sf.path != "" {
 		name = filepath.Base(sf.path)
 	}
 	if sf.doc.Modified {
 		name = "*" + name
 	}
-	return Msg("Sheet.Title") + ": " + name
+	return i18n.Msg("Sheet.Title") + ": " + name
 }
 
 func (sf *SheetFrame) GetHelp() string { return "Spreadsheet" }
@@ -109,12 +110,12 @@ func (sf *SheetFrame) GetHelp() string { return "Spreadsheet" }
 func (sf *SheetFrame) GetKeyLabels() *vtui.KeySet {
 	return &vtui.KeySet{
 		Normal: vtui.KeyBarLabels{
-			Msg("KeyBar.SheetF1"), Msg("KeyBar.SheetF2"), Msg("KeyBar.SheetF3"), Msg("KeyBar.SheetF4"),
-			Msg("KeyBar.SheetF5"), Msg("KeyBar.SheetF6"), Msg("KeyBar.SheetF7"), "",
-			"", Msg("KeyBar.SheetF10"), "", "",
+			i18n.Msg("KeyBar.SheetF1"), i18n.Msg("KeyBar.SheetF2"), i18n.Msg("KeyBar.SheetF3"), i18n.Msg("KeyBar.SheetF4"),
+			i18n.Msg("KeyBar.SheetF5"), i18n.Msg("KeyBar.SheetF6"), i18n.Msg("KeyBar.SheetF7"), "",
+			"", i18n.Msg("KeyBar.SheetF10"), "", "",
 		},
 		Shift: vtui.KeyBarLabels{
-			"", Msg("KeyBar.SheetShiftF2"), Msg("KeyBar.SheetShiftF3"), "", "", "", "", "", "", "", "", "",
+			"", i18n.Msg("KeyBar.SheetShiftF2"), i18n.Msg("KeyBar.SheetShiftF3"), "", "", "", "", "", "", "", "", "",
 		},
 		Alt: vtui.KeyBarLabels{
 			"", "", "", "", "", "", "", "", "", "", "", "",
@@ -273,7 +274,7 @@ func (sf *SheetFrame) Show(scr *vtui.ScreenBuf) {
 	// Status line.
 	status := sf.status
 	if sf.doc.Modified {
-		status = Msg("Sheet.StatusModified") + " " + status
+		status = i18n.Msg("Sheet.StatusModified") + " " + status
 	}
 	p.DrawString(sf.X1+1, sf.statusY(), sheet.FitText(status, inner, sheet.JustifyLeft), headerAttr)
 
@@ -324,7 +325,7 @@ func (sf *SheetFrame) commitEdit() {
 	sf.editText = nil
 	sf.editPos = 0
 	if cell := sf.doc.Cell(sf.cur.Col, sf.cur.Row); cell != nil && cell.Protected {
-		sf.status = Msg("Sheet.CellProtected")
+		sf.status = i18n.Msg("Sheet.CellProtected")
 		return
 	}
 	sf.doc.SetText(sf.cur.Col, sf.cur.Row, text)
@@ -340,10 +341,10 @@ func (sf *SheetFrame) cancelEdit() {
 // reportError surfaces the first failing formula on the status line.
 func (sf *SheetFrame) reportError() {
 	if point, ok := sf.doc.LastError(); ok {
-		sf.status = fmt.Sprintf(Msg("Sheet.FormulaError"), sheet.CellName(point.Col, point.Row))
+		sf.status = fmt.Sprintf(i18n.Msg("Sheet.FormulaError"), sheet.CellName(point.Col, point.Row))
 		return
 	}
-	sf.status = Msg("Sheet.StatusReady")
+	sf.status = i18n.Msg("Sheet.StatusReady")
 }
 
 func (sf *SheetFrame) processEditKey(e *vtinput.InputEvent, ctrl, alt bool) bool {
@@ -457,19 +458,19 @@ func (sf *SheetFrame) ProcessKey(e *vtinput.InputEvent) bool {
 		switch e.VirtualKeyCode {
 		case 'I':
 			sf.doc.InsertRow(sf.cur.Row)
-			sf.status = Msg("Sheet.RowInserted")
+			sf.status = i18n.Msg("Sheet.RowInserted")
 			return true
 		case 'C':
 			sf.doc.InsertColumn(sf.cur.Col)
-			sf.status = Msg("Sheet.ColumnInserted")
+			sf.status = i18n.Msg("Sheet.ColumnInserted")
 			return true
 		case 'L':
 			sf.doc.DeleteRow(sf.cur.Row)
-			sf.status = Msg("Sheet.RowDeleted")
+			sf.status = i18n.Msg("Sheet.RowDeleted")
 			return true
 		case 'D':
 			sf.doc.DeleteColumn(sf.cur.Col)
-			sf.status = Msg("Sheet.ColumnDeleted")
+			sf.status = i18n.Msg("Sheet.ColumnDeleted")
 			return true
 		case 'O':
 			showSheetFormatDialog(sf)
@@ -485,7 +486,7 @@ func (sf *SheetFrame) ProcessKey(e *vtinput.InputEvent) bool {
 			return true
 		case vtinput.VK_BACK:
 			if !sf.doc.Undo() {
-				sf.status = Msg("Sheet.NothingToUndo")
+				sf.status = i18n.Msg("Sheet.NothingToUndo")
 			}
 			return true
 		}
@@ -495,7 +496,7 @@ func (sf *SheetFrame) ProcessKey(e *vtinput.InputEvent) bool {
 		switch e.VirtualKeyCode {
 		case vtinput.VK_INSERT:
 			sf.clipboard = sf.doc.CopyBlock(sf.Block())
-			sf.status = Msg("Sheet.BlockCopied")
+			sf.status = i18n.Msg("Sheet.BlockCopied")
 			return true
 		case vtinput.VK_DELETE:
 			sf.doc.ClearBlock(sf.Block())
@@ -515,7 +516,7 @@ func (sf *SheetFrame) ProcessKey(e *vtinput.InputEvent) bool {
 		case vtinput.VK_DELETE:
 			sf.clipboard = sf.doc.CutBlock(sf.Block())
 			sf.marking = false
-			sf.status = Msg("Sheet.BlockCut")
+			sf.status = i18n.Msg("Sheet.BlockCut")
 			return true
 		case vtinput.VK_F2:
 			showSheetSaveAsDialog(sf)
@@ -610,7 +611,7 @@ func sheetNew(sf *SheetFrame) {
 	sf.cur = sheet.Point{}
 	sf.delta = sheet.Point{}
 	sf.marking = false
-	sf.status = Msg("Sheet.StatusReady")
+	sf.status = i18n.Msg("Sheet.StatusReady")
 }
 
 // sheetSave writes the sheet, choosing the format from the file extension.
@@ -632,12 +633,12 @@ func sheetSave(sf *SheetFrame, path string) {
 		err = sf.doc.Save(context.Background(), path)
 	}
 	if err != nil {
-		vtui.ShowMessage(Msg("Sheet.Title"), err.Error(), []string{Msg("vtui.Ok")})
+		vtui.ShowMessage(i18n.Msg("Sheet.Title"), err.Error(), []string{i18n.Msg("vtui.Ok")})
 		return
 	}
 	sf.path = path
 	sf.doc.Modified = false
-	sf.status = fmt.Sprintf(Msg("Sheet.Saved"), filepath.Base(path))
+	sf.status = fmt.Sprintf(i18n.Msg("Sheet.Saved"), filepath.Base(path))
 }
 
 // sheetOpen loads a sheet from disk, picking the reader by extension.
@@ -656,7 +657,7 @@ func sheetOpen(sf *SheetFrame, path string) {
 		loaded, err = sheet.Load(context.Background(), path)
 	}
 	if err != nil {
-		vtui.ShowMessage(Msg("Sheet.Title"), err.Error(), []string{Msg("vtui.Ok")})
+		vtui.ShowMessage(i18n.Msg("Sheet.Title"), err.Error(), []string{i18n.Msg("vtui.Ok")})
 		return
 	}
 	sf.doc = loaded

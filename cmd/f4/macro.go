@@ -10,6 +10,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -789,16 +790,16 @@ type MacroAssignFrame struct {
 
 func NewMacroAssignFrame(m *MacroManager) *MacroAssignFrame {
 	width, height := 42, 7
-	base := vtui.NewCenteredDialog(width, height, Msg("Macro.AssignTitle"))
+	base := vtui.NewCenteredDialog(width, height, i18n.Msg("Macro.AssignTitle"))
 	f := &MacroAssignFrame{
 		Window: base,
 		mgr:    m,
 	}
 
-	prompt := vtui.NewText(0, 0, Msg("Macro.AssignPrompt"), vtui.Palette[vtui.ColDialogText])
+	prompt := vtui.NewText(0, 0, i18n.Msg("Macro.AssignPrompt"), vtui.Palette[vtui.ColDialogText])
 	f.AddItem(prompt)
 
-	cancelPrompt := vtui.NewText(0, 0, Msg("Macro.AssignCancel"), vtui.Palette[vtui.ColDialogText])
+	cancelPrompt := vtui.NewText(0, 0, i18n.Msg("Macro.AssignCancel"), vtui.Palette[vtui.ColDialogText])
 	f.AddItem(cancelPrompt)
 
 	vbox := vtui.NewVBoxLayout(f.X1+2, f.Y1+2, width-4, height-4)

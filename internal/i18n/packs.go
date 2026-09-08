@@ -1,4 +1,4 @@
-package main
+package i18n
 
 import (
 	"embed"
@@ -10,14 +10,14 @@ import (
 )
 
 //go:embed lang/*.lng
-var langPackFS embed.FS
+var LangPackFS embed.FS
 
 // LoadAllLanguagePacks returns every translation shipped with f4, ready to be
 // handed to the vtui layout validator. Captions have different lengths in
 // different languages, so a dialog layout must be checked against all of them,
 // not only against the language that happens to be loaded.
 func LoadAllLanguagePacks() []vtui.LanguagePack {
-	entries, err := langPackFS.ReadDir("lang")
+	entries, err := LangPackFS.ReadDir("lang")
 	if err != nil {
 		return nil
 	}
@@ -27,7 +27,7 @@ func LoadAllLanguagePacks() []vtui.LanguagePack {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".lng") {
 			continue
 		}
-		data, err := langPackFS.ReadFile("lang/" + entry.Name())
+		data, err := LangPackFS.ReadFile("lang/" + entry.Name())
 		if err != nil {
 			continue
 		}
@@ -42,7 +42,7 @@ func LoadAllLanguagePacks() []vtui.LanguagePack {
 
 		packs = append(packs, vtui.LanguagePack{
 			Name:    name,
-			Strings: loadLangMapFromINI(ini),
+			Strings: LoadLangMapFromINI(ini),
 		})
 	}
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtui"
 )
 
@@ -13,13 +14,13 @@ import (
 // was watching.
 func ShowBackgroundJobs(pf *PanelsFrame) {
 	width, height := 66, 16
-	dlg := vtui.NewCenteredDialog(width, height, Msg("Jobs.Title"))
+	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("Jobs.Title"))
 	dlg.ShowClose = true
 
 	lb := vtui.NewListBox(0, 0, width-4, height-6, nil)
-	btnShow := vtui.NewButton(0, 0, Msg("Jobs.BtnShow"))
-	btnCancel := vtui.NewButton(0, 0, Msg("Jobs.BtnCancel"))
-	btnClose := vtui.NewButton(0, 0, Msg("Jobs.BtnClose"))
+	btnShow := vtui.NewButton(0, 0, i18n.Msg("Jobs.BtnShow"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("Jobs.BtnCancel"))
+	btnClose := vtui.NewButton(0, 0, i18n.Msg("Jobs.BtnClose"))
 
 	dlg.AddItem(lb)
 	dlg.AddItem(btnShow)
@@ -58,7 +59,7 @@ func ShowBackgroundJobs(pf *PanelsFrame) {
 			ids = append(ids, s.ID)
 		}
 		if len(items) == 0 {
-			items = append(items, Msg("Jobs.Empty"))
+			items = append(items, i18n.Msg("Jobs.Empty"))
 		}
 		lb.Items = items
 		lb.UpdateRows()

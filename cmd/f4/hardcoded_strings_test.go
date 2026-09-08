@@ -58,7 +58,7 @@ func TestNoNewHardcodedUIStrings(t *testing.T) {
 
 	if len(added) > 0 {
 		t.Errorf("%d UI caption(s) are hardcoded instead of coming from lang/en.lng:\n%s\n\n"+
-			"Add a key to lang/en.lng and wrap the caption in Msg(). See I18N.md and L10N_PLAN.md.",
+			"Add a key to lang/en.lng and wrap the caption in i18n.Msg(). See I18N.md and L10N_PLAN.md.",
 			len(added), strings.Join(added, "\n"))
 	}
 

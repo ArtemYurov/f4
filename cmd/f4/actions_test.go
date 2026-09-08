@@ -15,6 +15,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/history"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/f4/vfs"
@@ -189,7 +190,7 @@ func TestActionMkDir_Flow(t *testing.T) {
 	actionMkDir(pf)
 
 	top := vtui.FrameManager.GetTopFrame()
-	if top == nil || top.GetTitle() != Msg("MakeFolder.Title") {
+	if top == nil || top.GetTitle() != i18n.Msg("MakeFolder.Title") {
 		t.Fatalf("Expected MkDir dialog, got %v", top)
 	}
 
@@ -333,7 +334,7 @@ Loop:
 			}
 
 			// Ждем, когда на вершине стека окажется диалог с заголовком " Deletion Errors "
-			if fm.GetTopFrameType() == vtui.TypeDialog && fm.GetTopFrame().GetTitle() == Msg("FileOp.DeletionErrors") {
+			if fm.GetTopFrameType() == vtui.TypeDialog && fm.GetTopFrame().GetTitle() == i18n.Msg("FileOp.DeletionErrors") {
 				summaryShown = true
 			}
 			if summaryShown && progress != nil && progress.IsDone() {
@@ -601,7 +602,7 @@ Loop:
 			}
 
 			// Ждем финальный диалог со списком ошибок
-			if fm.GetTopFrameType() == vtui.TypeDialog && fm.GetTopFrame().GetTitle() == Msg("FileOp.DeletionErrors") {
+			if fm.GetTopFrameType() == vtui.TypeDialog && fm.GetTopFrame().GetTitle() == i18n.Msg("FileOp.DeletionErrors") {
 				summaryShown = true
 			}
 			if summaryShown && progress != nil && progress.IsDone() {
@@ -1037,7 +1038,7 @@ func TestActionNewFile_Flow(t *testing.T) {
 	actionNewFile(pf)
 
 	top := vtui.FrameManager.GetTopFrame()
-	if top == nil || top.GetTitle() != Msg("Edit.NewFileTitle") {
+	if top == nil || top.GetTitle() != i18n.Msg("Edit.NewFileTitle") {
 		t.Errorf("Expected New File dialog, got %v", top)
 	}
 }
@@ -1072,7 +1073,7 @@ func TestActionNewFile_AbsoluteExistingPath(t *testing.T) {
 		case *vtui.Edit:
 			edit = value
 		case *vtui.Button:
-			if strings.Contains(value.GetText(), Msg("vtui.Ok")) {
+			if strings.Contains(value.GetText(), i18n.Msg("vtui.Ok")) {
 				okButton = value
 			}
 		}
@@ -1261,7 +1262,7 @@ func TestActionOpenEditor_AlreadyOpened(t *testing.T) {
 	// ("switch / reload / new instance / cancel"), not a warning —
 	// so the dialog now carries the semantic FileOp.AlreadyOpenedTitle
 	// and must render on the neutral (non-warning) palette.
-	wantTitle := Msg("FileOp.AlreadyOpenedTitle")
+	wantTitle := i18n.Msg("FileOp.AlreadyOpenedTitle")
 	found := false
 	var foundWin *vtui.Window
 	timeout = time.After(2 * time.Second)
@@ -1335,7 +1336,7 @@ func TestActionOpenViewer_AlreadyOpened(t *testing.T) {
 
 	// Same rationale as TestActionOpenEditor_AlreadyOpened above:
 	// per #379 the reprompt is a neutral choice, not a warning.
-	wantTitle := Msg("FileOp.AlreadyViewedTitle")
+	wantTitle := i18n.Msg("FileOp.AlreadyViewedTitle")
 	found := false
 	var foundWin *vtui.Window
 	timeout = time.After(2 * time.Second)
@@ -1615,7 +1616,7 @@ func TestActionPanelSettings_Flow(t *testing.T) {
 	actionPanelSettings(pf)
 
 	top := vtui.FrameManager.GetTopFrame()
-	if top == nil || top.GetTitle() != Msg("PanelSettings.Title") {
+	if top == nil || top.GetTitle() != i18n.Msg("PanelSettings.Title") {
 		t.Fatalf("Expected Panel Settings dialog, got %v", top)
 	}
 
@@ -2234,7 +2235,7 @@ func TestActionCommandHistory_Flow(t *testing.T) {
 	actionCommandHistory(pf)
 
 	top = vtui.FrameManager.GetTopFrame()
-	if top == nil || top.GetTitle() != Msg("History.CommandsTitle") {
+	if top == nil || top.GetTitle() != i18n.Msg("History.CommandsTitle") {
 		t.Fatalf("Expected Command History dialog, got %v", top)
 	}
 
@@ -2357,7 +2358,7 @@ func TestActionAppearanceSettingsSavesSystemMonospace(t *testing.T) {
 	var systemFont *vtui.Checkbox
 	for _, child := range top.GetChildren() {
 		checkbox, ok := child.(*vtui.Checkbox)
-		if ok && checkbox.GetText() == Msg("AppearanceSettings.UseSystemMonospace") {
+		if ok && checkbox.GetText() == i18n.Msg("AppearanceSettings.UseSystemMonospace") {
 			systemFont = checkbox
 			break
 		}
@@ -2399,7 +2400,7 @@ func TestActionAppearanceSettingsSavesFullPathInTitle(t *testing.T) {
 	var fullPath *vtui.Checkbox
 	for _, child := range top.GetChildren() {
 		checkbox, ok := child.(*vtui.Checkbox)
-		if ok && checkbox.GetText() == Msg("AppearanceSettings.DisplayFullPathInTitle") {
+		if ok && checkbox.GetText() == i18n.Msg("AppearanceSettings.DisplayFullPathInTitle") {
 			fullPath = checkbox
 			break
 		}
@@ -2441,7 +2442,7 @@ func TestActionAppearanceSettingsSavesWorkspaceTabRestoration(t *testing.T) {
 	var restoreTabs *vtui.Checkbox
 	for _, child := range top.GetChildren() {
 		checkbox, ok := child.(*vtui.Checkbox)
-		if ok && checkbox.GetText() == Msg("AppearanceSettings.RestoreWorkspaceTabs") {
+		if ok && checkbox.GetText() == i18n.Msg("AppearanceSettings.RestoreWorkspaceTabs") {
 			restoreTabs = checkbox
 			break
 		}
@@ -2483,7 +2484,7 @@ func TestActionAppearanceSettingsSavesWorkspaceTabOverlay(t *testing.T) {
 	var overlayTabs *vtui.Checkbox
 	for _, child := range top.GetChildren() {
 		checkbox, ok := child.(*vtui.Checkbox)
-		if ok && checkbox.GetText() == Msg("AppearanceSettings.WorkspaceTabsOverlay") {
+		if ok && checkbox.GetText() == i18n.Msg("AppearanceSettings.WorkspaceTabsOverlay") {
 			overlayTabs = checkbox
 			break
 		}
@@ -2527,7 +2528,7 @@ func TestActionAppearanceSettingsSavesWorkspaceTabNumbering(t *testing.T) {
 	var numbering *vtui.ComboBox
 	for _, child := range top.GetChildren() {
 		combo, ok := child.(*vtui.ComboBox)
-		if ok && combo.Edit.GetText() == Msg("AppearanceSettings.WorkspaceNumbersAlways") {
+		if ok && combo.Edit.GetText() == i18n.Msg("AppearanceSettings.WorkspaceNumbersAlways") {
 			numbering = combo
 			break
 		}
@@ -2966,7 +2967,7 @@ func TestActionCreateLink_Flow(t *testing.T) {
 	actionCreateLink(pf)
 
 	top := vtui.FrameManager.GetTopFrame()
-	if top == nil || top.GetTitle() != Msg("Link.Title") {
+	if top == nil || top.GetTitle() != i18n.Msg("Link.Title") {
 		t.Fatalf("Expected Link dialog, got %v", top)
 	}
 

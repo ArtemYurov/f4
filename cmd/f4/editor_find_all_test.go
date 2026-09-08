@@ -12,6 +12,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtinput"
@@ -201,7 +202,7 @@ func pumpUntilSearchDialog(t *testing.T) *vtui.Window {
 	var dlg *vtui.Window
 	pumpFindAll(t, func() bool {
 		w, ok := vtui.FrameManager.GetTopFrame().(*vtui.Window)
-		if ok && w.GetTitle() == Msg("Search.Searching") {
+		if ok && w.GetTitle() == i18n.Msg("Search.Searching") {
 			dlg = w
 		}
 		return dlg != nil
@@ -435,7 +436,7 @@ func TestEditorFindAll_NotFound(t *testing.T) {
 		if _, ok := f.(*findAllFrame); ok {
 			t.Fatal("no occurrences menu expected for a miss")
 		}
-		return f != nil && f.GetTitle() == Msg("Search.Title")
+		return f != nil && f.GetTitle() == i18n.Msg("Search.Title")
 	})
 	if ev.selActive {
 		t.Error("a miss must not create a selection")
@@ -750,7 +751,7 @@ func TestEditorFindAll_F4DumpCapped(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "1: unit one\n2: unit two\n" + fmt.Sprintf(Msg("Search.AllEditorMore"), 2) + "\n"
+	want := "1: unit one\n2: unit two\n" + fmt.Sprintf(i18n.Msg("Search.AllEditorMore"), 2) + "\n"
 	if string(data) != want {
 		t.Errorf("dump mismatch:\n got %q\nwant %q", string(data), want)
 	}

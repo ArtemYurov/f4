@@ -10,6 +10,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
@@ -121,7 +122,7 @@ func NewInfoPanel(src *FileSystemPanel) *InfoPanel {
 	x1, y1, x2, y2 := src.GetPosition()
 	ip := &InfoPanel{src: src, cursor: -1, selection: map[string]bool{}}
 	ip.SetVisible(true)
-	ip.frame = vtui.NewBorderedFrame(x1, y1, x2, y2, vtui.SingleBox, Msg("InfoPanel.Title"))
+	ip.frame = vtui.NewBorderedFrame(x1, y1, x2, y2, vtui.SingleBox, i18n.Msg("InfoPanel.Title"))
 	ip.frame.ColorBoxIdx = ColPanelBox
 	ip.frame.ColorTitleIdx = ColPanelTitle
 	// Fill the interior with the same attribute we render text in, so
@@ -137,7 +138,7 @@ func NewInfoPanel(src *FileSystemPanel) *InfoPanel {
 // the probes must not reach into localization.
 func gpuModelLabel(g sysinfo.GPUInfo) string {
 	if g.ModelKey != "" {
-		return Msg(g.ModelKey)
+		return i18n.Msg(g.ModelKey)
 	}
 	return g.Model
 }
@@ -538,7 +539,7 @@ func (ip *InfoPanel) copyCurrent() {
 			return
 		}
 		setF4Clipboard(r.value)
-		toast.Show(fmt.Sprintf("%s: %s", Msg("InfoPanel.Copied"), r.value), 2*time.Second)
+		toast.Show(fmt.Sprintf("%s: %s", i18n.Msg("InfoPanel.Copied"), r.value), 2*time.Second)
 		return
 	}
 	var lines []string
@@ -547,7 +548,7 @@ func (ip *InfoPanel) copyCurrent() {
 	}
 	joined := strings.Join(lines, "\n")
 	setF4Clipboard(joined)
-	toast.Show(fmt.Sprintf("%s: %d", Msg("InfoPanel.CopiedRows"), len(selRows)), 2*time.Second)
+	toast.Show(fmt.Sprintf("%s: %d", i18n.Msg("InfoPanel.CopiedRows"), len(selRows)), 2*time.Second)
 }
 
 func (ip *InfoPanel) Show(scr *vtui.ScreenBuf) {
@@ -558,7 +559,7 @@ func (ip *InfoPanel) Show(scr *vtui.ScreenBuf) {
 	// the copy shortcut. Drawn on the ┴ line so the panel is
 	// self-documenting without a menu entry.
 	if ip.frame != nil && ip.Y2 > ip.Y1+1 {
-		hint := Msg("InfoPanel.UnitsHint")
+		hint := i18n.Msg("InfoPanel.UnitsHint")
 		if runewidth.StringWidth(hint) < ip.X2-ip.X1-1 {
 			attrBox := vtui.Palette[ColPanelBox]
 			scr.Write(ip.X1+2, ip.Y2, vtui.StringToCharInfo(hint, attrBox))
@@ -742,7 +743,7 @@ func (ip *InfoPanel) Show(scr *vtui.ScreenBuf) {
 	providerSnapshot, hasProviderInfo := ip.currentProviderInfo()
 	providerText := func(key, fallback, id string) string {
 		if key != "" {
-			if translated := Msg(key); translated != "" && translated != key && translated != "{"+key+"}" {
+			if translated := i18n.Msg(key); translated != "" && translated != key && translated != "{"+key+"}" {
 				return translated
 			}
 		}
@@ -760,8 +761,8 @@ func (ip *InfoPanel) Show(scr *vtui.ScreenBuf) {
 		if u, err := user.Current(); err == nil {
 			username = shortUsername(u.Username)
 		}
-		row(Msg("InfoPanel.Computer"), hostname, true)
-		row(Msg("InfoPanel.User"), username, true)
+		row(i18n.Msg("InfoPanel.Computer"), hostname, true)
+		row(i18n.Msg("InfoPanel.User"), username, true)
 		blank()
 	}
 
@@ -800,35 +801,35 @@ func (ip *InfoPanel) Show(scr *vtui.ScreenBuf) {
 	if ip.src != nil && ip.src.vfs != nil {
 		path = ip.src.vfs.GetPath()
 	}
-	fsTitle := Msg("InfoPanel.FilesystemTitle")
+	fsTitle := i18n.Msg("InfoPanel.FilesystemTitle")
 	if providerSnapshot.Authoritative {
 		sectionHeader(fsTitle)
-		row(Msg("InfoPanel.CurrentDir"), path, true)
+		row(i18n.Msg("InfoPanel.CurrentDir"), path, true)
 	} else if fs, ok := sysinfo.FS(path); ok {
 		if fs.Type != "" {
 			fsTitle = fmt.Sprintf("%s (%s)", fsTitle, fs.Type)
 		}
 		sectionHeader(fsTitle)
-		usageRow(Msg("InfoPanel.Space"), fs.Total, fs.Free)
+		usageRow(i18n.Msg("InfoPanel.Space"), fs.Total, fs.Free)
 		if fs.Label != "" {
-			row(Msg("InfoPanel.Label"), fs.Label, true)
+			row(i18n.Msg("InfoPanel.Label"), fs.Label, true)
 		}
 		if fs.Serial != "" {
-			row(Msg("InfoPanel.Serial"), fs.Serial, true)
+			row(i18n.Msg("InfoPanel.Serial"), fs.Serial, true)
 		}
-		row(Msg("InfoPanel.CurrentDir"), path, true)
+		row(i18n.Msg("InfoPanel.CurrentDir"), path, true)
 		if fs.Mount != "" && fs.Mount != path {
-			row(Msg("InfoPanel.Mount"), fs.Mount, true)
+			row(i18n.Msg("InfoPanel.Mount"), fs.Mount, true)
 		}
 		if fs.MaxFilename > 0 {
-			row(Msg("InfoPanel.MaxFilename"), fmt.Sprintf("%d", fs.MaxFilename), true)
+			row(i18n.Msg("InfoPanel.MaxFilename"), fmt.Sprintf("%d", fs.MaxFilename), true)
 		}
 		if fs.Flags != "" {
-			wrapRow(Msg("InfoPanel.Flags"), fs.Flags, ",")
+			wrapRow(i18n.Msg("InfoPanel.Flags"), fs.Flags, ",")
 		}
 	} else {
 		sectionHeader(fsTitle)
-		row(Msg("InfoPanel.CurrentDir"), path, true)
+		row(i18n.Msg("InfoPanel.CurrentDir"), path, true)
 	}
 
 	// Memory. Same numbers as far2l's InfoList reads via sysinfo(2)
@@ -836,16 +837,16 @@ func (ip *InfoPanel) Show(scr *vtui.ScreenBuf) {
 	if !providerSnapshot.Authoritative {
 		if mem, ok := sysinfo.Mem(); ok {
 			blank()
-			sectionHeader(Msg("InfoPanel.MemoryTitle"))
-			usageRow(Msg("InfoPanel.Memory"), mem.Total, mem.Free)
+			sectionHeader(i18n.Msg("InfoPanel.MemoryTitle"))
+			usageRow(i18n.Msg("InfoPanel.Memory"), mem.Total, mem.Free)
 			if mem.Shared > 0 {
-				row(Msg("InfoPanel.MemShared"), formatBytes(mem.Shared), true)
+				row(i18n.Msg("InfoPanel.MemShared"), formatBytes(mem.Shared), true)
 			}
 			if mem.Buffered > 0 {
-				row(Msg("InfoPanel.MemBuffered"), formatBytes(mem.Buffered), true)
+				row(i18n.Msg("InfoPanel.MemBuffered"), formatBytes(mem.Buffered), true)
 			}
 			if mem.SwapTotal > 0 {
-				usageRow(Msg("InfoPanel.PagingFile"), mem.SwapTotal, mem.SwapFree)
+				usageRow(i18n.Msg("InfoPanel.PagingFile"), mem.SwapTotal, mem.SwapFree)
 			}
 		}
 	}
@@ -856,18 +857,18 @@ func (ip *InfoPanel) Show(scr *vtui.ScreenBuf) {
 	if !providerSnapshot.Authoritative && config.App.InfoPanelCPUGPU {
 		if cpu, ok := sysinfo.CPU(); ok {
 			blank()
-			sectionHeader(Msg("InfoPanel.CPUTitle"))
+			sectionHeader(i18n.Msg("InfoPanel.CPUTitle"))
 			if cpu.Model != "" {
-				row(Msg("InfoPanel.CPUModel"), cpu.Model, true)
+				row(i18n.Msg("InfoPanel.CPUModel"), cpu.Model, true)
 			}
 			if cpu.PhysicalCores > 0 && cpu.LogicalCores > 0 && cpu.PhysicalCores != cpu.LogicalCores {
-				row(Msg("InfoPanel.CPUCores"),
+				row(i18n.Msg("InfoPanel.CPUCores"),
 					fmt.Sprintf("%d / %d", cpu.PhysicalCores, cpu.LogicalCores), true)
 			} else if cpu.LogicalCores > 0 {
-				row(Msg("InfoPanel.CPUCores"), fmt.Sprintf("%d", cpu.LogicalCores), true)
+				row(i18n.Msg("InfoPanel.CPUCores"), fmt.Sprintf("%d", cpu.LogicalCores), true)
 			}
 			if cpu.FreqMHz > 0 {
-				row(Msg("InfoPanel.CPUFreq"), formatMHz(cpu.FreqMHz), true)
+				row(i18n.Msg("InfoPanel.CPUFreq"), formatMHz(cpu.FreqMHz), true)
 			}
 			for i, sz := range cpu.CacheBytes {
 				if sz == 0 {
@@ -877,24 +878,24 @@ func (ip *InfoPanel) Show(scr *vtui.ScreenBuf) {
 			}
 			switch {
 			case cpu.HasLoadPct:
-				row(Msg("InfoPanel.CPULoad"), fmt.Sprintf("%d%%", cpu.Load), true)
+				row(i18n.Msg("InfoPanel.CPULoad"), fmt.Sprintf("%d%%", cpu.Load), true)
 			case cpu.HasLoad:
-				row(Msg("InfoPanel.CPULoadAvg"),
+				row(i18n.Msg("InfoPanel.CPULoadAvg"),
 					fmt.Sprintf("%.2f %.2f %.2f", cpu.LoadAvg[0], cpu.LoadAvg[1], cpu.LoadAvg[2]),
 					true)
 			}
 		}
 		if gpus, ok := sysinfo.GPU(); ok {
 			blank()
-			sectionHeader(Msg("InfoPanel.GPUTitle"))
+			sectionHeader(i18n.Msg("InfoPanel.GPUTitle"))
 			for i, g := range gpus {
-				label := Msg("InfoPanel.GPUModel")
+				label := i18n.Msg("InfoPanel.GPUModel")
 				if len(gpus) > 1 {
 					label = fmt.Sprintf("%s %d", label, i+1)
 				}
 				row(label, gpuModelLabel(g), true)
 				if g.Driver != "" {
-					dLabel := Msg("InfoPanel.GPUDriver")
+					dLabel := i18n.Msg("InfoPanel.GPUDriver")
 					if len(gpus) > 1 {
 						dLabel = fmt.Sprintf("%s %d", dLabel, i+1)
 					}

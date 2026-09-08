@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/sheet"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -133,9 +134,9 @@ func askSheetPath(title, label, initial string, accept func(string)) {
 
 	lbl := vtui.NewText(0, 0, label, vtui.Palette[vtui.ColDialogText])
 	edit := vtui.NewEdit(0, 0, 56, initial)
-	btnOk := vtui.NewButton(0, 0, Msg("vtui.Ok"))
+	btnOk := vtui.NewButton(0, 0, i18n.Msg("vtui.Ok"))
 	btnOk.IsDefault = true
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 
 	dlg.AddItem(lbl)
 	dlg.AddItem(edit)
@@ -172,7 +173,7 @@ func showSheetOpenDialog(sf *SheetFrame) {
 			initial = dir + string(filepath.Separator)
 		}
 	}
-	askSheetPath(Msg("Sheet.Title"), Msg("Sheet.OpenPrompt"), initial, func(path string) {
+	askSheetPath(i18n.Msg("Sheet.Title"), i18n.Msg("Sheet.OpenPrompt"), initial, func(path string) {
 		sheetOpen(sf, path)
 	})
 }
@@ -180,29 +181,29 @@ func showSheetOpenDialog(sf *SheetFrame) {
 func showSheetSaveAsDialog(sf *SheetFrame) {
 	initial := sf.Path()
 	if initial == "" {
-		initial = sheetResolvePath(Msg("Sheet.DefaultFileName"))
+		initial = sheetResolvePath(i18n.Msg("Sheet.DefaultFileName"))
 	}
-	askSheetPath(Msg("Sheet.Title"), Msg("Sheet.SavePrompt"), initial, func(path string) {
+	askSheetPath(i18n.Msg("Sheet.Title"), i18n.Msg("Sheet.SavePrompt"), initial, func(path string) {
 		sheetSave(sf, path)
 	})
 }
 
 // showSheetExportDialog offers the text, CSV and XLSX writers.
 func showSheetExportDialog(sf *SheetFrame) {
-	dlg := vtui.NewCenteredDialog(60, 12, Msg("Sheet.ExportTitle"))
+	dlg := vtui.NewCenteredDialog(60, 12, i18n.Msg("Sheet.ExportTitle"))
 	dlg.ShowClose = true
 
-	lblFormat := vtui.NewText(0, 0, Msg("Sheet.ExportFormat"), vtui.Palette[vtui.ColDialogText])
+	lblFormat := vtui.NewText(0, 0, i18n.Msg("Sheet.ExportFormat"), vtui.Palette[vtui.ColDialogText])
 	format := vtui.NewRadioGroup(0, 0, 1, []string{
-		Msg("Sheet.ExportText"),
-		Msg("Sheet.ExportCSV"),
-		Msg("Sheet.ExportXLSX"),
+		i18n.Msg("Sheet.ExportText"),
+		i18n.Msg("Sheet.ExportCSV"),
+		i18n.Msg("Sheet.ExportXLSX"),
 	})
-	lblPath := vtui.NewText(0, 0, Msg("Sheet.ExportPath"), vtui.Palette[vtui.ColDialogText])
+	lblPath := vtui.NewText(0, 0, i18n.Msg("Sheet.ExportPath"), vtui.Palette[vtui.ColDialogText])
 	edit := vtui.NewEdit(0, 0, 52, defaultExportName(sf, ".txt"))
-	btnOk := vtui.NewButton(0, 0, Msg("vtui.Ok"))
+	btnOk := vtui.NewButton(0, 0, i18n.Msg("vtui.Ok"))
 	btnOk.IsDefault = true
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 
 	format.OnChange = func(selected int) {
 		edit.SetText(defaultExportName(sf, exportExtension(selected)))
@@ -241,10 +242,10 @@ func showSheetExportDialog(sf *SheetFrame) {
 			err = exportSheetText(sf.Document(), path)
 		}
 		if err != nil {
-			vtui.ShowMessage(Msg("Sheet.Title"), err.Error(), []string{Msg("vtui.Ok")})
+			vtui.ShowMessage(i18n.Msg("Sheet.Title"), err.Error(), []string{i18n.Msg("vtui.Ok")})
 			return
 		}
-		sf.SetStatus(fmt.Sprintf(Msg("Sheet.Exported"), path))
+		sf.SetStatus(fmt.Sprintf(i18n.Msg("Sheet.Exported"), path))
 	}
 	btnCancel.OnClick = func() { dlg.Close() }
 	vtui.FrameManager.Push(dlg)
@@ -271,10 +272,10 @@ func defaultExportName(sf *SheetFrame, extension string) string {
 
 // showSheetGotoDialog jumps to a cell entered by name.
 func showSheetGotoDialog(sf *SheetFrame) {
-	askSheetPathLike(Msg("Sheet.GotoTitle"), Msg("Sheet.GotoPrompt"), sheet.CellName(sf.Cursor().Col, sf.Cursor().Row), 16, func(text string) {
+	askSheetPathLike(i18n.Msg("Sheet.GotoTitle"), i18n.Msg("Sheet.GotoPrompt"), sheet.CellName(sf.Cursor().Col, sf.Cursor().Row), 16, func(text string) {
 		ref, ok := sheet.ParseRef(strings.TrimSpace(text))
 		if !ok {
-			vtui.ShowMessage(Msg("Sheet.Title"), Msg("Sheet.BadReference"), []string{Msg("vtui.Ok")})
+			vtui.ShowMessage(i18n.Msg("Sheet.Title"), i18n.Msg("Sheet.BadReference"), []string{i18n.Msg("vtui.Ok")})
 			return
 		}
 		point := ref.Point()
@@ -289,9 +290,9 @@ func askSheetPathLike(title, label, initial string, width int, accept func(strin
 
 	lbl := vtui.NewText(0, 0, label, vtui.Palette[vtui.ColDialogText])
 	edit := vtui.NewEdit(0, 0, width, initial)
-	btnOk := vtui.NewButton(0, 0, Msg("vtui.Ok"))
+	btnOk := vtui.NewButton(0, 0, i18n.Msg("vtui.Ok"))
 	btnOk.IsDefault = true
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 
 	for _, item := range []vtui.UIElement{lbl, edit, btnOk, btnCancel} {
 		dlg.AddItem(item)
@@ -321,7 +322,7 @@ func askSheetPathLike(title, label, initial string, width int, accept func(strin
 func showSheetWidthDialog(sf *SheetFrame) {
 	col := sf.Cursor().Col
 	current := strconv.Itoa(sf.Document().ColumnWidth(col))
-	askSheetPathLike(Msg("Sheet.WidthTitle"), fmt.Sprintf(Msg("Sheet.WidthPrompt"), sheet.ColumnName(col)), current, 6, func(text string) {
+	askSheetPathLike(i18n.Msg("Sheet.WidthTitle"), fmt.Sprintf(i18n.Msg("Sheet.WidthPrompt"), sheet.ColumnName(col)), current, 6, func(text string) {
 		width, err := strconv.Atoi(strings.TrimSpace(text))
 		if err != nil {
 			return
@@ -332,22 +333,22 @@ func showSheetWidthDialog(sf *SheetFrame) {
 
 // showSheetFormatDialog is the cell/block format editor.
 func showSheetFormatDialog(sf *SheetFrame) {
-	dlg := vtui.NewCenteredDialog(50, 18, Msg("Sheet.FormatTitle"))
+	dlg := vtui.NewCenteredDialog(50, 18, i18n.Msg("Sheet.FormatTitle"))
 	dlg.ShowClose = true
 
-	lblDisplay := vtui.NewText(0, 0, Msg("Sheet.FormatDisplay"), vtui.Palette[vtui.ColDialogText])
+	lblDisplay := vtui.NewText(0, 0, i18n.Msg("Sheet.FormatDisplay"), vtui.Palette[vtui.ColDialogText])
 	display := vtui.NewRadioGroup(0, 0, 2, []string{
-		Msg("Sheet.FormatAsIs"), Msg("Sheet.FormatDecimal"), Msg("Sheet.FormatComma"),
-		Msg("Sheet.FormatExponent"), Msg("Sheet.FormatLogical"), Msg("Sheet.FormatCurrency"),
-		Msg("Sheet.FormatPercent"), Msg("Sheet.FormatHidden"),
+		i18n.Msg("Sheet.FormatAsIs"), i18n.Msg("Sheet.FormatDecimal"), i18n.Msg("Sheet.FormatComma"),
+		i18n.Msg("Sheet.FormatExponent"), i18n.Msg("Sheet.FormatLogical"), i18n.Msg("Sheet.FormatCurrency"),
+		i18n.Msg("Sheet.FormatPercent"), i18n.Msg("Sheet.FormatHidden"),
 	})
-	lblJustify := vtui.NewText(0, 0, Msg("Sheet.FormatJustify"), vtui.Palette[vtui.ColDialogText])
+	lblJustify := vtui.NewText(0, 0, i18n.Msg("Sheet.FormatJustify"), vtui.Palette[vtui.ColDialogText])
 	justify := vtui.NewRadioGroup(0, 0, 3, []string{
-		Msg("Sheet.JustifyLeft"), Msg("Sheet.JustifyRight"), Msg("Sheet.JustifyCenter"),
+		i18n.Msg("Sheet.JustifyLeft"), i18n.Msg("Sheet.JustifyRight"), i18n.Msg("Sheet.JustifyCenter"),
 	})
-	lblDecimals := vtui.NewText(0, 0, Msg("Sheet.FormatDecimals"), vtui.Palette[vtui.ColDialogText])
+	lblDecimals := vtui.NewText(0, 0, i18n.Msg("Sheet.FormatDecimals"), vtui.Palette[vtui.ColDialogText])
 	decimals := vtui.NewEdit(0, 0, 6, "2")
-	protected := vtui.NewCheckbox(0, 0, Msg("Sheet.FormatProtected"), false)
+	protected := vtui.NewCheckbox(0, 0, i18n.Msg("Sheet.FormatProtected"), false)
 
 	if cell := sf.Document().Cell(sf.Cursor().Col, sf.Cursor().Row); cell != nil {
 		display.Selected = int(cell.Display)
@@ -358,9 +359,9 @@ func showSheetFormatDialog(sf *SheetFrame) {
 		}
 	}
 
-	btnOk := vtui.NewButton(0, 0, Msg("vtui.Ok"))
+	btnOk := vtui.NewButton(0, 0, i18n.Msg("vtui.Ok"))
 	btnOk.IsDefault = true
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 
 	for _, item := range []vtui.UIElement{lblDisplay, display, lblJustify, justify, lblDecimals, decimals, protected, btnOk, btnCancel} {
 		dlg.AddItem(item)
@@ -421,21 +422,21 @@ func showSheetFormatDialog(sf *SheetFrame) {
 // showSheetFindDialog runs the search, optionally with a replacement.
 func showSheetFindDialog(sf *SheetFrame, withReplace bool) {
 	height := 13
-	title := Msg("Sheet.FindTitle")
+	title := i18n.Msg("Sheet.FindTitle")
 	if withReplace {
 		height = 16
-		title = Msg("Sheet.ReplaceTitle")
+		title = i18n.Msg("Sheet.ReplaceTitle")
 	}
 	dlg := vtui.NewCenteredDialog(56, height, title)
 	dlg.ShowClose = true
 
-	lblPattern := vtui.NewText(0, 0, Msg("Sheet.FindPattern"), vtui.Palette[vtui.ColDialogText])
+	lblPattern := vtui.NewText(0, 0, i18n.Msg("Sheet.FindPattern"), vtui.Palette[vtui.ColDialogText])
 	pattern := vtui.NewEdit(0, 0, 48, sf.search.Pattern)
-	lblReplace := vtui.NewText(0, 0, Msg("Sheet.ReplaceWith"), vtui.Palette[vtui.ColDialogText])
+	lblReplace := vtui.NewText(0, 0, i18n.Msg("Sheet.ReplaceWith"), vtui.Palette[vtui.ColDialogText])
 	replacement := vtui.NewEdit(0, 0, 48, sf.replace)
-	searchAs := vtui.NewRadioGroup(0, 0, 2, []string{Msg("Sheet.FindAsString"), Msg("Sheet.FindAsValue")})
-	caseSensitive := vtui.NewCheckbox(0, 0, Msg("Sheet.FindCase"), false)
-	wholeWords := vtui.NewCheckbox(0, 0, Msg("Sheet.FindWholeWords"), false)
+	searchAs := vtui.NewRadioGroup(0, 0, 2, []string{i18n.Msg("Sheet.FindAsString"), i18n.Msg("Sheet.FindAsValue")})
+	caseSensitive := vtui.NewCheckbox(0, 0, i18n.Msg("Sheet.FindCase"), false)
+	wholeWords := vtui.NewCheckbox(0, 0, i18n.Msg("Sheet.FindWholeWords"), false)
 	if sf.search.ByValue {
 		searchAs.Selected = 1
 	}
@@ -446,9 +447,9 @@ func showSheetFindDialog(sf *SheetFrame, withReplace bool) {
 		wholeWords.State = 1
 	}
 
-	btnOk := vtui.NewButton(0, 0, Msg("vtui.Ok"))
+	btnOk := vtui.NewButton(0, 0, i18n.Msg("vtui.Ok"))
 	btnOk.IsDefault = true
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 
 	items := []vtui.UIElement{lblPattern, pattern, searchAs, caseSensitive, wholeWords, btnOk, btnCancel}
 	if withReplace {
@@ -503,17 +504,17 @@ func sheetSearchNext(sf *SheetFrame, from sheet.Point) {
 	}
 	point, ok := sf.Document().Find(sf.search, from)
 	if !ok {
-		sf.SetStatus(Msg("Sheet.NotFound"))
+		sf.SetStatus(i18n.Msg("Sheet.NotFound"))
 		return
 	}
 	sf.gotoCell(point.Col, point.Row)
 	if sf.replacing {
 		if sf.Document().Replace(point, sf.search, sf.replace) {
-			sf.SetStatus(Msg("Sheet.Replaced"))
+			sf.SetStatus(i18n.Msg("Sheet.Replaced"))
 			return
 		}
 	}
-	sf.SetStatus(fmt.Sprintf(Msg("Sheet.Found"), sheet.CellName(point.Col, point.Row)))
+	sf.SetStatus(fmt.Sprintf(i18n.Msg("Sheet.Found"), sheet.CellName(point.Col, point.Row)))
 }
 
 // sheetSearchAgain repeats the last search from the cell after the cursor.
@@ -532,54 +533,54 @@ type sheetMenuEntry struct {
 
 func sheetMenuEntries() []sheetMenuEntry {
 	return []sheetMenuEntry{
-		{Msg("Sheet.MenuNew"), "F4", func(sf *SheetFrame) { sheetNew(sf) }},
-		{Msg("Sheet.MenuOpen"), "F3", showSheetOpenDialog},
-		{Msg("Sheet.MenuSave"), "F2", func(sf *SheetFrame) { sheetSave(sf, sf.Path()) }},
-		{Msg("Sheet.MenuSaveAs"), "Shift-F2", showSheetSaveAsDialog},
-		{Msg("Sheet.MenuExport"), "Shift-F3", showSheetExportDialog},
-		{Msg("Sheet.MenuUndo"), "Alt-BkSp", func(sf *SheetFrame) {
+		{i18n.Msg("Sheet.MenuNew"), "F4", func(sf *SheetFrame) { sheetNew(sf) }},
+		{i18n.Msg("Sheet.MenuOpen"), "F3", showSheetOpenDialog},
+		{i18n.Msg("Sheet.MenuSave"), "F2", func(sf *SheetFrame) { sheetSave(sf, sf.Path()) }},
+		{i18n.Msg("Sheet.MenuSaveAs"), "Shift-F2", showSheetSaveAsDialog},
+		{i18n.Msg("Sheet.MenuExport"), "Shift-F3", showSheetExportDialog},
+		{i18n.Msg("Sheet.MenuUndo"), "Alt-BkSp", func(sf *SheetFrame) {
 			if !sf.Document().Undo() {
-				sf.SetStatus(Msg("Sheet.NothingToUndo"))
+				sf.SetStatus(i18n.Msg("Sheet.NothingToUndo"))
 			}
 		}},
-		{Msg("Sheet.MenuCut"), "Shift-Del", func(sf *SheetFrame) {
+		{i18n.Msg("Sheet.MenuCut"), "Shift-Del", func(sf *SheetFrame) {
 			sf.clipboard = sf.Document().CutBlock(sf.Block())
 			sf.marking = false
 		}},
-		{Msg("Sheet.MenuCopy"), "Ctrl-Ins", func(sf *SheetFrame) {
+		{i18n.Msg("Sheet.MenuCopy"), "Ctrl-Ins", func(sf *SheetFrame) {
 			sf.clipboard = sf.Document().CopyBlock(sf.Block())
 		}},
-		{Msg("Sheet.MenuPaste"), "Shift-Ins", func(sf *SheetFrame) {
+		{i18n.Msg("Sheet.MenuPaste"), "Shift-Ins", func(sf *SheetFrame) {
 			if sf.clipboard != nil {
 				sf.Document().PasteBlock(sf.clipboard, sf.Cursor().Col, sf.Cursor().Row)
 			}
 		}},
-		{Msg("Sheet.MenuClear"), "Ctrl-Del", func(sf *SheetFrame) {
+		{i18n.Msg("Sheet.MenuClear"), "Ctrl-Del", func(sf *SheetFrame) {
 			sf.Document().ClearBlock(sf.Block())
 			sf.marking = false
 		}},
-		{Msg("Sheet.MenuFind"), "F7", func(sf *SheetFrame) { showSheetFindDialog(sf, false) }},
-		{Msg("Sheet.MenuReplace"), "", func(sf *SheetFrame) { showSheetFindDialog(sf, true) }},
-		{Msg("Sheet.MenuSearchAgain"), "", sheetSearchAgain},
-		{Msg("Sheet.MenuGoto"), "F6", showSheetGotoDialog},
-		{Msg("Sheet.MenuGotoError"), "", func(sf *SheetFrame) {
+		{i18n.Msg("Sheet.MenuFind"), "F7", func(sf *SheetFrame) { showSheetFindDialog(sf, false) }},
+		{i18n.Msg("Sheet.MenuReplace"), "", func(sf *SheetFrame) { showSheetFindDialog(sf, true) }},
+		{i18n.Msg("Sheet.MenuSearchAgain"), "", sheetSearchAgain},
+		{i18n.Msg("Sheet.MenuGoto"), "F6", showSheetGotoDialog},
+		{i18n.Msg("Sheet.MenuGotoError"), "", func(sf *SheetFrame) {
 			point, ok := sf.Document().LastError()
 			if !ok {
-				sf.SetStatus(Msg("Sheet.NoErrors"))
+				sf.SetStatus(i18n.Msg("Sheet.NoErrors"))
 				return
 			}
 			sf.gotoCell(point.Col, point.Row)
 		}},
-		{Msg("Sheet.MenuCellFormat"), "Alt-O", showSheetFormatDialog},
-		{Msg("Sheet.MenuColumnWidth"), "Alt-Arrows", showSheetWidthDialog},
-		{Msg("Sheet.MenuSeparators"), "Alt-S", func(sf *SheetFrame) {
+		{i18n.Msg("Sheet.MenuCellFormat"), "Alt-O", showSheetFormatDialog},
+		{i18n.Msg("Sheet.MenuColumnWidth"), "Alt-Arrows", showSheetWidthDialog},
+		{i18n.Msg("Sheet.MenuSeparators"), "Alt-S", func(sf *SheetFrame) {
 			sf.Document().Separators = !sf.Document().Separators
 		}},
-		{Msg("Sheet.MenuInsertRow"), "Alt-I", func(sf *SheetFrame) { sf.Document().InsertRow(sf.Cursor().Row) }},
-		{Msg("Sheet.MenuInsertColumn"), "Alt-C", func(sf *SheetFrame) { sf.Document().InsertColumn(sf.Cursor().Col) }},
-		{Msg("Sheet.MenuDeleteRow"), "Alt-L", func(sf *SheetFrame) { sf.Document().DeleteRow(sf.Cursor().Row) }},
-		{Msg("Sheet.MenuDeleteColumn"), "Alt-D", func(sf *SheetFrame) { sf.Document().DeleteColumn(sf.Cursor().Col) }},
-		{Msg("Sheet.MenuRecalc"), "F5", func(sf *SheetFrame) {
+		{i18n.Msg("Sheet.MenuInsertRow"), "Alt-I", func(sf *SheetFrame) { sf.Document().InsertRow(sf.Cursor().Row) }},
+		{i18n.Msg("Sheet.MenuInsertColumn"), "Alt-C", func(sf *SheetFrame) { sf.Document().InsertColumn(sf.Cursor().Col) }},
+		{i18n.Msg("Sheet.MenuDeleteRow"), "Alt-L", func(sf *SheetFrame) { sf.Document().DeleteRow(sf.Cursor().Row) }},
+		{i18n.Msg("Sheet.MenuDeleteColumn"), "Alt-D", func(sf *SheetFrame) { sf.Document().DeleteColumn(sf.Cursor().Col) }},
+		{i18n.Msg("Sheet.MenuRecalc"), "F5", func(sf *SheetFrame) {
 			sf.Document().Recalc()
 			sf.reportError()
 		}},
@@ -604,7 +605,7 @@ func showSheetMenu(sf *SheetFrame) {
 	if height > 24 {
 		height = 24
 	}
-	dlg := vtui.NewCenteredDialog(52, height, Msg("Sheet.MenuTitle"))
+	dlg := vtui.NewCenteredDialog(52, height, i18n.Msg("Sheet.MenuTitle"))
 	dlg.ShowClose = true
 	list := vtui.NewListBox(dlg.X1+2, dlg.Y1+1, 48, height-3, labels)
 	list.ColorTextIdx = vtui.ColDialogText

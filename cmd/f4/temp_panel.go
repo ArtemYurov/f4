@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -320,7 +321,7 @@ func (t *TempPanelVFS) setParent(parent vfs.VFS, selection string) {
 func (t *TempPanelVFS) GetTitle() string { return "Temp" }
 
 func (t *TempPanelVFS) PanelTitle(string) string {
-	return fmt.Sprintf("%s %d", Msg("TempPanel.Title"), t.slot)
+	return fmt.Sprintf("%s %d", i18n.Msg("TempPanel.Title"), t.slot)
 }
 
 func (t *TempPanelVFS) IsAtRoot() bool { return t.currentPath == t.root() }
@@ -794,12 +795,12 @@ func (t *TempPanelVFS) switchToSlot(pf *PanelsFrame, fsp *FileSystemPanel, slot 
 }
 
 func showTempPanelSlots(pf *PanelsFrame, fsp *FileSystemPanel, current *TempPanelVFS) {
-	menu := vtui.NewVMenu(Msg("TempPanel.SwitchTitle"))
+	menu := vtui.NewVMenu(i18n.Msg("TempPanel.SwitchTitle"))
 	for slot := 0; slot < tempPanelSlotCount; slot++ {
 		selectedSlot := slot
 		count := len(globalTempPanelStore.references(slot))
 		menu.AddItem(vtui.MenuItem{
-			Text: fmt.Sprintf(Msg("TempPanel.Slot"), slot, count),
+			Text: fmt.Sprintf(i18n.Msg("TempPanel.Slot"), slot, count),
 			UserData: func(*FileSystemPanel) {
 				next := newTempPanelVFS(current.parent, globalTempPanelStore, selectedSlot)
 				next.parentSelection = current.parentSelection

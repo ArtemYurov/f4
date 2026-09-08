@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 )
 
@@ -94,7 +95,7 @@ func (ev *EditorView) editorStatusText() string {
 		return fmt.Sprintf("%sColorer %d%% (Esc) │ %s     ", prefix, percent, ev.editorStatusPositionText())
 	}
 	if st := ev.IndexState(); st.Phase == IndexScanning {
-		return fmt.Sprintf("%s%s %d%% (Esc) │ %s     ", prefix, Msg("Editor.Indexing"), st.Percent(), ev.editorStatusPositionText())
+		return fmt.Sprintf("%s%s %d%% (Esc) │ %s     ", prefix, i18n.Msg("Editor.Indexing"), st.Percent(), ev.editorStatusPositionText())
 	}
 
 	if ev.DecodeMode {

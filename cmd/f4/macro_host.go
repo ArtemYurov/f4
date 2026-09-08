@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -240,9 +241,9 @@ func actionReloadLuaMacros() bool {
 	count, err := MacroMgr.ReloadLuaMacros(dir)
 	if err != nil {
 		vtui.DebugLog("MACRO: reload: %v", err)
-		toast.Show(fmt.Sprintf("%s (%d loaded)", Msg("Macro.ReloadFailed"), count), 3*time.Second)
+		toast.Show(fmt.Sprintf("%s (%d loaded)", i18n.Msg("Macro.ReloadFailed"), count), 3*time.Second)
 		return true
 	}
-	toast.Show(fmt.Sprintf(Msg("Macro.Reloaded"), count), 3*time.Second)
+	toast.Show(fmt.Sprintf(i18n.Msg("Macro.Reloaded"), count), 3*time.Second)
 	return true
 }

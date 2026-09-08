@@ -35,6 +35,12 @@ var architectureLayers = map[string]int{
 	// Checked conversions, shared by seven packages. Zero imports of ours.
 	"internal/numeric": 0,
 
+	// The string table and the language packs, with lang/ embedded beside them.
+	// It takes the two configured languages and the profile directory as
+	// arguments rather than importing internal/config: netfox's own test
+	// imports the plugin, the plugin imports this, and that would close a cycle.
+	"internal/i18n": 0,
+
 	// The user's configuration: F4Config, config.App, the ini round trip, and
 	// the schema of every field — the enumeration it may hold, the parser that
 	// normalises it, the default it falls back to.

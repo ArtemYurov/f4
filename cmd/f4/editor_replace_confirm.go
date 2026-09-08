@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/coregx/coregex"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtui"
 )
 
@@ -170,12 +171,12 @@ func (st *replaceLoop) promptAt(data []byte, off, mLen int) {
 	vtui.FrameManager.Redraw()
 
 	buttons := []string{
-		Msg("Replace.BtnReplace"),
-		Msg("Replace.BtnAll"),
-		Msg("Replace.BtnSkip"),
-		Msg("vtui.Cancel"),
+		i18n.Msg("Replace.BtnReplace"),
+		i18n.Msg("Replace.BtnAll"),
+		i18n.Msg("Replace.BtnSkip"),
+		i18n.Msg("vtui.Cancel"),
 	}
-	dlg := vtui.ShowMessageEx(Msg("Replace.ConfirmTitle"),
+	dlg := vtui.ShowMessageEx(i18n.Msg("Replace.ConfirmTitle"),
 		replacePromptBody(string(match), string(rendered)), buttons, vtui.MessageInfo)
 
 	// SetExitCode fires OnResult on every close, and a done dialog can be
@@ -293,10 +294,10 @@ func (st *replaceLoop) replaceRemaining(off, mLen int) {
 // and the not-found message only when the very first find came up empty.
 func (st *replaceLoop) finish() {
 	if st.found {
-		vtui.ShowMessage(Msg("Replace.ConfirmTitle"),
-			fmt.Sprintf(Msg("Replace.Replaced"), st.replaced), []string{Msg("vtui.Ok")})
+		vtui.ShowMessage(i18n.Msg("Replace.ConfirmTitle"),
+			fmt.Sprintf(i18n.Msg("Replace.Replaced"), st.replaced), []string{i18n.Msg("vtui.Ok")})
 	} else {
-		vtui.ShowMessage(Msg("Replace.ConfirmTitle"), Msg("Search.NotFound"), []string{Msg("vtui.Ok")})
+		vtui.ShowMessage(i18n.Msg("Replace.ConfirmTitle"), i18n.Msg("Search.NotFound"), []string{i18n.Msg("vtui.Ok")})
 	}
 }
 
@@ -304,8 +305,8 @@ func (st *replaceLoop) finish() {
 // found text and the concrete rendered replacement are shown quoted, each on
 // its own line.
 func replacePromptBody(match, rendered string) string {
-	return Msg("Replace.AskReplace") + "\n" + promptQuote(match) + "\n" +
-		Msg("Replace.AskWith") + "\n" + promptQuote(rendered)
+	return i18n.Msg("Replace.AskReplace") + "\n" + promptQuote(match) + "\n" +
+		i18n.Msg("Replace.AskWith") + "\n" + promptQuote(rendered)
 }
 
 // promptQuote renders one side of the confirm dialog body: whitespace

@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -92,7 +93,7 @@ func codepageChoiceIndex(ids []int, current int) int {
 
 func actionViewerSettings(pf *PanelsFrame) {
 	width, height := 78, 10
-	dlg := vtui.NewCenteredDialog(width, height, Msg("ViewerSettings.Title"))
+	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("ViewerSettings.Title"))
 	dlg.ShowClose = true
 
 	ids, labels := codepageSettingChoices()
@@ -101,15 +102,15 @@ func actionViewerSettings(pf *PanelsFrame) {
 	selected := codepageChoiceIndex(ids, config.App.ViewerDefaultCodePage)
 	comboDefault.Menu.SetSelectPos(selected)
 	comboDefault.Edit.SetText(labels[selected])
-	lblDefault := vtui.NewLabel(0, 0, Msg("ViewerSettings.DefaultCodePage"), comboDefault)
+	lblDefault := vtui.NewLabel(0, 0, i18n.Msg("ViewerSettings.DefaultCodePage"), comboDefault)
 
-	chkAutodetect := vtui.NewCheckbox(0, 0, Msg("ViewerSettings.AutodetectCodePage"), false)
+	chkAutodetect := vtui.NewCheckbox(0, 0, i18n.Msg("ViewerSettings.AutodetectCodePage"), false)
 	if config.App.ViewerAutodetectCodePage {
 		chkAutodetect.State = 1
 	}
-	btnOK := vtui.NewButton(0, 0, Msg("vtui.Ok"))
+	btnOK := vtui.NewButton(0, 0, i18n.Msg("vtui.Ok"))
 	btnOK.IsDefault = true
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 
 	dlg.AddItem(chkAutodetect)
 	dlg.AddItem(lblDefault)

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -260,7 +261,7 @@ func commandPaletteConditionTrue(name string) bool {
 
 func commandPaletteActionCategory(act action.Action) string {
 	for _, key := range commandPaletteActionCategoryKeys(act) {
-		if category := Msg(key); category != "" && !strings.HasPrefix(category, "{") {
+		if category := i18n.Msg(key); category != "" && !strings.HasPrefix(category, "{") {
 			return action.PlainLabel(category)
 		}
 	}
@@ -318,10 +319,10 @@ func commandPalettePluginEntries(pf *PanelsFrame) []commandPaletteEntry {
 	var entries []commandPaletteEntry
 	for _, location := range []vfs.PluginCommandLocation{vfs.PluginCommandPanel, vfs.PluginCommandConfig} {
 		categoryKey := "CommandPalette.CategoryPlugin"
-		category := Msg("CommandPalette.CategoryPlugin")
+		category := i18n.Msg("CommandPalette.CategoryPlugin")
 		if location == vfs.PluginCommandConfig {
 			categoryKey = "CommandPalette.CategoryPluginConfig"
-			category = Msg("CommandPalette.CategoryPluginConfig")
+			category = i18n.Msg("CommandPalette.CategoryPluginConfig")
 		}
 		for _, command := range pluginCommandsSnapshot(location, pf) {
 			label := action.PlainLabel(pluginCommandDisplayLabel(command))
@@ -359,7 +360,7 @@ func commandPalettePluginEntries(pf *PanelsFrame) []commandPaletteEntry {
 			actionName = legacyPluginActionName(index)
 		}
 		label := action.PlainLabel(item.Label)
-		searchFields := []string{Msg("CommandPalette.CategoryLegacyPlugin")}
+		searchFields := []string{i18n.Msg("CommandPalette.CategoryLegacyPlugin")}
 		searchFields = append(searchFields, commandPaletteTranslations(
 			"CommandPalette.CategoryPlugin",
 			"CommandPalette.CategoryLegacyPlugin",
@@ -368,7 +369,7 @@ func commandPalettePluginEntries(pf *PanelsFrame) []commandPaletteEntry {
 			Key:          fmt.Sprintf("legacy-plugin:%s:%d", normalizeCommandPaletteText(label), index),
 			Label:        label,
 			EnglishLabel: label,
-			Category:     Msg("CommandPalette.CategoryPlugin"),
+			Category:     i18n.Msg("CommandPalette.CategoryPlugin"),
 			Shortcut:     pluginActionShortcut(actionName),
 			SearchFields: searchFields,
 			source:       commandPaletteSourceLegacyPlugin,
@@ -448,7 +449,7 @@ func flattenCommandPaletteUserMenu(source commandPaletteUserMenuSource, pf *Pane
 				Description:        breadcrumb,
 				EnglishDescription: breadcrumb,
 				ID:                 item.HotKey,
-				Category:           fmt.Sprintf("%s: %s", Msg("CommandPalette.CategoryUserMenu"), action.PlainLabel(source.title)),
+				Category:           fmt.Sprintf("%s: %s", i18n.Msg("CommandPalette.CategoryUserMenu"), action.PlainLabel(source.title)),
 				Shortcut:           item.HotKey,
 				SearchFields:       searchFields,
 				source:             commandPaletteSourceUserMenu,

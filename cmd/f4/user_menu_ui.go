@@ -10,6 +10,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/history"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -182,34 +183,34 @@ func loadMenuForMode(pf *PanelsFrame, mode MenuMode) (items []UserMenuItem, titl
 	case MenuModeLocal:
 		fsp, _ := pf.panels[pf.activeIdx].(*FileSystemPanel)
 		if fsp == nil {
-			return nil, Msg("UserMenu.LocalMenuTitle"), "", false
+			return nil, i18n.Msg("UserMenu.LocalMenuTitle"), "", false
 		}
 		path, found := findLocalFarMenu(fsp.vfs.GetPath())
 		if !found {
-			return nil, Msg("UserMenu.LocalMenuTitle"), "", false
+			return nil, i18n.Msg("UserMenu.LocalMenuTitle"), "", false
 		}
 		loaded, err := loadFarMenuFile(path)
 		if err != nil {
-			return nil, Msg("UserMenu.LocalMenuTitle"), path, false
+			return nil, i18n.Msg("UserMenu.LocalMenuTitle"), path, false
 		}
-		return loaded, Msg("UserMenu.LocalMenuTitle"), path, true
+		return loaded, i18n.Msg("UserMenu.LocalMenuTitle"), path, true
 	case MenuModeFar:
 		path, found := findFarMenuNearBinary()
 		if !found {
-			return nil, fmt.Sprintf("%s (%s)", Msg("UserMenu.MainMenuTitle"), Msg("UserMenu.MainMenuFAR")), "", false
+			return nil, fmt.Sprintf("%s (%s)", i18n.Msg("UserMenu.MainMenuTitle"), i18n.Msg("UserMenu.MainMenuFAR")), "", false
 		}
 		loaded, err := loadFarMenuFile(path)
 		if err != nil {
-			return nil, fmt.Sprintf("%s (%s)", Msg("UserMenu.MainMenuTitle"), Msg("UserMenu.MainMenuFAR")), path, false
+			return nil, fmt.Sprintf("%s (%s)", i18n.Msg("UserMenu.MainMenuTitle"), i18n.Msg("UserMenu.MainMenuFAR")), path, false
 		}
-		return loaded, fmt.Sprintf("%s (%s)", Msg("UserMenu.MainMenuTitle"), Msg("UserMenu.MainMenuFAR")), path, true
+		return loaded, fmt.Sprintf("%s (%s)", i18n.Msg("UserMenu.MainMenuTitle"), i18n.Msg("UserMenu.MainMenuFAR")), path, true
 	case MenuModeMain:
 		path := MainMenuFilePath()
 		loaded, err := LoadMainMenu(path)
 		if err != nil {
-			return nil, Msg("UserMenu.MainMenuTitle"), path, false
+			return nil, i18n.Msg("UserMenu.MainMenuTitle"), path, false
 		}
-		return loaded, Msg("UserMenu.MainMenuTitle"), path, len(loaded) > 0
+		return loaded, i18n.Msg("UserMenu.MainMenuTitle"), path, len(loaded) > 0
 	}
 	return nil, "", "", false
 }
@@ -684,16 +685,16 @@ func (s *userMenuState) goBack(current *vtui.VMenu) {
 }
 
 func showEditItemDialog(s *userMenuState, current *vtui.VMenu, items []UserMenuItem, idx int, isCreate bool, isSubmenu bool) {
-	title := Msg("UserMenu.EditTitle")
+	title := i18n.Msg("UserMenu.EditTitle")
 	if isCreate {
 		if isSubmenu {
-			title = Msg("UserMenu.CreateSubmenuTitle")
+			title = i18n.Msg("UserMenu.CreateSubmenuTitle")
 		} else {
-			title = Msg("UserMenu.CreateTitle")
+			title = i18n.Msg("UserMenu.CreateTitle")
 		}
 	} else {
 		if isSubmenu {
-			title = Msg("UserMenu.EditSubmenuTitle")
+			title = i18n.Msg("UserMenu.EditSubmenuTitle")
 		}
 	}
 
@@ -741,13 +742,13 @@ func showEditItemDialog(s *userMenuState, current *vtui.VMenu, items []UserMenuI
 	}
 
 	vbox := vtui.NewVBoxLayout(dlg.X1+2, dlg.Y1+2, width-4, height-4)
-	vbox.Add(makeRow(Msg("UserMenu.LabelHotkey"), editHotkey), vtui.Margins{}, vtui.AlignFill)
-	vbox.Add(makeRow(Msg("UserMenu.LabelLabel"), editLabel), vtui.Margins{Top: 1}, vtui.AlignFill)
+	vbox.Add(makeRow(i18n.Msg("UserMenu.LabelHotkey"), editHotkey), vtui.Margins{}, vtui.AlignFill)
+	vbox.Add(makeRow(i18n.Msg("UserMenu.LabelLabel"), editLabel), vtui.Margins{Top: 1}, vtui.AlignFill)
 	if !isSubmenu {
 		// Multi-line command box: label sits on its own row above the box
 		// (FAR's edit-menu-item dialog layout) so the multi-row edit
 		// doesn't leave the label floating next to just its first row.
-		cmdLabel := vtui.NewLabel(0, 0, Msg("UserMenu.LabelCommand"), editCommand)
+		cmdLabel := vtui.NewLabel(0, 0, i18n.Msg("UserMenu.LabelCommand"), editCommand)
 		dlg.AddItem(cmdLabel)
 		dlg.AddItem(editCommand)
 		cmdBox := vtui.NewHBoxLayout(0, 0, width-4, cmdRowsVisible)
@@ -756,8 +757,8 @@ func showEditItemDialog(s *userMenuState, current *vtui.VMenu, items []UserMenuI
 		vbox.Add(cmdBox, vtui.Margins{}, vtui.AlignFill)
 	}
 
-	btnOk := vtui.NewButton(0, 0, Msg("vtui.Save"))
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnOk := vtui.NewButton(0, 0, i18n.Msg("vtui.Save"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 	btnOk.IsDefault = true
 
 	btnHbox := vtui.NewHBoxLayout(0, 0, width-4, 1)

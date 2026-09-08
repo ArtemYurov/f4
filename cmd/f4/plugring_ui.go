@@ -14,6 +14,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/netproxy"
 	"github.com/unxed/f4/internal/unpack"
 	"github.com/unxed/vtui"
@@ -115,17 +116,17 @@ func BuildPlugRingRows(items []PlugRingItem, installed map[string]PlugRingItem) 
 func actionPlugRing(pf *PanelsFrame) {
 	w, h := 76, 22
 
-	btnInstall := vtui.NewButton(0, 0, Msg("PlugRing.BtnInstall"))
-	btnRemove := vtui.NewButton(0, 0, Msg("PlugRing.BtnRemove"))
-	btnRefresh := vtui.NewButton(0, 0, Msg("PlugRing.BtnRefresh"))
-	btnClose := vtui.NewButton(0, 0, Msg("PlugRing.BtnClose"))
+	btnInstall := vtui.NewButton(0, 0, i18n.Msg("PlugRing.BtnInstall"))
+	btnRemove := vtui.NewButton(0, 0, i18n.Msg("PlugRing.BtnRemove"))
+	btnRefresh := vtui.NewButton(0, 0, i18n.Msg("PlugRing.BtnRefresh"))
+	btnClose := vtui.NewButton(0, 0, i18n.Msg("PlugRing.BtnClose"))
 
-	dlg, table := vtui.NewTableDialog(w, h, Msg("PlugRing.Title"), []vtui.TableColumn{
-		{Title: Msg("PlugRing.ColName"), Width: 16},
-		{Title: Msg("PlugRing.ColVersion"), Width: 8},
-		{Title: Msg("PlugRing.ColStatus"), Width: 13},
-		{Title: Msg("PlugRing.ColAuthor"), Width: 10},
-		{Title: Msg("PlugRing.ColDescription"), Width: 0},
+	dlg, table := vtui.NewTableDialog(w, h, i18n.Msg("PlugRing.Title"), []vtui.TableColumn{
+		{Title: i18n.Msg("PlugRing.ColName"), Width: 16},
+		{Title: i18n.Msg("PlugRing.ColVersion"), Width: 8},
+		{Title: i18n.Msg("PlugRing.ColStatus"), Width: 13},
+		{Title: i18n.Msg("PlugRing.ColAuthor"), Width: 10},
+		{Title: i18n.Msg("PlugRing.ColDescription"), Width: 0},
 	}, btnInstall, btnRemove, btnRefresh, btnClose)
 	useDialogTableColors(table)
 	table.Sortable = true    // click a column header to sort, again to reverse

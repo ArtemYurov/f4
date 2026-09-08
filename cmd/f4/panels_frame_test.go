@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/plugins/archive"
@@ -588,7 +589,7 @@ func findDriveMenu(t *testing.T) *vtui.VMenu {
 	t.Helper()
 	frames := openFrames()
 	for i := len(frames) - 1; i >= 0; i-- {
-		if m, ok := driveMenuFromFrame(frames[i]); ok && m.GetTitle() == Msg("Drive.Title") {
+		if m, ok := driveMenuFromFrame(frames[i]); ok && m.GetTitle() == i18n.Msg("Drive.Title") {
 			return m
 		}
 	}
@@ -668,7 +669,7 @@ func TestPanelsFrame_DriveMenuBookmarkKeys(t *testing.T) {
 			}
 		}
 	}
-	if row < 0 || row == 0 || menu.Items[row-1].Text != Msg("Drive.Links") {
+	if row < 0 || row == 0 || menu.Items[row-1].Text != i18n.Msg("Drive.Links") {
 		t.Fatalf("named bookmark section is malformed: row=%d items=%#v", row, menu.Items)
 	}
 	fsp := pf.panels[1].(*FileSystemPanel)
@@ -701,7 +702,7 @@ func TestPanelsFrame_DriveMenuBookmarkKeys(t *testing.T) {
 	press(menu, vtinput.VK_DELETE)
 	settleFrames(t)
 	confirmation, ok := vtui.FrameManager.GetTopFrame().(*vtui.Window)
-	if !ok || confirmation.GetTitle() != Msg("DriveLink.DeleteTitle") {
+	if !ok || confirmation.GetTitle() != i18n.Msg("DriveLink.DeleteTitle") {
 		t.Fatalf("Del did not open delete confirmation: %T", vtui.FrameManager.GetTopFrame())
 	}
 	confirmation.OnResult(1)
@@ -1265,7 +1266,7 @@ func TestPanelsFrame_CtrlF12SortMenu(t *testing.T) {
 	if len(menu.Items) != 6 {
 		t.Fatalf("sort menu has %d items, want 6", len(menu.Items))
 	}
-	if !strings.Contains(menu.Items[5].Text, Msg("Menu.SortUseGroups")) {
+	if !strings.Contains(menu.Items[5].Text, i18n.Msg("Menu.SortUseGroups")) {
 		t.Fatalf("last sort menu row = %q, want the sort-group toggle", menu.Items[5].Text)
 	}
 	panelX1, panelY1, panelX2, panelY2 := fsp.GetPosition()
@@ -3053,7 +3054,7 @@ func TestPanelsFrame_CommandLineUsesRemoteRunnerWithoutPTY(t *testing.T) {
 			t.Fatal("remote command completion did not reach the output frame")
 		}
 	}
-	if top := vtui.FrameManager.GetTopFrame(); top == nil || !strings.Contains(top.GetTitle(), Msg("RemoteCmd.Title")) {
+	if top := vtui.FrameManager.GetTopFrame(); top == nil || !strings.Contains(top.GetTitle(), i18n.Msg("RemoteCmd.Title")) {
 		t.Fatalf("remote command output frame = %T %q", top, func() string {
 			if top != nil {
 				return top.GetTitle()
@@ -3501,7 +3502,7 @@ func TestPanelsFrame_FilesMenuLabels(t *testing.T) {
 		t.Errorf("Expected Files menu label '&Files', got %q", filesMenu.Label)
 	}
 
-	expected := "&" + Msg("Menu.Files.RenMov")
+	expected := "&" + i18n.Msg("Menu.Files.RenMov")
 	var renMove *vtui.MenuItem
 	for i := range filesMenu.SubItems {
 		if filesMenu.SubItems[i].Text == expected {
@@ -3579,7 +3580,7 @@ func TestPanelsFrame_CommandRouting_FKeys(t *testing.T) {
 
 	// Now it shouldn't be shutdown immediately. A dialog should be on top.
 	top := fm.GetTopFrame()
-	if top == nil || top.GetTitle() != Msg("Quit.Title") {
+	if top == nil || top.GetTitle() != i18n.Msg("Quit.Title") {
 		t.Fatalf("Expected quit confirmation dialog, got %v", top)
 	}
 
@@ -3604,7 +3605,7 @@ func TestPanelsFrame_QuitConfirmation_Cancel(t *testing.T) {
 	pf.HandleCommand(vtui.CmQuit, nil)
 
 	top := fm.GetTopFrame()
-	if top == nil || top.GetTitle() != Msg("Quit.Title") {
+	if top == nil || top.GetTitle() != i18n.Msg("Quit.Title") {
 		t.Fatal("Quit dialog didn't appear")
 	}
 
@@ -3661,7 +3662,7 @@ func TestPanelsFrame_F9HiddenPanels_UsesShellMenuAndKeepsTerminalLog(t *testing.
 	pf.showPanels = false
 
 	items := pf.GetMenuBar().Items
-	wantLabels := []string{Msg("Menu.Shell.Files"), Msg("Menu.Shell.Commands"), Msg("Menu.Shell.Options")}
+	wantLabels := []string{i18n.Msg("Menu.Shell.Files"), i18n.Msg("Menu.Shell.Commands"), i18n.Msg("Menu.Shell.Options")}
 	if len(items) != len(wantLabels) {
 		t.Fatalf("hidden-panels F9 menu has %d top-level items, want %d: %+v", len(items), len(wantLabels), items)
 	}
@@ -3672,8 +3673,8 @@ func TestPanelsFrame_F9HiddenPanels_UsesShellMenuAndKeepsTerminalLog(t *testing.
 	}
 
 	wantTerminalItems := map[string]bool{
-		Msg("Action.Terminal.ViewLog"): false,
-		Msg("Action.Terminal.EditLog"): false,
+		i18n.Msg("Action.Terminal.ViewLog"): false,
+		i18n.Msg("Action.Terminal.EditLog"): false,
 	}
 	for _, item := range items[0].SubItems {
 		if _, ok := wantTerminalItems[item.Text]; ok {
@@ -3943,7 +3944,7 @@ func TestPanelsFrame_DriveMenu_OtherPanel(t *testing.T) {
 	// "Other panel" stays at index 0, but the cursor now opens on the drive
 	// the panel currently shows when the menu lists it (driveMenuDefaultPos,
 	// far2l parity), so the expected row depends on where the panel sits.
-	if menu.GetTitle() != Msg("Drive.Title") {
+	if menu.GetTitle() != i18n.Msg("Drive.Title") {
 		t.Errorf("Menu title invalid: %q", menu.GetTitle())
 	}
 	cur := pf.panels[0].(*FileSystemPanel).vfs.GetPath()

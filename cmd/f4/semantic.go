@@ -8,6 +8,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/sdk/extui"
@@ -332,7 +333,7 @@ func semanticFileSize(entry *fileEntry) string {
 			return formatIntWithSpaces(entry.Size)
 		}
 		if entry.Name == ".." {
-			return Msg("Panel.UpDir")
+			return i18n.Msg("Panel.UpDir")
 		}
 		return ""
 	}

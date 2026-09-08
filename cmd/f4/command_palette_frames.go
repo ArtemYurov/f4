@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtui"
 )
 
@@ -39,7 +40,7 @@ func commandPaletteImageEntries(image *ImageView) []commandPaletteEntry {
 	if image == nil {
 		return nil
 	}
-	category := Msg("CommandPalette.CategoryImageViewer")
+	category := i18n.Msg("CommandPalette.CategoryImageViewer")
 	type spec struct {
 		id, labelKey, english, description, shortcut string
 		checked                                      func(*ImageView) bool
@@ -69,7 +70,7 @@ func commandPaletteImageEntries(image *ImageView) []commandPaletteEntry {
 	entries := make([]commandPaletteEntry, 0, len(specs))
 	for _, command := range specs {
 		command := command
-		label := Msg(command.labelKey)
+		label := i18n.Msg(command.labelKey)
 		if label == "" || strings.HasPrefix(label, "{") {
 			label = command.english
 		}
@@ -103,9 +104,9 @@ func commandPaletteQueueEntries(queue *QueueFrame) []commandPaletteEntry {
 	if queue == nil {
 		return nil
 	}
-	category := Msg("CommandPalette.CategoryQueue")
+	category := i18n.Msg("CommandPalette.CategoryQueue")
 	newEntry := func(id, labelKey, english, description, shortcut string, run func(*QueueFrame) bool) commandPaletteEntry {
-		label := Msg(labelKey)
+		label := i18n.Msg(labelKey)
 		if label == "" || strings.HasPrefix(label, "{") {
 			label = english
 		}
@@ -167,7 +168,7 @@ func commandPaletteCancelQueueTask(queue *QueueFrame) bool {
 	if !queueTaskCancellable(state) {
 		return false
 	}
-	vtui.ShowMessageOn(queue, " "+Msg("CommandPalette.Confirm")+" ", fmt.Sprintf(Msg("CommandPalette.Queue.CancelQuestion"), id), []string{Msg("CommandPalette.Yes"), Msg("CommandPalette.No")}).OnResult = func(choice int) {
+	vtui.ShowMessageOn(queue, " "+i18n.Msg("CommandPalette.Confirm")+" ", fmt.Sprintf(i18n.Msg("CommandPalette.Queue.CancelQuestion"), id), []string{i18n.Msg("CommandPalette.Yes"), i18n.Msg("CommandPalette.No")}).OnResult = func(choice int) {
 		if choice == 0 {
 			GlobalQueueManager.Cancel(id)
 		}

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -135,7 +136,7 @@ func TestBuildMenuBarItems_Shell(t *testing.T) {
 	var pluginConfiguration *vtui.MenuItem
 	for i := range items[2].SubItems {
 		item := &items[2].SubItems[i]
-		if item.Text == Msg("Menu.PluginConfiguration") {
+		if item.Text == i18n.Msg("Menu.PluginConfiguration") {
 			pluginConfiguration = item
 			break
 		}
@@ -148,8 +149,8 @@ func TestBuildMenuBarItems_Shell(t *testing.T) {
 	}
 
 	wantCommandShortcuts := map[string]string{
-		Msg("Action.Panel.CopyPath"):   "Ctrl+D",
-		Msg("Action.Panel.InsertPath"): "Ctrl+F",
+		i18n.Msg("Action.Panel.CopyPath"):   "Ctrl+D",
+		i18n.Msg("Action.Panel.InsertPath"): "Ctrl+F",
 	}
 	var checkShortcuts func(list []vtui.MenuItem)
 	checkShortcuts = func(list []vtui.MenuItem) {
@@ -390,10 +391,10 @@ func TestBuildMenuBarItemsFoldsRareCommandsIntoSubMenus(t *testing.T) {
 		title  string
 		member string
 	}{
-		{Msg("Menu.Shell.Commands.History"), "Panel.CommandHistory"},
-		{Msg("Menu.Shell.Commands.Navigation"), "Panel.GoParent"},
-		{Msg("Menu.Shell.Commands.Paths"), "Panel.CopyPath"},
-		{Msg("Menu.Shell.Commands.AI"), "AI.TogglePanel"},
+		{i18n.Msg("Menu.Shell.Commands.History"), "Panel.CommandHistory"},
+		{i18n.Msg("Menu.Shell.Commands.Navigation"), "Panel.GoParent"},
+		{i18n.Msg("Menu.Shell.Commands.Paths"), "Panel.CopyPath"},
+		{i18n.Msg("Menu.Shell.Commands.AI"), "AI.TogglePanel"},
 	} {
 		heading := find(commands, sub.title)
 		if heading == nil {

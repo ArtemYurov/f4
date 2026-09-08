@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/internal/vtvibe"
@@ -71,16 +72,16 @@ func aiApplyPatch(pf *PanelsFrame) {
 	}
 	patch := aiSession().LastPatch()
 	if patch == nil {
-		vtui.ShowMessage(Msg("AI.Title"), Msg("AI.NoPatch"), []string{Msg("vtui.Ok")})
+		vtui.ShowMessage(i18n.Msg("AI.Title"), i18n.Msg("AI.NoPatch"), []string{i18n.Msg("vtui.Ok")})
 		return
 	}
 	root, ok := aiPatchTargetDir(pf)
 	if !ok {
-		vtui.ShowMessage(Msg("AI.ErrorTitle"), Msg("AI.PatchNoLocalDir"), []string{Msg("vtui.Ok")})
+		vtui.ShowMessage(i18n.Msg("AI.ErrorTitle"), i18n.Msg("AI.PatchNoLocalDir"), []string{i18n.Msg("vtui.Ok")})
 		return
 	}
 
-	body := fmt.Sprintf(Msg("AI.PatchConfirm"), root, len(patch.Files))
+	body := fmt.Sprintf(i18n.Msg("AI.PatchConfirm"), root, len(patch.Files))
 	shown := patch.Files
 	if len(shown) > 12 {
 		shown = shown[:12]
@@ -89,14 +90,14 @@ func aiApplyPatch(pf *PanelsFrame) {
 		body += "\n  " + f
 	}
 	if len(patch.Files) > len(shown) {
-		body += "\n  " + fmt.Sprintf(Msg("AI.PatchMoreFiles"), len(patch.Files)-len(shown))
+		body += "\n  " + fmt.Sprintf(i18n.Msg("AI.PatchMoreFiles"), len(patch.Files)-len(shown))
 	}
 	if patch.Ignored > 0 {
-		body += "\n\n" + fmt.Sprintf(Msg("AI.PatchIgnored"), patch.Ignored)
+		body += "\n\n" + fmt.Sprintf(i18n.Msg("AI.PatchIgnored"), patch.Ignored)
 	}
 
-	dlg := vtui.ShowMessage(Msg("AI.PatchTitle"), body,
-		[]string{Msg("AI.BtnApplyPatch"), Msg("AI.BtnDryRun"), Msg("vtui.Cancel")})
+	dlg := vtui.ShowMessage(i18n.Msg("AI.PatchTitle"), body,
+		[]string{i18n.Msg("AI.BtnApplyPatch"), i18n.Msg("AI.BtnDryRun"), i18n.Msg("vtui.Cancel")})
 	dlg.OnResult = func(code int) {
 		switch code {
 		case 0:
@@ -114,8 +115,8 @@ func aiRunPatcher(pf *PanelsFrame, patch *vtvibe.Patch, root string, dry bool) {
 	var output string
 	exitCode := 0
 
-	title := Msg("AI.PatchTitle")
-	pf.RunProgressTask(title, Msg("AI.PatchRunning"), false,
+	title := i18n.Msg("AI.PatchTitle")
+	pf.RunProgressTask(title, i18n.Msg("AI.PatchRunning"), false,
 		func(ctx context.Context, update func(msg string, percent int)) error {
 			script, err := aiEnsurePatcher(ctx, update)
 			if err != nil {
@@ -137,7 +138,7 @@ func aiRunPatcher(pf *PanelsFrame, patch *vtvibe.Patch, root string, dry bool) {
 				return err
 			}
 
-			update(Msg("AI.PatchRunning"), -1)
+			update(i18n.Msg("AI.PatchRunning"), -1)
 			args := []string{script, patchPath, "--dir", root}
 			if dry {
 				args = append(args, "--dry-run")
@@ -170,13 +171,13 @@ func aiShowPatchResult(pf *PanelsFrame, root string, dry bool, exitCode int, out
 	var head string
 	switch {
 	case exitCode == 0 && dry:
-		head = Msg("AI.PatchDryOk")
+		head = i18n.Msg("AI.PatchDryOk")
 	case exitCode == 0:
-		head = Msg("AI.PatchOk")
+		head = i18n.Msg("AI.PatchOk")
 	case exitCode == 2:
-		head = Msg("AI.PatchPartial")
+		head = i18n.Msg("AI.PatchPartial")
 	default:
-		head = Msg("AI.PatchFailed")
+		head = i18n.Msg("AI.PatchFailed")
 	}
 
 	output = strings.TrimSpace(output)
@@ -190,22 +191,22 @@ func aiShowPatchResult(pf *PanelsFrame, root string, dry bool, exitCode int, out
 		body += "\n\n" + preview
 	}
 
-	buttons := []string{Msg("vtui.Ok")}
+	buttons := []string{i18n.Msg("vtui.Ok")}
 	hasOutput := output != ""
 	if hasOutput {
-		buttons = append(buttons, Msg("AI.BtnViewLog"))
+		buttons = append(buttons, i18n.Msg("AI.BtnViewLog"))
 	}
 
 	reportPath := filepath.Join(root, "afailed.md")
 	hasReport := false
 	if exitCode != 0 {
 		if st, err := os.Stat(reportPath); err == nil && !st.IsDir() {
-			buttons = append(buttons, Msg("AI.BtnAttachReport"))
+			buttons = append(buttons, i18n.Msg("AI.BtnAttachReport"))
 			hasReport = true
 		}
 	}
 
-	dlg := vtui.ShowMessage(Msg("AI.PatchTitle"), body, buttons)
+	dlg := vtui.ShowMessage(i18n.Msg("AI.PatchTitle"), body, buttons)
 	dlg.OnResult = func(code int) {
 		var viewLogIdx = -1
 		var attachReportIdx = -1
@@ -248,7 +249,7 @@ func aiAttachFailureReport(reportPath string) {
 		aiShowError(err)
 		return
 	}
-	toast.Show(Msg("AI.PatchReportAttached"), 3*time.Second)
+	toast.Show(i18n.Msg("AI.PatchReportAttached"), 3*time.Second)
 	if pf := findPanelsFrameAnyScreen(); pf != nil {
 		pf.RefreshAll()
 	}
@@ -285,7 +286,7 @@ func aiPythonPath() (string, error) {
 			return p, nil
 		}
 	}
-	return "", fmt.Errorf("%s", Msg("AI.NoPython"))
+	return "", fmt.Errorf("%s", i18n.Msg("AI.NoPython"))
 }
 
 // aiEnsurePatcher returns a path to ap.py, downloading it once if needed.
@@ -309,7 +310,7 @@ func aiEnsurePatcher(ctx context.Context, update func(msg string, percent int)) 
 		return path, nil
 	}
 
-	update(Msg("AI.PatchDownloading"), -1)
+	update(i18n.Msg("AI.PatchDownloading"), -1)
 	data, err := aiDownload(ctx, url)
 	if err != nil {
 		return "", err
@@ -317,7 +318,7 @@ func aiEnsurePatcher(ctx context.Context, update func(msg string, percent int)) 
 	// A proxy login page is also a 200 with a body. Refuse anything that is
 	// not recognizably the patcher rather than feeding it to an interpreter.
 	if !strings.Contains(string(data), "def apply_patch(") {
-		return "", fmt.Errorf("%s", Msg("AI.PatchBadDownload"))
+		return "", fmt.Errorf("%s", i18n.Msg("AI.PatchBadDownload"))
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		return "", err
@@ -339,7 +340,7 @@ func aiAttachAPSpec(pf *PanelsFrame) {
 		url = ini.GetString("general", "ap_spec_url", vtvibeAPSpecURL)
 	}
 	var spec []byte
-	pf.RunProgressTask(Msg("AI.PatchTitle"), Msg("AI.SpecDownloading"), false,
+	pf.RunProgressTask(i18n.Msg("AI.PatchTitle"), i18n.Msg("AI.SpecDownloading"), false,
 		func(ctx context.Context, update func(msg string, percent int)) error {
 			data, err := aiDownload(ctx, url)
 			if err != nil {
@@ -361,7 +362,7 @@ func aiAttachAPSpec(pf *PanelsFrame) {
 			}
 			aiSession().SetPatchMode(true)
 			pf.RefreshAll()
-			vtui.ShowMessage(Msg("AI.Title"), Msg("AI.SpecAttached"), []string{Msg("vtui.Ok")})
+			vtui.ShowMessage(i18n.Msg("AI.Title"), i18n.Msg("AI.SpecAttached"), []string{i18n.Msg("vtui.Ok")})
 		})
 }
 

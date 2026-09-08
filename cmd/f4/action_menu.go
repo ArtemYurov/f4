@@ -5,6 +5,7 @@ import (
 
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/history"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -42,7 +43,7 @@ func BuildMenuBarItems(area string) []vtui.MenuBarItem {
 		}
 		m := menus[a.MenuPath]
 		if m == nil {
-			title := Msg("Menu." + area + "." + a.MenuPath)
+			title := i18n.Msg("Menu." + area + "." + a.MenuPath)
 			if strings.HasPrefix(title, "{") {
 				title = a.MenuPath
 			}
@@ -76,7 +77,7 @@ func BuildMenuBarItems(area string) []vtui.MenuBarItem {
 				if a.MenuSeparatorBefore {
 					m.items = append(m.items, vtui.MenuItem{Separator: true})
 				}
-				subTitle := Msg("Menu." + area + "." + a.MenuPath + "." + a.MenuSubPath)
+				subTitle := i18n.Msg("Menu." + area + "." + a.MenuPath + "." + a.MenuSubPath)
 				if strings.HasPrefix(subTitle, "{") {
 					subTitle = a.MenuSubPath
 				}
@@ -107,7 +108,7 @@ func BuildMenuBarItems(area string) []vtui.MenuBarItem {
 	appendPluginCommand := func(command vfs.PluginCommand) {
 		m := menus[command.MenuPath]
 		if m == nil {
-			title := Msg("Menu." + area + "." + command.MenuPath)
+			title := i18n.Msg("Menu." + area + "." + command.MenuPath)
 			if strings.HasPrefix(title, "{") {
 				title = command.MenuPath
 			}

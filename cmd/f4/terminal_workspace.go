@@ -3,6 +3,7 @@ package main
 import (
 	"time"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/vtui"
 )
@@ -68,7 +69,7 @@ func (pf *PanelsFrame) togglePanelsVisibility() {
 		// Captured mode has no separate console view to switch to;
 		// output already went to a dialog, so panels stay visible.
 		pf.showPanels = true
-		toast.Show(Msg("Terminal.NotAvailableInEnv"), 3*time.Second)
+		toast.Show(i18n.Msg("Terminal.NotAvailableInEnv"), 3*time.Second)
 	default:
 		vtui.FrameManager.HardRefresh()
 	}
@@ -91,7 +92,7 @@ func (pf *PanelsFrame) forkTerminalWorkspace() bool {
 		// goes to a dialog and Ctrl+O says so while staying on the panels.
 		// Forking first would leave the user with a second, identical copy of
 		// the panels and the very same message.
-		toast.Show(Msg("Terminal.NotAvailableInEnv"), 3*time.Second)
+		toast.Show(i18n.Msg("Terminal.NotAvailableInEnv"), 3*time.Second)
 		return true
 	}
 	clone := pf.forkPanelsClone()

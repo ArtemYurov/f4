@@ -194,7 +194,7 @@ func TestPluginCommandDisplayMetadataTracksActiveLanguage(t *testing.T) {
 	t.Cleanup(func() {
 		config.App.Language = oldLanguage
 		config.App.FallbackLanguage = oldFallbackLanguage
-		InitLang()
+		initLang()
 	})
 
 	command := vfs.PluginCommand{
@@ -207,7 +207,7 @@ func TestPluginCommandDisplayMetadataTracksActiveLanguage(t *testing.T) {
 
 	config.App.FallbackLanguage = ""
 	config.App.Language = "ru"
-	InitLang()
+	initLang()
 	if got := pluginCommandDisplayLabel(command); got != "Извлечь файлы" {
 		t.Fatalf("Russian label = %q", got)
 	}
@@ -223,7 +223,7 @@ func TestPluginCommandDisplayMetadataTracksActiveLanguage(t *testing.T) {
 	}
 
 	config.App.Language = "en"
-	InitLang()
+	initLang()
 	if got := pluginCommandDisplayLabel(command); got != command.Label {
 		t.Fatalf("English label = %q, want %q", got, command.Label)
 	}

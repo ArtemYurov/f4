@@ -186,11 +186,11 @@ func TestCommandPalettePluginMetadataUsesCurrentLanguageAndAllLanguageAliases(t 
 	t.Cleanup(func() {
 		config.App.Language = oldLanguage
 		config.App.FallbackLanguage = oldFallbackLanguage
-		InitLang()
+		initLang()
 	})
 	config.App.Language = "en"
 	config.App.FallbackLanguage = ""
-	InitLang()
+	initLang()
 
 	api := &coreAPI{}
 	registration, err := api.RegisterPluginCommand(vfs.PluginCommand{
@@ -244,7 +244,7 @@ func TestCommandPalettePluginMetadataUsesCurrentLanguageAndAllLanguageAliases(t 
 	}
 
 	config.App.Language = "ru"
-	InitLang()
+	initLang()
 	entry = findEntry()
 	if entry.Label != "Извлечь файлы" || entry.Description != "Извлечь выбранный архив в пассивную панель" {
 		t.Fatalf("Russian display metadata = %#v", entry)

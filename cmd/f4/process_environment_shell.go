@@ -16,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -488,7 +489,7 @@ func (pf *PanelsFrame) reportProcessEnvironmentShellFailure() {
 		}
 		// The localized title is intentionally value-free: neither environment
 		// names nor values may be copied to terminal or diagnostic output.
-		toastDuration := toast.Show(Msg("EnvMan.ShellSyncError"), processEnvironmentFailureToastDuration)
+		toastDuration := toast.Show(i18n.Msg("EnvMan.ShellSyncError"), processEnvironmentFailureToastDuration)
 		// ShowToast posts its setup. Queue our timer behind that setup so the
 		// coalescing window cannot end before vtui's own expiry timer.
 		manager.PostTask(func() {

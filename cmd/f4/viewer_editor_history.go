@@ -9,6 +9,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/history"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -176,7 +177,7 @@ func viewerEditorHistoryVFS(pf *PanelsFrame, entry viewerEditorHistoryEntry) vfs
 func openViewerEditorHistoryEntry(pf *PanelsFrame, entry viewerEditorHistoryEntry, mode viewerEditorHistoryMode) bool {
 	fs := viewerEditorHistoryVFS(pf, entry)
 	if fs == nil {
-		vtui.ShowMessage(Msg("History.ViewEditTitle"), Msg("History.SourceUnavailable"), []string{Msg("vtui.Ok")})
+		vtui.ShowMessage(i18n.Msg("History.ViewEditTitle"), i18n.Msg("History.SourceUnavailable"), []string{i18n.Msg("vtui.Ok")})
 		return false
 	}
 	if mode == historyModeEdit {
@@ -190,7 +191,7 @@ func openViewerEditorHistoryEntry(pf *PanelsFrame, entry viewerEditorHistoryEntr
 func actionViewerEditorHistory(pf *PanelsFrame) {
 	entries := loadViewerEditorHistory()
 	if len(entries) == 0 {
-		vtui.ShowMessage(Msg("History.Title"), Msg("History.EmptyViewEdit"), []string{Msg("vtui.Ok")})
+		vtui.ShowMessage(i18n.Msg("History.Title"), i18n.Msg("History.EmptyViewEdit"), []string{i18n.Msg("vtui.Ok")})
 		return
 	}
 
@@ -199,15 +200,15 @@ func actionViewerEditorHistory(pf *PanelsFrame) {
 	for i, entry := range entries {
 		paths[i] = history.HistoryRecord{Name: entry.Display, Lock: entry.Lock, Timestamp: entry.Timestamp}
 		if entry.Mode == historyModeEdit {
-			modes[i] = Msg("History.Mode.Edit")
+			modes[i] = i18n.Msg("History.Mode.Edit")
 		} else {
-			modes[i] = Msg("History.Mode.View")
+			modes[i] = i18n.Msg("History.Mode.View")
 		}
 	}
 
-	menu := vtui.NewVMenu(Msg("History.ViewEditTitle"))
+	menu := vtui.NewVMenu(i18n.Msg("History.ViewEditTitle"))
 	menu.SetHelp("HistoryViewEdit")
-	search := newHistorySearch(menu, paths, Msg("History.ViewEditHint"))
+	search := newHistorySearch(menu, paths, i18n.Msg("History.ViewEditHint"))
 	search.supportsLocks = true
 	// Same timestamp column the command and folder histories use, with its
 	// own Ctrl+T mode remembered separately — far2l keeps one setting per
@@ -295,7 +296,7 @@ func actionViewerEditorHistory(pf *PanelsFrame) {
 }
 
 func confirmAndClearViewerEditorHistory(entries *[]viewerEditorHistoryEntry, search *historySearch, menu *vtui.VMenu) {
-	dlg := vtui.ShowMessage(Msg("History.ViewEditTitle"), Msg("History.ConfirmClearAll"), []string{Msg("vtui.Ok"), Msg("vtui.Cancel")})
+	dlg := vtui.ShowMessage(i18n.Msg("History.ViewEditTitle"), i18n.Msg("History.ConfirmClearAll"), []string{i18n.Msg("vtui.Ok"), i18n.Msg("vtui.Cancel")})
 	dlg.OnResult = func(code int) {
 		if code != 0 {
 			return

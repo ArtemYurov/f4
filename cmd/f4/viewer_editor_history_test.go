@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -66,7 +67,7 @@ func TestViewerEditorHistoryDialogDeletesEntry(t *testing.T) {
 	if !ok || menu.GetHelp() != "HistoryViewEdit" {
 		t.Fatalf("history dialog = %T help=%q", vtui.FrameManager.GetTopFrame(), menu.GetHelp())
 	}
-	if activeHistorySearch == nil || activeHistorySearch.selectedSecondary() != Msg("History.Mode.View") {
+	if activeHistorySearch == nil || activeHistorySearch.selectedSecondary() != i18n.Msg("History.Mode.View") {
 		t.Fatal("viewer/editor mode column is missing")
 	}
 

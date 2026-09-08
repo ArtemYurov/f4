@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtui"
 )
 
@@ -22,7 +23,7 @@ func TestIssue631TrashSettingIsInPanelSettings(t *testing.T) {
 	actionPanelSettings(pf)
 	panelFrame := vtui.FrameManager.GetTopFrame()
 	panelDialog := panelFrame.(vtui.Container)
-	wantText := getCleanText(vtui.NewCheckbox(0, 0, Msg("PanelSettings.UseTrash"), false))
+	wantText := getCleanText(vtui.NewCheckbox(0, 0, i18n.Msg("PanelSettings.UseTrash"), false))
 
 	var trashCheckbox *vtui.Checkbox
 	for _, child := range panelDialog.GetChildren() {

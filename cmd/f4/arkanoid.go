@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -70,7 +71,7 @@ func NewArkanoidFrame() *ArkanoidFrame {
 	x1 := (scrW - width) / 2
 
 	af := &ArkanoidFrame{
-		BaseWindow: *vtui.NewBaseWindow(x1, 2, x1+width-1, 2+height-1, " "+Msg("Arkanoid.Title")+" "),
+		BaseWindow: *vtui.NewBaseWindow(x1, 2, x1+width-1, 2+height-1, " "+i18n.Msg("Arkanoid.Title")+" "),
 		stop:       make(chan struct{}),
 		done:       make(chan struct{}),
 		lives:      3,
@@ -787,7 +788,7 @@ func (af *ArkanoidFrame) checkHighScore() {
 func (af *ArkanoidFrame) showHighScoresDialog() {
 	loadArkScores()
 	af.RunOnUI(func() {
-		dlg := vtui.NewCenteredDialog(42, 15, Msg("Arkanoid.HighScores"))
+		dlg := vtui.NewCenteredDialog(42, 15, i18n.Msg("Arkanoid.HighScores"))
 		dlg.ShowClose = true
 
 		var lines []string

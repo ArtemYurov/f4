@@ -8,6 +8,7 @@ import (
 
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -372,10 +373,10 @@ func actionHotkeyConfig(pf *PanelsFrame) {
 		w, h = hotkeyDialogSizeForScreen(vtui.FrameManager.GetScreenSize(), vtui.FrameManager.GetScreenHeight())
 	}
 
-	btnAssign := vtui.NewButton(0, 0, Msg("Hotkeys.BtnAssign"))
-	btnUnbind := vtui.NewButton(0, 0, Msg("Hotkeys.BtnUnbind"))
-	btnSave := vtui.NewButton(0, 0, Msg("vtui.Save"))
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnAssign := vtui.NewButton(0, 0, i18n.Msg("Hotkeys.BtnAssign"))
+	btnUnbind := vtui.NewButton(0, 0, i18n.Msg("Hotkeys.BtnUnbind"))
+	btnSave := vtui.NewButton(0, 0, i18n.Msg("vtui.Save"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 	btnSave.IsDefault = true
 
 	if GlobalHotkeysMgr == nil {
@@ -384,12 +385,12 @@ func actionHotkeyConfig(pf *PanelsFrame) {
 	original := GlobalHotkeysMgr
 	draft := original.CloneForEdit()
 
-	dlg, table := vtui.NewTableDialog(w, h, Msg("Hotkeys.Title"), []vtui.TableColumn{
-		{Title: Msg("Hotkeys.ColCommand"), Width: 23},
-		{Title: Msg("Hotkeys.ColKey"), Width: 14},
-		{Title: Msg("Hotkeys.ColArea"), Width: 10},
-		{Title: Msg("Hotkeys.ColWhen"), Width: 17},
-		{Title: Msg("Hotkeys.ColDescription"), Width: 0},
+	dlg, table := vtui.NewTableDialog(w, h, i18n.Msg("Hotkeys.Title"), []vtui.TableColumn{
+		{Title: i18n.Msg("Hotkeys.ColCommand"), Width: 23},
+		{Title: i18n.Msg("Hotkeys.ColKey"), Width: 14},
+		{Title: i18n.Msg("Hotkeys.ColArea"), Width: 10},
+		{Title: i18n.Msg("Hotkeys.ColWhen"), Width: 17},
+		{Title: i18n.Msg("Hotkeys.ColDescription"), Width: 0},
 	}, btnAssign, btnUnbind, btnSave, btnCancel)
 	useDialogTableColors(table)
 	table.ShowScrollBar = true
@@ -421,8 +422,8 @@ func actionHotkeyConfig(pf *PanelsFrame) {
 	btnUnbind.OnClick = func() {
 		if row, ok := selectedHotkeyRow(table, hkRows); ok && row.Editable {
 			if row.RawKey != "" && row.Area != "" {
-				question := fmt.Sprintf("%s %s?", action.PlainLabel(Msg("Hotkeys.BtnUnbind")), row.Key)
-				vtui.ShowMessageOn(dlg, Msg("Hotkeys.Title"), question, []string{Msg("vtui.Ok"), Msg("vtui.Cancel")}).OnResult = func(choice int) {
+				question := fmt.Sprintf("%s %s?", action.PlainLabel(i18n.Msg("Hotkeys.BtnUnbind")), row.Key)
+				vtui.ShowMessageOn(dlg, i18n.Msg("Hotkeys.Title"), question, []string{i18n.Msg("vtui.Ok"), i18n.Msg("vtui.Cancel")}).OnResult = func(choice int) {
 					if choice != 0 {
 						return
 					}
@@ -455,7 +456,7 @@ func actionHotkeyConfig(pf *PanelsFrame) {
 }
 
 func showAreaSelectDialog(hm *HotkeyManager, actionName, defaultArea, defaultCond string, onComplete func()) {
-	dlg := vtui.NewCenteredDialog(40, 11, Msg("Hotkeys.SelectTitle"))
+	dlg := vtui.NewCenteredDialog(40, 11, i18n.Msg("Hotkeys.SelectTitle"))
 	dlg.ShowClose = true
 
 	if defaultArea == "" {
@@ -487,12 +488,12 @@ func showAreaSelectDialog(hm *HotkeyManager, actionName, defaultArea, defaultCon
 	comboCond.Menu.SetSelectPos(cIdx)
 	comboCond.Edit.SetText(conds[cIdx])
 
-	btnOk := vtui.NewButton(0, 0, Msg("Hotkeys.BtnNext"))
+	btnOk := vtui.NewButton(0, 0, i18n.Msg("Hotkeys.BtnNext"))
 	btnOk.IsDefault = true
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 
-	lbl := vtui.NewLabel(0, 0, Msg("Hotkeys.LabelArea"), combo)
-	lblCond := vtui.NewLabel(0, 0, Msg("Hotkeys.LabelWhen"), comboCond)
+	lbl := vtui.NewLabel(0, 0, i18n.Msg("Hotkeys.LabelArea"), combo)
+	lblCond := vtui.NewLabel(0, 0, i18n.Msg("Hotkeys.LabelWhen"), comboCond)
 
 	dlg.AddItem(lbl)
 	dlg.AddItem(combo)
@@ -552,7 +553,7 @@ type HotkeyAssignFrame struct {
 
 func NewHotkeyAssignFrame(hm *HotkeyManager, actionName, area string, onComplete func()) *HotkeyAssignFrame {
 	width, height := 42, 9
-	base := vtui.NewCenteredDialog(width, height, Msg("Hotkeys.AssignTitle"))
+	base := vtui.NewCenteredDialog(width, height, i18n.Msg("Hotkeys.AssignTitle"))
 	f := &HotkeyAssignFrame{
 		Window:     base,
 		hm:         hm,
@@ -561,15 +562,15 @@ func NewHotkeyAssignFrame(hm *HotkeyManager, actionName, area string, onComplete
 		onComplete: onComplete,
 	}
 
-	lblAction := vtui.NewText(0, 0, fmt.Sprintf(Msg("Hotkeys.AssignAction"), actionName), vtui.Palette[vtui.ColDialogText])
-	lblArea := vtui.NewText(0, 0, fmt.Sprintf(Msg("Hotkeys.AssignArea"), area), vtui.Palette[vtui.ColDialogText])
-	currentText := fmt.Sprintf(Msg("Hotkeys.AssignCurrent"), Msg("Hotkeys.AssignNone"))
+	lblAction := vtui.NewText(0, 0, fmt.Sprintf(i18n.Msg("Hotkeys.AssignAction"), actionName), vtui.Palette[vtui.ColDialogText])
+	lblArea := vtui.NewText(0, 0, fmt.Sprintf(i18n.Msg("Hotkeys.AssignArea"), area), vtui.Palette[vtui.ColDialogText])
+	currentText := fmt.Sprintf(i18n.Msg("Hotkeys.AssignCurrent"), i18n.Msg("Hotkeys.AssignNone"))
 	if _, currentKey := configuredHotkeyBinding(hm, strings.SplitN(actionName, ":", 2)[0]); currentKey != "" {
-		currentText = fmt.Sprintf(Msg("Hotkeys.AssignCurrent"), FormatKeyForUI(currentKey))
+		currentText = fmt.Sprintf(i18n.Msg("Hotkeys.AssignCurrent"), FormatKeyForUI(currentKey))
 	}
 	lblCurrent := vtui.NewText(0, 0, currentText, vtui.Palette[vtui.ColDialogText])
-	prompt := vtui.NewText(0, 0, Msg("Hotkeys.AssignPrompt"), vtui.Palette[vtui.ColDialogText])
-	cancelPrompt := vtui.NewText(0, 0, Msg("Hotkeys.AssignCancel"), vtui.Palette[vtui.ColDialogText])
+	prompt := vtui.NewText(0, 0, i18n.Msg("Hotkeys.AssignPrompt"), vtui.Palette[vtui.ColDialogText])
+	cancelPrompt := vtui.NewText(0, 0, i18n.Msg("Hotkeys.AssignCancel"), vtui.Palette[vtui.ColDialogText])
 
 	f.AddItem(lblAction)
 	f.AddItem(lblArea)

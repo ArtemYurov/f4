@@ -10,6 +10,7 @@ import (
 
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -77,17 +78,17 @@ func ShowCompareFoldersDialog(pf *PanelsFrame) {
 		dialogInset = 6 // dialog border and margin on both sides
 	)
 
-	capRecursive := Msg("Compare.Recursive")
-	capDepth := Msg("Compare.MaxDepth")
-	capMarked := Msg("Compare.MarkedOnly")
-	capTime := Msg("Compare.ByTime")
-	capSlack := Msg("Compare.TimeSlack")
-	capZones := Msg("Compare.IgnoreZones")
-	capSize := Msg("Compare.BySize")
-	capContent := Msg("Compare.ByContent")
-	capIgnore := Msg("Compare.Ignore")
-	capReport := Msg("Compare.ReportEqual")
-	ignoreItems := []string{Msg("Compare.IgnoreEOL"), Msg("Compare.IgnoreSpaces")}
+	capRecursive := i18n.Msg("Compare.Recursive")
+	capDepth := i18n.Msg("Compare.MaxDepth")
+	capMarked := i18n.Msg("Compare.MarkedOnly")
+	capTime := i18n.Msg("Compare.ByTime")
+	capSlack := i18n.Msg("Compare.TimeSlack")
+	capZones := i18n.Msg("Compare.IgnoreZones")
+	capSize := i18n.Msg("Compare.BySize")
+	capContent := i18n.Msg("Compare.ByContent")
+	capIgnore := i18n.Msg("Compare.Ignore")
+	capReport := i18n.Msg("Compare.ReportEqual")
+	ignoreItems := []string{i18n.Msg("Compare.IgnoreEOL"), i18n.Msg("Compare.IgnoreSpaces")}
 
 	inGroup := 0
 	for _, w := range []int{
@@ -122,18 +123,18 @@ func ShowCompareFoldersDialog(pf *PanelsFrame) {
 	const processRows, compareRows = 3, 8
 	height := (processRows + 2) + (compareRows + 2) + 1 + 1 + 1 + 4
 
-	dlg := vtui.NewCenteredDialog(width, height, Msg("Compare.Title"))
+	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("Compare.Title"))
 	dlg.ShowClose = true
 
 	// NewGroupBox takes corners, not a size: the bottom row of a box
 	// holding n rows is n+1 below its top one.
-	gbProcess := vtui.NewGroupBox(0, 0, width-dialogInset, processRows+1, Msg("Compare.Process"))
-	gbCompare := vtui.NewGroupBox(0, 0, width-dialogInset, compareRows+1, Msg("Compare.Criteria"))
+	gbProcess := vtui.NewGroupBox(0, 0, width-dialogInset, processRows+1, i18n.Msg("Compare.Process"))
+	gbCompare := vtui.NewGroupBox(0, 0, width-dialogInset, compareRows+1, i18n.Msg("Compare.Criteria"))
 	cbReport := vtui.NewCheckbox(0, 0, capReport, false)
 	cbReport.State = compareCheckState(opts.ReportEqual)
-	btnOk := vtui.NewButton(0, 0, Msg("vtui.Ok"))
+	btnOk := vtui.NewButton(0, 0, i18n.Msg("vtui.Ok"))
 	btnOk.IsDefault = true
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 
 	for _, item := range []vtui.UIElement{gbProcess, gbCompare, cbReport, btnOk, btnCancel} {
 		dlg.AddItem(item)
@@ -159,7 +160,7 @@ func ShowCompareFoldersDialog(pf *PanelsFrame) {
 	cbDepth := vtui.NewCheckbox(0, 0, capDepth, false)
 	cbDepth.State = compareCheckState(opts.LimitDepth)
 	edDepth := vtui.NewEdit(0, 0, depthWidth, strconv.Itoa(opts.MaxDepth))
-	edDepth.Validator = &vtui.IntRangeValidator{Min: 1, Max: config.CompareMaxDepthLimit, Title: Msg("Compare.Title")}
+	edDepth.Validator = &vtui.IntRangeValidator{Min: 1, Max: config.CompareMaxDepthLimit, Title: i18n.Msg("Compare.Title")}
 	cbMarked := vtui.NewCheckbox(0, 0, capMarked, false)
 	cbMarked.State = compareCheckState(opts.MarkedOnly)
 
@@ -250,7 +251,7 @@ func ShowCompareFoldersDialog(pf *PanelsFrame) {
 			// Comparing by name alone would call two folders equal
 			// whenever they hold the same names, which is not an answer
 			// anybody asked for.
-			vtui.ShowMessage(Msg("Compare.Title"), Msg("Compare.NoCriteria"), []string{"&Ok"})
+			vtui.ShowMessage(i18n.Msg("Compare.Title"), i18n.Msg("Compare.NoCriteria"), []string{"&Ok"})
 			return
 		}
 		next = next.Normalize()
@@ -338,17 +339,17 @@ func runCompareFolders(pf *PanelsFrame, opts config.CompareOptions) {
 	}
 	active, passive := pf.getActivePanel(), pf.getInactivePanel()
 	if active == nil || passive == nil {
-		vtui.ShowMessage(Msg("Compare.Title"), Msg("Compare.NoPanels"), []string{"&Ok"})
+		vtui.ShowMessage(i18n.Msg("Compare.Title"), i18n.Msg("Compare.NoPanels"), []string{"&Ok"})
 		return
 	}
 	leftSnap, okLeft := captureComparePanel(active, opts)
 	rightSnap, okRight := captureComparePanel(passive, opts)
 	if !okLeft || !okRight {
-		vtui.ShowMessage(Msg("Compare.Title"), Msg("Compare.NoPanels"), []string{"&Ok"})
+		vtui.ShowMessage(i18n.Msg("Compare.Title"), i18n.Msg("Compare.NoPanels"), []string{"&Ok"})
 		return
 	}
 
-	opDlg := NewFileOpProgressDialog(Msg("Compare.Progress"))
+	opDlg := NewFileOpProgressDialog(i18n.Msg("Compare.Progress"))
 	var taskCtx *vtui.TaskContext
 	opDlg.btnCancel.OnClick = func() {
 		if taskCtx != nil {
@@ -374,8 +375,8 @@ func runCompareFolders(pf *PanelsFrame, opts config.CompareOptions) {
 			})
 		}
 
-		scanning := Msg("Compare.Scanning")
-		comparing := Msg("Compare.Comparing")
+		scanning := i18n.Msg("Compare.Scanning")
+		comparing := i18n.Msg("Compare.Comparing")
 		leftItems, err := collectCompareSide(ctx.Context, leftSnap.fs, leftSnap.root, leftSnap.allow, opts,
 			func(path string) { show(scanning, path, 0, 0) })
 		var rightItems map[string]compareItem
@@ -395,13 +396,13 @@ func runCompareFolders(pf *PanelsFrame, opts config.CompareOptions) {
 				return
 			}
 			if err != nil {
-				vtui.ShowMessage(Msg("Compare.Title"), fmt.Sprintf(Msg("Compare.Failed"), err.Error()), []string{"&Ok"})
+				vtui.ShowMessage(i18n.Msg("Compare.Title"), fmt.Sprintf(i18n.Msg("Compare.Failed"), err.Error()), []string{"&Ok"})
 				return
 			}
 			if !leftSnap.stillCurrent() || !rightSnap.stillCurrent() {
 				// Both panels moved on while the tree was being read;
 				// marking them now would mark the wrong listing.
-				vtui.ShowMessage(Msg("Compare.Title"), Msg("Compare.Moved"), []string{"&Ok"})
+				vtui.ShowMessage(i18n.Msg("Compare.Title"), i18n.Msg("Compare.Moved"), []string{"&Ok"})
 				return
 			}
 			leftSnap.applyCompareMarks(outcome.left)
@@ -409,12 +410,12 @@ func runCompareFolders(pf *PanelsFrame, opts config.CompareOptions) {
 			vtui.FrameManager.Redraw()
 
 			if outcome.readErr != nil {
-				vtui.ShowMessage(Msg("Compare.Title"),
-					fmt.Sprintf(Msg("Compare.ReadFailed"), outcome.readErr.Error()), []string{"&Ok"})
+				vtui.ShowMessage(i18n.Msg("Compare.Title"),
+					fmt.Sprintf(i18n.Msg("Compare.ReadFailed"), outcome.readErr.Error()), []string{"&Ok"})
 				return
 			}
 			if outcome.differing == 0 && opts.ReportEqual {
-				vtui.ShowMessage(Msg("Compare.Title"), Msg("Compare.Equal"), []string{"&Ok"})
+				vtui.ShowMessage(i18n.Msg("Compare.Title"), i18n.Msg("Compare.Equal"), []string{"&Ok"})
 			}
 		})
 	})

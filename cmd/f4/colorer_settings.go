@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtui"
 )
 
@@ -17,10 +18,10 @@ const (
 // ColorerCross* constants define, so that the combo box position is the mode.
 func colorerCrossModeItems() []string {
 	return []string{
-		Msg("ColorerSettings.CrossOff"),
-		Msg("ColorerSettings.CrossVertical"),
-		Msg("ColorerSettings.CrossHorizontal"),
-		Msg("ColorerSettings.CrossBoth"),
+		i18n.Msg("ColorerSettings.CrossOff"),
+		i18n.Msg("ColorerSettings.CrossVertical"),
+		i18n.Msg("ColorerSettings.CrossHorizontal"),
+		i18n.Msg("ColorerSettings.CrossBoth"),
 	}
 }
 
@@ -83,11 +84,11 @@ func EditorCrossAttrs() (horz, vert bool, horzAttr, vertAttr uint64) {
 
 func actionColorerSettings(pf *PanelsFrame) {
 	width, height := 74, 19
-	dlg := vtui.NewCenteredDialog(width, height, Msg("ColorerSettings.Title"))
+	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("ColorerSettings.Title"))
 	dlg.ShowClose = true
 
 	// 1. Initialize Widgets
-	chkEnabled := vtui.NewCheckbox(0, 0, Msg("ColorerSettings.Enabled"), false)
+	chkEnabled := vtui.NewCheckbox(0, 0, i18n.Msg("ColorerSettings.Enabled"), false)
 	if colorerIsActive() {
 		chkEnabled.State = 1
 	}
@@ -115,7 +116,7 @@ func actionColorerSettings(pf *PanelsFrame) {
 	comboScheme.DropdownOnly = true
 	comboScheme.Menu.SetSelectPos(selectedScheme)
 	comboScheme.Edit.SetText(schemeItems[selectedScheme])
-	lblScheme := vtui.NewLabel(0, 0, Msg("ColorerSettings.Style"), comboScheme)
+	lblScheme := vtui.NewLabel(0, 0, i18n.Msg("ColorerSettings.Style"), comboScheme)
 
 	crossItems := colorerCrossModeItems()
 	crossPos := config.App.EditorCrossMode
@@ -126,27 +127,27 @@ func actionColorerSettings(pf *PanelsFrame) {
 	comboCross.DropdownOnly = true
 	comboCross.Menu.SetSelectPos(crossPos)
 	comboCross.Edit.SetText(crossItems[crossPos])
-	lblCross := vtui.NewLabel(0, 0, Msg("ColorerSettings.Cross"), comboCross)
+	lblCross := vtui.NewLabel(0, 0, i18n.Msg("ColorerSettings.Cross"), comboCross)
 
-	chkSyntax := vtui.NewCheckbox(0, 0, Msg("ColorerSettings.Syntax"), false)
+	chkSyntax := vtui.NewCheckbox(0, 0, i18n.Msg("ColorerSettings.Syntax"), false)
 	if config.App.EditorColorerSyntax {
 		chkSyntax.State = 1
 	}
 
-	chkBackground := vtui.NewCheckbox(0, 0, Msg("ColorerSettings.Background"), false)
+	chkBackground := vtui.NewCheckbox(0, 0, i18n.Msg("ColorerSettings.Background"), false)
 	if config.App.EditorColorerBackground {
 		chkBackground.State = 1
 	}
 
 	editCatalog := vtui.NewEdit(0, 0, width-6, config.App.EditorColorerCatalog)
 	editCatalog.ClearSelection()
-	lblCatalog := vtui.NewLabel(0, 0, Msg("ColorerSettings.Catalog"), editCatalog)
+	lblCatalog := vtui.NewLabel(0, 0, i18n.Msg("ColorerSettings.Catalog"), editCatalog)
 
-	btnReload := vtui.NewButton(0, 0, Msg("ColorerSettings.Reload"))
-	btnDownload := vtui.NewButton(0, 0, Msg("ColorerSettings.Download"))
-	btnOk := vtui.NewButton(0, 0, Msg("vtui.Ok"))
+	btnReload := vtui.NewButton(0, 0, i18n.Msg("ColorerSettings.Reload"))
+	btnDownload := vtui.NewButton(0, 0, i18n.Msg("ColorerSettings.Download"))
+	btnOk := vtui.NewButton(0, 0, i18n.Msg("vtui.Ok"))
 	btnOk.IsDefault = true
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 
 	// 2. Add to Dialog in desired focus order
 	dlg.AddItem(chkEnabled)

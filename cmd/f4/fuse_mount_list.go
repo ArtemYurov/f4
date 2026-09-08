@@ -9,6 +9,7 @@ import (
 
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/fusefs"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtui"
 )
 
@@ -95,7 +96,7 @@ func showMountList(pf *PanelsFrame) {
 		// An empty list is the most likely moment for someone to want
 		// their first mount, so offer it here instead of sending them
 		// back to the menu.
-		dlg := vtui.ShowMessage(Msg("Mounts.Title"), "Nothing is mounted.",
+		dlg := vtui.ShowMessage(i18n.Msg("Mounts.Title"), "Nothing is mounted.",
 			[]string{"&Mount this panel", "Mount read-&write", "&Ok"})
 		dlg.OnResult = func(code int) {
 			switch code {
@@ -123,10 +124,10 @@ func showMountList(pf *PanelsFrame) {
 		here = fsp.vfs.GetPath()
 	}
 
-	menu := vtui.NewVMenu(Msg("Mounts.Title"))
+	menu := vtui.NewVMenu(i18n.Msg("Mounts.Title"))
 	if live := liveRows(rows); len(live) > 1 {
 		menu.AddItem(vtui.MenuItem{
-			Text:     fmt.Sprintf(Msg("Mounts.UnmountAll"), len(live)),
+			Text:     fmt.Sprintf(i18n.Msg("Mounts.UnmountAll"), len(live)),
 			UserData: -1,
 		})
 	}
@@ -251,7 +252,7 @@ func unmountAll(rows []mountRow) {
 		}
 	}
 	if len(failed) > 0 {
-		vtui.ShowMessage(Msg("Mounts.Title"), "Still mounted:\n"+strings.Join(failed, "\n"), []string{"&Ok"})
+		vtui.ShowMessage(i18n.Msg("Mounts.Title"), "Still mounted:\n"+strings.Join(failed, "\n"), []string{"&Ok"})
 	}
 }
 

@@ -16,6 +16,7 @@ import (
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/f4/internal/history"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/f4/vfs"
@@ -770,7 +771,7 @@ func SetupUI() {
 	vtui.FrameManager.ConfigureWorkspaceTabs(vtui.WorkspaceTabMode(config.App.WorkspaceTabMode), ctrlTabMode)
 	vtui.FrameManager.ConfigureWorkspaceTabOverlay(config.App.WorkspaceTabsOverlay)
 	vtui.FrameManager.ConfigureWorkspaceAltNumberSwitch(config.App.AltNumberSwitchesTabs)
-	InitLang()
+	initLang()
 	if err := ApplyColorStyle(config.App.ColorStyle); err != nil {
 		vtui.DebugLog("COLORS: %v; falling back to Modern", err)
 		config.App.ColorStyle = "Modern"
@@ -781,8 +782,8 @@ func SetupUI() {
 	GlobalFileState = NewF4FileStateProvider()
 	StartQueueWorker()
 	// The registry is a leaf and cannot reach the message catalogue; the root
-	// hands it the lookup. Moves to internal/i18n's Msg when that package exists.
-	action.Localize = Msg
+	// hands it the lookup. Moves to internal/i18n's i18n.Msg when that package exists.
+	action.Localize = i18n.Msg
 	vtinput.Logger = vtui.DebugLog // Pipe vtinput logs to vtui's debug logger
 	vtui.GlobalClipboardAccessManager = NewF4ClipboardAuth()
 	// sysinfo.RegisterDrive("Null VFS", func() vfs.VFS { return vfs.NewNullVFS(50 * 1024 * 1024) }) // 50 MB/s

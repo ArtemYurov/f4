@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -55,7 +56,7 @@ func newDriveBookmarkEditDialog(initial DriveBookmark, defaultPath string, onFin
 		titleKey = "DriveLink.EditTitle"
 	}
 	dialog := &driveBookmarkEditDialog{
-		Window:     vtui.NewCenteredDialog(width, height, Msg(titleKey)),
+		Window:     vtui.NewCenteredDialog(width, height, i18n.Msg(titleKey)),
 		nameEdit:   vtui.NewEdit(0, 0, width-6, initial.Name),
 		pathEdit:   vtui.NewEdit(0, 0, width-6, initial.Path),
 		hotkeyEdit: vtui.NewEdit(0, 0, 1, initial.Hotkey),
@@ -65,17 +66,17 @@ func newDriveBookmarkEditDialog(initial DriveBookmark, defaultPath string, onFin
 		dialog.pathEdit.SetText(defaultPath)
 	}
 
-	nameLabel := vtui.NewLabel(0, 0, Msg("DriveLink.Name"), dialog.nameEdit)
-	pathLabel := vtui.NewLabel(0, 0, Msg("DriveLink.Path"), dialog.pathEdit)
-	hotkeyLabel := vtui.NewLabel(0, 0, Msg("DriveLink.Hotkey"), dialog.hotkeyEdit)
-	hotkeyHint := vtui.NewText(0, 0, Msg("DriveLink.HotkeyHint"), vtui.Palette[vtui.ColDialogText])
-	createText := Msg("DriveLink.Create")
+	nameLabel := vtui.NewLabel(0, 0, i18n.Msg("DriveLink.Name"), dialog.nameEdit)
+	pathLabel := vtui.NewLabel(0, 0, i18n.Msg("DriveLink.Path"), dialog.pathEdit)
+	hotkeyLabel := vtui.NewLabel(0, 0, i18n.Msg("DriveLink.Hotkey"), dialog.hotkeyEdit)
+	hotkeyHint := vtui.NewText(0, 0, i18n.Msg("DriveLink.HotkeyHint"), vtui.Palette[vtui.ColDialogText])
+	createText := i18n.Msg("DriveLink.Create")
 	if initial.Name != "" || initial.Path != "" {
-		createText = Msg("DriveLink.Save")
+		createText = i18n.Msg("DriveLink.Save")
 	}
 	createButton := vtui.NewButton(0, 0, createText)
 	createButton.IsDefault = true
-	cancelButton := vtui.NewButton(0, 0, Msg("DriveLink.Cancel"))
+	cancelButton := vtui.NewButton(0, 0, i18n.Msg("DriveLink.Cancel"))
 	createButton.OnClick = func() { dialog.submit() }
 	cancelButton.OnClick = func() { dialog.finish(false, DriveBookmark{}) }
 
@@ -137,12 +138,12 @@ func (d *driveBookmarkEditDialog) submit() {
 		Hotkey: strings.TrimSpace(d.hotkeyEdit.GetText()),
 	}
 	if bookmark.Name == "" {
-		vtui.ShowMessageOn(d, Msg("DriveLink.ErrorTitle"), Msg("DriveLink.NameRequired"), []string{"&Ok"})
+		vtui.ShowMessageOn(d, i18n.Msg("DriveLink.ErrorTitle"), i18n.Msg("DriveLink.NameRequired"), []string{"&Ok"})
 		d.SetFocusedItem(d.nameEdit)
 		return
 	}
 	if bookmark.Path == "" {
-		vtui.ShowMessageOn(d, Msg("DriveLink.ErrorTitle"), Msg("DriveLink.PathRequired"), []string{"&Ok"})
+		vtui.ShowMessageOn(d, i18n.Msg("DriveLink.ErrorTitle"), i18n.Msg("DriveLink.PathRequired"), []string{"&Ok"})
 		d.SetFocusedItem(d.pathEdit)
 		return
 	}
@@ -202,7 +203,7 @@ func (pf *PanelsFrame) openDriveBookmarkEditor(panelIdx int, menu *vtui.VMenu, b
 				err = SaveDriveBookmarks(DriveBookmarksFilePath(), current)
 			}
 			if err != nil {
-				message := vtui.ShowMessage(Msg("DriveLink.ErrorTitle"), fmt.Sprintf(Msg("DriveLink.SaveError"), err), []string{"&Ok"})
+				message := vtui.ShowMessage(i18n.Msg("DriveLink.ErrorTitle"), fmt.Sprintf(i18n.Msg("DriveLink.SaveError"), err), []string{"&Ok"})
 				message.OnResult = func(int) { vtui.FrameManager.PostTask(reopen) }
 				return
 			}
@@ -216,8 +217,8 @@ func (pf *PanelsFrame) deleteDriveBookmark(menu *vtui.VMenu, bookmarks []DriveBo
 	if index < 0 || index >= len(bookmarks) {
 		return
 	}
-	question := fmt.Sprintf(Msg("DriveLink.DeleteQuestion"), bookmarks[index].Name)
-	vtui.ShowMessageOn(menu, Msg("DriveLink.DeleteTitle"), question, []string{"&Delete", Msg("DriveLink.Cancel")}).OnResult = func(choice int) {
+	question := fmt.Sprintf(i18n.Msg("DriveLink.DeleteQuestion"), bookmarks[index].Name)
+	vtui.ShowMessageOn(menu, i18n.Msg("DriveLink.DeleteTitle"), question, []string{"&Delete", i18n.Msg("DriveLink.Cancel")}).OnResult = func(choice int) {
 		if choice != 0 {
 			return
 		}
@@ -227,7 +228,7 @@ func (pf *PanelsFrame) deleteDriveBookmark(menu *vtui.VMenu, bookmarks []DriveBo
 			err = SaveDriveBookmarks(DriveBookmarksFilePath(), current)
 		}
 		if err != nil {
-			message := vtui.ShowMessage(Msg("DriveLink.ErrorTitle"), fmt.Sprintf(Msg("DriveLink.SaveError"), err), []string{"&Ok"})
+			message := vtui.ShowMessage(i18n.Msg("DriveLink.ErrorTitle"), fmt.Sprintf(i18n.Msg("DriveLink.SaveError"), err), []string{"&Ok"})
 			message.OnResult = func(int) { menu.Close(); vtui.FrameManager.PostTask(reopen) }
 			return
 		}

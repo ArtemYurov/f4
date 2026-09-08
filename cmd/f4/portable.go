@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/vtui"
 )
@@ -173,31 +174,31 @@ func actionPortableSettings(pf *PanelsFrame) {
 	wasPortable := config.IsPortableProfile()
 
 	width, height := 70, 14
-	dlg := vtui.NewCenteredDialog(width, height, Msg("PortableSettings.Title"))
+	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("PortableSettings.Title"))
 	dlg.ShowClose = true
 	dlg.SetHelp("PortableSettings")
 
-	chkPortable := vtui.NewCheckbox(0, 0, Msg("PortableSettings.Enable"), false)
+	chkPortable := vtui.NewCheckbox(0, 0, i18n.Msg("PortableSettings.Enable"), false)
 	if wasPortable {
 		chkPortable.State = 1
 	}
-	chkCopy := vtui.NewCheckbox(0, 0, Msg("PortableSettings.CopyProfile"), false)
+	chkCopy := vtui.NewCheckbox(0, 0, i18n.Msg("PortableSettings.CopyProfile"), false)
 	chkCopy.State = 1
 
 	// Both paths can be long (a deep %APPDATA% or a build sandbox); keep the
 	// tail, which is the part that tells the two locations apart.
 	pathLine := func(key, path string) string {
-		label := fmt.Sprintf(Msg(key), "")
+		label := fmt.Sprintf(i18n.Msg(key), "")
 		return label + truncPathLeft(path, width-4-vtui.StringWidth(label))
 	}
 	current := vtui.NewText(0, 0, pathLine("PortableSettings.Current", config.GetF4ConfigDir()), 0)
 	iniInfo := vtui.NewText(0, 0, pathLine("PortableSettings.ini.File", iniPath), 0)
-	note := vtui.NewText(0, 0, Msg("PortableSettings.Note"), 0)
-	note2 := vtui.NewText(0, 0, Msg("PortableSettings.Note2"), 0)
+	note := vtui.NewText(0, 0, i18n.Msg("PortableSettings.Note"), 0)
+	note2 := vtui.NewText(0, 0, i18n.Msg("PortableSettings.Note2"), 0)
 
-	btnOk := vtui.NewButton(0, 0, Msg("vtui.Ok"))
+	btnOk := vtui.NewButton(0, 0, i18n.Msg("vtui.Ok"))
 	btnOk.IsDefault = true
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 
 	dlg.AddItem(current)
 	dlg.AddItem(iniInfo)
@@ -232,11 +233,11 @@ func actionPortableSettings(pf *PanelsFrame) {
 			return
 		}
 		if err := applyPortableMode(iniPath, enable, chkCopy.State == 1); err != nil {
-			vtui.ShowMessage(Msg("Error.Title"), err.Error(), []string{Msg("vtui.Ok")})
+			vtui.ShowMessage(i18n.Msg("Error.Title"), err.Error(), []string{i18n.Msg("vtui.Ok")})
 			return
 		}
 		dlg.Close()
-		vtui.ShowMessage(Msg("PortableSettings.Title"), Msg("PortableSettings.Restart"), []string{Msg("vtui.Ok")})
+		vtui.ShowMessage(i18n.Msg("PortableSettings.Title"), i18n.Msg("PortableSettings.Restart"), []string{i18n.Msg("vtui.Ok")})
 	}
 
 	vtui.FrameManager.Push(dlg)

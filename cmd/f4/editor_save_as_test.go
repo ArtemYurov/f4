@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtui"
 )
@@ -173,7 +174,7 @@ func TestEditorSaveAs_ExistingTargetAsksBeforeOverwriting(t *testing.T) {
 	ev.saveAs(target, 65001, false, saveAsEOLKeep)
 	var confirm *vtui.Window
 	pumpEditorUntil(t, func() bool {
-		if w, ok := vtui.FrameManager.GetTopFrame().(*vtui.Window); ok && w != nil && w.OnResult != nil && strings.TrimSpace(w.GetTitle()) == strings.TrimSpace(Msg("SaveAs.Title")) {
+		if w, ok := vtui.FrameManager.GetTopFrame().(*vtui.Window); ok && w != nil && w.OnResult != nil && strings.TrimSpace(w.GetTitle()) == strings.TrimSpace(i18n.Msg("SaveAs.Title")) {
 			confirm = w
 			return true
 		}

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/history"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -33,28 +34,28 @@ func waitForHistoryClipboard(t *testing.T, want string) string {
 // the bottom border of the Alt+F8/Alt+F12 dialogs would show a placeholder.
 func TestHistoryHint_MessagesResolved(t *testing.T) {
 	for _, key := range []string{"History.CommandsHint", "History.FoldersHint", "History.ViewEditHint"} {
-		s := Msg(key)
+		s := i18n.Msg(key)
 		if s == "" || strings.HasPrefix(s, "{") {
-			t.Errorf("Msg(%q) not resolved: %q", key, s)
+			t.Errorf("i18n.Msg(%q) not resolved: %q", key, s)
 			continue
 		}
 		// Each hint must at least reference Enter (paste/goto) and
 		// Shift+Del (delete), the two shortcuts issue #290 called out as
 		// undocumented.
 		if !strings.Contains(s, "Enter") {
-			t.Errorf("Msg(%q) missing Enter hint: %q", key, s)
+			t.Errorf("i18n.Msg(%q) missing Enter hint: %q", key, s)
 		}
 		if !strings.Contains(s, "Shift+Del") {
-			t.Errorf("Msg(%q) missing Shift+Del hint: %q", key, s)
+			t.Errorf("i18n.Msg(%q) missing Shift+Del hint: %q", key, s)
 		}
 		if !strings.Contains(s, "Ins") {
-			t.Errorf("Msg(%q) missing Insert/pin hint: %q", key, s)
+			t.Errorf("i18n.Msg(%q) missing Insert/pin hint: %q", key, s)
 		}
 	}
 }
 
 // TestActionCommandHistory_WiresHint verifies actionCommandHistory installs
-// a historySearch with Msg("History.CommandsHint") — the string the F8
+// a historySearch with i18n.Msg("History.CommandsHint") — the string the F8
 // dialog actually paints on its bottom border.
 func TestActionCommandHistory_WiresHint(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
@@ -75,7 +76,7 @@ func TestActionCommandHistory_WiresHint(t *testing.T) {
 	if activeHistorySearch == nil {
 		t.Fatal("actionCommandHistory did not install a historySearch")
 	}
-	want := Msg("History.CommandsHint")
+	want := i18n.Msg("History.CommandsHint")
 	if got := activeHistorySearch.hint; got != want {
 		t.Errorf("commands hint = %q, want %q", got, want)
 	}
@@ -132,7 +133,7 @@ func TestActionFoldersHistory_WiresHint(t *testing.T) {
 	if activeHistorySearch.supportsLocks {
 		t.Fatal("non-persistent folder history exposed a fake lock column")
 	}
-	want := Msg("History.FoldersHint")
+	want := i18n.Msg("History.FoldersHint")
 	if got := activeHistorySearch.hint; got != want {
 		t.Errorf("folders hint = %q, want %q", got, want)
 	}

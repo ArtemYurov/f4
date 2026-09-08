@@ -6,6 +6,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/history"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -42,7 +43,7 @@ func ShowFileAssociations(pf *PanelsFrame) {
 // openList (re)pushes the associations list menu, positioned near the
 // screen centre. selected is the cursor row to restore after an edit.
 func (s *assocEditorState) openList(selected int) {
-	title := " " + Msg("FileAssoc.EditorTitle") + " "
+	title := " " + i18n.Msg("FileAssoc.EditorTitle") + " "
 	menu := vtui.NewVMenu(title)
 
 	if len(s.items) == 0 {
@@ -50,7 +51,7 @@ func (s *assocEditorState) openList(selected int) {
 		// UserData=-1 makes selectedIndex() return -1, and Enter on it
 		// falls through to the "bootstrap first entry" Ins branch.
 		menu.AddItem(vtui.MenuItem{
-			Text:     " " + Msg("FileAssoc.EmptyHint") + " ",
+			Text:     " " + i18n.Msg("FileAssoc.EmptyHint") + " ",
 			UserData: -1,
 		})
 	} else {
@@ -125,8 +126,8 @@ func (s *assocEditorState) openList(selected int) {
 				return true
 			}
 			it := s.items[idx]
-			dlg := vtui.ShowMessageOn(menu, " "+Msg("FileAssoc.DeleteTitle")+" ",
-				fmt.Sprintf(Msg("FileAssoc.DeleteConfirm"), assocDisplayLabel(it)),
+			dlg := vtui.ShowMessageOn(menu, " "+i18n.Msg("FileAssoc.DeleteTitle")+" ",
+				fmt.Sprintf(i18n.Msg("FileAssoc.DeleteConfirm"), assocDisplayLabel(it)),
 				[]string{"&Delete", "Cancel"})
 			// Destructive — render on the WarnDialog palette (see #379).
 			dlg.IsWarning = true
@@ -256,9 +257,9 @@ func (s *assocEditorState) editAt(idx int, isCreate bool) {
 		work = s.items[idx]
 	}
 
-	title := " " + Msg("FileAssoc.EditTitle") + " "
+	title := " " + i18n.Msg("FileAssoc.EditTitle") + " "
 	if isCreate {
-		title = " " + Msg("FileAssoc.NewTitle") + " "
+		title = " " + i18n.Msg("FileAssoc.NewTitle") + " "
 	}
 
 	const width = 74
@@ -292,9 +293,9 @@ func (s *assocEditorState) editAt(idx int, isCreate bool) {
 		slotEdits[k] = ed
 	}
 
-	btnOk := vtui.NewButton(0, 0, Msg("vtui.Save"))
+	btnOk := vtui.NewButton(0, 0, i18n.Msg("vtui.Save"))
 	btnOk.IsDefault = true
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 
 	// Register widgets. Order matters for Tab traversal, so we register
 	// in the visual order (mask → desc → each slot pair → buttons).
@@ -311,8 +312,8 @@ func (s *assocEditorState) editAt(idx int, isCreate bool) {
 	// captions from squeezing the edits.
 	vbox := vtui.NewVBoxLayout(dlg.X1+2, dlg.Y1+2, width-4, height-4)
 
-	maskLbl := vtui.NewLabel(0, 0, "&"+Msg("FileAssoc.MaskLabel")+":", editMask)
-	descLbl := vtui.NewLabel(0, 0, "&"+Msg("FileAssoc.DescLabel")+":", editDesc)
+	maskLbl := vtui.NewLabel(0, 0, "&"+i18n.Msg("FileAssoc.MaskLabel")+":", editMask)
+	descLbl := vtui.NewLabel(0, 0, "&"+i18n.Msg("FileAssoc.DescLabel")+":", editDesc)
 	dlg.AddItem(maskLbl)
 	dlg.AddItem(descLbl)
 
@@ -344,8 +345,8 @@ func (s *assocEditorState) editAt(idx int, isCreate bool) {
 	btnOk.OnClick = func() {
 		mask := strings.TrimSpace(editMask.GetText())
 		if mask == "" {
-			vtui.ShowMessageOn(dlg, " "+Msg("FileAssoc.ErrorTitle")+" ",
-				Msg("FileAssoc.EmptyMask"),
+			vtui.ShowMessageOn(dlg, " "+i18n.Msg("FileAssoc.ErrorTitle")+" ",
+				i18n.Msg("FileAssoc.EmptyMask"),
 				[]string{"&Ok"})
 			return
 		}

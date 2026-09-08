@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
@@ -482,7 +483,7 @@ func TestCommandPaletteIndexesPanelContextAndPlatformDriveCommands(t *testing.T)
 		t.Fatalf("Russian panel-context query = %#v", results)
 	}
 	activateEntry, found := commandPaletteTestEntryByID(entries, "Panel.ActivateSelected")
-	if !found || activateEntry.Description != Msg("CommandPalette.Panel.ActivateSelected.Desc") || activateEntry.EnglishDescription != "Open the selected item or execute it" {
+	if !found || activateEntry.Description != i18n.Msg("CommandPalette.Panel.ActivateSelected.Desc") || activateEntry.EnglishDescription != "Open the selected item or execute it" {
 		t.Fatalf("localized panel activation metadata = %#v", activateEntry)
 	}
 
@@ -494,7 +495,7 @@ func TestCommandPaletteIndexesPanelContextAndPlatformDriveCommands(t *testing.T)
 	for _, entry := range entries {
 		if entry.ID == "QuickView.ToggleWrap" {
 			foundQuickView = true
-			if entry.Description != Msg("CommandPalette.QuickView.ToggleWrap.Desc") || entry.EnglishDescription != "Toggle long-line wrapping in Quick View" {
+			if entry.Description != i18n.Msg("CommandPalette.QuickView.ToggleWrap.Desc") || entry.EnglishDescription != "Toggle long-line wrapping in Quick View" {
 				t.Fatalf("localized Quick View metadata = %#v", entry)
 			}
 			break
@@ -603,7 +604,7 @@ func TestCommandPaletteIndexesFocusedInfoAndAIChatCommands(t *testing.T) {
 	if !found {
 		t.Fatal("focused InfoPanel copy command is missing")
 	}
-	if infoEntry.Description != Msg("CommandPalette.Info.CopyCurrent.Desc") ||
+	if infoEntry.Description != i18n.Msg("CommandPalette.Info.CopyCurrent.Desc") ||
 		infoEntry.EnglishDescription != "Copy the focused information value or selected rows to the clipboard" {
 		t.Fatalf("InfoPanel copy descriptions = (%q, %q)", infoEntry.Description, infoEntry.EnglishDescription)
 	}

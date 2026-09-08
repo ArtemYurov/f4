@@ -12,6 +12,7 @@ import (
 	"unicode"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -124,12 +125,12 @@ func actionApplyCommand(pf *PanelsFrame) {
 		targets = active.GetSelectedNames()
 	}
 	if len(targets) == 0 {
-		vtui.ShowMessageOn(pf, Msg("ApplyCommand.NoTargetsTitle"), Msg("ApplyCommand.NoTargets"), []string{Msg("vtui.Ok")})
+		vtui.ShowMessageOn(pf, i18n.Msg("ApplyCommand.NoTargetsTitle"), i18n.Msg("ApplyCommand.NoTargets"), []string{i18n.Msg("vtui.Ok")})
 		return
 	}
 	runner, info, ok := resolveApplyCommandRunner(active.vfs)
 	if !ok {
-		vtui.ShowMessageOn(pf, Msg("ApplyCommand.UnsupportedTitle"), Msg("ApplyCommand.Unsupported"), []string{Msg("vtui.Ok")})
+		vtui.ShowMessageOn(pf, i18n.Msg("ApplyCommand.UnsupportedTitle"), i18n.Msg("ApplyCommand.Unsupported"), []string{i18n.Msg("vtui.Ok")})
 		return
 	}
 
@@ -280,7 +281,7 @@ func applyCommandDialect(dialect vfs.CommandDialect) ApplyCommandDialect {
 
 func showApplyCommandDialog(session *applyCommandSession) {
 	const width, height = 72, 15
-	dlg := vtui.NewCenteredDialog(width, height, Msg("ApplyCommand.Title"))
+	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("ApplyCommand.Title"))
 	dlg.ShowClose = true
 	dlg.SetHelp("ApplyCmd")
 
@@ -295,30 +296,30 @@ func showApplyCommandDialog(session *applyCommandSession) {
 			editCommand.SetText(editCommand.History[0])
 		}
 	}
-	lblCommand := vtui.NewLabel(0, 0, Msg("ApplyCommand.Prompt"), editCommand)
-	txtTargets := vtui.NewText(0, 0, fmt.Sprintf(Msg("ApplyCommand.TargetsFmt"), len(session.targets)), 0)
+	lblCommand := vtui.NewLabel(0, 0, i18n.Msg("ApplyCommand.Prompt"), editCommand)
+	txtTargets := vtui.NewText(0, 0, fmt.Sprintf(i18n.Msg("ApplyCommand.TargetsFmt"), len(session.targets)), 0)
 
-	modes := []string{Msg("ApplyCommand.ModeSequential"), Msg("ApplyCommand.ModeParallel"), Msg("ApplyCommand.ModeQueue")}
+	modes := []string{i18n.Msg("ApplyCommand.ModeSequential"), i18n.Msg("ApplyCommand.ModeParallel"), i18n.Msg("ApplyCommand.ModeQueue")}
 	comboMode := vtui.NewComboBox(0, 0, 24, modes)
 	comboMode.DropdownOnly = true
 	comboMode.Menu.SetSelectPos(0)
 	comboMode.Edit.SetText(modes[0])
-	lblMode := vtui.NewLabel(0, 0, Msg("ApplyCommand.Mode"), comboMode)
+	lblMode := vtui.NewLabel(0, 0, i18n.Msg("ApplyCommand.Mode"), comboMode)
 
 	workerDefault := config.App.ApplyCommandParallelism
 	if workerDefault <= 0 {
 		workerDefault = runtime.NumCPU()
 	}
 	editWorkers := vtui.NewEdit(0, 0, 10, strconv.Itoa(workerDefault))
-	lblWorkers := vtui.NewLabel(0, 0, Msg("ApplyCommand.Workers"), editWorkers)
-	chkUnlimited := vtui.NewCheckbox(0, 0, Msg("ApplyCommand.Unlimited"), false)
+	lblWorkers := vtui.NewLabel(0, 0, i18n.Msg("ApplyCommand.Workers"), editWorkers)
+	chkUnlimited := vtui.NewCheckbox(0, 0, i18n.Msg("ApplyCommand.Unlimited"), false)
 	if config.App.ApplyCommandParallelism == 0 {
 		chkUnlimited.State = 1
 	}
 
-	btnRun := vtui.NewButton(0, 0, Msg("ApplyCommand.Run"))
+	btnRun := vtui.NewButton(0, 0, i18n.Msg("ApplyCommand.Run"))
 	btnRun.IsDefault = true
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 	items := []vtui.UIElement{lblCommand, editCommand, txtTargets, lblMode, comboMode, lblWorkers, editWorkers, chkUnlimited, btnRun, btnCancel}
 	for _, item := range items {
 		dlg.AddItem(item)
@@ -367,7 +368,7 @@ func showApplyCommandDialog(session *applyCommandSession) {
 		raw := editCommand.GetText()
 		executable := strings.TrimLeftFunc(raw, unicode.IsSpace)
 		if strings.TrimSpace(executable) == "" {
-			vtui.ShowMessageOn(dlg, Msg("ApplyCommand.Title"), Msg("ApplyCommand.InvalidCommand"), []string{Msg("vtui.Ok")})
+			vtui.ShowMessageOn(dlg, i18n.Msg("ApplyCommand.Title"), i18n.Msg("ApplyCommand.InvalidCommand"), []string{i18n.Msg("vtui.Ok")})
 			return
 		}
 		silent := false
@@ -376,16 +377,16 @@ func showApplyCommandDialog(session *applyCommandSession) {
 			executable = strings.TrimLeftFunc(strings.TrimPrefix(executable, "@"), unicode.IsSpace)
 		}
 		if strings.TrimSpace(executable) == "" {
-			vtui.ShowMessageOn(dlg, Msg("ApplyCommand.Title"), Msg("ApplyCommand.InvalidCommand"), []string{Msg("vtui.Ok")})
+			vtui.ShowMessageOn(dlg, i18n.Msg("ApplyCommand.Title"), i18n.Msg("ApplyCommand.InvalidCommand"), []string{i18n.Msg("vtui.Ok")})
 			return
 		}
 		compiled, err := CompileApplyCommand(executable)
 		if err != nil {
-			vtui.ShowMessageOn(dlg, Msg("ApplyCommand.Title"), fmt.Sprintf(Msg("ApplyCommand.InvalidTemplateFmt"), err), []string{Msg("vtui.Ok")})
+			vtui.ShowMessageOn(dlg, i18n.Msg("ApplyCommand.Title"), fmt.Sprintf(i18n.Msg("ApplyCommand.InvalidTemplateFmt"), err), []string{i18n.Msg("vtui.Ok")})
 			return
 		}
 		if session.info.Dialect == vfs.CommandDialectUnknown && compiled.Metadata().RequiresDialect {
-			vtui.ShowMessageOn(dlg, Msg("ApplyCommand.Title"), Msg("ApplyCommand.UnknownDialect"), []string{Msg("vtui.Ok")})
+			vtui.ShowMessageOn(dlg, i18n.Msg("ApplyCommand.Title"), i18n.Msg("ApplyCommand.UnknownDialect"), []string{i18n.Msg("vtui.Ok")})
 			return
 		}
 		mode := ApplyCommandSequential
@@ -402,7 +403,7 @@ func showApplyCommandDialog(session *applyCommandSession) {
 			} else {
 				workers, err = strconv.Atoi(strings.TrimSpace(editWorkers.GetText()))
 				if err != nil || workers <= 0 {
-					vtui.ShowMessageOn(dlg, Msg("ApplyCommand.InvalidWorkersTitle"), Msg("ApplyCommand.InvalidWorkers"), []string{Msg("vtui.Ok")})
+					vtui.ShowMessageOn(dlg, i18n.Msg("ApplyCommand.InvalidWorkersTitle"), i18n.Msg("ApplyCommand.InvalidWorkers"), []string{i18n.Msg("vtui.Ok")})
 					return
 				}
 			}
@@ -410,7 +411,7 @@ func showApplyCommandDialog(session *applyCommandSession) {
 		firstContext := session.contextFor(session.targets[0])
 		prompts, err := compiled.ResolvePrompts(firstContext)
 		if err != nil {
-			vtui.ShowMessageOn(dlg, Msg("ApplyCommand.Title"), fmt.Sprintf(Msg("ApplyCommand.InvalidTemplateFmt"), err), []string{Msg("vtui.Ok")})
+			vtui.ShowMessageOn(dlg, i18n.Msg("ApplyCommand.Title"), fmt.Sprintf(i18n.Msg("ApplyCommand.InvalidTemplateFmt"), err), []string{i18n.Msg("vtui.Ok")})
 			return
 		}
 		accept := func(values ApplyCommandPromptValues) {
@@ -420,7 +421,7 @@ func showApplyCommandDialog(session *applyCommandSession) {
 			session.mode = mode
 			session.workers = workers
 			if err := session.prepareExecution(); err != nil {
-				vtui.ShowMessageOn(dlg, Msg("ApplyCommand.Title"), fmt.Sprintf(Msg("ApplyCommand.InvalidTemplateFmt"), err), []string{Msg("vtui.Ok")})
+				vtui.ShowMessageOn(dlg, i18n.Msg("ApplyCommand.Title"), fmt.Sprintf(i18n.Msg("ApplyCommand.InvalidTemplateFmt"), err), []string{i18n.Msg("vtui.Ok")})
 				return
 			}
 			lastApplyCommandTemplate = raw
@@ -452,7 +453,7 @@ func showApplyCommandPrompts(anchor vtui.Frame, prompts []ApplyCommandResolvedPr
 	// can contain any number of fields; additional fields are paged within
 	// this same preflight dialog and retain their values between pages.
 	height := 7 + visibleRows
-	dlg := vtui.NewCenteredDialog(width, height, Msg("ApplyCommand.PromptTitle"))
+	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("ApplyCommand.PromptTitle"))
 	dlg.ShowClose = true
 	dlg.SetHelp("ApplyCmd")
 	contentX := dlg.X1 + 2
@@ -468,7 +469,7 @@ func showApplyCommandPrompts(anchor vtui.Frame, prompts []ApplyCommandResolvedPr
 	for i, prompt := range prompts {
 		title := prompt.Title
 		if title == "" {
-			title = fmt.Sprintf(Msg("ApplyCommand.ValueFmt"), i+1)
+			title = fmt.Sprintf(i18n.Msg("ApplyCommand.ValueFmt"), i+1)
 		}
 		title = escapeAmpersand(vtui.TruncateMiddle(title, labelWidth))
 		y := rowY + i%pageSize
@@ -497,10 +498,10 @@ func showApplyCommandPrompts(anchor vtui.Frame, prompts []ApplyCommandResolvedPr
 	pageInfo := vtui.NewText(contentX, dlg.Y2-3, "", 0)
 	pageInfo.SetPosition(contentX, dlg.Y2-3, contentRight, dlg.Y2-3)
 	dlg.AddItem(pageInfo)
-	btnBack := vtui.NewButton(0, 0, Msg("ApplyCommand.PromptBack"))
-	btnNext := vtui.NewButton(0, 0, Msg("ApplyCommand.PromptNext"))
-	btnOK := vtui.NewButton(0, 0, Msg("vtui.Ok"))
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnBack := vtui.NewButton(0, 0, i18n.Msg("ApplyCommand.PromptBack"))
+	btnNext := vtui.NewButton(0, 0, i18n.Msg("ApplyCommand.PromptNext"))
+	btnOK := vtui.NewButton(0, 0, i18n.Msg("vtui.Ok"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 	dlg.AddItem(btnBack)
 	dlg.AddItem(btnNext)
 	dlg.AddItem(btnOK)
@@ -534,7 +535,7 @@ func showApplyCommandPrompts(anchor vtui.Frame, prompts []ApplyCommandResolvedPr
 			labels[i].SetDisabled(!visible)
 			edits[i].SetDisabled(!visible)
 		}
-		pageInfo.SetText(fmt.Sprintf(Msg("ApplyCommand.PromptPageFmt"), start+1, end, len(prompts)))
+		pageInfo.SetText(fmt.Sprintf(i18n.Msg("ApplyCommand.PromptPageFmt"), start+1, end, len(prompts)))
 		btnBack.SetDisabled(page == 0)
 		btnNext.SetDisabled(end == len(prompts))
 		btnOK.SetDisabled(end != len(prompts))
@@ -639,7 +640,7 @@ func (s *applyCommandSession) prepareExecution() error {
 		if passiveClone != nil && !sameVFSInstance(passiveClone, s.passive.panelVFS) {
 			_ = passiveClone.Close()
 		}
-		return fmt.Errorf("%s", Msg("ApplyCommand.Unsupported"))
+		return fmt.Errorf("%s", i18n.Msg("ApplyCommand.Unsupported"))
 	}
 	if info.Dialect == vfs.CommandDialectUnknown && s.template.Metadata().RequiresDialect {
 		if !sameVFSInstance(activeClone, s.active.panelVFS) {
@@ -648,7 +649,7 @@ func (s *applyCommandSession) prepareExecution() error {
 		if passiveClone != nil && !sameVFSInstance(passiveClone, s.passive.panelVFS) {
 			_ = passiveClone.Close()
 		}
-		return fmt.Errorf("%s", Msg("ApplyCommand.UnknownDialect"))
+		return fmt.Errorf("%s", i18n.Msg("ApplyCommand.UnknownDialect"))
 	}
 	s.active.vfs = activeClone
 	s.passive.vfs = passiveClone
@@ -780,7 +781,7 @@ func (s *applyCommandSession) refreshCapturedPanels() {
 func (s *applyCommandSession) enqueue(request applyBatchRequest, model *applyBatchViewModel) {
 	preconditions := s.queuePreconditions()
 	task := &QueueTask{
-		Type: Msg("ApplyCommand.QueueType"), Desc: fmt.Sprintf(Msg("ApplyCommand.QueueDescriptionFmt"), len(s.targets)),
+		Type: i18n.Msg("ApplyCommand.QueueType"), Desc: fmt.Sprintf(i18n.Msg("ApplyCommand.QueueDescriptionFmt"), len(s.targets)),
 		Preconditions: preconditions, ResKeys: []string{getResourceKey(s.active.panelVFS)},
 	}
 	task.Run = func(ctx context.Context, reporter TaskReporter, _ vtui.Frame) error {
@@ -791,7 +792,7 @@ func (s *applyCommandSession) enqueue(request applyBatchRequest, model *applyBat
 			if event.Kind == applyBatchItemFinished {
 				completed := event.Index + 1
 				pct := completed * 100 / len(request.Items)
-				reporter.UpdateTransfer(Msg("ApplyCommand.QueueType"), event.Name, pct, fmt.Sprintf("%d/%d", completed, len(request.Items)), pct, "")
+				reporter.UpdateTransfer(i18n.Msg("ApplyCommand.QueueType"), event.Name, pct, fmt.Sprintf("%d/%d", completed, len(request.Items)), pct, "")
 			}
 		}
 		result := runApplyCommandBatch(ctx, request)
@@ -800,7 +801,7 @@ func (s *applyCommandSession) enqueue(request applyBatchRequest, model *applyBat
 			return err
 		}
 		if result.Failed > 0 {
-			return fmt.Errorf(Msg("ApplyCommand.QueueFailedFmt"), result.Failed)
+			return fmt.Errorf(i18n.Msg("ApplyCommand.QueueFailedFmt"), result.Failed)
 		}
 		return nil
 	}
@@ -816,19 +817,19 @@ func (s *applyCommandSession) enqueue(request applyBatchRequest, model *applyBat
 			task.mu.Unlock()
 			fallback := applyBatchResult{Items: make([]applyBatchItemResult, len(request.Items)), NotStarted: len(request.Items)}
 			if state == "Cancelled" {
-				model.transcript.Add(Msg("ApplyCommand.ResultCancelled"))
+				model.transcript.Add(i18n.Msg("ApplyCommand.ResultCancelled"))
 			} else {
 				if taskErr != nil {
-					model.transcript.Add(fmt.Sprintf(Msg("ApplyCommand.ResultFailedFmt"), taskErr))
+					model.transcript.Add(fmt.Sprintf(i18n.Msg("ApplyCommand.ResultFailedFmt"), taskErr))
 				}
 			}
 			model.Finish(fallback)
 		}
 		s.refreshCapturedPanels()
-		toast.Show(Msg("ApplyCommand.StatusFinishedToast"), 3*time.Second)
+		toast.Show(i18n.Msg("ApplyCommand.StatusFinishedToast"), 3*time.Second)
 	}
 	GlobalQueueManager.Enqueue(task)
-	toast.Show(Msg("ApplyCommand.QueuedToast"), 3*time.Second)
+	toast.Show(i18n.Msg("ApplyCommand.QueuedToast"), 3*time.Second)
 }
 
 func (s *applyCommandSession) queuePreconditions() []OpPrecondition {

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtui"
 )
 
@@ -22,7 +23,7 @@ func TestBuildCommandPaletteTranslationIndexDeduplicatesEquivalentAliases(t *tes
 
 func TestCommandPaletteMatchesEveryShippedTranslationWithoutChangingDisplay(t *testing.T) {
 	const key = "Menu.PluginConfiguration"
-	packs := LoadAllLanguagePacks()
+	packs := i18n.LoadAllLanguagePacks()
 	index := buildCommandPaletteTranslationIndex(packs)
 	aliases := index[key]
 	if len(aliases) < 2 {

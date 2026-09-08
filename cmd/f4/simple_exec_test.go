@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -195,7 +196,7 @@ func TestSimpleCaptured_ToggleShowsToast(t *testing.T) {
 
 	// ShowToast is posted to the UI task queue; pump it like the main loop
 	// would and wait for the expected toast.
-	want := Msg("Terminal.NotAvailableInEnv")
+	want := i18n.Msg("Terminal.NotAvailableInEnv")
 	var toast string
 	timeout := time.After(1 * time.Second)
 Loop:

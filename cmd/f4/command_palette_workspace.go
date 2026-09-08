@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtui"
 )
 
@@ -22,7 +23,7 @@ func commandPaletteWorkspaceEntries() []commandPaletteEntry {
 		return nil
 	}
 
-	category := Msg("CommandPalette.CategoryWorkspace")
+	category := i18n.Msg("CommandPalette.CategoryWorkspace")
 	aliases := commandPaletteTranslations(
 		"CommandPalette.CategoryWorkspace",
 		"CommandPalette.Workspace.Switch",
@@ -47,11 +48,11 @@ func commandPaletteWorkspaceEntries() []commandPaletteEntry {
 			primary = "Workspace"
 		}
 		secondary := strings.TrimSpace(info.Secondary)
-		activateDescription := fmt.Sprintf(Msg("CommandPalette.Workspace.Switch.Desc"), number)
+		activateDescription := fmt.Sprintf(i18n.Msg("CommandPalette.Workspace.Switch.Desc"), number)
 		if secondary != "" {
 			activateDescription += ": " + secondary
 		}
-		closeDescription := fmt.Sprintf(Msg("CommandPalette.Workspace.Close.Desc"), number)
+		closeDescription := fmt.Sprintf(i18n.Msg("CommandPalette.Workspace.Close.Desc"), number)
 		if secondary != "" {
 			closeDescription += ": " + secondary
 		}
@@ -69,7 +70,7 @@ func commandPaletteWorkspaceEntries() []commandPaletteEntry {
 		searchFields = append(searchFields, aliases...)
 		entries = append(entries, commandPaletteEntry{
 			Key:                fmt.Sprintf("workspace:activate:%d", number),
-			Label:              fmt.Sprintf(Msg("CommandPalette.Workspace.Switch"), number, primary),
+			Label:              fmt.Sprintf(i18n.Msg("CommandPalette.Workspace.Switch"), number, primary),
 			EnglishLabel:       fmt.Sprintf("Switch to workspace %d: %s", number, primary),
 			Description:        activateDescription,
 			EnglishDescription: fmt.Sprintf("Activate workspace %d", number),
@@ -81,7 +82,7 @@ func commandPaletteWorkspaceEntries() []commandPaletteEntry {
 			run:                func() bool { return actionActivateWorkspaceNumber(number) },
 		}, commandPaletteEntry{
 			Key:                fmt.Sprintf("workspace:close:%d", number),
-			Label:              fmt.Sprintf(Msg("CommandPalette.Workspace.Close"), number, primary),
+			Label:              fmt.Sprintf(i18n.Msg("CommandPalette.Workspace.Close"), number, primary),
 			EnglishLabel:       fmt.Sprintf("Close workspace %d: %s", number, primary),
 			Description:        closeDescription,
 			EnglishDescription: fmt.Sprintf("Close workspace %d", number),

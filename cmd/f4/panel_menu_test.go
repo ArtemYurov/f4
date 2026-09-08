@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtui"
 )
 
@@ -48,12 +49,12 @@ func TestPanelsFrame_SideMenusExposeDriveHotkeys(t *testing.T) {
 	pf := &PanelsFrame{}
 
 	left := pf.leftMenu().SubItems
-	if !findSideDriveMenuItem(left, Msg("Menu.Left.DriveMenu"), "Alt+F1", CmLeftDriveMenu) {
+	if !findSideDriveMenuItem(left, i18n.Msg("Menu.Left.DriveMenu"), "Alt+F1", CmLeftDriveMenu) {
 		t.Fatalf("left drive menu has no drive item: %+v", left)
 	}
 
 	right := pf.rightMenu().SubItems
-	if !findSideDriveMenuItem(right, Msg("Menu.Right.DriveMenu"), "Alt+F2", CmRightDriveMenu) {
+	if !findSideDriveMenuItem(right, i18n.Msg("Menu.Right.DriveMenu"), "Alt+F2", CmRightDriveMenu) {
 		t.Fatalf("right drive menu has no drive item: %+v", right)
 	}
 }
@@ -83,8 +84,8 @@ func TestPanelsFrame_SideMenuExposesWorkspaceHotkeys(t *testing.T) {
 				continue
 			}
 			found = true
-			if item.Text != Msg(tc.label) {
-				t.Errorf("workspace command %d label = %q, want %q", tc.command, item.Text, Msg(tc.label))
+			if item.Text != i18n.Msg(tc.label) {
+				t.Errorf("workspace command %d label = %q, want %q", tc.command, item.Text, i18n.Msg(tc.label))
 			}
 			if item.Shortcut != tc.shortcut {
 				t.Errorf("workspace command %d shortcut = %q, want %q", tc.command, item.Shortcut, tc.shortcut)

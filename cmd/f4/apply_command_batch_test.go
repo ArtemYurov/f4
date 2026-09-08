@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/unxed/f4/internal/i18n"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -152,7 +153,7 @@ func TestApplyTranscriptBounded(t *testing.T) {
 	if len(lines) != applyTranscriptMaxLines+1 {
 		t.Fatalf("lines = %d", len(lines))
 	}
-	if lines[0] != Msg("ApplyCommand.OutputOmitted") {
+	if lines[0] != i18n.Msg("ApplyCommand.OutputOmitted") {
 		t.Fatalf("marker = %q", lines[0])
 	}
 }
@@ -161,7 +162,7 @@ func TestApplyTranscriptByteBoundPreservesUTF8(t *testing.T) {
 	tr := newApplyTranscript()
 	tr.Add(string([]byte{0xff}) + strings.Repeat("я", applyTranscriptMaxBytes))
 	lines := tr.Snapshot()
-	if len(lines) != 2 || lines[0] != Msg("ApplyCommand.OutputOmitted") || len(lines[1]) > applyTranscriptMaxBytes || !utf8.ValidString(lines[1]) {
+	if len(lines) != 2 || lines[0] != i18n.Msg("ApplyCommand.OutputOmitted") || len(lines[1]) > applyTranscriptMaxBytes || !utf8.ValidString(lines[1]) {
 		t.Fatalf("bounded transcript: count=%d marker=%q bytes=%d valid=%v", len(lines), lines[0], len(lines[len(lines)-1]), utf8.ValidString(lines[len(lines)-1]))
 	}
 }

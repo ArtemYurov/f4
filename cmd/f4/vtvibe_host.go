@@ -13,6 +13,7 @@ import (
 
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/vtvibe"
@@ -347,7 +348,7 @@ func aiNewSession(pf *PanelsFrame) {
 	aiSession().Reset(true)
 	vtvibeConfig()
 	pf.RefreshAll()
-	vtui.ShowMessage(Msg("AI.Title"), Msg("AI.NewSessionDone"), []string{Msg("vtui.Ok")})
+	vtui.ShowMessage(i18n.Msg("AI.Title"), i18n.Msg("AI.NewSessionDone"), []string{i18n.Msg("vtui.Ok")})
 }
 
 func aiAskAction() bool {
@@ -495,14 +496,14 @@ func aiAskAction() bool {
 // a model, done. Both steps may be skipped with an empty answer.
 func aiSetupDialog(pf *PanelsFrame) {
 	cfg, _ := vtvibeConfig()
-	vtui.InputBox(Msg("AI.Title"), Msg("AI.KeyPrompt"), "", func(key string) {
+	vtui.InputBox(i18n.Msg("AI.Title"), i18n.Msg("AI.KeyPrompt"), "", func(key string) {
 		if key = strings.TrimSpace(key); key != "" {
 			if err := vtvibeSaveSetting("key", key); err != nil {
 				aiShowError(err)
 				return
 			}
 		}
-		vtui.InputBox(Msg("AI.Title"), Msg("AI.ModelPrompt"), cfg.Model, func(model string) {
+		vtui.InputBox(i18n.Msg("AI.Title"), i18n.Msg("AI.ModelPrompt"), cfg.Model, func(model string) {
 			if model = strings.TrimSpace(model); model != "" {
 				if err := vtvibeSaveSetting("model", model); err != nil {
 					aiShowError(err)
@@ -511,7 +512,7 @@ func aiSetupDialog(pf *PanelsFrame) {
 			}
 			vtvibeConfig()
 			pf.RefreshAll()
-			vtui.ShowMessage(Msg("AI.Title"), fmt.Sprintf(Msg("AI.Saved"), vtvibeIniPath()), []string{Msg("vtui.Ok")})
+			vtui.ShowMessage(i18n.Msg("AI.Title"), fmt.Sprintf(i18n.Msg("AI.Saved"), vtvibeIniPath()), []string{i18n.Msg("vtui.Ok")})
 		})
 	})
 }
@@ -530,13 +531,13 @@ func aiCommand(app vfs.App, arg string) {
 	case arg == "":
 		draft := aiSession().Draft()
 		if draft == "" {
-			vtui.ShowMessage(Msg("AI.Title"), Msg("AI.EmptyDraft"), []string{Msg("vtui.Ok")})
+			vtui.ShowMessage(i18n.Msg("AI.Title"), i18n.Msg("AI.EmptyDraft"), []string{i18n.Msg("vtui.Ok")})
 			return
 		}
 		aiSend(pf, draft)
 		aiSession().ClearDraft()
 	case lower == "help" || lower == "?":
-		vtui.ShowMessage(Msg("AI.Title"), Msg("AI.Help"), []string{Msg("vtui.Ok")})
+		vtui.ShowMessage(i18n.Msg("AI.Title"), i18n.Msg("AI.Help"), []string{i18n.Msg("vtui.Ok")})
 	case lower == "new":
 		aiNewSession(pf)
 	case lower == "apply" || lower == "patch":
@@ -557,7 +558,7 @@ func aiCommand(app vfs.App, arg string) {
 		}
 		vtvibeConfig()
 		pf.RefreshAll()
-		vtui.ShowMessage(Msg("AI.Title"), fmt.Sprintf(Msg("AI.Saved"), vtvibeIniPath()), []string{Msg("vtui.Ok")})
+		vtui.ShowMessage(i18n.Msg("AI.Title"), fmt.Sprintf(i18n.Msg("AI.Saved"), vtvibeIniPath()), []string{i18n.Msg("vtui.Ok")})
 	default:
 		aiSend(pf, arg)
 	}
@@ -570,7 +571,7 @@ func aiSend(pf *PanelsFrame, question string) {
 	if cfg.APIKey == "" && keySource == "" && !strings.Contains(cfg.BaseURL, "127.0.0.1") &&
 		!strings.Contains(cfg.BaseURL, "localhost") {
 		vtui.FrameManager.PostTask(func() {
-			dlg := vtui.ShowMessage(Msg("AI.Title"), Msg("AI.NoKeyBrowserPrompt"), []string{Msg("AI.BtnGetToken"), Msg("vtui.Cancel")})
+			dlg := vtui.ShowMessage(i18n.Msg("AI.Title"), i18n.Msg("AI.NoKeyBrowserPrompt"), []string{i18n.Msg("AI.BtnGetToken"), i18n.Msg("vtui.Cancel")})
 			dlg.OnResult = func(code int) {
 				if code == 0 {
 					openBrowser("https://aistudio.google.com/apikey")
@@ -581,12 +582,12 @@ func aiSend(pf *PanelsFrame, question string) {
 		return
 	}
 	if aiSession().Busy() {
-		vtui.ShowMessage(Msg("AI.Title"), Msg("AI.Busy"), []string{Msg("vtui.Ok")})
+		vtui.ShowMessage(i18n.Msg("AI.Title"), i18n.Msg("AI.Busy"), []string{i18n.Msg("vtui.Ok")})
 		return
 	}
 
 	session := aiSession()
-	pf.RunProgressTask(Msg("AI.Title"), Msg("AI.Sending"), false,
+	pf.RunProgressTask(i18n.Msg("AI.Title"), i18n.Msg("AI.Sending"), false,
 		func(ctx context.Context, update func(msg string, percent int)) error {
 			return session.Ask(ctx, cfg, question)
 		},
@@ -622,7 +623,7 @@ func aiLastAnswerPath(s *vtvibe.Session) string {
 func aiListModels(pf *PanelsFrame) {
 	cfg, _ := vtvibeConfig()
 	var models []string
-	pf.RunProgressTask(Msg("AI.Title"), Msg("AI.Sending"), false,
+	pf.RunProgressTask(i18n.Msg("AI.Title"), i18n.Msg("AI.Sending"), false,
 		func(ctx context.Context, update func(msg string, percent int)) error {
 			list, err := cfg.Models(ctx)
 			models = list
@@ -636,25 +637,25 @@ func aiListModels(pf *PanelsFrame) {
 				return
 			}
 			if len(models) == 0 {
-				vtui.ShowMessage(Msg("AI.Title"), Msg("AI.NoModels"), []string{Msg("vtui.Ok")})
+				vtui.ShowMessage(i18n.Msg("AI.Title"), i18n.Msg("AI.NoModels"), []string{i18n.Msg("vtui.Ok")})
 				return
 			}
 			if len(models) > 40 {
 				models = models[:40]
 			}
-			vtui.ShowMessage(Msg("AI.Title"), strings.Join(models, "\n"), []string{Msg("vtui.Ok")})
+			vtui.ShowMessage(i18n.Msg("AI.Title"), strings.Join(models, "\n"), []string{i18n.Msg("vtui.Ok")})
 		})
 }
 
 func aiShowError(err error) {
 	msg := err.Error()
 	if err == vtvibe.ErrNoKey {
-		msg = Msg("AI.NoKey")
+		msg = i18n.Msg("AI.NoKey")
 	}
 	if len(msg) > 600 {
 		msg = msg[:600] + "..."
 	}
-	vtui.ShowMessage(Msg("AI.ErrorTitle"), msg, []string{Msg("vtui.Ok")})
+	vtui.ShowMessage(i18n.Msg("AI.ErrorTitle"), msg, []string{i18n.Msg("vtui.Ok")})
 }
 func openBrowser(url string) {
 	var err error

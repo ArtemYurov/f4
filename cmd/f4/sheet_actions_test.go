@@ -6,12 +6,13 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtui"
 )
 
 // spreadsheetMenuItem finds the spreadsheet entry in a built menu bar.
 func spreadsheetMenuItem(items []vtui.MenuBarItem) (vtui.MenuBarItem, vtui.MenuItem, bool) {
-	label := Msg("Action.App.Spreadsheet")
+	label := i18n.Msg("Action.App.Spreadsheet")
 	for _, bar := range items {
 		for _, item := range bar.SubItems {
 			if strings.Contains(item.Text, label) {
@@ -42,7 +43,7 @@ func TestSpreadsheetStaysInTheMenuWhileAPopupIsOpen(t *testing.T) {
 	if !ok {
 		t.Fatal("the spreadsheet command is missing from the panels menu")
 	}
-	if commands := action.PlainLabel(Msg("Menu.Shell.Commands")); !strings.Contains(bar.Label, commands) {
+	if commands := action.PlainLabel(i18n.Msg("Menu.Shell.Commands")); !strings.Contains(bar.Label, commands) {
 		t.Errorf("the spreadsheet command sits in %q, expected %q", bar.Label, commands)
 	}
 
@@ -119,7 +120,7 @@ func TestSheetNativeNamesAreSQLiteNames(t *testing.T) {
 	if !strings.HasSuffix(sheetNativeExtension, ".sqlite") {
 		t.Fatalf("sheetNativeExtension = %q, want it to end in .sqlite", sheetNativeExtension)
 	}
-	if offered := Msg("Sheet.DefaultFileName"); !strings.HasSuffix(strings.ToLower(offered), sheetNativeExtension) {
+	if offered := i18n.Msg("Sheet.DefaultFileName"); !strings.HasSuffix(strings.ToLower(offered), sheetNativeExtension) {
 		t.Errorf("the Save As dialog offers %q, want a %s name", offered, sheetNativeExtension)
 	}
 

@@ -3,6 +3,7 @@ package main
 import (
 	"strings"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtui"
 )
 
@@ -89,7 +90,7 @@ func commandPaletteSheetEntries(frame *SheetFrame) []commandPaletteEntry {
 			"CommandPalette.Sheet.Undo.Desc", "Undo the last spreadsheet change", "Alt+BackSpace",
 			func(sf *SheetFrame) {
 				if !sf.doc.Undo() {
-					sf.status = Msg("Sheet.NothingToUndo")
+					sf.status = i18n.Msg("Sheet.NothingToUndo")
 				}
 			}),
 		newEntry("Menu", "CommandPalette.Sheet.Menu", "Spreadsheet menu",

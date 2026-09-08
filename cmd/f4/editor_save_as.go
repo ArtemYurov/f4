@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/history"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -166,13 +167,13 @@ func (ev *EditorView) showSaveAsDialog() {
 		return
 	}
 	dlgW, dlgH := 76, 16
-	dlg := vtui.NewCenteredDialog(dlgW, dlgH, Msg("SaveAs.Title"))
+	dlg := vtui.NewCenteredDialog(dlgW, dlgH, i18n.Msg("SaveAs.Title"))
 	dlg.ShowClose = true
 
 	editPath := vtui.NewEdit(0, 0, dlgW-4, ev.filePath)
 	history.AttachHistory(editPath, history.NewEditHistoryID)
 	editPath.SelectAll()
-	lblPath := vtui.NewLabel(0, 0, Msg("SaveAs.Path"), editPath)
+	lblPath := vtui.NewLabel(0, 0, i18n.Msg("SaveAs.Path"), editPath)
 	dlg.SetFocusedItem(editPath)
 
 	cps, cpLabels, cpIdx := saveAsCodepages(ev.Codepage)
@@ -180,9 +181,9 @@ func (ev *EditorView) showSaveAsDialog() {
 	comboCP.DropdownOnly = true
 	comboCP.Menu.SetSelectPos(cpIdx)
 	comboCP.Edit.SetText(cpLabels[cpIdx])
-	lblCP := vtui.NewLabel(0, 0, Msg("SaveAs.Codepage"), comboCP)
+	lblCP := vtui.NewLabel(0, 0, i18n.Msg("SaveAs.Codepage"), comboCP)
 
-	chkBOM := vtui.NewCheckbox(0, 0, Msg("SaveAs.BOM"), false)
+	chkBOM := vtui.NewCheckbox(0, 0, i18n.Msg("SaveAs.BOM"), false)
 	selectedCP := func() int {
 		pos := comboCP.Menu.SelectPos
 		if pos < 0 || pos >= len(cps) {
@@ -217,18 +218,18 @@ func (ev *EditorView) showSaveAsDialog() {
 	}
 	syncBOM()
 
-	lblEOL := vtui.NewText(0, 0, Msg("SaveAs.LineBreaks"), vtui.Palette[vtui.ColDialogText])
+	lblEOL := vtui.NewText(0, 0, i18n.Msg("SaveAs.LineBreaks"), vtui.Palette[vtui.ColDialogText])
 	eolGroup := vtui.NewRadioGroup(0, 0, 2, []string{
-		Msg("SaveAs.EOLKeep"),
-		Msg("SaveAs.EOLDos"),
-		Msg("SaveAs.EOLUnix"),
-		Msg("SaveAs.EOLMac"),
+		i18n.Msg("SaveAs.EOLKeep"),
+		i18n.Msg("SaveAs.EOLDos"),
+		i18n.Msg("SaveAs.EOLUnix"),
+		i18n.Msg("SaveAs.EOLMac"),
 	})
 	eolGroup.Selected = int(saveAsEOLKeep)
 
-	btnSave := vtui.NewButton(0, 0, Msg("SaveAs.BtnSave"))
+	btnSave := vtui.NewButton(0, 0, i18n.Msg("SaveAs.BtnSave"))
 	btnSave.IsDefault = true
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 
 	for _, item := range []vtui.UIElement{lblPath, editPath, lblCP, comboCP, chkBOM, lblEOL, eolGroup, btnSave, btnCancel} {
 		dlg.AddItem(item)
@@ -256,7 +257,7 @@ func (ev *EditorView) showSaveAsDialog() {
 	btnSave.OnClick = func() {
 		target := ev.resolveSaveAsPath(editPath.GetText())
 		if target == "" {
-			vtui.ShowMessage(Msg("SaveAs.Title"), Msg("SaveAs.EmptyPath"), []string{Msg("vtui.Ok")})
+			vtui.ShowMessage(i18n.Msg("SaveAs.Title"), i18n.Msg("SaveAs.EmptyPath"), []string{i18n.Msg("vtui.Ok")})
 			return
 		}
 		history.CommitHistory(editPath, editPath.GetText())
@@ -291,8 +292,8 @@ func (ev *EditorView) saveAs(target string, cpID int, bom bool, eol saveAsEOL) {
 			}
 			switch {
 			case statErr == nil:
-				msg := fmt.Sprintf(Msg("SaveAs.OverwriteQuestion"), target)
-				confirm := vtui.ShowMessageOn(ev, Msg("SaveAs.Title"), msg, []string{Msg("FileOp.Overwrite"), Msg("vtui.Cancel")})
+				msg := fmt.Sprintf(i18n.Msg("SaveAs.OverwriteQuestion"), target)
+				confirm := vtui.ShowMessageOn(ev, i18n.Msg("SaveAs.Title"), msg, []string{i18n.Msg("FileOp.Overwrite"), i18n.Msg("vtui.Cancel")})
 				confirm.OnResult = func(code int) {
 					if code == 0 {
 						ev.applySaveAs(target, cpID, bom, eol, false)

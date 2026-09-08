@@ -14,6 +14,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/f4/vfs/hostmode"
 	"github.com/unxed/vtui"
@@ -158,7 +159,7 @@ func showAttributesUnixForTargets(pf *PanelsFrame, v vfs.VFS, targets []attribut
 		height = 26
 	}
 
-	dlg := vtui.NewCenteredDialog(width, height, Msg("Attributes.Title"))
+	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("Attributes.Title"))
 	dlg.ShowClose = true
 
 	x, y := dlg.X1, dlg.Y1
@@ -180,7 +181,7 @@ func showAttributesUnixForTargets(pf *PanelsFrame, v vfs.VFS, targets []attribut
 	if item.IsSymlink && len(targets) == 1 {
 		targetVal, _ := vfs.Readlink(context.Background(), v, path)
 		editTarget = vtui.NewEdit(0, 0, 35, targetVal)
-		lblTarget := vtui.NewLabel(0, 0, padLabel(Msg("Attributes.Target")), editTarget)
+		lblTarget := vtui.NewLabel(0, 0, padLabel(i18n.Msg("Attributes.Target")), editTarget)
 		rowTarget := vtui.NewHBoxLayout(0, 0, 66, 1)
 		rowTarget.Add(lblTarget, vtui.Margins{Left: 2, Right: 1}, vtui.AlignLeft)
 		rowTarget.Add(editTarget, vtui.Margins{}, vtui.AlignFill)
@@ -190,19 +191,19 @@ func showAttributesUnixForTargets(pf *PanelsFrame, v vfs.VFS, targets []attribut
 	}
 
 	// Ownership Group
-	gbOwnership := vtui.NewGroupBox(0, 0, 66, 4, " "+Msg("Attributes.Ownership")+" ")
+	gbOwnership := vtui.NewGroupBox(0, 0, 66, 4, " "+i18n.Msg("Attributes.Ownership")+" ")
 	dlg.AddItem(gbOwnership)
 	mainVBox.Add(gbOwnership, vtui.Margins{Top: 1}, vtui.AlignFill)
 
 	// Permissions Group
 	// Permissions Group
-	gbPerms := vtui.NewGroupBox(0, 0, 66, 7, " "+Msg("Attributes.Permissions")+" ")
+	gbPerms := vtui.NewGroupBox(0, 0, 66, 7, " "+i18n.Msg("Attributes.Permissions")+" ")
 	dlg.AddItem(gbPerms)
 	mainVBox.Add(gbPerms, vtui.Margins{Top: 0}, vtui.AlignFill)
 
 	// Time Row
 	editMTime := vtui.NewEdit(0, 0, 20, item.MTime.Format(timeFormat))
-	lblTime := vtui.NewLabel(0, 0, padLabel(Msg("Attributes.MTime")), editMTime)
+	lblTime := vtui.NewLabel(0, 0, padLabel(i18n.Msg("Attributes.MTime")), editMTime)
 	rowTime := vtui.NewHBoxLayout(0, 0, 66, 1)
 	rowTime.Add(lblTime, vtui.Margins{Left: 2, Right: 1}, vtui.AlignLeft)
 	rowTime.Add(editMTime, vtui.Margins{}, vtui.AlignLeft)
@@ -211,9 +212,9 @@ func showAttributesUnixForTargets(pf *PanelsFrame, v vfs.VFS, targets []attribut
 	mainVBox.Add(rowTime, vtui.Margins{Top: 0}, vtui.AlignFill)
 
 	// Buttons
-	btnSet := vtui.NewButton(0, 0, Msg("Attributes.BtnSet"))
+	btnSet := vtui.NewButton(0, 0, i18n.Msg("Attributes.BtnSet"))
 	btnSet.IsDefault = true
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 	rowBtns := vtui.NewHBoxLayout(0, 0, 66, 1)
 	rowBtns.HorizontalAlign = vtui.AlignCenter
 	rowBtns.Spacing = 2
@@ -246,7 +247,7 @@ func showAttributesUnixForTargets(pf *PanelsFrame, v vfs.VFS, targets []attribut
 	vboxOwner := vtui.NewVBoxLayout(gbOwnership.X1+2, gbOwnership.Y1+1, gbOwnership.X2-gbOwnership.X1-4, 2)
 
 	r1 := vtui.NewHBoxLayout(0, 0, 60, 1)
-	l1 := vtui.NewLabel(0, 0, padLabel(Msg("Attributes.Owner")), editOwner)
+	l1 := vtui.NewLabel(0, 0, padLabel(i18n.Msg("Attributes.Owner")), editOwner)
 	r1.Add(l1, vtui.Margins{Right: 1}, vtui.AlignLeft)
 	r1.Add(editOwner, vtui.Margins{}, vtui.AlignFill)
 	gbOwnership.AddItem(l1)
@@ -254,7 +255,7 @@ func showAttributesUnixForTargets(pf *PanelsFrame, v vfs.VFS, targets []attribut
 	vboxOwner.Add(r1, vtui.Margins{}, vtui.AlignFill)
 
 	r2 := vtui.NewHBoxLayout(0, 0, 60, 1)
-	l2 := vtui.NewLabel(0, 0, padLabel(Msg("Attributes.Group")), editGroup)
+	l2 := vtui.NewLabel(0, 0, padLabel(i18n.Msg("Attributes.Group")), editGroup)
 	r2.Add(l2, vtui.Margins{Right: 1}, vtui.AlignLeft)
 	r2.Add(editGroup, vtui.Margins{}, vtui.AlignFill)
 	gbOwnership.AddItem(l2)
@@ -272,11 +273,11 @@ func showAttributesUnixForTargets(pf *PanelsFrame, v vfs.VFS, targets []attribut
 	makeRow := func(label string, bitOff uint) {
 		row := vtui.NewHBoxLayout(0, 0, 60, 1)
 		lbl := vtui.NewText(0, 0, padLabel(label), vtui.Palette[vtui.ColDialogText])
-		r := vtui.NewCheckbox(0, 0, Msg("Attributes.Read"), false)
+		r := vtui.NewCheckbox(0, 0, i18n.Msg("Attributes.Read"), false)
 		r.State = map[bool]int{true: 1}[(item.UnixMode&(0400>>bitOff)) != 0]
-		w := vtui.NewCheckbox(0, 0, Msg("Attributes.Write"), false)
+		w := vtui.NewCheckbox(0, 0, i18n.Msg("Attributes.Write"), false)
 		w.State = map[bool]int{true: 1}[(item.UnixMode&(0200>>bitOff)) != 0]
-		x_ := vtui.NewCheckbox(0, 0, Msg("Attributes.Execute"), false)
+		x_ := vtui.NewCheckbox(0, 0, i18n.Msg("Attributes.Execute"), false)
 		x_.State = map[bool]int{true: 1}[(item.UnixMode&(0100>>bitOff)) != 0]
 		row.Add(lbl, vtui.Margins{Right: 1}, vtui.AlignLeft)
 		row.Add(r, vtui.Margins{Right: 1}, vtui.AlignLeft)
@@ -290,15 +291,15 @@ func showAttributesUnixForTargets(pf *PanelsFrame, v vfs.VFS, targets []attribut
 		allChecks = append(allChecks, r, w, x_)
 		row.Apply()
 	}
-	makeRow(Msg("Attributes.PermUser"), 0)
-	makeRow(Msg("Attributes.PermGroup"), 3)
-	makeRow(Msg("Attributes.PermOther"), 6)
+	makeRow(i18n.Msg("Attributes.PermUser"), 0)
+	makeRow(i18n.Msg("Attributes.PermGroup"), 3)
+	makeRow(i18n.Msg("Attributes.PermOther"), 6)
 
 	editOctal := vtui.NewEdit(0, 0, 6, fmt.Sprintf("%04o", item.UnixMode))
 	editOctal.Validator = &vtui.OctalValidator{MaxDigits: 4}
 	editOctal.ClearSelection()
 	rowOct := vtui.NewHBoxLayout(0, 0, 60, 1)
-	lblOct := vtui.NewLabel(0, 0, padLabel(Msg("Attributes.Octal")), editOctal)
+	lblOct := vtui.NewLabel(0, 0, padLabel(i18n.Msg("Attributes.Octal")), editOctal)
 	rowOct.Add(lblOct, vtui.Margins{Right: 2}, vtui.AlignLeft)
 	rowOct.Add(editOctal, vtui.Margins{}, vtui.AlignLeft)
 	gbPerms.AddItem(lblOct)
@@ -441,27 +442,27 @@ func showAttributesWindowsWithPropertiesForTargets(
 	path := targets[0].path
 	item := targets[0].item
 	width, height := 60, 22
-	dlg := vtui.NewCenteredDialog(width, height, Msg("Attributes.Title"))
+	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("Attributes.Title"))
 	dlg.ShowClose = true
 	x, y := dlg.X1, dlg.Y1
 	const timeFormat = "02.01.2006 15:04:05"
 
 	mainVBox := vtui.NewVBoxLayout(x+3, y+2, width-6, height-4)
 
-	lblFile := vtui.NewText(0, 0, fmt.Sprintf(Msg("Attributes.File"), vtui.TruncateMiddle(v.Base(path), 46)), vtui.Palette[vtui.ColDialogText])
+	lblFile := vtui.NewText(0, 0, fmt.Sprintf(i18n.Msg("Attributes.File"), vtui.TruncateMiddle(v.Base(path), 46)), vtui.Palette[vtui.ColDialogText])
 	dlg.AddItem(lblFile)
 	mainVBox.Add(lblFile, vtui.Margins{}, vtui.AlignLeft)
 
-	gbAttr := vtui.NewGroupBox(0, 0, 54, 6, " "+Msg("Attributes.Flags")+" ")
+	gbAttr := vtui.NewGroupBox(0, 0, 54, 6, " "+i18n.Msg("Attributes.Flags")+" ")
 	dlg.AddItem(gbAttr)
 	mainVBox.Add(gbAttr, vtui.Margins{Top: 1}, vtui.AlignFill)
 
-	gbAdv := vtui.NewGroupBox(0, 0, 54, 3, " "+Msg("Attributes.AdvancedFlags")+" ")
+	gbAdv := vtui.NewGroupBox(0, 0, 54, 3, " "+i18n.Msg("Attributes.AdvancedFlags")+" ")
 	dlg.AddItem(gbAdv)
 	mainVBox.Add(gbAdv, vtui.Margins{Top: 1}, vtui.AlignFill)
 
 	editMTime := vtui.NewEdit(0, 0, 20, item.MTime.Format(timeFormat))
-	lblTime := vtui.NewLabel(0, 0, padLabel(Msg("Attributes.LastWrite")), editMTime)
+	lblTime := vtui.NewLabel(0, 0, padLabel(i18n.Msg("Attributes.LastWrite")), editMTime)
 	rowTime := vtui.NewHBoxLayout(0, 0, 54, 1)
 	rowTime.Add(lblTime, vtui.Margins{Right: 1}, vtui.AlignLeft)
 	rowTime.Add(editMTime, vtui.Margins{}, vtui.AlignLeft)
@@ -469,10 +470,10 @@ func showAttributesWindowsWithPropertiesForTargets(
 	dlg.AddItem(editMTime)
 	mainVBox.Add(rowTime, vtui.Margins{Top: 1}, vtui.AlignFill)
 
-	btnSet := vtui.NewButton(0, 0, Msg("Attributes.BtnSet"))
+	btnSet := vtui.NewButton(0, 0, i18n.Msg("Attributes.BtnSet"))
 	btnSet.IsDefault = true
-	btnSec := vtui.NewButton(0, 0, Msg("Attributes.BtnSecurity"))
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnSec := vtui.NewButton(0, 0, i18n.Msg("Attributes.BtnSecurity"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 
 	var osPath string
 	if isLocalOSVFS(v) {
@@ -519,10 +520,10 @@ func showAttributesWindowsWithPropertiesForTargets(
 
 	// Apply second pass for GroupBox
 	gbVBox := vtui.NewVBoxLayout(gbAttr.X1+2, gbAttr.Y1+1, gbAttr.X2-gbAttr.X1-4, 4)
-	chkRO := vtui.NewCheckbox(0, 0, Msg("Attributes.ReadOnly"), false)
-	chkHD := vtui.NewCheckbox(0, 0, Msg("Attributes.Hidden"), false)
-	chkSY := vtui.NewCheckbox(0, 0, Msg("Attributes.System"), false)
-	chkAR := vtui.NewCheckbox(0, 0, Msg("Attributes.Archive"), false)
+	chkRO := vtui.NewCheckbox(0, 0, i18n.Msg("Attributes.ReadOnly"), false)
+	chkHD := vtui.NewCheckbox(0, 0, i18n.Msg("Attributes.Hidden"), false)
+	chkSY := vtui.NewCheckbox(0, 0, i18n.Msg("Attributes.System"), false)
+	chkAR := vtui.NewCheckbox(0, 0, i18n.Msg("Attributes.Archive"), false)
 
 	if (item.WinAttrs & 1) != 0 {
 		chkRO.State = 1

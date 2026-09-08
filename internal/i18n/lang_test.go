@@ -1,4 +1,4 @@
-package main
+package i18n
 
 import (
 	"github.com/unxed/f4/internal/ini"
@@ -22,23 +22,6 @@ func TestMsg(t *testing.T) {
 	}
 }
 
-func TestFormatVersionSHA(t *testing.T) {
-	tests := []struct {
-		in   string
-		want string
-	}{
-		{"v0.1.1-alpha-a1b2c3d4", "v0.1.1-alpha-a1b2c3d"},
-		{"f4 version 0.1 (commit ffeeddcc)", "f4 version 0.1 (commit ffeeddc)"},
-		{"v0.1.1-a1b2c3d45", "v0.1.1-a1b2c3d45"},
-		{"v0.1.1-a1b2c3d", "v0.1.1-a1b2c3d"},
-	}
-
-	for _, tt := range tests {
-		if got := formatVersionSHA(tt.in); got != tt.want {
-			t.Errorf("formatVersionSHA(%q) = %q, want %q", tt.in, got, tt.want)
-		}
-	}
-}
 func TestLoadLangMapFromINI(t *testing.T) {
 	iniContent := `
 [Language]
@@ -49,7 +32,7 @@ Key1=Value1
 Key2=Line1\nLine2
 `
 	ini := ini.Parse(strings.NewReader(iniContent))
-	m := loadLangMapFromINI(ini)
+	m := LoadLangMapFromINI(ini)
 
 	if m["Key1"] != "Value1" {
 		t.Errorf("Expected 'Value1', got %q", m["Key1"])

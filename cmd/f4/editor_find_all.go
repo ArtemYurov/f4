@@ -19,6 +19,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/charlievieth/strcase"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -637,7 +638,7 @@ func (ev *EditorView) FindAll(pattern string, caseSensitive, useRegex, wholeWord
 					return // buffer changed while scanning; offsets are stale
 				}
 				if len(spans) == 0 {
-					vtui.ShowMessage(Msg("Search.Title"), Msg("Search.NotFound"), []string{Msg("vtui.Ok")})
+					vtui.ShowMessage(i18n.Msg("Search.Title"), i18n.Msg("Search.NotFound"), []string{i18n.Msg("vtui.Ok")})
 					return
 				}
 				ev.showFindAllMenu(pattern, spans, occurrences)
@@ -660,7 +661,7 @@ func (ev *EditorView) showFindAllMenu(pattern string, spans []matchSpan, occurre
 		ev.ensureIndexedTo(spans[len(spans)-1].Off)
 	}
 
-	menuTitle := " " + fmt.Sprintf(Msg("Search.AllStatistics"), occurrences, len(spans)) + " "
+	menuTitle := " " + fmt.Sprintf(i18n.Msg("Search.AllStatistics"), occurrences, len(spans)) + " "
 	menu := vtui.NewVMenu(menuTitle)
 	// The menu holds no items: it is a window onto the spans, and everything
 	// VMenu would read out of Items the frame answers from them instead.
@@ -671,7 +672,7 @@ func (ev *EditorView) showFindAllMenu(pattern string, spans []matchSpan, occurre
 		VMenu:      menu,
 		ev:         ev,
 		spans:      spans,
-		bottomHint: Msg("Search.AllBottomHint"),
+		bottomHint: i18n.Msg("Search.AllBottomHint"),
 		// The last occurrence sits on the highest line number in the list, so
 		// one lookup fixes the width of the line column for good.
 		lineW: len(strconv.Itoa(ev.li.GetLineAtOffset(spans[len(spans)-1].Off) + 1)),
@@ -835,11 +836,11 @@ func (ev *EditorView) openFoundLinesEditor(pattern string, spans []matchSpan) {
 		lines++
 	}
 	if left := len(spans) - i; left > 0 {
-		fmt.Fprintf(&b, Msg("Search.AllEditorMore")+"\n", left)
+		fmt.Fprintf(&b, i18n.Msg("Search.AllEditorMore")+"\n", left)
 	}
 
 	editor := NewEditorView(piecetable.New([]byte(b.String())), nil, "")
-	editor.DisplayTitle = fmt.Sprintf(Msg("Search.AllEditorTitle"), pattern)
+	editor.DisplayTitle = fmt.Sprintf(i18n.Msg("Search.AllEditorTitle"), pattern)
 	editor.ResizeConsole(vtui.FrameManager.GetScreenSize(), vtui.FrameManager.GetScreenHeight())
 	editor.StartIndexing()
 	vtui.FrameManager.AddScreen(editor)

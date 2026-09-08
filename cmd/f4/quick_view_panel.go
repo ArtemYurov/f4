@@ -13,6 +13,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/vfs"
@@ -119,7 +120,7 @@ func NewQuickViewPanel(src *FileSystemPanel) *QuickViewPanel {
 	x1, y1, x2, y2 := src.GetPosition()
 	q := &QuickViewPanel{src: src, wrap: true, lastSearchSource: -1, codepages: make(map[quickViewSelectionKey]int)}
 	q.SetVisible(true)
-	q.frame = vtui.NewBorderedFrame(x1, y1, x2, y2, vtui.SingleBox, Msg("QuickView.Title"))
+	q.frame = vtui.NewBorderedFrame(x1, y1, x2, y2, vtui.SingleBox, i18n.Msg("QuickView.Title"))
 	q.frame.ColorBoxIdx = ColPanelBox
 	q.frame.ColorTitleIdx = ColPanelTitle
 	q.frame.ColorBackgroundIdx = ColPanelInfoText
@@ -334,7 +335,7 @@ func (q *QuickViewPanel) showCodepageDialog() {
 		return
 	}
 	items, currIdx := vfs.BuildCodepageMenuItems(q.cacheCodepage, q.cacheAutoDetect)
-	menu := vtui.NewVMenu(Msg("Codepage.Title"))
+	menu := vtui.NewVMenu(i18n.Msg("Codepage.Title"))
 	for _, item := range items {
 		menu.AddItem(item)
 	}
@@ -401,7 +402,7 @@ func (q *QuickViewPanel) showSearchDialog() {
 	if q.cacheLoading || len(q.cacheLines) == 0 {
 		return
 	}
-	vtui.InputBox(Msg("Viewer.SearchTitle"), "Search for:", q.lastSearch, func(pattern string) {
+	vtui.InputBox(i18n.Msg("Viewer.SearchTitle"), "Search for:", q.lastSearch, func(pattern string) {
 		pattern = strings.TrimSpace(pattern)
 		if pattern == "" {
 			return
@@ -467,7 +468,7 @@ func (q *QuickViewPanel) updateFrameTitle() {
 	if q.frame == nil {
 		return
 	}
-	title := Msg("QuickView.Title")
+	title := i18n.Msg("QuickView.Title")
 	if !q.cacheDir && q.cacheCodepage > 0 {
 		title = fmt.Sprintf("%s │ %s", title, vfs.DisplayCodepageName(q.cacheCodepage))
 	}
@@ -521,7 +522,7 @@ func (q *QuickViewPanel) Show(scr *vtui.ScreenBuf) {
 	// affects both the "Files size" number for directories and the
 	// header "Size" for files.
 	if q.frame != nil && q.Y2 > q.Y1+1 {
-		hint := Msg("InfoPanel.UnitsHint")
+		hint := i18n.Msg("InfoPanel.UnitsHint")
 		if runewidth.StringWidth(hint) < q.X2-q.X1-1 {
 			attrBox := vtui.Palette[ColPanelBox]
 			scr.Write(q.X1+2, q.Y2, vtui.StringToCharInfo(hint, attrBox))
@@ -566,7 +567,7 @@ func (q *QuickViewPanel) Show(scr *vtui.ScreenBuf) {
 		q.cacheDir = false
 		q.cacheCodepage = 0
 		q.updateFrameTitle()
-		writeLine(" " + Msg("QuickView.NoSelection"))
+		writeLine(" " + i18n.Msg("QuickView.NoSelection"))
 		return
 	}
 	item := q.src.entries[idx]
@@ -610,7 +611,7 @@ func (q *QuickViewPanel) Show(scr *vtui.ScreenBuf) {
 }
 
 func (q *QuickViewPanel) renderDir(item *fileEntry, writeLine func(string)) {
-	writeLine(" " + Msg("QuickView.Folder") + " \"" + item.Name + "\"")
+	writeLine(" " + i18n.Msg("QuickView.Folder") + " \"" + item.Name + "\"")
 	writeLine("")
 	q.scanMu.Lock()
 	stats := q.scanStats
@@ -627,10 +628,10 @@ func (q *QuickViewPanel) renderDir(item *fileEntry, writeLine func(string)) {
 		dirs = 0
 	}
 
-	writeLine(" " + Msg("QuickView.Contains") + ":")
+	writeLine(" " + i18n.Msg("QuickView.Contains") + ":")
 	writeLine("")
-	writeLine(fmt.Sprintf(" %-14s %d", Msg("QuickView.FolderCount"), dirs))
-	writeLine(fmt.Sprintf(" %-14s %d", Msg("QuickView.FileCount"), stats.Files))
+	writeLine(fmt.Sprintf(" %-14s %d", i18n.Msg("QuickView.FolderCount"), dirs))
+	writeLine(fmt.Sprintf(" %-14s %d", i18n.Msg("QuickView.FileCount"), stats.Files))
 	// "Files size" adds dir-inode Sizes to file bytes — that's what
 	// far2l puts in "Размер файлов" (see far2l/src/dirinfo.cpp:
 	// FileSize += FindData.nFileSize for directories). On Windows,
@@ -643,37 +644,37 @@ func (q *QuickViewPanel) renderDir(item *fileEntry, writeLine func(string)) {
 	if runtime.GOOS == "windows" {
 		logical = stats.Bytes
 	}
-	writeLine(fmt.Sprintf(" %-14s %s", Msg("QuickView.FilesSize"), formatBytes(numeric.NonNegativeUint64(logical))))
+	writeLine(fmt.Sprintf(" %-14s %s", i18n.Msg("QuickView.FilesSize"), formatBytes(numeric.NonNegativeUint64(logical))))
 	// Physical size + Ratio need per-item on-disk footprint. Stub /
 	// remote VFSes leave PhysicalBytes at 0 during the whole scan —
 	// hide the rows in that case. Ratio is also hidden when it would
 	// just read "100%" — on Unix that's every uncompressed tree, and
 	// a constant carries no information for the reader.
 	if stats.PhysicalBytes > 0 {
-		writeLine(fmt.Sprintf(" %-14s %s", Msg("QuickView.PhysicalSize"), formatBytes(numeric.NonNegativeUint64(stats.PhysicalBytes))))
+		writeLine(fmt.Sprintf(" %-14s %s", i18n.Msg("QuickView.PhysicalSize"), formatBytes(numeric.NonNegativeUint64(stats.PhysicalBytes))))
 		if stats.PhysicalBytes < logical {
 			// Ratio interpretation matches far/far2l — >100% means "on
 			// disk it takes less than the logical size", i.e. real
 			// NTFS compression / sparse regions.
 			ratio := int((logical * 100) / stats.PhysicalBytes)
-			writeLine(fmt.Sprintf(" %-14s %d%%", Msg("QuickView.Ratio"), ratio))
+			writeLine(fmt.Sprintf(" %-14s %d%%", i18n.Msg("QuickView.Ratio"), ratio))
 		}
 	}
 	// Cluster size stands on its own — shown even when PhysicalBytes
 	// couldn't be filled (VFS without per-item support).
 	if cluster > 0 {
 		writeLine("")
-		writeLine(fmt.Sprintf(" %-14s %s", Msg("QuickView.ClusterSize"), formatBytes(cluster)))
+		writeLine(fmt.Sprintf(" %-14s %s", i18n.Msg("QuickView.ClusterSize"), formatBytes(cluster)))
 	}
 	// Single "scanning" hint per far2l — one trailing line at the
 	// bottom, not repeated on every row.
 	if !done && serr == nil {
 		writeLine("")
-		writeLine(" " + Msg("QuickView.Scanning"))
+		writeLine(" " + i18n.Msg("QuickView.Scanning"))
 	}
 	if serr != nil {
 		writeLine("")
-		writeLine(" " + Msg("QuickView.ReadError") + ": " + serr.Error())
+		writeLine(" " + i18n.Msg("QuickView.ReadError") + ": " + serr.Error())
 	}
 }
 
@@ -791,20 +792,20 @@ func (q *QuickViewPanel) Close() {
 
 func (q *QuickViewPanel) renderFile(item *fileEntry, innerW int, writeLine func(string), attr uint64, scr *vtui.ScreenBuf) {
 	if q.cacheReadErr != nil {
-		writeLine(" " + Msg("QuickView.ReadError") + ": " + q.cacheReadErr.Error())
+		writeLine(" " + i18n.Msg("QuickView.ReadError") + ": " + q.cacheReadErr.Error())
 		return
 	}
 	// The file name and size are already visible in the source panel. Keep
 	// Quick View's header for the mode/encoding only, so the codepage remains
 	// visible even for long names and never shifts with the panel selection.
 	if q.cacheLoading {
-		writeLine(" " + Msg("QuickView.Loading"))
+		writeLine(" " + i18n.Msg("QuickView.Loading"))
 	} else if q.cacheLabel != "" {
 		writeLine(" " + q.cacheLabel)
 	} else if q.cacheImage {
-		writeLine(" " + Msg("QuickView.Image"))
+		writeLine(" " + i18n.Msg("QuickView.Image"))
 	} else if q.hexMode {
-		writeLine(" " + Msg("QuickView.Binary"))
+		writeLine(" " + i18n.Msg("QuickView.Binary"))
 	} else {
 		writeLine("")
 	}

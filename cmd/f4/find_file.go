@@ -13,6 +13,7 @@ import (
 	"github.com/charlievieth/strcase"
 	"github.com/coregx/coregex"
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -60,7 +61,7 @@ func padLabelTo(s string, w int) string {
 
 // ExecuteFindFile initiates a background search and displays a progress dialog.
 func ExecuteFindFile(pf *PanelsFrame, v vfs.VFS, startDir, mask, text string, options FindFileOptions) {
-	dlg := vtui.NewCenteredDialog(60, 9, Msg("FindFile.SearchingTitle"))
+	dlg := vtui.NewCenteredDialog(60, 9, i18n.Msg("FindFile.SearchingTitle"))
 	dlg.AttentionSuppressed = true
 
 	// lblMask and lblDir sit inside a 56-column vbox; lblFound shares a
@@ -69,11 +70,11 @@ func ExecuteFindFile(pf *PanelsFrame, v vfs.VFS, startDir, mask, text string, op
 	// the underlying vtui gotcha. lblFound holds
 	// "Found: 999999 (scanned 999999999)" and then some, and AlignRight
 	// on the button anchors it at the far end.
-	lblMask := vtui.NewLabel(0, 0, padLabelTo(Msg("FindFile.MaskPrompt")+" "+mask, 56), nil)
-	lblDir := vtui.NewLabel(0, 0, padLabelTo(Msg("FindFile.Scanning")+" ...", 56), nil)
-	lblFound := vtui.NewLabel(0, 0, padLabelTo(fmt.Sprintf(Msg("FindFile.FoundCount"), 0), 40), nil)
+	lblMask := vtui.NewLabel(0, 0, padLabelTo(i18n.Msg("FindFile.MaskPrompt")+" "+mask, 56), nil)
+	lblDir := vtui.NewLabel(0, 0, padLabelTo(i18n.Msg("FindFile.Scanning")+" ...", 56), nil)
+	lblFound := vtui.NewLabel(0, 0, padLabelTo(fmt.Sprintf(i18n.Msg("FindFile.FoundCount"), 0), 40), nil)
 
-	btnCancel := vtui.NewButton(0, 0, Msg("vtui.Cancel"))
+	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 
 	dlg.AddItem(lblMask)
 	dlg.AddItem(lblDir)
@@ -158,12 +159,12 @@ func ExecuteFindFile(pf *PanelsFrame, v vfs.VFS, startDir, mask, text string, op
 				// pace is dominated by the ReadDir round trips it
 				// makes), so the parenthetical is only shown when a
 				// remote finder actually supplied a number.
-				foundText := fmt.Sprintf(Msg("FindFile.FoundCount"), currentCount)
+				foundText := fmt.Sprintf(i18n.Msg("FindFile.FoundCount"), currentCount)
 				if remoteScanned > 0 {
 					foundText = fmt.Sprintf("%s (scanned %d)", foundText, remoteScanned)
 				}
 				ctx.RunOnUI(func() {
-					lblDir.SetText(Msg("FindFile.Scanning") + " " + displayDir)
+					lblDir.SetText(i18n.Msg("FindFile.Scanning") + " " + displayDir)
 					lblFound.SetText(foundText)
 					vtui.FrameManager.Redraw()
 				})
@@ -523,7 +524,7 @@ func (srw *SearchResultsWindow) HandleCommand(cmd int, args any) bool {
 func (srw *SearchResultsWindow) GetKeyLabels() *vtui.KeySet {
 	return &vtui.KeySet{
 		Normal: vtui.KeyBarLabels{
-			"", "", "View", "Edit", Msg("FindFile.BtnPanel"), "", "", "", "", "Quit", "", "",
+			"", "", "View", "Edit", i18n.Msg("FindFile.BtnPanel"), "", "", "", "", "Quit", "", "",
 		},
 	}
 }
@@ -545,7 +546,7 @@ func (srw *SearchResultsWindow) sendToTempPanel() bool {
 
 func ShowSearchResults(pf *PanelsFrame, v vfs.VFS, found []FoundFile) {
 	dlgW, dlgH := 76, 20
-	baseDlg := vtui.NewCenteredDialog(dlgW, dlgH, Msg("FindFile.SearchResultsTitle"))
+	baseDlg := vtui.NewCenteredDialog(dlgW, dlgH, i18n.Msg("FindFile.SearchResultsTitle"))
 
 	srw := &SearchResultsWindow{
 		Window: baseDlg,
@@ -555,9 +556,9 @@ func ShowSearchResults(pf *PanelsFrame, v vfs.VFS, found []FoundFile) {
 	}
 
 	cols := []vtui.TableColumn{
-		{Title: Msg("FindFile.ColName"), Width: 20},
-		{Title: Msg("FindFile.ColSize"), Width: 10, Alignment: vtui.AlignRight},
-		{Title: Msg("FindFile.ColPath"), Width: 38},
+		{Title: i18n.Msg("FindFile.ColName"), Width: 20},
+		{Title: i18n.Msg("FindFile.ColSize"), Width: 10, Alignment: vtui.AlignRight},
+		{Title: i18n.Msg("FindFile.ColPath"), Width: 38},
 	}
 	srw.table = vtui.NewTable(0, 0, 72, 12, cols)
 	srw.table.SetOwner(srw) // Explicit owner for command routing
@@ -569,15 +570,15 @@ func ShowSearchResults(pf *PanelsFrame, v vfs.VFS, found []FoundFile) {
 	}
 	srw.table.SetRows(rows)
 
-	btnGo := vtui.NewButton(0, 0, Msg("FindFile.BtnGoTo"))
+	btnGo := vtui.NewButton(0, 0, i18n.Msg("FindFile.BtnGoTo"))
 	btnGo.SetOwner(srw)
-	btnPanel := vtui.NewButton(0, 0, Msg("FindFile.BtnPanel"))
+	btnPanel := vtui.NewButton(0, 0, i18n.Msg("FindFile.BtnPanel"))
 	btnPanel.SetOwner(srw)
-	btnView := vtui.NewButton(0, 0, Msg("FindFile.BtnView"))
+	btnView := vtui.NewButton(0, 0, i18n.Msg("FindFile.BtnView"))
 	btnView.SetOwner(srw)
-	btnEdit := vtui.NewButton(0, 0, Msg("FindFile.BtnEdit"))
+	btnEdit := vtui.NewButton(0, 0, i18n.Msg("FindFile.BtnEdit"))
 	btnEdit.SetOwner(srw)
-	btnClose := vtui.NewButton(0, 0, Msg("FindFile.BtnClose"))
+	btnClose := vtui.NewButton(0, 0, i18n.Msg("FindFile.BtnClose"))
 	btnClose.SetOwner(srw)
 
 	btnGo.IsDefault = true

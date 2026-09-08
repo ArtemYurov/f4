@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -13,15 +14,15 @@ func commandPaletteLocalizedDirectEntry(
 	run func() bool,
 	aliasKeys ...string,
 ) commandPaletteEntry {
-	label := Msg(labelKey)
+	label := i18n.Msg(labelKey)
 	if label == "" || strings.HasPrefix(label, "{") {
 		label = englishLabel
 	}
-	description := Msg(descKey)
+	description := i18n.Msg(descKey)
 	if description == "" || strings.HasPrefix(description, "{") {
 		description = englishDescription
 	}
-	category := Msg(categoryKey)
+	category := i18n.Msg(categoryKey)
 	if category == "" || strings.HasPrefix(category, "{") {
 		category = englishCategory
 	}

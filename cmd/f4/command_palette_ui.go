@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -38,7 +39,7 @@ type commandPaletteRow struct {
 func (row commandPaletteRow) GetCellText(column int) string {
 	if row.empty {
 		if column == 0 {
-			return Msg("CommandPalette.Empty")
+			return i18n.Msg("CommandPalette.Empty")
 		}
 		return ""
 	}
@@ -47,7 +48,7 @@ func (row commandPaletteRow) GetCellText(column int) string {
 	case 0:
 		label := commandPaletteDisplayLabel(row.entry)
 		if row.entry.Checked {
-			label = action.PlainLabel(Msg("CommandPalette.CheckedPrefix")) + " " + label
+			label = action.PlainLabel(i18n.Msg("CommandPalette.CheckedPrefix")) + " " + label
 		}
 		return label
 	case 1:
@@ -79,7 +80,7 @@ func commandPaletteDisplayDescription(entry commandPaletteEntry) string {
 	if description == "" {
 		return entry.ID
 	}
-	return fmt.Sprintf(Msg("CommandPalette.DescriptionWithID"), description, entry.ID)
+	return fmt.Sprintf(i18n.Msg("CommandPalette.DescriptionWithID"), description, entry.ID)
 }
 
 // newCommandPaletteDialog creates a self-contained modal command picker. It
@@ -91,11 +92,11 @@ func newCommandPaletteDialog(
 	onExecute func(commandPaletteEntry),
 ) *commandPaletteDialog {
 	width, height := commandPaletteDialogSize(len(entries))
-	window := vtui.NewCenteredDialog(width, height, Msg("CommandPalette.Title"))
+	window := vtui.NewCenteredDialog(width, height, i18n.Msg("CommandPalette.Title"))
 	window.ShowClose = true
 
 	contentWidth := max(1, width-4)
-	queryPrompt := vtui.NewText(0, 0, Msg("CommandPalette.QueryPrompt"), 0)
+	queryPrompt := vtui.NewText(0, 0, i18n.Msg("CommandPalette.QueryPrompt"), 0)
 	query := vtui.NewEdit(0, 0, max(1, contentWidth-2), "")
 	table := vtui.NewTable(0, 0, contentWidth, max(1, height-4), commandPaletteColumns(width))
 	useDialogTableColors(table)
@@ -196,12 +197,12 @@ func commandPaletteColumns(dialogWidth int) []vtui.TableColumn {
 	// need 49 dialog cells. Narrow terminals keep the useful command column
 	// and expose the other metadata in the description line/search index.
 	if dialogWidth < 49 {
-		return []vtui.TableColumn{{Title: Msg("CommandPalette.ColumnCommand"), Width: 0, MinWidth: 1}}
+		return []vtui.TableColumn{{Title: i18n.Msg("CommandPalette.ColumnCommand"), Width: 0, MinWidth: 1}}
 	}
 	return []vtui.TableColumn{
-		{Title: Msg("CommandPalette.ColumnCommand"), Width: 0, MinWidth: 12},
-		{Title: Msg("CommandPalette.ColumnCategory"), Width: 16},
-		{Title: Msg("CommandPalette.ColumnShortcut"), Width: 14},
+		{Title: i18n.Msg("CommandPalette.ColumnCommand"), Width: 0, MinWidth: 12},
+		{Title: i18n.Msg("CommandPalette.ColumnCategory"), Width: 16},
+		{Title: i18n.Msg("CommandPalette.ColumnShortcut"), Width: 14},
 	}
 }
 
@@ -299,7 +300,7 @@ func (dialog *commandPaletteDialog) refreshDescription() {
 		index = dialog.table.SelectPos
 	}
 	if index < 0 || index >= len(dialog.filtered) {
-		dialog.description.SetText(escapeAmpersand(Msg("CommandPalette.Empty")))
+		dialog.description.SetText(escapeAmpersand(i18n.Msg("CommandPalette.Empty")))
 		return
 	}
 	dialog.description.SetText(escapeAmpersand(commandPaletteDisplayDescription(dialog.filtered[index])))

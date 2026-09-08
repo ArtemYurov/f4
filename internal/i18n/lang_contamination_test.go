@@ -1,4 +1,4 @@
-package main
+package i18n
 
 import (
 	"os"
@@ -40,16 +40,19 @@ var germanLeftovers = []string{
 func TestTranslationsAreFreeOfGermanLeftovers(t *testing.T) {
 	testutil.SkipIfNoRelevantChanges(t, "lang_contamination_german",
 		"lang/*.lng",
-		"help/*.hlf",
+		"../../cmd/f4/help/*.hlf",
 		"lang_contamination_test.go",
 	)
 	paths, err := filepath.Glob("lang/*.lng")
 	if err != nil {
 		t.Fatalf("cannot list language files: %v", err)
 	}
-	helpPaths, err := filepath.Glob("help/*.hlf")
+	helpPaths, err := filepath.Glob(filepath.Join(testutil.ModuleRootDir(t), "cmd", "f4", "help", "*.hlf"))
 	if err != nil {
 		t.Fatalf("cannot list help files: %v", err)
+	}
+	if len(helpPaths) == 0 {
+		t.Fatal("no .hlf files under cmd/f4/help; the help directory moved without this path")
 	}
 	paths = append(paths, helpPaths...)
 
@@ -83,18 +86,24 @@ func TestTranslationsAreFreeOfGermanLeftovers(t *testing.T) {
 func TestTranslationsAreFreeOfAIGarbage(t *testing.T) {
 	testutil.SkipIfNoRelevantChanges(t, "lang_contamination_garbage",
 		"lang/*.lng",
-		"help/*.hlf",
+		"../../cmd/f4/help/*.hlf",
 		"lang_contamination_test.go",
 	)
 	paths, err := filepath.Glob("lang/*.lng")
 	if err != nil {
 		t.Fatalf("cannot list language files: %v", err)
 	}
-	helpPaths, err := filepath.Glob("help/*.hlf")
+	helpPaths, err := filepath.Glob(filepath.Join(testutil.ModuleRootDir(t), "cmd", "f4", "help", "*.hlf"))
 	if err != nil {
 		t.Fatalf("cannot list help files: %v", err)
 	}
+	if len(helpPaths) == 0 {
+		t.Fatal("no .hlf files under cmd/f4/help; the help directory moved without this path")
+	}
 	paths = append(paths, helpPaths...)
+	if len(paths) == 0 {
+		t.Fatal("no localization files found, is the test running from the repository root?")
+	}
 
 	for _, path := range paths {
 		base := filepath.Base(path)

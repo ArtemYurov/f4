@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -337,7 +338,7 @@ func TestUserMenu_InteractiveEdit(t *testing.T) {
 	showEditItemDialog(s, vtui.NewVMenu("dummy"), s.rootItems, 0, false, false)
 
 	top := vtui.FrameManager.GetTopFrame()
-	if top == nil || top.GetTitle() != Msg("UserMenu.EditTitle") {
+	if top == nil || top.GetTitle() != i18n.Msg("UserMenu.EditTitle") {
 		t.Fatalf("Expected Edit User Menu dialog, got %v", top)
 	}
 

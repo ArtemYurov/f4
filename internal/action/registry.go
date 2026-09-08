@@ -21,12 +21,12 @@ type Action struct {
 	Name     string // stable ID and macro command, e.g. "Editor.Save"
 	Area     string // primary area: "Shell", "Editor", "Viewer", "Terminal", "Common"
 	Label    string // English fallback for menu/keybar
-	LabelKey string // optional i18n key resolved via Msg()
+	LabelKey string // optional i18n key resolved via i18n.Msg()
 	// SearchKeys are additional localization keys whose values are indexed by
 	// discoverability surfaces but are not rendered as the action label.
 	SearchKeys  []string
 	Description string // English fallback for help
-	DescKey     string // optional i18n key resolved via Msg()
+	DescKey     string // optional i18n key resolved via i18n.Msg()
 	// DefaultKeys are Far-style key names ("F2", "CtrlIns") with an
 	// optional ":Condition" suffix per key (e.g. "Esc:EscToggle").
 	DefaultKeys []string

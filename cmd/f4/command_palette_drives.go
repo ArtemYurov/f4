@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/vfs"
 )
@@ -19,7 +20,7 @@ func commandPaletteDriveEntries(pf *PanelsFrame) []commandPaletteEntry {
 		return nil
 	}
 
-	entries := commandPaletteDrivePair(pf, "other", "Panel.Other", action.PlainLabel(Msg("Panel.Other")), func(panelIndex int) bool {
+	entries := commandPaletteDrivePair(pf, "other", "Panel.Other", action.PlainLabel(i18n.Msg("Panel.Other")), func(panelIndex int) bool {
 		return executeCommandPaletteOtherPanel(pf, panelIndex)
 	}, "Panel.Other")
 	for _, drive := range sysinfo.GetPlatformDrives() {
@@ -38,7 +39,7 @@ func commandPaletteDriveEntries(pf *PanelsFrame) []commandPaletteEntry {
 				continue
 			}
 			path := bookmarks[slot].Path
-			displayName := fmt.Sprintf("%s %d: %s", action.PlainLabel(Msg("Menu.Commands.Bookmarks")), slot, path)
+			displayName := fmt.Sprintf("%s %d: %s", action.PlainLabel(i18n.Msg("Menu.Commands.Bookmarks")), slot, path)
 			entries = append(entries, commandPaletteDrivePair(pf, "bookmark", fmt.Sprintf("Bookmark.%d", slot), displayName, func(panelIndex int) bool {
 				return executeCommandPaletteBookmark(pf, panelIndex, slot)
 			}, "Menu.Commands.Bookmarks")...)
@@ -77,14 +78,14 @@ func commandPaletteDrivePair(pf *PanelsFrame, source, id, displayName string, ru
 		}
 		translationKeys := []string{"CommandPalette.CategoryDrive", formatKey, "Drive.Title", sideDescriptionKey}
 		translationKeys = append(translationKeys, extraTranslationKeys...)
-		category := Msg("CommandPalette.CategoryDrive")
-		searchFields := []string{id, displayName, category, Msg("Drive.Title"), Msg(sideDescriptionKey)}
+		category := i18n.Msg("CommandPalette.CategoryDrive")
+		searchFields := []string{id, displayName, category, i18n.Msg("Drive.Title"), i18n.Msg(sideDescriptionKey)}
 		searchFields = append(searchFields, commandPaletteTranslations(translationKeys...)...)
 		entries = append(entries, commandPaletteEntry{
 			Key:                fmt.Sprintf("drive:%s:%s:%s", sideKey, source, normalizeCommandPaletteText(id)),
-			Label:              fmt.Sprintf(Msg(formatKey), displayName),
+			Label:              fmt.Sprintf(i18n.Msg(formatKey), displayName),
 			EnglishLabel:       englishLabel,
-			Description:        Msg(sideDescriptionKey),
+			Description:        i18n.Msg(sideDescriptionKey),
 			EnglishDescription: englishDescription,
 			ID:                 id,
 			Category:           category,

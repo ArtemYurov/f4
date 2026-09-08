@@ -14,6 +14,7 @@ import (
 	embedded "github.com/unxed/f4"
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/vtui"
 )
@@ -109,31 +110,31 @@ func helpMsg(key string) string {
 			return s
 		}
 	}
-	return Msg(key)
+	return i18n.Msg(key)
 }
 
 // loadHelpLangStrings loads the .lng map for a help language code.
-// Returns nil for English (embedded strings already cover it via Msg)
+// Returns nil for English (embedded strings already cover it via i18n.Msg)
 // or when no language file is found.
 func loadHelpLangStrings(code string) map[string]string {
 	if code == "" || code == "en" || code == "eng" {
 		return nil
 	}
-	if !safeLanguageCode(code) {
+	if !i18n.SafeLanguageCode(code) {
 		return nil
 	}
-	exeDir := filepath.Dir(os.Args[0])
-	userDir := filepath.Join(config.GetF4ConfigDir(), "lang")
-	candidates := []string{
-		filepath.Join(userDir, code+".lng"),
-		filepath.Join(exeDir, "lang", code+".lng"),
-		filepath.Join("lang", code+".lng"),
-	}
-	for _, cand := range candidates {
-		// #nosec G703 -- safeLanguageCode rejects separators and ".." before code is used as a path component.
+	for _, dir := range i18n.SearchDirs(userLangDir()) {
+		cand := filepath.Join(dir, code+".lng")
+		// #nosec G703 -- i18n.SafeLanguageCode rejects separators and ".." before code is used as a path component.
 		if _, err := os.Stat(cand); err == nil {
-			return loadLangMapFromINI(ini.Load(cand))
+			return i18n.LoadLangMapFromINI(ini.Load(cand))
 		}
+	}
+	// No pack on disk: the one embedded in this binary says the same thing.
+	// Generated help used to go untranslated in an installation that carries no
+	// lang/ directory, which is every single-binary one.
+	if embedded := i18n.LoadEmbeddedLanguageMap(code); len(embedded) > 0 {
+		return embedded
 	}
 	return nil
 }

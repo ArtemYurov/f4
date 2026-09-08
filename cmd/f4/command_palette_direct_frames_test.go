@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -96,7 +97,7 @@ func TestCommandPaletteArkanoidProviderRoutesCommandsAndGuardsState(t *testing.T
 		"Arkanoid.ToggleAutoPlay", "Arkanoid.HighScores", "Arkanoid.SpeedUp", "Arkanoid.SpeedDown", "Arkanoid.Close",
 	)
 	autoPlay, _ := commandPaletteTestEntryByID(entries, "Arkanoid.ToggleAutoPlay")
-	if autoPlay.Label != Msg("CommandPalette.Arkanoid.ToggleAutoPlay") || autoPlay.Description != Msg("CommandPalette.Arkanoid.ToggleAutoPlay.Desc") {
+	if autoPlay.Label != i18n.Msg("CommandPalette.Arkanoid.ToggleAutoPlay") || autoPlay.Description != i18n.Msg("CommandPalette.Arkanoid.ToggleAutoPlay.Desc") {
 		t.Fatalf("Arkanoid command did not use current UI language: %#v", autoPlay)
 	}
 	if !executeCommandPaletteEntry(autoPlay) || !arkanoid.autoPlay {

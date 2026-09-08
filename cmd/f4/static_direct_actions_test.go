@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -246,8 +247,8 @@ func TestFixedSidePaletteEntriesUseLocalizedSideCategories(t *testing.T) {
 	t.Cleanup(testutil.SetFrameManagerScreens(t, []*vtui.AppScreen{{Number: 1, Frames: []vtui.Frame{pf}}}, 0))
 
 	want := map[string]string{
-		"Panel.Left.ViewBrief":   action.PlainLabel(Msg("Menu.Left")),
-		"Panel.Right.SortByName": action.PlainLabel(Msg("Menu.Right")),
+		"Panel.Left.ViewBrief":   action.PlainLabel(i18n.Msg("Menu.Left")),
+		"Panel.Right.SortByName": action.PlainLabel(i18n.Msg("Menu.Right")),
 	}
 	for _, entry := range commandPaletteActionEntries("Shell") {
 		category, ok := want[entry.ID]

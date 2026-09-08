@@ -6,6 +6,7 @@ import (
 	"unicode"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -427,7 +428,7 @@ func renderHelpSearch(scr *vtui.ScreenBuf) {
 
 	x1, y1, x2, y2 := frame.GetPosition()
 	titleAttr := scr.GetCell((x1+x2)/2, y1).Attributes
-	vtui.NewPainter(scr).DrawTitle(x1, y2, x2, Msg("Help.SearchHint"), titleAttr)
+	vtui.NewPainter(scr).DrawTitle(x1, y2, x2, i18n.Msg("Help.SearchHint"), titleAttr)
 	if currentHelpSearch == nil || currentHelpSearch.frame != frame || currentHelpSearch.topicName != topicName {
 		currentHelpSearch = nil
 		return

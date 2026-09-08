@@ -12,6 +12,7 @@ import (
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/fusefs"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -145,7 +146,7 @@ func TestAllDialogs_LayoutValidation(t *testing.T) {
 	MacroMgr = NewMacroManager(filepath.Join(tmpDir, "key_macros.ini"))
 
 	// Load all language packs so the validator can assert layout against all translations dynamically
-	packs := LoadAllLanguagePacks()
+	packs := i18n.LoadAllLanguagePacks()
 	if len(packs) == 0 {
 		packs = []vtui.LanguagePack{{Name: "current"}}
 	}

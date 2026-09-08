@@ -16,6 +16,7 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 )
 
@@ -181,10 +182,10 @@ func materializeApplyCommandResources(ctx context.Context, target vfs.VFS, dir s
 		return nil, nil, nil
 	}
 	if dialect == vfs.CommandDialectUnknown {
-		return nil, nil, fmt.Errorf("%s", Msg("ApplyCommand.UnknownDialect"))
+		return nil, nil, fmt.Errorf("%s", i18n.Msg("ApplyCommand.UnknownDialect"))
 	}
 	if target == nil {
-		return nil, nil, fmt.Errorf(Msg("ApplyCommand.ResourceErrorFmt"), fmt.Errorf("nil command host"))
+		return nil, nil, fmt.Errorf(i18n.Msg("ApplyCommand.ResourceErrorFmt"), fmt.Errorf("nil command host"))
 	}
 	if err := ctx.Err(); err != nil {
 		return nil, nil, err
@@ -199,7 +200,7 @@ func materializeApplyCommandResources(ctx context.Context, target vfs.VFS, dir s
 		resourceTarget := target.Clone()
 		if resourceTarget == nil {
 			group.cleanupNow()
-			return nil, nil, fmt.Errorf(Msg("ApplyCommand.ResourceErrorFmt"), fmt.Errorf("command host could not be captured"))
+			return nil, nil, fmt.Errorf(i18n.Msg("ApplyCommand.ResourceErrorFmt"), fmt.Errorf("command host could not be captured"))
 		}
 		resourceTargetWork = &sync.WaitGroup{}
 		// Keep the captured target usable through materialization itself as
@@ -237,7 +238,7 @@ func materializeApplyCommandResources(ctx context.Context, target vfs.VFS, dir s
 		}
 		data, err := encodeApplyCommandListForTarget(request.ListFile, dialect, target)
 		if err != nil {
-			return fail(fmt.Errorf(Msg("ApplyCommand.ResourceErrorFmt"), err))
+			return fail(fmt.Errorf(i18n.Msg("ApplyCommand.ResourceErrorFmt"), err))
 		}
 		var (
 			resourcePath string
@@ -253,7 +254,7 @@ func materializeApplyCommandResources(ctx context.Context, target vfs.VFS, dir s
 			if errors.Is(createErr, context.Canceled) || errors.Is(createErr, context.DeadlineExceeded) {
 				return fail(createErr)
 			}
-			return fail(fmt.Errorf(Msg("ApplyCommand.ResourceErrorFmt"), createErr))
+			return fail(fmt.Errorf(i18n.Msg("ApplyCommand.ResourceErrorFmt"), createErr))
 		}
 		if !group.addCleanup(remove) {
 			return fail(context.Canceled)

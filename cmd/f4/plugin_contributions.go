@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -121,7 +122,7 @@ func pluginCommandLocalizedText(values map[string]string) string {
 func pluginCommandDisplayText(key string, localized map[string]string, fallback string) string {
 	key = strings.TrimSpace(key)
 	if key != "" {
-		if value := Msg(key); !strings.HasPrefix(value, "{") {
+		if value := i18n.Msg(key); !strings.HasPrefix(value, "{") {
 			return value
 		}
 	}
@@ -257,7 +258,7 @@ func executeRegisteredPluginCommand(location vfs.PluginCommandLocation, id strin
 func actionPluginConfiguration(pf *PanelsFrame) {
 	commands := pluginCommandsSnapshot(vfs.PluginCommandConfig, pf)
 	if len(commands) == 0 {
-		vtui.ShowMessage(Msg("Plugins.ConfigTitle"), Msg("Plugins.ConfigEmpty"), []string{Msg("vtui.Ok")})
+		vtui.ShowMessage(i18n.Msg("Plugins.ConfigTitle"), i18n.Msg("Plugins.ConfigEmpty"), []string{i18n.Msg("vtui.Ok")})
 		return
 	}
 
@@ -265,7 +266,7 @@ func actionPluginConfiguration(pf *PanelsFrame) {
 	for i := range commands {
 		labels[i] = pluginCommandDisplayLabel(commands[i])
 	}
-	pf.Menu(Msg("Plugins.ConfigTitle"), labels, func(index int) {
+	pf.Menu(i18n.Msg("Plugins.ConfigTitle"), labels, func(index int) {
 		if index >= 0 && index < len(commands) {
 			executeRegisteredPluginCommand(vfs.PluginCommandConfig, commands[index].ID, pf)
 		}

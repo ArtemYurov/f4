@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtui"
 )
 
@@ -63,12 +64,12 @@ func (ev *EditorView) showBase64Menu() {
 	if vtui.FrameManager == nil {
 		return
 	}
-	menu := vtui.NewVMenu(Msg("Editor.Base64.Title"))
-	menu.AddItem(vtui.MenuItem{Text: Msg("Action.Editor.Base64Encode")})
-	menu.AddItem(vtui.MenuItem{Text: Msg("Action.Editor.Base64Decode")})
+	menu := vtui.NewVMenu(i18n.Msg("Editor.Base64.Title"))
+	menu.AddItem(vtui.MenuItem{Text: i18n.Msg("Action.Editor.Base64Encode")})
+	menu.AddItem(vtui.MenuItem{Text: i18n.Msg("Action.Editor.Base64Decode")})
 
 	screenW, screenH := vtui.FrameManager.GetScreenSize(), vtui.FrameManager.GetScreenHeight()
-	w := vtui.StringWidth(Msg("Editor.Base64.Title")) + 8
+	w := vtui.StringWidth(i18n.Msg("Editor.Base64.Title")) + 8
 	for _, item := range menu.Items {
 		if itemW := vtui.StringWidth(item.Text) + 6; itemW > w {
 			w = itemW
@@ -93,9 +94,9 @@ func (ev *EditorView) showBase64Menu() {
 		if err := ev.transformBase64Selection(encode); err != nil {
 			message := err.Error()
 			if errors.Is(err, errBase64NoSelection) {
-				message = Msg("Editor.Base64.NoSelection")
+				message = i18n.Msg("Editor.Base64.NoSelection")
 			}
-			vtui.ShowMessage(Msg("Editor.Base64.Title"), message, []string{Msg("vtui.Ok")})
+			vtui.ShowMessage(i18n.Msg("Editor.Base64.Title"), message, []string{i18n.Msg("vtui.Ok")})
 		}
 	}
 	vtui.FrameManager.Push(menu)

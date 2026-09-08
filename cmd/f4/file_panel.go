@@ -21,6 +21,7 @@ import (
 	"golang.org/x/text/language"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -460,7 +461,7 @@ func (f *fileEntry) GetCellText(col int) string {
 				return formatIntWithSpaces(f.Size)
 			}
 			if f.Name == ".." {
-				return Msg("Panel.UpDir")
+				return i18n.Msg("Panel.UpDir")
 			}
 			return ""
 		}
@@ -1187,13 +1188,13 @@ func (fp *FileSystemPanel) sortIsAscending() bool {
 func sortModeTitle(mode SortMode) string {
 	switch mode {
 	case SortName:
-		return Msg("Menu.SortName")
+		return i18n.Msg("Menu.SortName")
 	case SortExt:
-		return Msg("Menu.SortExt")
+		return i18n.Msg("Menu.SortExt")
 	case SortTime:
-		return Msg("Menu.SortTime")
+		return i18n.Msg("Menu.SortTime")
 	case SortSize:
-		return Msg("Menu.SortSize")
+		return i18n.Msg("Menu.SortSize")
 	}
 	return ""
 }
@@ -1230,18 +1231,18 @@ func hiddenSortColumnTitle(mode SortMode, ascending bool, width int) string {
 func (fp *FileSystemPanel) updateSortColumnTitles() {
 	visibleSortColumn := false
 	for column := range fp.table.Columns {
-		title := Msg("Panel.Column.Name")
+		title := i18n.Msg("Panel.Column.Name")
 		switch fp.effectiveViewMode() {
 		case ViewModeWide:
 			switch column {
 			case 1:
-				title = Msg("Panel.Column.Size")
+				title = i18n.Msg("Panel.Column.Size")
 			case 2:
-				title = Msg("Panel.Column.Modified")
+				title = i18n.Msg("Panel.Column.Modified")
 			}
 		case ViewModeDetailed:
 			if column == 1 {
-				title = Msg("Panel.Column.Size")
+				title = i18n.Msg("Panel.Column.Size")
 			}
 		}
 
@@ -1261,7 +1262,7 @@ func (fp *FileSystemPanel) updateSortColumnTitles() {
 		right := hiddenSortColumnTitle(
 			fp.sortMode, fp.sortIsAscending(), fp.table.Columns[0].Width)
 		fp.table.Columns[0].Title = composePanelColumnTitle(
-			Msg("Panel.Column.Name"), right, fp.table.Columns[0].Width)
+			i18n.Msg("Panel.Column.Name"), right, fp.table.Columns[0].Width)
 	}
 }
 
@@ -2801,7 +2802,7 @@ func (fp *FileSystemPanel) Show(scr *vtui.ScreenBuf) {
 
 	selStr := ""
 	if selFiles > 0 || selDirs > 0 {
-		selStr = fmt.Sprintf(" "+Msg("Panel.SelectedInfo")+" ", formatIntWithSpaces(selSize), selFiles, selDirs)
+		selStr = fmt.Sprintf(" "+i18n.Msg("Panel.SelectedInfo")+" ", formatIntWithSpaces(selSize), selFiles, selDirs)
 	}
 
 	totalStr := ""
@@ -2885,7 +2886,7 @@ func (fp *FileSystemPanel) Show(scr *vtui.ScreenBuf) {
 
 		p.Fill(fx1, fy1, fx2, fy2, ' ', vtui.Palette[vtui.ColDialogText])
 		p.DrawBox(fx1, fy1, fx2, fy2, vtui.Palette[vtui.ColDialogBox], vtui.DoubleBox)
-		p.DrawTitle(fx1, fy1, fx2, Msg("Viewer.SearchTitle"), vtui.Palette[vtui.ColDialogBoxTitle])
+		p.DrawTitle(fx1, fy1, fx2, i18n.Msg("Viewer.SearchTitle"), vtui.Palette[vtui.ColDialogBoxTitle])
 
 		searchStr := fp.fastFindStr
 		for runewidth.StringWidth(searchStr) > boxW-4 {
@@ -3022,9 +3023,9 @@ func (fp *FileSystemPanel) Resize(w, h int) {
 			nameW = 1
 		}
 		fp.table.Columns = []vtui.TableColumn{
-			{Title: Msg("Panel.Column.Name"), Width: nameW},
-			{Title: Msg("Panel.Column.Size"), Width: panelSizeColumnWidth, Alignment: vtui.AlignRight},
-			{Title: Msg("Panel.Column.Modified"), Width: panelModifiedColumnWidth},
+			{Title: i18n.Msg("Panel.Column.Name"), Width: nameW},
+			{Title: i18n.Msg("Panel.Column.Size"), Width: panelSizeColumnWidth, Alignment: vtui.AlignRight},
+			{Title: i18n.Msg("Panel.Column.Modified"), Width: panelModifiedColumnWidth},
 		}
 	case ViewModeDetailed:
 		// The panel's inner table is w-2 characters wide. The size column
@@ -3034,8 +3035,8 @@ func (fp *FileSystemPanel) Resize(w, h int) {
 			nameW = 5
 		}
 		fp.table.Columns = []vtui.TableColumn{
-			{Title: Msg("Panel.Column.Name"), Width: nameW},
-			{Title: Msg("Panel.Column.Size"), Width: panelSizeColumnWidth, Alignment: vtui.AlignRight},
+			{Title: i18n.Msg("Panel.Column.Name"), Width: nameW},
+			{Title: i18n.Msg("Panel.Column.Size"), Width: panelSizeColumnWidth, Alignment: vtui.AlignRight},
 		}
 	default:
 		columnCount := fp.gridColumnCount()
@@ -3050,7 +3051,7 @@ func (fp *FileSystemPanel) Resize(w, h int) {
 			if width < 1 {
 				width = 1
 			}
-			columns[i] = vtui.TableColumn{Title: Msg("Panel.Column.Name"), Width: width}
+			columns[i] = vtui.TableColumn{Title: i18n.Msg("Panel.Column.Name"), Width: width}
 			remaining -= width
 		}
 		fp.table.Columns = columns

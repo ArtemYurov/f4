@@ -10,6 +10,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -28,12 +29,12 @@ func actionShareLink(pf *PanelsFrame) {
 	}
 	names := panel.GetSelectedNames()
 	if len(names) != 1 {
-		vtui.ShowMessageOn(pf, Msg("Share.Title"), Msg("Share.SelectOne"), []string{Msg("vtui.Ok")})
+		vtui.ShowMessageOn(pf, i18n.Msg("Share.Title"), i18n.Msg("Share.SelectOne"), []string{i18n.Msg("vtui.Ok")})
 		return
 	}
 	path := panel.vfs.Join(panel.vfs.GetPath(), names[0])
 	var info vfs.ShareLinkInfo
-	pf.RunProgressTask(Msg("Share.LoadTitle"), Msg("Share.Loading"), false, func(ctx context.Context, _ func(string, int)) error {
+	pf.RunProgressTask(i18n.Msg("Share.LoadTitle"), i18n.Msg("Share.Loading"), false, func(ctx context.Context, _ func(string, int)) error {
 		var err error
 		info, err = provider.ShareLinkInfo(ctx, path)
 		return err
@@ -82,7 +83,7 @@ type shareLinkDialog struct {
 
 func showShareLinkDialog(app *PanelsFrame, provider vfs.ShareLinkProvider, path string, info vfs.ShareLinkInfo) *shareLinkDialog {
 	d := &shareLinkDialog{app: app, provider: provider, path: path, info: info}
-	d.dialog = vtui.NewCenteredDialog(78, 19, Msg("Share.Title"))
+	d.dialog = vtui.NewCenteredDialog(78, 19, i18n.Msg("Share.Title"))
 	d.dialog.ShowClose = true
 
 	labelX := d.dialog.X1 + 2
@@ -94,19 +95,19 @@ func showShareLinkDialog(app *PanelsFrame, provider vfs.ShareLinkProvider, path 
 		d.dialog.AddItem(vtui.NewText(fieldX, row, vtui.TruncateMiddle(value, fieldWidth), vtui.Palette[vtui.ColDialogText]))
 		row++
 	}
-	addValue(Msg("Share.Provider"), info.Provider)
+	addValue(i18n.Msg("Share.Provider"), info.Provider)
 	itemName := info.ItemName
 	if itemName == "" {
 		itemName = path
 	}
-	addValue(Msg("Share.Item"), itemName)
+	addValue(i18n.Msg("Share.Item"), itemName)
 
 	roleLabels := make([]string, len(info.Roles))
 	for i, role := range info.Roles {
 		roleLabels[i] = shareRoleLabel(role)
 	}
 	if len(roleLabels) == 0 {
-		roleLabels = []string{Msg("Share.NotAvailable")}
+		roleLabels = []string{i18n.Msg("Share.NotAvailable")}
 	}
 	roleIndex := 0
 	if info.Link != nil {
@@ -117,7 +118,7 @@ func showShareLinkDialog(app *PanelsFrame, provider vfs.ShareLinkProvider, path 
 			}
 		}
 	}
-	d.dialog.AddItem(vtui.NewText(labelX, row, Msg("Share.Access"), vtui.Palette[vtui.ColDialogText]))
+	d.dialog.AddItem(vtui.NewText(labelX, row, i18n.Msg("Share.Access"), vtui.Palette[vtui.ColDialogText]))
 	d.role = vtui.NewComboBox(fieldX, row, fieldWidth, roleLabels)
 	d.role.DropdownOnly = true
 	d.role.Menu.SetSelectPos(roleIndex)
@@ -132,9 +133,9 @@ func showShareLinkDialog(app *PanelsFrame, provider vfs.ShareLinkProvider, path 
 	}
 	if len(expirationLabels) == 0 {
 		if info.Link != nil && info.Link.Role == vfs.ShareRoleServerControlled {
-			expirationLabels = []string{Msg("Share.Expiration.ServerControlled")}
+			expirationLabels = []string{i18n.Msg("Share.Expiration.ServerControlled")}
 		} else {
-			expirationLabels = []string{Msg("Share.Expiration.Never")}
+			expirationLabels = []string{i18n.Msg("Share.Expiration.Never")}
 		}
 	}
 	expirationIndex := 0
@@ -144,7 +145,7 @@ func showShareLinkDialog(app *PanelsFrame, provider vfs.ShareLinkProvider, path 
 			break
 		}
 	}
-	d.dialog.AddItem(vtui.NewText(labelX, row, Msg("Share.Expiration"), vtui.Palette[vtui.ColDialogText]))
+	d.dialog.AddItem(vtui.NewText(labelX, row, i18n.Msg("Share.Expiration"), vtui.Palette[vtui.ColDialogText]))
 	d.expiration = vtui.NewComboBox(fieldX, row, fieldWidth, expirationLabels)
 	d.expiration.DropdownOnly = true
 	d.expiration.Menu.SetSelectPos(expirationIndex)
@@ -163,7 +164,7 @@ func showShareLinkDialog(app *PanelsFrame, provider vfs.ShareLinkProvider, path 
 		row++
 	}
 
-	d.dialog.AddItem(vtui.NewText(labelX, d.dialog.Y2-5, Msg("Share.Link"), vtui.Palette[vtui.ColDialogText]))
+	d.dialog.AddItem(vtui.NewText(labelX, d.dialog.Y2-5, i18n.Msg("Share.Link"), vtui.Palette[vtui.ColDialogText]))
 	d.link = vtui.NewText(labelX, d.dialog.Y2-4, "", vtui.Palette[vtui.ColDialogText])
 	d.link.SetPosition(labelX, d.dialog.Y2-4, d.dialog.X2-2, d.dialog.Y2-4)
 	d.dialog.AddItem(d.link)
@@ -171,10 +172,10 @@ func showShareLinkDialog(app *PanelsFrame, provider vfs.ShareLinkProvider, path 
 	d.status.SetPosition(labelX, d.dialog.Y2-3, d.dialog.X2-2, d.dialog.Y2-3)
 	d.dialog.AddItem(d.status)
 
-	d.create = vtui.NewButton(0, 0, Msg("Share.CreateCopy"))
-	d.copy = vtui.NewButton(0, 0, Msg("Share.Copy"))
-	d.revoke = vtui.NewButton(0, 0, Msg("Share.Revoke"))
-	closeButton := vtui.NewButton(0, 0, Msg("Share.Close"))
+	d.create = vtui.NewButton(0, 0, i18n.Msg("Share.CreateCopy"))
+	d.copy = vtui.NewButton(0, 0, i18n.Msg("Share.Copy"))
+	d.revoke = vtui.NewButton(0, 0, i18n.Msg("Share.Revoke"))
+	closeButton := vtui.NewButton(0, 0, i18n.Msg("Share.Close"))
 	d.dialog.AddItem(d.create)
 	d.dialog.AddItem(d.copy)
 	d.dialog.AddItem(d.revoke)
@@ -312,7 +313,7 @@ func (d *shareLinkDialog) onCreate() {
 	d.setBusy(true)
 	var link vfs.ShareLink
 	issuedAfter := time.Now()
-	d.app.RunProgressTask(Msg("Share.CreateTitle"), Msg("Share.Creating"), false, func(ctx context.Context, _ func(string, int)) error {
+	d.app.RunProgressTask(i18n.Msg("Share.CreateTitle"), i18n.Msg("Share.Creating"), false, func(ctx context.Context, _ func(string, int)) error {
 		var err error
 		link, err = d.provider.CreateShareLink(ctx, d.path, request)
 		return err
@@ -330,12 +331,12 @@ func (d *shareLinkDialog) onCreate() {
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				if !d.closed {
-					d.refresh(Msg("Share.Canceled"))
+					d.refresh(i18n.Msg("Share.Canceled"))
 				}
 				return
 			}
 			if !d.closed {
-				d.refresh(Msg("Share.CreateFailed"))
+				d.refresh(i18n.Msg("Share.CreateFailed"))
 			}
 			showShareErrorOn(d.reconciliationAnchor(), err)
 			return
@@ -349,11 +350,11 @@ func (d *shareLinkDialog) onCreate() {
 		}
 		d.copyLinkToClipboard(link.URL)
 		if d.closed {
-			showShareMessageOn(d.reconciliationAnchor(), Msg("Share.StateTitle"), Msg("Share.CreatedCopiedAfterClose"))
+			showShareMessageOn(d.reconciliationAnchor(), i18n.Msg("Share.StateTitle"), i18n.Msg("Share.CreatedCopiedAfterClose"))
 			return
 		}
 		d.selectLinkRole()
-		d.refresh(Msg("Share.Copied"))
+		d.refresh(i18n.Msg("Share.Copied"))
 	})
 }
 
@@ -362,7 +363,7 @@ func (d *shareLinkDialog) onCopy() {
 		return
 	}
 	link := d.info.Link.URL
-	d.refresh(Msg("Share.Copied"))
+	d.refresh(i18n.Msg("Share.Copied"))
 	d.copyLinkToClipboard(link)
 }
 
@@ -370,13 +371,13 @@ func (d *shareLinkDialog) onRevoke() {
 	if d.busy || d.stateUnknown || d.info.Link == nil || !d.info.CanRevoke {
 		return
 	}
-	confirm := vtui.ShowMessageOn(d.dialog, Msg("Share.RevokeTitle"), Msg("Share.RevokeConfirm"), []string{Msg("Share.Revoke"), Msg("vtui.Cancel")})
+	confirm := vtui.ShowMessageOn(d.dialog, i18n.Msg("Share.RevokeTitle"), i18n.Msg("Share.RevokeConfirm"), []string{i18n.Msg("Share.Revoke"), i18n.Msg("vtui.Cancel")})
 	confirm.OnResult = func(code int) {
 		if code != 0 || d.closed {
 			return
 		}
 		d.setBusy(true)
-		d.app.RunProgressTask(Msg("Share.RevokeTitle"), Msg("Share.Revoking"), false, func(ctx context.Context, _ func(string, int)) error {
+		d.app.RunProgressTask(i18n.Msg("Share.RevokeTitle"), i18n.Msg("Share.Revoking"), false, func(ctx context.Context, _ func(string, int)) error {
 			return d.provider.RevokeShareLink(ctx, d.path)
 		}, func(err error) {
 			if errors.Is(err, vfs.ErrOperationStateUnknown) {
@@ -387,12 +388,12 @@ func (d *shareLinkDialog) onRevoke() {
 			if err != nil {
 				if errors.Is(err, context.Canceled) {
 					if !d.closed {
-						d.refresh(Msg("Share.Canceled"))
+						d.refresh(i18n.Msg("Share.Canceled"))
 					}
 					return
 				}
 				if !d.closed {
-					d.refresh(Msg("Share.RevokeFailed"))
+					d.refresh(i18n.Msg("Share.RevokeFailed"))
 				}
 				showShareErrorOn(d.reconciliationAnchor(), err)
 				return
@@ -405,10 +406,10 @@ func (d *shareLinkDialog) onRevoke() {
 			d.info.LinkDiscoverable = false
 			d.info.LinkDiscoverabilityInherited = false
 			if d.closed {
-				showShareMessageOn(d.reconciliationAnchor(), Msg("Share.StateTitle"), Msg("Share.RevokedAfterClose"))
+				showShareMessageOn(d.reconciliationAnchor(), i18n.Msg("Share.StateTitle"), i18n.Msg("Share.RevokedAfterClose"))
 				return
 			}
-			d.refresh(Msg("Share.Revoked"))
+			d.refresh(i18n.Msg("Share.Revoked"))
 		})
 	}
 }
@@ -444,7 +445,7 @@ func (d *shareLinkDialog) reconcileCreate(original error, request vfs.ShareLinkR
 		return
 	}
 	var info vfs.ShareLinkInfo
-	d.app.RunProgressTask(Msg("Share.ReconcileTitle"), Msg("Share.Reconciling"), false, func(ctx context.Context, _ func(string, int)) error {
+	d.app.RunProgressTask(i18n.Msg("Share.ReconcileTitle"), i18n.Msg("Share.Reconciling"), false, func(ctx context.Context, _ func(string, int)) error {
 		var err error
 		info, err = d.provider.ShareLinkInfo(ctx, d.path)
 		if err == nil {
@@ -457,7 +458,7 @@ func (d *shareLinkDialog) reconcileCreate(original error, request vfs.ShareLinkR
 			d.unexpectedAccess = false
 			d.setBusy(false)
 			if !d.closed {
-				d.refresh(Msg("Share.StateUnknown"))
+				d.refresh(i18n.Msg("Share.StateUnknown"))
 			}
 			showShareErrorOn(d.reconciliationAnchor(), &vfs.UnknownOperationStateError{Operation: "reconcile share link", Err: reconcileErr})
 			return
@@ -471,20 +472,20 @@ func (d *shareLinkDialog) reconcileCreate(original error, request vfs.ShareLinkR
 				d.setBusy(false)
 				if !d.closed {
 					d.selectLinkRole()
-					d.refresh(Msg("Share.UnexpectedAccess"))
+					d.refresh(i18n.Msg("Share.UnexpectedAccess"))
 				}
-				showShareMessageOn(d.reconciliationAnchor(), Msg("Share.StateTitle"), Msg("Share.UnexpectedAccess"))
+				showShareMessageOn(d.reconciliationAnchor(), i18n.Msg("Share.StateTitle"), i18n.Msg("Share.UnexpectedAccess"))
 				return
 			}
 			d.unexpectedAccess = false
 			d.setBusy(false)
 			d.copyLinkToClipboard(link.URL)
 			if d.closed {
-				showShareMessageOn(d.reconciliationAnchor(), Msg("Share.StateTitle"), Msg("Share.ReconciledCopied"))
+				showShareMessageOn(d.reconciliationAnchor(), i18n.Msg("Share.StateTitle"), i18n.Msg("Share.ReconciledCopied"))
 				return
 			}
 			d.selectLinkRole()
-			d.refresh(Msg("Share.ReconciledCopied"))
+			d.refresh(i18n.Msg("Share.ReconciledCopied"))
 			return
 		}
 		if info.LinksUnenumerable {
@@ -493,7 +494,7 @@ func (d *shareLinkDialog) reconcileCreate(original error, request vfs.ShareLinkR
 			d.applyAuthoritativeInfo(info)
 			d.setBusy(false)
 			if !d.closed {
-				d.refresh(Msg("Share.StateUnknown"))
+				d.refresh(i18n.Msg("Share.StateUnknown"))
 			}
 			showShareErrorOn(d.reconciliationAnchor(), &vfs.UnknownOperationStateError{Operation: "reconcile share link"})
 			return
@@ -504,10 +505,10 @@ func (d *shareLinkDialog) reconcileCreate(original error, request vfs.ShareLinkR
 		d.unexpectedAccess = false
 		d.setBusy(false)
 		if d.closed {
-			showShareMessageOn(d.reconciliationAnchor(), Msg("Share.StateTitle"), Msg("Share.NotCreated"))
+			showShareMessageOn(d.reconciliationAnchor(), i18n.Msg("Share.StateTitle"), i18n.Msg("Share.NotCreated"))
 			return
 		}
-		d.refresh(Msg("Share.NotCreated"))
+		d.refresh(i18n.Msg("Share.NotCreated"))
 	})
 }
 
@@ -519,7 +520,7 @@ func (d *shareLinkDialog) reconcileRevoke(original error) {
 		return
 	}
 	var info vfs.ShareLinkInfo
-	d.app.RunProgressTask(Msg("Share.ReconcileTitle"), Msg("Share.Reconciling"), false, func(ctx context.Context, _ func(string, int)) error {
+	d.app.RunProgressTask(i18n.Msg("Share.ReconcileTitle"), i18n.Msg("Share.Reconciling"), false, func(ctx context.Context, _ func(string, int)) error {
 		var err error
 		info, err = d.provider.ShareLinkInfo(ctx, d.path)
 		if err == nil {
@@ -532,7 +533,7 @@ func (d *shareLinkDialog) reconcileRevoke(original error) {
 			d.unexpectedAccess = false
 			d.setBusy(false)
 			if !d.closed {
-				d.refresh(Msg("Share.StateUnknown"))
+				d.refresh(i18n.Msg("Share.StateUnknown"))
 			}
 			showShareErrorOn(d.reconciliationAnchor(), &vfs.UnknownOperationStateError{Operation: "reconcile revoked share link", Err: reconcileErr})
 			return
@@ -543,9 +544,9 @@ func (d *shareLinkDialog) reconcileRevoke(original error) {
 			d.applyAuthoritativeInfo(info)
 			d.setBusy(false)
 			if !d.closed {
-				d.refresh(Msg("Share.Revoked"))
+				d.refresh(i18n.Msg("Share.Revoked"))
 			} else {
-				showShareMessageOn(d.reconciliationAnchor(), Msg("Share.StateTitle"), Msg("Share.RevokedAfterClose"))
+				showShareMessageOn(d.reconciliationAnchor(), i18n.Msg("Share.StateTitle"), i18n.Msg("Share.RevokedAfterClose"))
 			}
 			return
 		}
@@ -554,9 +555,9 @@ func (d *shareLinkDialog) reconcileRevoke(original error) {
 			d.setBusy(false)
 			if !d.closed {
 				d.selectLinkRole()
-				d.refresh(Msg("Share.RevokeStillActive"))
+				d.refresh(i18n.Msg("Share.RevokeStillActive"))
 			}
-			showShareMessageOn(d.reconciliationAnchor(), Msg("Share.StateTitle"), Msg("Share.RevokeStillActive"))
+			showShareMessageOn(d.reconciliationAnchor(), i18n.Msg("Share.StateTitle"), i18n.Msg("Share.RevokeStillActive"))
 			return
 		}
 	})
@@ -578,34 +579,34 @@ func (d *shareLinkDialog) refresh(status string) {
 	d.refreshNotice()
 	if d.info.Link == nil || d.info.Link.URL == "" {
 		if d.info.LinksUnenumerable {
-			d.link.SetText(Msg("Share.LinkUnenumerable"))
+			d.link.SetText(i18n.Msg("Share.LinkUnenumerable"))
 			if status == "" {
-				status = Msg("Share.UnenumerableStatus")
+				status = i18n.Msg("Share.UnenumerableStatus")
 			}
 		} else if d.info.UnmanagedPublicAccess {
-			d.link.SetText(Msg("Share.UnmanagedAccess"))
+			d.link.SetText(i18n.Msg("Share.UnmanagedAccess"))
 			if status == "" {
-				status = Msg("Share.UnmanagedStatus")
+				status = i18n.Msg("Share.UnmanagedStatus")
 			}
 		} else {
-			d.link.SetText(Msg("Share.NoLink"))
+			d.link.SetText(i18n.Msg("Share.NoLink"))
 			if status == "" {
-				status = Msg("Share.Ready")
+				status = i18n.Msg("Share.Ready")
 			}
 		}
 	} else {
 		d.link.SetText(vtui.TruncateMiddle(d.info.Link.URL, 72))
 		if status == "" {
 			if d.info.Link.Role == vfs.ShareRoleServerControlled {
-				status = Msg("Share.ServerControlledStatus")
+				status = i18n.Msg("Share.ServerControlledStatus")
 			} else if !shareLinkCopyableAt(d.info.Link, time.Now()) {
-				status = Msg("Share.Expired")
+				status = i18n.Msg("Share.Expired")
 			} else if d.info.Link.ExpiresAt.IsZero() {
-				status = Msg("Share.Active")
+				status = i18n.Msg("Share.Active")
 			} else if d.info.Link.ExpiresAtIsMaximum {
-				status = fmt.Sprintf(Msg("Share.ActiveNoLaterThan"), d.info.Link.ExpiresAt.Local().Format(time.RFC822))
+				status = fmt.Sprintf(i18n.Msg("Share.ActiveNoLaterThan"), d.info.Link.ExpiresAt.Local().Format(time.RFC822))
 			} else {
-				status = fmt.Sprintf(Msg("Share.ActiveUntil"), d.info.Link.ExpiresAt.Local().Format(time.RFC822))
+				status = fmt.Sprintf(i18n.Msg("Share.ActiveUntil"), d.info.Link.ExpiresAt.Local().Format(time.RFC822))
 			}
 		}
 	}
@@ -663,7 +664,7 @@ func (d *shareLinkDialog) syncShareSelectors() {
 		}
 	}
 	if len(roleLabels) == 0 {
-		roleLabels = []string{Msg("Share.NotAvailable")}
+		roleLabels = []string{i18n.Msg("Share.NotAvailable")}
 	}
 	setShareComboItems(d.role, roleLabels, roleIndex)
 
@@ -677,9 +678,9 @@ func (d *shareLinkDialog) syncShareSelectors() {
 	}
 	if len(expirationLabels) == 0 {
 		if d.info.Link != nil && d.info.Link.Role == vfs.ShareRoleServerControlled {
-			expirationLabels = []string{Msg("Share.Expiration.ServerControlled")}
+			expirationLabels = []string{i18n.Msg("Share.Expiration.ServerControlled")}
 		} else {
-			expirationLabels = []string{Msg("Share.Expiration.Never")}
+			expirationLabels = []string{i18n.Msg("Share.Expiration.Never")}
 		}
 	}
 	setShareComboItems(d.expiration, expirationLabels, expirationIndex)
@@ -749,7 +750,7 @@ func (d *shareLinkDialog) scheduleExpiryRefresh() {
 			if !d.expiryTimerStillCurrent(generation, linkURL, expiry, time.Now()) {
 				return
 			}
-			d.refresh(Msg("Share.Expired"))
+			d.refresh(i18n.Msg("Share.Expired"))
 		})
 	})
 }
@@ -762,42 +763,42 @@ func (d *shareLinkDialog) expiryTimerStillCurrent(generation uint64, linkURL str
 func shareRoleLabel(role vfs.ShareRole) string {
 	switch role {
 	case vfs.ShareRoleViewer:
-		return Msg("Share.Role.Viewer")
+		return i18n.Msg("Share.Role.Viewer")
 	case vfs.ShareRoleCommenter:
-		return Msg("Share.Role.Commenter")
+		return i18n.Msg("Share.Role.Commenter")
 	case vfs.ShareRoleEditor:
-		return Msg("Share.Role.Editor")
+		return i18n.Msg("Share.Role.Editor")
 	case vfs.ShareRoleUploader:
-		return Msg("Share.Role.Uploader")
+		return i18n.Msg("Share.Role.Uploader")
 	case vfs.ShareRoleServerControlled:
-		return Msg("Share.Role.ServerControlled")
+		return i18n.Msg("Share.Role.ServerControlled")
 	default:
-		return Msg("Share.NotAvailable")
+		return i18n.Msg("Share.NotAvailable")
 	}
 }
 
 func shareExpirationLabel(duration time.Duration) string {
 	if duration == 0 {
-		return Msg("Share.Expiration.Never")
+		return i18n.Msg("Share.Expiration.Never")
 	}
 	if duration%(24*time.Hour) == 0 {
-		return fmt.Sprintf(Msg("Share.Expiration.Days"), int(duration/(24*time.Hour)))
+		return fmt.Sprintf(i18n.Msg("Share.Expiration.Days"), int(duration/(24*time.Hour)))
 	}
 	if duration%time.Hour == 0 {
-		return fmt.Sprintf(Msg("Share.Expiration.Hours"), int(duration/time.Hour))
+		return fmt.Sprintf(i18n.Msg("Share.Expiration.Hours"), int(duration/time.Hour))
 	}
-	return fmt.Sprintf(Msg("Share.Expiration.Minutes"), int(duration/time.Minute))
+	return fmt.Sprintf(i18n.Msg("Share.Expiration.Minutes"), int(duration/time.Minute))
 }
 
 func shareNotice(info vfs.ShareLinkInfo) string {
 	provider := strings.ToLower(info.Provider)
 	switch {
 	case strings.Contains(provider, "webdav"):
-		return Msg("Share.Notice.WebDAV")
+		return i18n.Msg("Share.Notice.WebDAV")
 	case strings.Contains(provider, "s3"):
-		return Msg("Share.Notice.S3")
+		return i18n.Msg("Share.Notice.S3")
 	case strings.Contains(provider, "yandex"):
-		return Msg("Share.Notice.Yandex")
+		return i18n.Msg("Share.Notice.Yandex")
 	case strings.Contains(provider, "google"):
 		parts := make([]string, 0, 5)
 		// Google view=published is public exposure whose URL and lifecycle are
@@ -805,26 +806,26 @@ func shareNotice(info vfs.ShareLinkInfo) string {
 		// anyone permission managed in this dialog. Put the remediation first so
 		// the fixed-height notice cannot truncate it behind generic prose.
 		if info.UnmanagedPublicAccess {
-			parts = append(parts, Msg("Share.Notice.GooglePublished"))
+			parts = append(parts, i18n.Msg("Share.Notice.GooglePublished"))
 		}
-		parts = append(parts, Msg("Share.Notice.Google"))
+		parts = append(parts, i18n.Msg("Share.Notice.Google"))
 		if info.LinkDiscoverabilityInherited {
-			parts = append(parts, Msg("Share.Notice.GoogleInheritedDiscoverable"))
+			parts = append(parts, i18n.Msg("Share.Notice.GoogleInheritedDiscoverable"))
 		} else if info.LinkDiscoverable {
-			parts = append(parts, Msg("Share.Notice.GoogleDiscoverable"))
+			parts = append(parts, i18n.Msg("Share.Notice.GoogleDiscoverable"))
 		}
 		if info.LinkInherited {
-			parts = append(parts, Msg("Share.Notice.GoogleInherited"))
+			parts = append(parts, i18n.Msg("Share.Notice.GoogleInherited"))
 		}
 		lowerNotice := strings.ToLower(info.Notice)
 		if strings.Contains(lowerNotice, "do not allow") {
-			parts = append(parts, Msg("Share.Notice.GoogleReadOnly"))
+			parts = append(parts, i18n.Msg("Share.Notice.GoogleReadOnly"))
 		}
 		return strings.Join(parts, " ")
 	case info.Notice != "":
 		return info.Notice
 	default:
-		return Msg("Share.Notice.Public")
+		return i18n.Msg("Share.Notice.Public")
 	}
 }
 
@@ -834,13 +835,13 @@ var (
 )
 
 func safeShareErrorMessage(err error) string {
-	message := Msg("Share.ErrorGeneric")
+	message := i18n.Msg("Share.ErrorGeneric")
 	if err != nil {
 		message = strings.TrimSpace(err.Error())
 		message = shareErrorURLPattern.ReplaceAllString(message, "[link redacted]")
 		message = shareErrorSecretPattern.ReplaceAllString(message, "$1=[redacted]")
 		if message == "" {
-			message = Msg("Share.ErrorGeneric")
+			message = i18n.Msg("Share.ErrorGeneric")
 		}
 		runes := []rune(message)
 		if len(runes) > 4096 {
@@ -852,13 +853,13 @@ func safeShareErrorMessage(err error) string {
 
 func showShareErrorOn(anchor vtui.Frame, err error) {
 	message := safeShareErrorMessage(err)
-	showShareMessageOn(anchor, Msg("Share.ErrorTitle"), message)
+	showShareMessageOn(anchor, i18n.Msg("Share.ErrorTitle"), message)
 }
 
 func showShareMessageOn(anchor vtui.Frame, title, message string) {
 	if anchor != nil {
-		vtui.ShowMessageOn(anchor, title, message, []string{Msg("vtui.Ok")})
+		vtui.ShowMessageOn(anchor, title, message, []string{i18n.Msg("vtui.Ok")})
 		return
 	}
-	vtui.ShowMessage(title, message, []string{Msg("vtui.Ok")})
+	vtui.ShowMessage(title, message, []string{i18n.Msg("vtui.Ok")})
 }

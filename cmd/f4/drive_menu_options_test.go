@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -49,7 +50,7 @@ func TestDriveMenuOptionsDialogSizeIsContentBased(t *testing.T) {
 	}
 	longest := 0
 	for _, spec := range driveMenuOptionSpecs {
-		label, _, _ := vtui.ParseAmpersandString(Msg(spec.label))
+		label, _, _ := vtui.ParseAmpersandString(i18n.Msg(spec.label))
 		if w := vtui.StringWidth(label); w > longest {
 			longest = w
 		}
@@ -92,8 +93,8 @@ func TestPanelsFrame_DriveMenu_F9OpensOptions(t *testing.T) {
 	if !ok {
 		t.Fatalf("drive menu not opened: %T", vtui.FrameManager.GetTopFrame())
 	}
-	if !strings.Contains(Msg("Drive.BottomHint"), "F9") {
-		t.Fatalf("drive menu hint does not advertise F9: %q", Msg("Drive.BottomHint"))
+	if !strings.Contains(i18n.Msg("Drive.BottomHint"), "F9") {
+		t.Fatalf("drive menu hint does not advertise F9: %q", i18n.Msg("Drive.BottomHint"))
 	}
 	if !menu.ProcessKey(&vtinput.InputEvent{
 		Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_F9,

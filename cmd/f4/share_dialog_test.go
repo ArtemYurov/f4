@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -81,7 +82,7 @@ func TestShareDialogCannotCreateWithoutAProviderRole(t *testing.T) {
 		t.Fatal("dialog produced a request without a provider-supported role")
 	}
 	focused, ok := d.dialog.GetFocusedItem().(*vtui.Button)
-	if !ok || focused.GetCaption() != Msg("Share.Close") {
+	if !ok || focused.GetCaption() != i18n.Msg("Share.Close") {
 		t.Fatalf("focused item = %#v, want Close button", d.dialog.GetFocusedItem())
 	}
 }
@@ -123,7 +124,7 @@ func TestShareDialogShowsMaximumExpiryHonestly(t *testing.T) {
 	})
 	defer d.dialog.Close()
 
-	want := fmt.Sprintf(Msg("Share.ActiveNoLaterThan"), expiresAt.Local().Format(time.RFC822))
+	want := fmt.Sprintf(i18n.Msg("Share.ActiveNoLaterThan"), expiresAt.Local().Format(time.RFC822))
 	want = vtui.TruncateMiddle(want, 72)
 	if got := d.status.GetText(); got != want {
 		t.Fatalf("status = %q, want %q", got, want)
@@ -199,10 +200,10 @@ func TestShareDialogDoesNotClaimS3HasNoIssuedLinks(t *testing.T) {
 		LinksUnenumerable: true,
 	})
 	defer d.dialog.Close()
-	if got := d.link.GetText(); got != Msg("Share.LinkUnenumerable") {
+	if got := d.link.GetText(); got != i18n.Msg("Share.LinkUnenumerable") {
 		t.Fatalf("link text = %q", got)
 	}
-	if got := d.status.GetText(); got != vtui.TruncateMiddle(Msg("Share.UnenumerableStatus"), 72) {
+	if got := d.status.GetText(); got != vtui.TruncateMiddle(i18n.Msg("Share.UnenumerableStatus"), 72) {
 		t.Fatalf("status = %q", got)
 	}
 }
@@ -223,7 +224,7 @@ func TestShareDialogDisablesExpiredAndUnknownStateActions(t *testing.T) {
 		},
 	})
 	defer d.dialog.Close()
-	if !d.copy.IsDisabled() || d.status.GetText() != vtui.TruncateMiddle(Msg("Share.Expired"), 72) {
+	if !d.copy.IsDisabled() || d.status.GetText() != vtui.TruncateMiddle(i18n.Msg("Share.Expired"), 72) {
 		t.Fatalf("expired link copy disabled=%v status=%q", d.copy.IsDisabled(), d.status.GetText())
 	}
 
@@ -348,10 +349,10 @@ func TestShareDialogPresentsWebDAVAccessAsServerControlled(t *testing.T) {
 		},
 	})
 	defer d.dialog.Close()
-	if got := d.expiration.Edit.GetText(); got != Msg("Share.Expiration.ServerControlled") {
+	if got := d.expiration.Edit.GetText(); got != i18n.Msg("Share.Expiration.ServerControlled") {
 		t.Fatalf("expiration = %q", got)
 	}
-	if got := d.status.GetText(); got != vtui.TruncateMiddle(Msg("Share.ServerControlledStatus"), 72) {
+	if got := d.status.GetText(); got != vtui.TruncateMiddle(i18n.Msg("Share.ServerControlledStatus"), 72) {
 		t.Fatalf("status = %q", got)
 	}
 }
@@ -414,12 +415,12 @@ func TestGoogleShareNoticeDistinguishesDirectAndInheritedDiscoverability(t *test
 		LinkDiscoverable: true,
 	}
 	notice := shareNotice(info)
-	for _, expected := range []string{Msg("Share.Notice.GoogleDiscoverable"), Msg("Share.Notice.GoogleInherited")} {
+	for _, expected := range []string{i18n.Msg("Share.Notice.GoogleDiscoverable"), i18n.Msg("Share.Notice.GoogleInherited")} {
 		if !strings.Contains(notice, expected) {
 			t.Fatalf("notice %q does not contain %q", notice, expected)
 		}
 	}
-	if strings.Contains(notice, Msg("Share.Notice.GoogleInheritedDiscoverable")) {
+	if strings.Contains(notice, i18n.Msg("Share.Notice.GoogleInheritedDiscoverable")) {
 		t.Fatalf("direct discoverability was mislabeled as inherited: %q", notice)
 	}
 }
@@ -434,7 +435,7 @@ func TestGooglePublishedExposureNoticeIsVisibleAndActionable(t *testing.T) {
 		UnmanagedPublicAccess: true,
 	}
 	notice := shareNotice(info)
-	if !strings.HasPrefix(notice, Msg("Share.Notice.GooglePublished")) {
+	if !strings.HasPrefix(notice, i18n.Msg("Share.Notice.GooglePublished")) {
 		t.Fatalf("published remediation is not prominent: %q", notice)
 	}
 	d := showShareLinkDialog(nil, shareDialogTestProvider{}, "opaque-item", info)
@@ -448,15 +449,15 @@ func TestGooglePublishedExposureNoticeIsVisibleAndActionable(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	wantRunes := []rune(Msg("Share.Notice.GooglePublished"))
+	wantRunes := []rune(i18n.Msg("Share.Notice.GooglePublished"))
 	wantPrefix := string(wantRunes[:min(24, len(wantRunes))])
 	if text := visible.String(); !strings.Contains(text, wantPrefix) {
 		t.Fatalf("published remediation was hidden in dialog notice: %q", text)
 	}
-	if got := d.link.GetText(); got != Msg("Share.UnmanagedAccess") {
+	if got := d.link.GetText(); got != i18n.Msg("Share.UnmanagedAccess") {
 		t.Fatalf("published view exposure was presented as private: %q", got)
 	}
-	if got := d.status.GetText(); got != vtui.TruncateMiddle(Msg("Share.UnmanagedStatus"), 72) {
+	if got := d.status.GetText(); got != vtui.TruncateMiddle(i18n.Msg("Share.UnmanagedStatus"), 72) {
 		t.Fatalf("published view status = %q", got)
 	}
 }

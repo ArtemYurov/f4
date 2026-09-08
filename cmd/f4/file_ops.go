@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -876,7 +877,7 @@ func ExecuteDeleteOpWithDispositionAt(pf *PanelsFrame, activeVfs vfs.VFS, basePa
 		progressTitleKey = "Delete.ProgressTitleTrash"
 		failedKey = "Delete.FailedTrash"
 	}
-	desc := fmt.Sprintf(Msg(descKey), len(names))
+	desc := fmt.Sprintf(i18n.Msg(descKey), len(names))
 
 	runFunc := func(ctx context.Context, reporter TaskReporter, anchor vtui.Frame) error {
 		ctx = context.WithValue(ctx, vfs.ReporterKey, reporter)
@@ -889,7 +890,7 @@ func ExecuteDeleteOpWithDispositionAt(pf *PanelsFrame, activeVfs vfs.VFS, basePa
 		})
 
 		if scanErr != nil && !errors.Is(scanErr, context.Canceled) {
-			return fmt.Errorf(Msg("Delete.ScanFailed"), scanErr)
+			return fmt.Errorf(i18n.Msg("Delete.ScanFailed"), scanErr)
 		}
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -905,9 +906,9 @@ func ExecuteDeleteOpWithDispositionAt(pf *PanelsFrame, activeVfs vfs.VFS, basePa
 				filePct, totalPct, currName := tracker.GetProgress()
 				processed, total := tracker.GetStats()
 
-				totalText := fmt.Sprintf(Msg("Delete.Total"), processed.Files+processed.Dirs, total.Files+total.Dirs)
+				totalText := fmt.Sprintf(i18n.Msg("Delete.Total"), processed.Files+processed.Dirs, total.Files+total.Dirs)
 
-				reporter.UpdateTransfer(Msg(progressVerbKey), currName, filePct, totalText, totalPct, "")
+				reporter.UpdateTransfer(i18n.Msg(progressVerbKey), currName, filePct, totalText, totalPct, "")
 			}
 		}
 
@@ -947,23 +948,23 @@ func ExecuteDeleteOpWithDispositionAt(pf *PanelsFrame, activeVfs vfs.VFS, basePa
 					return err
 				}
 				if errors.Is(err, vfs.ErrTrashUnsupported) {
-					err = fmt.Errorf("%s", Msg("Trash.Unsupported"))
+					err = fmt.Errorf("%s", i18n.Msg("Trash.Unsupported"))
 				}
 
 				if skipAll {
-					allErrors = append(allErrors, fmt.Sprintf(Msg("Delete.Skipped"), name, err))
+					allErrors = append(allErrors, fmt.Sprintf(i18n.Msg("Delete.Skipped"), name, err))
 					break
 				}
 
-				choice := askDeleteError(ctx, fmt.Sprintf(Msg(failedKey), name), err, anchor)
+				choice := askDeleteError(ctx, fmt.Sprintf(i18n.Msg(failedKey), name), err, anchor)
 				if choice == 0 { // Retry
 					continue
 				} else if choice == 1 { // Skip
-					allErrors = append(allErrors, fmt.Sprintf(Msg("Delete.Skipped"), name, err))
+					allErrors = append(allErrors, fmt.Sprintf(i18n.Msg("Delete.Skipped"), name, err))
 					break
 				} else if choice == 2 { // Skip All
 					skipAll = true
-					allErrors = append(allErrors, fmt.Sprintf(Msg("Delete.Skipped"), name, err))
+					allErrors = append(allErrors, fmt.Sprintf(i18n.Msg("Delete.Skipped"), name, err))
 					break
 				} else { // Abort
 					return context.Canceled
@@ -988,7 +989,7 @@ func ExecuteDeleteOpWithDispositionAt(pf *PanelsFrame, activeVfs vfs.VFS, basePa
 					dlgH = 8
 				}
 
-				dlg := vtui.NewCenteredDialog(dlgW, dlgH, Msg("FileOp.DeletionErrors"))
+				dlg := vtui.NewCenteredDialog(dlgW, dlgH, i18n.Msg("FileOp.DeletionErrors"))
 				dlg.ShowClose = true
 
 				var listItems []string
@@ -1002,7 +1003,7 @@ func ExecuteDeleteOpWithDispositionAt(pf *PanelsFrame, activeVfs vfs.VFS, basePa
 				}
 
 				lb := vtui.NewListBox(0, 0, dlgW-4, dlgH-6, listItems)
-				btnOk := vtui.NewButton(0, 0, Msg("vtui.Ok"))
+				btnOk := vtui.NewButton(0, 0, i18n.Msg("vtui.Ok"))
 				btnOk.IsDefault = true
 				btnOk.OnClick = func() { dlg.Close() }
 
@@ -1049,7 +1050,7 @@ func ExecuteDeleteOpWithDispositionAt(pf *PanelsFrame, activeVfs vfs.VFS, basePa
 		}
 		GlobalQueueManager.Enqueue(task)
 	} else {
-		dlg := NewFileOpProgressDialog(" " + strings.TrimSpace(Msg(progressTitleKey)) + " ")
+		dlg := NewFileOpProgressDialog(" " + strings.TrimSpace(i18n.Msg(progressTitleKey)) + " ")
 		// RunAsync starts the worker before it returns the context assigned
 		// here, and the worker closes the dialog when it finishes, which runs
 		// OnResult. A plain variable is therefore written and read from two
@@ -1088,7 +1089,7 @@ func ExecuteDeleteOpWithDispositionAt(pf *PanelsFrame, activeVfs vfs.VFS, basePa
 					onComplete()
 				}
 				if shouldDisplayFileOpError(err) {
-					vtui.ShowMessage(" "+strings.TrimSpace(Msg("Error.Title"))+" ", fmt.Sprintf(Msg("Delete.OperationFailed"), err), []string{Msg("vtui.Ok")})
+					vtui.ShowMessage(" "+strings.TrimSpace(i18n.Msg("Error.Title"))+" ", fmt.Sprintf(i18n.Msg("Delete.OperationFailed"), err), []string{i18n.Msg("vtui.Ok")})
 				}
 			})
 		}))
@@ -1659,19 +1660,19 @@ func AskOverwrite(ctx context.Context, destPath string, srcStat, dstStat vfs.VFS
 
 		width := 76
 		buttons := []*vtui.Button{
-			vtui.NewButton(0, 0, Msg("FileOp.Overwrite")),
-			vtui.NewButton(0, 0, Msg("FileOp.Skip")),
-			vtui.NewButton(0, 0, Msg("FileOp.Rename")),
-			vtui.NewButton(0, 0, Msg("FileOp.Append")),
-			vtui.NewButton(0, 0, Msg("FileOp.Resume")),
-			vtui.NewButton(0, 0, Msg("vtui.Cancel")),
+			vtui.NewButton(0, 0, i18n.Msg("FileOp.Overwrite")),
+			vtui.NewButton(0, 0, i18n.Msg("FileOp.Skip")),
+			vtui.NewButton(0, 0, i18n.Msg("FileOp.Rename")),
+			vtui.NewButton(0, 0, i18n.Msg("FileOp.Append")),
+			vtui.NewButton(0, 0, i18n.Msg("FileOp.Resume")),
+			vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel")),
 		}
 		buttonRows := dialogButtonRows(buttons, width-4, 1)
 		height := 11 + 2*len(buttonRows)
-		dlg = vtui.NewCenteredDialog(width, height, Msg("Warning.Title"))
+		dlg = vtui.NewCenteredDialog(width, height, i18n.Msg("Warning.Title"))
 		dlg.IsWarning = true
 
-		lbl1 := vtui.NewLabel(0, 0, Msg("FileOp.FileAlreadyExists"), nil)
+		lbl1 := vtui.NewLabel(0, 0, i18n.Msg("FileOp.FileAlreadyExists"), nil)
 		truncPath := vtui.TruncateMiddle(destPath, width-6)
 		lbl2 := vtui.NewLabel(0, 0, truncPath, nil)
 
@@ -1687,7 +1688,7 @@ func AskOverwrite(ctx context.Context, destPath string, srcStat, dstStat vfs.VFS
 
 		sep2 := vtui.NewSeparator(0, 0, width, true, true)
 
-		chkRem := vtui.NewCheckbox(0, 0, Msg("FileOp.RememberChoice"), false)
+		chkRem := vtui.NewCheckbox(0, 0, i18n.Msg("FileOp.RememberChoice"), false)
 
 		sep3 := vtui.NewSeparator(0, 0, width, true, true)
 
@@ -1775,9 +1776,9 @@ func askDeleteError(ctx context.Context, op string, err error, anchor vtui.Frame
 		if ctx.Err() != nil {
 			return
 		}
-		msg := fmt.Sprintf(Msg("Delete.ErrorPrompt"), op, err.Error())
-		buttons := []string{Msg("Btn.Retry"), Msg("Delete.BtnSkip"), Msg("Btn.SkipAll"), Msg("Delete.BtnAbort")}
-		title := " " + strings.TrimSpace(Msg("Error.Title")) + " "
+		msg := fmt.Sprintf(i18n.Msg("Delete.ErrorPrompt"), op, err.Error())
+		buttons := []string{i18n.Msg("Btn.Retry"), i18n.Msg("Delete.BtnSkip"), i18n.Msg("Btn.SkipAll"), i18n.Msg("Delete.BtnAbort")}
+		title := " " + strings.TrimSpace(i18n.Msg("Error.Title")) + " "
 		if anchor != nil {
 			dlg = vtui.ShowMessageOn(anchor, title, msg, buttons)
 		} else {
@@ -1853,9 +1854,9 @@ func AskError(ctx context.Context, op string, err error, anchor vtui.Frame) int 
 		}
 		msg := fmt.Sprintf("%s:\n%s\n\n%s", op, err.Error(), "What to do?")
 		if anchor != nil {
-			dlg = vtui.ShowMessageOn(anchor, " Error ", msg, []string{Msg("Btn.Retry"), "&Skip", "&Abort"})
+			dlg = vtui.ShowMessageOn(anchor, " Error ", msg, []string{i18n.Msg("Btn.Retry"), "&Skip", "&Abort"})
 		} else {
-			dlg = vtui.ShowMessage(" Error ", msg, []string{Msg("Btn.Retry"), "&Skip", "&Abort"})
+			dlg = vtui.ShowMessage(" Error ", msg, []string{i18n.Msg("Btn.Retry"), "&Skip", "&Abort"})
 		}
 		dlg.OnResult = func(code int) {
 			if code < 0 {

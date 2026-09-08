@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -107,7 +108,7 @@ func TestApplyCommandActionUsesActivePanelWorkspace(t *testing.T) {
 		t.Fatalf("Apply switched to background workspace A; active frame = %p", got)
 	}
 	top, ok := vtui.FrameManager.GetTopFrame().(*vtui.Window)
-	if !ok || top.GetTitle() != Msg("ApplyCommand.Title") {
+	if !ok || top.GetTitle() != i18n.Msg("ApplyCommand.Title") {
 		t.Fatalf("active workspace top frame = %T %q", vtui.FrameManager.GetTopFrame(), vtui.FrameManager.GetTopFrame().GetTitle())
 	}
 	top.Close()
@@ -414,7 +415,7 @@ func TestApplyTranscriptCanBeForwardedToEditor(t *testing.T) {
 	if got := editor.pt.String(); got != "first line\nsecond line\n" {
 		t.Fatalf("editor transcript = %q", got)
 	}
-	if editor.DisplayTitle != Msg("ApplyCommand.OutputEditorTitle") {
+	if editor.DisplayTitle != i18n.Msg("ApplyCommand.OutputEditorTitle") {
 		t.Fatalf("editor title = %q", editor.DisplayTitle)
 	}
 }
@@ -435,7 +436,7 @@ func TestApplyCommandCtrlGOpensHistoryDialogAndPreservesCommandLine(t *testing.T
 		t.Fatal("Ctrl+G was not handled")
 	}
 	top, ok := vtui.FrameManager.GetTopFrame().(*vtui.Window)
-	if !ok || top.GetTitle() != Msg("ApplyCommand.Title") {
+	if !ok || top.GetTitle() != i18n.Msg("ApplyCommand.Title") {
 		t.Fatalf("top frame = %T %q", vtui.FrameManager.GetTopFrame(), vtui.FrameManager.GetTopFrame().GetTitle())
 	}
 	foundHistory := false
@@ -551,9 +552,9 @@ func TestApplyCommandPromptDialogPagesEveryField(t *testing.T) {
 		clean, _, _ := vtui.ParseAmpersandString(message)
 		return clean
 	}
-	next := buttons[cleanCaption(Msg("ApplyCommand.PromptNext"))]
-	back := buttons[cleanCaption(Msg("ApplyCommand.PromptBack"))]
-	okButton := buttons[cleanCaption(Msg("vtui.Ok"))]
+	next := buttons[cleanCaption(i18n.Msg("ApplyCommand.PromptNext"))]
+	back := buttons[cleanCaption(i18n.Msg("ApplyCommand.PromptBack"))]
+	okButton := buttons[cleanCaption(i18n.Msg("vtui.Ok"))]
 	if next == nil || back == nil || okButton == nil {
 		t.Fatalf("pagination buttons missing: %#v", buttons)
 	}
