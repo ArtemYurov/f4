@@ -13,6 +13,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/numeric"
+	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -680,7 +681,7 @@ func (q *QuickViewPanel) renderDir(item *fileEntry, writeLine func(string)) {
 // scanStats under scanMu; the UI is nudged via HardRefresh no more
 // than every 200ms while the scan runs. On completion the final stats
 // (plus scanErr if any) are latched and scanDone becomes true.
-// fsInfo (statfs / GetDiskFreeSpace) is done inside the goroutine —
+// sysinfo.FsInfo (statfs / GetDiskFreeSpace) is done inside the goroutine —
 // it can block for seconds on a hung NFS/SMB mount and must not sit
 // on the UI thread.
 func (q *QuickViewPanel) startDirScan(fullPath string) {
@@ -713,10 +714,10 @@ func (q *QuickViewPanel) startDirScan(fullPath string) {
 	frames := vtui.FrameManager
 	go func() {
 		defer close(done)
-		// fsInfo() is a syscall that may block on stuck network
+		// sysinfo.FS() is a syscall that may block on stuck network
 		// mounts; do it here, off the UI thread. Cluster size is a
 		// display-only field.
-		if fs, ok := fsInfo(fullPath); ok {
+		if fs, ok := sysinfo.FS(fullPath); ok {
 			q.scanMu.Lock()
 			if q.scanGen == gen {
 				q.scanClusterSize = fs.ClusterSize

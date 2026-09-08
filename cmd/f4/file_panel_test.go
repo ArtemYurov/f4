@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -743,9 +744,9 @@ func TestFileSystemPanel_SelectedInfo(t *testing.T) {
 	if !strings.Contains(statusResult, "(2/1)") {
 		t.Errorf("Expected status line to contain file/directory counts, got: %q", statusResult)
 	}
-	info, ok := fsInfo(fp.vfs.GetPath())
+	info, ok := sysinfo.FS(fp.vfs.GetPath())
 	if !ok {
-		t.Fatal("fsInfo failed for the local test directory")
+		t.Fatal("sysinfo.FsInfo failed for the local test directory")
 	}
 	freeSpace := strings.ReplaceAll(formatBytes(info.Free), " ", "")
 	if !strings.Contains(statusResult, freeSpace) {

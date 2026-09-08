@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package sysinfo
 
 import (
 	"encoding/binary"
@@ -63,7 +63,7 @@ var (
 
 const cpuSampleInterval = 500 * time.Millisecond
 
-func cpuInfo() (CPUInfo, bool) {
+func CPU() (CPUInfo, bool) {
 	cpuStaticOnce.Do(func() {
 		cachedCPU = readStaticWindowsCPU()
 	})

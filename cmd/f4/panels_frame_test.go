@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/plugins/archive"
 	"github.com/unxed/f4/vfs"
@@ -4025,12 +4026,11 @@ func TestDriveMenu_SmartHotkeys(t *testing.T) {
 	pf.ResizeConsole(80, 25)
 
 	// Сохраняем оригинал и подменяем реестр
-	oldRegistry := DriveRegistry
-	DriveRegistry = []DriveEntry{
+	defer sysinfo.SnapshotDrives()()
+	sysinfo.SetDrives([]sysinfo.DriveEntry{
 		{Name: "NetFox", Factory: func() vfs.VFS { return nil }},
 		{Name: "Null VFS", Factory: func() vfs.VFS { return nil }},
-	}
-	defer func() { DriveRegistry = oldRegistry }()
+	})
 
 	pf.showDriveMenu(0)
 	top := vtui.FrameManager.GetTopFrame()

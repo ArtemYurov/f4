@@ -1,4 +1,4 @@
-package main
+package sysinfo
 
 // GPUInfo is what the InfoPanel's GPU section renders. Systems with
 // dGPU + iGPU return two entries. Empty slice → section is hidden

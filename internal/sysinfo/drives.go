@@ -1,4 +1,4 @@
-package main
+package sysinfo
 
 import (
 	"sync"
@@ -35,8 +35,26 @@ func RegisterDrive(name string, factory func() vfs.VFS) {
 	DriveRegistry = append(DriveRegistry, DriveEntry{Name: name, Factory: factory})
 }
 
-func driveRegistrySnapshot() []DriveEntry {
+func DriveRegistrySnapshot() []DriveEntry {
 	driveRegistryMu.RLock()
 	defer driveRegistryMu.RUnlock()
 	return append([]DriveEntry(nil), DriveRegistry...)
+}
+
+// Drives returns the registry as a slice, ordered as it was registered.
+func Drives() []DriveEntry { return DriveRegistrySnapshot() }
+
+// SetDrives replaces the registry wholesale. It exists for tests: the mutex is
+// this package's own, so a caller that swaps the slice from outside cannot take
+// it, and a swap without it races every reader.
+func SetDrives(entries []DriveEntry) {
+	driveRegistryMu.Lock()
+	defer driveRegistryMu.Unlock()
+	DriveRegistry = append([]DriveEntry(nil), entries...)
+}
+
+// SnapshotDrives copies the registry and returns a function that puts it back.
+func SnapshotDrives() (restore func()) {
+	previous := DriveRegistrySnapshot()
+	return func() { SetDrives(previous) }
 }

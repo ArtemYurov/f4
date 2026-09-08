@@ -44,6 +44,10 @@ var architectureLayers = map[string]int{
 	// closures reach every view in the application.
 	"internal/action": 0,
 
+	// The hardware probes. A leaf in the strict sense: it imports no package of
+	// ours, which is what lets any layer call it.
+	"internal/sysinfo": 0,
+
 	// Data with an embed directive beside it, nothing else.
 	"internal/colorer": 0,
 
@@ -123,6 +127,26 @@ func TestArchitectureModuleBoundaries(t *testing.T) {
 			}
 		}
 		reportEdges(t, "a package below the application imports it", offenders)
+	})
+
+	// Rule 5: sysinfo imports nothing of ours. It is the one package with a
+	// private copy of a shared helper — cpu_darwin.go's boundedUint64ToInt —
+	// and this is what stops a future contributor from "cleaning that up" into
+	// an import that makes the leaf stop being one.
+	t.Run("SysinfoImportsNothingOfOurs", func(t *testing.T) {
+		sysinfo := architectureModule + "/internal/sysinfo"
+		var offenders []string
+		for importer, imports := range graph {
+			if !underAny(importer, sysinfo) {
+				continue
+			}
+			for _, imported := range imports {
+				if strings.HasPrefix(imported, architectureModule+"/internal/") {
+					offenders = append(offenders, importer+" -> "+imported)
+				}
+			}
+		}
+		reportEdges(t, "internal/sysinfo imports a package of ours", offenders)
 	})
 
 	// Rule 4: the module's own import graph is acyclic. The compiler refuses

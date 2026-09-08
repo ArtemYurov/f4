@@ -1,15 +1,15 @@
 //go:build darwin
 
-package main
+package sysinfo
 
 import "syscall"
 
-// fsInfo populates FSInfo for the filesystem holding path on macOS via
+// FsInfo populates FSInfo for the filesystem holding path on macOS via
 // syscall.Statfs. Darwin's Statfs_t exposes fs type name (e.g. "apfs",
 // "hfs") and mount point, so those fields land too. Namelen isn't in
 // Darwin's Statfs_t, so MaxFilename stays 0. `ok=false` if path is
 // empty or the syscall fails.
-func fsInfo(path string) (FSInfo, bool) {
+func FS(path string) (FSInfo, bool) {
 	if path == "" {
 		return FSInfo{}, false
 	}

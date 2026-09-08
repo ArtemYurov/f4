@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -91,17 +92,13 @@ Loop:
 
 func TestCoreAPI_Registrations(t *testing.T) {
 	api := &coreAPI{}
-	driveRegistryMu.Lock()
-	initialDrives := append([]DriveEntry(nil), DriveRegistry...)
-	driveRegistryMu.Unlock()
+	restoreDrives := sysinfo.SnapshotDrives()
 	pluginRegistryMu.Lock()
 	initialHotkeyEntries := append([]HotkeyEntry(nil), GlobalHotkeys...)
 	initialMenuItems := append([]PluginMenuItem(nil), PluginMenuItems...)
 	pluginRegistryMu.Unlock()
 	t.Cleanup(func() {
-		driveRegistryMu.Lock()
-		DriveRegistry = initialDrives
-		driveRegistryMu.Unlock()
+		restoreDrives()
 		pluginRegistryMu.Lock()
 		GlobalHotkeys = initialHotkeyEntries
 		PluginMenuItems = initialMenuItems
@@ -125,10 +122,10 @@ func TestCoreAPI_Registrations(t *testing.T) {
 		t.Error("Highlighter was not registered correctly")
 	}
 
-	// 3. RegisterDrive
-	initialLen := len(DriveRegistry)
+	// 3. sysinfo.RegisterDrive
+	initialLen := len(sysinfo.Drives())
 	api.RegisterDrive("MockDrive", func() vfs.VFS { return nil })
-	if len(DriveRegistry) != initialLen+1 || DriveRegistry[len(DriveRegistry)-1].Name != "MockDrive" {
+	if drives := sysinfo.Drives(); len(drives) != initialLen+1 || drives[len(drives)-1].Name != "MockDrive" {
 		t.Error("Drive was not registered correctly")
 	}
 

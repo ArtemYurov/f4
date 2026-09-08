@@ -1,4 +1,4 @@
-package main
+package sysinfo
 
 // CPUInfo is what the InfoPanel's CPU section renders. Fields are
 // filled only where the OS supplies them; the panel skips missing

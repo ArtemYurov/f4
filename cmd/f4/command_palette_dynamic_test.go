@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -173,7 +174,7 @@ func TestCommandPalettePrefixAndDriveRejectPreviousWorkspace(t *testing.T) {
 	}
 
 	factoryCalls := 0
-	restoreDrives := replaceDriveRegistryForCommandPaletteTest([]DriveEntry{{
+	restoreDrives := replaceDriveRegistryForCommandPaletteTest([]sysinfo.DriveEntry{{
 		Name: "Stale workspace drive",
 		Factory: func() vfs.VFS {
 			factoryCalls++
@@ -515,7 +516,7 @@ func TestCommandPaletteIndexesPanelContextAndPlatformDriveCommands(t *testing.T)
 	if otherCount != 2 {
 		t.Fatalf("other-panel drive commands = %d, want 2", otherCount)
 	}
-	if wantPlatform := len(getPlatformDrives()) * 2; platformCount != wantPlatform {
+	if wantPlatform := len(sysinfo.GetPlatformDrives()) * 2; platformCount != wantPlatform {
 		t.Fatalf("platform drive commands = %d, want %d", platformCount, wantPlatform)
 	}
 }

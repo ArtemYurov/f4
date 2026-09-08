@@ -1,6 +1,6 @@
 //go:build linux
 
-package main
+package sysinfo
 
 import (
 	"bufio"
@@ -33,7 +33,7 @@ var (
 //     least identifiable.
 //
 // Everything is cached — the GPU set doesn't change at runtime.
-func gpuInfo() ([]GPUInfo, bool) {
+func GPU() ([]GPUInfo, bool) {
 	gpuOnce.Do(func() {
 		cachedGPU = enumerateLinuxGPUs()
 	})

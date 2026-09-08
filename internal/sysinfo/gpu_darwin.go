@@ -1,6 +1,6 @@
 //go:build darwin
 
-package main
+package sysinfo
 
 // gpuInfo on darwin: IOKit is the honest source but pulling it
 // requires cgo, which we deliberately avoid. On Apple Silicon the
@@ -8,6 +8,6 @@ package main
 // the info panel already renders CPU model. Rather than surface a
 // noisy or misleading string, we skip the section. A follow-up can
 // pull in an IOKit binding if anyone wants a distinct GPU row.
-func gpuInfo() ([]GPUInfo, bool) {
+func GPU() ([]GPUInfo, bool) {
 	return nil, false
 }

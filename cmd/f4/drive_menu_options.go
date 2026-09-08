@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/vtui"
 )
 
@@ -177,10 +178,10 @@ type driveMenuPlatformColumn struct {
 	rightAlign bool
 }
 
-// driveMenuPlatformRowFor collects the metadata for one built-in drive. fsInfo
+// driveMenuPlatformRowFor collects the metadata for one built-in drive. sysinfo.FsInfo
 // is deliberately used only for built-in local rows: plugin VFSes can be
 // remote and may block while resolving their metadata.
-func driveMenuPlatformRowFor(drv DriveEntry, options uint32) driveMenuPlatformRow {
+func driveMenuPlatformRowFor(drv sysinfo.DriveEntry, options uint32) driveMenuPlatformRow {
 	row := driveMenuPlatformRow{base: driveMenuBaseName(drv.Name)}
 	path := driveMenuInfoPath(drv.Name)
 	kind := driveMenuKindFor(drv.Name, path)
@@ -189,9 +190,9 @@ func driveMenuPlatformRowFor(drv DriveEntry, options uint32) driveMenuPlatformRo
 		row.kind = driveMenuKindLabel(kind)
 	}
 
-	info, infoOK := FSInfo{}, false
+	info, infoOK := sysinfo.FSInfo{}, false
 	if path != "" {
-		info, infoOK = fsInfo(path)
+		info, infoOK = sysinfo.FS(path)
 	}
 	if infoOK {
 		if driveMenuOptionEnabled(options, driveMenuShowLabel) && info.Label != "" {
@@ -301,7 +302,7 @@ func driveMenuPlatformRowsText(rows []driveMenuPlatformRow, options uint32) []st
 
 // driveMenuPlatformItemText is kept for callers and small formatting tests;
 // the live menu uses driveMenuPlatformRowsText so all rows share widths.
-func driveMenuPlatformItemText(drv DriveEntry, options uint32) string {
+func driveMenuPlatformItemText(drv sysinfo.DriveEntry, options uint32) string {
 	return driveMenuPlatformRowsText([]driveMenuPlatformRow{driveMenuPlatformRowFor(drv, options)}, options)[0]
 }
 
@@ -321,7 +322,7 @@ func driveMenuOptionsDialogSize() (int, int) {
 	return width, len(driveMenuOptionSpecs) + 7
 }
 
-func driveMenuPlatformItemVisible(drv DriveEntry, options uint32) bool {
+func driveMenuPlatformItemVisible(drv sysinfo.DriveEntry, options uint32) bool {
 	kind := driveMenuKindFor(drv.Name, driveMenuInfoPath(drv.Name))
 	switch kind {
 	case driveMenuKindRemovable:

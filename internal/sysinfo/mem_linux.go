@@ -1,12 +1,12 @@
 //go:build linux
 
-package main
+package sysinfo
 
 import "syscall"
 
-// memInfo uses sysinfo(2) — same source far2l reads on Linux, so
+// MemInfo uses sysinfo(2) — same source far2l reads on Linux, so
 // numbers line up between the two apps.
-func memInfo() (MemInfo, bool) {
+func Mem() (MemInfo, bool) {
 	var si syscall.Sysinfo_t
 	if err := syscall.Sysinfo(&si); err != nil {
 		return MemInfo{}, false

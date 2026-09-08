@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -879,7 +880,7 @@ func TestInfoPanel_LocalResourcesUseUsageMeters(t *testing.T) {
 	ip.SetPosition(0, 0, 49, 59)
 	ip.Show(scr)
 
-	if fs, ok := fsInfo(tmp); ok && fs.Total > 0 {
+	if fs, ok := sysinfo.FS(tmp); ok && fs.Total > 0 {
 		if !infoPanelHasUsageMeter(ip, Msg("InfoPanel.Space")) {
 			t.Fatal("local filesystem capacity was not rendered with the reusable usage meter")
 		}
@@ -889,7 +890,7 @@ func TestInfoPanel_LocalResourcesUseUsageMeters(t *testing.T) {
 		}
 	}
 
-	if mem, ok := memInfo(); ok && mem.Total > 0 {
+	if mem, ok := sysinfo.Mem(); ok && mem.Total > 0 {
 		if !infoPanelHasUsageMeter(ip, Msg("InfoPanel.Memory")) {
 			t.Fatal("physical memory was not rendered with the reusable usage meter")
 		}
@@ -1444,10 +1445,10 @@ func TestInfoPanelLocalizesGPUModelKey(t *testing.T) {
 	if strings.HasPrefix(want, "{") {
 		t.Fatalf("%s is missing from the message catalogue", key)
 	}
-	if got := gpuModelLabel(GPUInfo{ModelKey: key, Driver: "dxgkrnl"}); got != want {
+	if got := gpuModelLabel(sysinfo.GPUInfo{ModelKey: key, Driver: "dxgkrnl"}); got != want {
 		t.Errorf("gpuModelLabel with a key = %q, want %q", got, want)
 	}
-	if got := gpuModelLabel(GPUInfo{Model: "NVIDIA GeForce RTX 4090"}); got != "NVIDIA GeForce RTX 4090" {
+	if got := gpuModelLabel(sysinfo.GPUInfo{Model: "NVIDIA GeForce RTX 4090"}); got != "NVIDIA GeForce RTX 4090" {
 		t.Errorf("gpuModelLabel with a vendor name = %q, want it untouched", got)
 	}
 }

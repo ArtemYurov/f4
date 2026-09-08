@@ -1,11 +1,11 @@
 //go:build !windows
 
-package main
+package sysinfo
 
 import "os"
 import "github.com/unxed/f4/vfs"
 
-func getPlatformDrives() []DriveEntry {
+func GetPlatformDrives() []DriveEntry {
 	home, _ := os.UserHomeDir()
 	return []DriveEntry{
 		{Name: "/ Root", Factory: func() vfs.VFS { return vfs.NewOSVFS("/") }},

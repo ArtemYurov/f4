@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package sysinfo
 
 import (
 	"strings"
@@ -39,7 +39,7 @@ var (
 // laptops both the iGPU and dGPU show up; duplicates by DeviceString
 // are collapsed. Driver name comes from the DeviceKey → registry
 // hop (\Registry\Machine\... → HKLM\...\DriverDesc).
-func gpuInfo() ([]GPUInfo, bool) {
+func GPU() ([]GPUInfo, bool) {
 	gpuOnce.Do(func() {
 		cachedGPU = enumerateWindowsGPUs()
 	})

@@ -161,7 +161,25 @@ which is what lets any layer call it.
    inside a flat package and is redundant inside `sysinfo`.
 3. There is no `_test.go` file to move: Task 43's roster lists none for
    `internal/sysinfo` — the info family has no test in `cmd/f4` today.
-4. Export the entry points `cmd/f4` still calls. Find them with
+4. Export the entry points `cmd/f4` still calls. Two name collisions come out of
+   this, and both are the same shape: the probe function and the struct it
+   returns were distinguished only by case inside the flat package. `memInfo()`
+   returning `MemInfo` becomes `Mem()`, `fsInfo()` returning `FSInfo` becomes
+   `FS()`, and `cpuInfo`/`gpuInfo` follow them to `CPU()`/`GPU()` for the sake of
+   one rule instead of two. `sysinfo.CPU()` reads better than `sysinfo.CPUInfo()`
+   anyway — the package name already says what kind of information it is.
+
+   Watch the mechanical rewrite for method declarations: three files declare
+   `func (h *someHost) RegisterDrive(…)` as part of the plugin host interface,
+   and a qualifier in front of a method name is a syntax error rather than a
+   wrong program, which is the good case.
+
+   The registry's mutex stays unexported, so the tests that swapped
+   `DriveRegistry` under it get `SnapshotDrives`, `SetDrives` and `Drives`
+   instead — the same seam shape as `action.Snapshot`. One of them was mutating
+   `DriveRegistry[0].Factory` by hand; `RegisterDrive` already replaces a factory
+   in place for a name it knows, which is what a reloaded plugin does, so the
+   test says that instead. Find them with
    `npx -y @colbymchenry/codegraph@1.6.0 callers` on each package-level function
    before exporting — export only what has an external caller.
 5. Do **not** take `drive_menu_options*.go` or `drive_bookmarks*.go`: menu UI over

@@ -1,5 +1,7 @@
 package main
 
+import "github.com/unxed/f4/internal/sysinfo"
+
 import "github.com/unxed/vtui"
 import "github.com/unxed/f4/vfs"
 import "github.com/unxed/vtinput"
@@ -39,7 +41,7 @@ func (c *coreAPI) RegisterHighlighter(p vtui.HighlighterProvider) {
 	vtui.RegisterHighlighter(p)
 }
 func (c *coreAPI) RegisterDrive(name string, factory func() vfs.VFS) {
-	RegisterDrive(name, factory)
+	sysinfo.RegisterDrive(name, factory)
 }
 
 func (c *coreAPI) RegisterGlobalHotkey(vk uint16, mods vtinput.ControlKeyState, handler func(app vfs.App)) {

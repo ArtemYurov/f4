@@ -339,7 +339,7 @@ titles, not the ordering.
 - [x] Task 21: Create `internal/action` with a localizer hook ([details](phase-04-shared-primitives.md#task-21-create-internalaction)) (depends on 18)
 
 ### Phase 5: Leaf Packages
-- [ ] Task 22: Extract `internal/sysinfo` (1 outbound) ([details](phase-05-leaf-packages.md#task-22-extract-internalsysinfo)) (depends on 6, 7, 19, 20, 21, 43)
+- [x] Task 22: Extract `internal/sysinfo` (1 outbound) ([details](phase-05-leaf-packages.md#task-22-extract-internalsysinfo)) (depends on 6, 7, 19, 20, 21, 43)
 - [ ] Task 23: Extract `internal/update` (3 outbound) ([details](phase-05-leaf-packages.md#task-23-extract-internalupdate)) (depends on 22)
 - [ ] Task 24: Extract `internal/config`, `internal/i18n`, `internal/theme`, `internal/keymap` ([details](phase-05-leaf-packages.md#task-24-extract-internalconfig-internali18n-internaltheme-internalkeymap)) (depends on 4, 23)
 

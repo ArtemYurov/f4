@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -133,7 +134,7 @@ func NewInfoPanel(src *FileSystemPanel) *InfoPanel {
 // gpuModelLabel renders a GPU's model. A probe that could not read a vendor
 // string reports a catalogue key instead, and resolving it is the panel's job:
 // the probes must not reach into localization.
-func gpuModelLabel(g GPUInfo) string {
+func gpuModelLabel(g sysinfo.GPUInfo) string {
 	if g.ModelKey != "" {
 		return Msg(g.ModelKey)
 	}
@@ -802,7 +803,7 @@ func (ip *InfoPanel) Show(scr *vtui.ScreenBuf) {
 	if providerSnapshot.Authoritative {
 		sectionHeader(fsTitle)
 		row(Msg("InfoPanel.CurrentDir"), path, true)
-	} else if fs, ok := fsInfo(path); ok {
+	} else if fs, ok := sysinfo.FS(path); ok {
 		if fs.Type != "" {
 			fsTitle = fmt.Sprintf("%s (%s)", fsTitle, fs.Type)
 		}
@@ -832,7 +833,7 @@ func (ip *InfoPanel) Show(scr *vtui.ScreenBuf) {
 	// Memory. Same numbers as far2l's InfoList reads via sysinfo(2)
 	// on Linux — see mem_info_unix.go for the exact formula.
 	if !providerSnapshot.Authoritative {
-		if mem, ok := memInfo(); ok {
+		if mem, ok := sysinfo.Mem(); ok {
 			blank()
 			sectionHeader(Msg("InfoPanel.MemoryTitle"))
 			usageRow(Msg("InfoPanel.Memory"), mem.Total, mem.Free)
@@ -852,7 +853,7 @@ func (ip *InfoPanel) Show(scr *vtui.ScreenBuf) {
 	// after Memory so a user who enables the section doesn't have
 	// what they see above shifted downward.
 	if !providerSnapshot.Authoritative && AppConfig.InfoPanelCPUGPU {
-		if cpu, ok := cpuInfo(); ok {
+		if cpu, ok := sysinfo.CPU(); ok {
 			blank()
 			sectionHeader(Msg("InfoPanel.CPUTitle"))
 			if cpu.Model != "" {
@@ -882,7 +883,7 @@ func (ip *InfoPanel) Show(scr *vtui.ScreenBuf) {
 					true)
 			}
 		}
-		if gpus, ok := gpuInfo(); ok {
+		if gpus, ok := sysinfo.GPU(); ok {
 			blank()
 			sectionHeader(Msg("InfoPanel.GPUTitle"))
 			for i, g := range gpus {

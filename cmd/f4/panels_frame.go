@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/unxed/f4/internal/history"
+	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"os"
@@ -4838,7 +4839,7 @@ func (pf *PanelsFrame) driveMenuDefaultPos(panelIdx int) int {
 		return 0
 	}
 	cur := osVFS.GetPath()
-	for i, drv := range getPlatformDrives() {
+	for i, drv := range sysinfo.GetPlatformDrives() {
 		if driveMatchesPath(drv, cur) {
 			// The "Other panel" and "Temporary panel" entries precede
 			// platform drives.
@@ -4852,7 +4853,7 @@ func (pf *PanelsFrame) driveMenuDefaultPos(panelIdx int) int {
 // the path cur currently belongs to. Only the Windows drive-letter case is
 // matched (the menu entries there carry letters, as the user expects); in
 // posix/UNIX mode the default "Other panel" row stays selected.
-func driveMatchesPath(drv DriveEntry, cur string) bool {
+func driveMatchesPath(drv sysinfo.DriveEntry, cur string) bool {
 	if runtime.GOOS != "windows" || hostmode.Posix() {
 		return false
 	}
@@ -4896,8 +4897,8 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 	// filesystem types and free space reflect the current state. Collect all
 	// rows first: the formatter needs the whole list to align its columns.
 	driveMenuOptions := AppConfig.DriveMenuOptions
-	platformDrives := make([]DriveEntry, 0)
-	for _, drv := range getPlatformDrives() {
+	platformDrives := make([]sysinfo.DriveEntry, 0)
+	for _, drv := range sysinfo.GetPlatformDrives() {
 		if !driveMenuPlatformItemVisible(drv, driveMenuOptions) {
 			continue
 		}
@@ -4965,9 +4966,9 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 	}
 
 	// 4. Plugins & custom drives
-	drives := []DriveEntry(nil)
+	drives := []sysinfo.DriveEntry(nil)
 	if driveMenuOptionEnabled(driveMenuOptions, driveMenuShowPlugins) {
-		drives = driveRegistrySnapshot()
+		drives = sysinfo.DriveRegistrySnapshot()
 		if driveMenuOptionEnabled(driveMenuOptions, driveMenuSortPluginsByHotkey) {
 			sort.SliceStable(drives, func(i, j int) bool {
 				return strings.ToLower(driveMenuNameWithoutMarker(drives[i].Name)) <

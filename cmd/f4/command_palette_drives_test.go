@@ -4,23 +4,18 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/vfs"
 )
 
-func replaceDriveRegistryForCommandPaletteTest(drives []DriveEntry) func() {
-	driveRegistryMu.Lock()
-	previous := append([]DriveEntry(nil), DriveRegistry...)
-	DriveRegistry = append([]DriveEntry(nil), drives...)
-	driveRegistryMu.Unlock()
-	return func() {
-		driveRegistryMu.Lock()
-		DriveRegistry = previous
-		driveRegistryMu.Unlock()
-	}
+func replaceDriveRegistryForCommandPaletteTest(drives []sysinfo.DriveEntry) func() {
+	restore := sysinfo.SnapshotDrives()
+	sysinfo.SetDrives(drives)
+	return restore
 }
 
 func TestCommandPaletteDriveEntriesExposeRegistryNamesForBothPanels(t *testing.T) {
-	restore := replaceDriveRegistryForCommandPaletteTest([]DriveEntry{
+	restore := replaceDriveRegistryForCommandPaletteTest([]sysinfo.DriveEntry{
 		{Name: "1. &NetFox", Factory: func() vfs.VFS { return nil }},
 		{Name: "", Factory: func() vfs.VFS { return nil }},
 		{Name: "Broken", Factory: nil},
@@ -58,7 +53,7 @@ func TestCommandPaletteDriveEntriesExposeRegistryNamesForBothPanels(t *testing.T
 
 func TestCommandPaletteDriveEntryReResolvesFactoryAndRejectsRemoval(t *testing.T) {
 	oldCalls, replacementCalls := 0, 0
-	restore := replaceDriveRegistryForCommandPaletteTest([]DriveEntry{{
+	restore := replaceDriveRegistryForCommandPaletteTest([]sysinfo.DriveEntry{{
 		Name: "Mutable drive",
 		Factory: func() vfs.VFS {
 			oldCalls++
@@ -83,12 +78,12 @@ func TestCommandPaletteDriveEntryReResolvesFactoryAndRejectsRemoval(t *testing.T
 		left = entries[1]
 	}
 
-	driveRegistryMu.Lock()
-	DriveRegistry[0].Factory = func() vfs.VFS {
+	// RegisterDrive replaces a factory in place for a name already registered,
+	// which is exactly what a reloaded plugin does.
+	sysinfo.RegisterDrive("Mutable drive", func() vfs.VFS {
 		replacementCalls++
 		return nil
-	}
-	driveRegistryMu.Unlock()
+	})
 	if executeCommandPaletteEntry(left) {
 		t.Fatal("nil replacement VFS was reported as a successful drive switch")
 	}
@@ -96,9 +91,7 @@ func TestCommandPaletteDriveEntryReResolvesFactoryAndRejectsRemoval(t *testing.T
 		t.Fatalf("stale/current factory calls = %d/%d, want 0/1", oldCalls, replacementCalls)
 	}
 
-	driveRegistryMu.Lock()
-	DriveRegistry = nil
-	driveRegistryMu.Unlock()
+	sysinfo.SetDrives(nil)
 	if executeCommandPaletteEntry(left) {
 		t.Fatal("removed drive executed from a stale palette entry")
 	}
@@ -109,7 +102,7 @@ func TestCommandPaletteDriveEntryReResolvesFactoryAndRejectsRemoval(t *testing.T
 
 func TestCommandPaletteDriveEntryDoesNotResolveAgainstClosedPanels(t *testing.T) {
 	calls := 0
-	restore := replaceDriveRegistryForCommandPaletteTest([]DriveEntry{{
+	restore := replaceDriveRegistryForCommandPaletteTest([]sysinfo.DriveEntry{{
 		Name: "Closed panels drive",
 		Factory: func() vfs.VFS {
 			calls++

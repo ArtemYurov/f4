@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package sysinfo
 
 import (
 	"syscall"
@@ -25,8 +25,8 @@ var (
 	procGlobalMemoryStatusEx = kernel32.NewProc("GlobalMemoryStatusEx")
 )
 
-// memInfo returns physical-memory info via GlobalMemoryStatusEx.
-func memInfo() (MemInfo, bool) {
+// MemInfo returns physical-memory info via GlobalMemoryStatusEx.
+func Mem() (MemInfo, bool) {
 	var m memoryStatusEx
 	m.Length = uint32(unsafe.Sizeof(m))
 	r, _, _ := procGlobalMemoryStatusEx.Call(uintptr(unsafe.Pointer(&m)))

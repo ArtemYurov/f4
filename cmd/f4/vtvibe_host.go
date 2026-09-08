@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/vtvibe"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -95,7 +96,7 @@ func vtvibeSaveSetting(key, value string) error {
 }
 
 func init() {
-	RegisterDrive("AI", func() vfs.VFS { return &aiVFSWrapper{vtvibe.NewVFS(aiSession())} })
+	sysinfo.RegisterDrive("AI", func() vfs.VFS { return &aiVFSWrapper{vtvibe.NewVFS(aiSession())} })
 
 	if _, err := (&coreAPI{}).RegisterCommandPrefix("vtvibe", "ai", aiCommand); err != nil {
 		vtui.DebugLog("VTVIBE: cannot register the ai: prefix: %v", err)

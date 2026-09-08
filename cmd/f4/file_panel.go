@@ -16,6 +16,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/history"
+	"github.com/unxed/f4/internal/sysinfo"
 	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
 
@@ -2743,7 +2744,7 @@ func (fp *FileSystemPanel) Show(scr *vtui.ScreenBuf) {
 
 			rightStr := fmt.Sprintf("%s  %s", sizeStr, dateStr)
 			if _, isLocal := fp.vfs.(*vfs.OSVFS); isLocal {
-				if info, ok := fsInfo(fp.vfs.GetPath()); ok {
+				if info, ok := sysinfo.FS(fp.vfs.GetPath()); ok {
 					rightStr = fmt.Sprintf("(%d/%d) %s  %s", totFiles, totDirs, formatBytes(info.Free), rightStr)
 				}
 			}

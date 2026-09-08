@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/vfs"
 )
 
@@ -21,7 +22,7 @@ func commandPaletteDriveEntries(pf *PanelsFrame) []commandPaletteEntry {
 	entries := commandPaletteDrivePair(pf, "other", "Panel.Other", action.PlainLabel(Msg("Panel.Other")), func(panelIndex int) bool {
 		return executeCommandPaletteOtherPanel(pf, panelIndex)
 	}, "Panel.Other")
-	for _, drive := range getPlatformDrives() {
+	for _, drive := range sysinfo.GetPlatformDrives() {
 		registryName := drive.Name
 		displayName := commandPaletteDriveDisplayName(registryName)
 		if displayName == "" || drive.Factory == nil {
@@ -44,7 +45,7 @@ func commandPaletteDriveEntries(pf *PanelsFrame) []commandPaletteEntry {
 		}
 	}
 
-	drives := driveRegistrySnapshot()
+	drives := sysinfo.DriveRegistrySnapshot()
 	for _, drive := range drives {
 		registryName := drive.Name
 		displayName := commandPaletteDriveDisplayName(registryName)
@@ -110,7 +111,7 @@ func executeCommandPaletteDrive(pf *PanelsFrame, panelIndex int, registryName st
 		return false
 	}
 	var factory func() vfs.VFS
-	for _, drive := range driveRegistrySnapshot() {
+	for _, drive := range sysinfo.DriveRegistrySnapshot() {
 		if drive.Name == registryName {
 			factory = drive.Factory
 			break
@@ -126,7 +127,7 @@ func executeCommandPalettePlatformDrive(pf *PanelsFrame, panelIndex int, name st
 	if !commandPaletteDrivePanelValid(pf, panelIndex) {
 		return false
 	}
-	for _, drive := range getPlatformDrives() {
+	for _, drive := range sysinfo.GetPlatformDrives() {
 		if drive.Name == name && drive.Factory != nil {
 			return switchCommandPaletteDriveVFS(pf, panelIndex, drive.Factory())
 		}

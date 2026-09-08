@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package sysinfo
 
 import (
 	"fmt"
@@ -18,9 +18,9 @@ import (
 // LazyDLL declared in mem_info_windows.go.
 var procGetDiskFreeSpaceW = kernel32.NewProc("GetDiskFreeSpaceW")
 
-// fsInfo returns filesystem info for the drive containing path.
+// FsInfo returns filesystem info for the drive containing path.
 // ok=false if the value can't be determined.
-func fsInfo(path string) (FSInfo, bool) {
+func FS(path string) (FSInfo, bool) {
 	if path == "" {
 		return FSInfo{}, false
 	}

@@ -1,6 +1,6 @@
 //go:build darwin
 
-package main
+package sysinfo
 
 import (
 	"encoding/binary"
@@ -15,7 +15,7 @@ var (
 	cachedCPU     CPUInfo
 )
 
-func cpuInfo() (CPUInfo, bool) {
+func CPU() (CPUInfo, bool) {
 	cpuStaticOnce.Do(func() {
 		cachedCPU = readStaticDarwinCPU()
 	})

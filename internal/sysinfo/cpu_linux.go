@@ -1,6 +1,6 @@
 //go:build linux
 
-package main
+package sysinfo
 
 import (
 	"bufio"
@@ -17,7 +17,7 @@ var (
 	cachedCPU     CPUInfo
 )
 
-func cpuInfo() (CPUInfo, bool) {
+func CPU() (CPUInfo, bool) {
 	cpuStaticOnce.Do(func() {
 		cachedCPU = readStaticLinuxCPU()
 	})

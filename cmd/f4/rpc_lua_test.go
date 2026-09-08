@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -60,7 +61,7 @@ func TestLuaPluginIntegration(t *testing.T) {
 
 	// 4. Verify Handshake results
 	foundDrive := false
-	for _, drv := range DriveRegistry {
+	for _, drv := range sysinfo.Drives() {
 		// The dummy plugin registers "Lua Virtual Drive"
 		if strings.Contains(drv.Name, "Lua") {
 			foundDrive = true

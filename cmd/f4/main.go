@@ -779,7 +779,7 @@ func SetupUI() {
 	action.Localize = Msg
 	vtinput.Logger = vtui.DebugLog // Pipe vtinput logs to vtui's debug logger
 	vtui.GlobalClipboardAccessManager = NewF4ClipboardAuth()
-	// RegisterDrive("Null VFS", func() vfs.VFS { return vfs.NewNullVFS(50 * 1024 * 1024) }) // 50 MB/s
+	// sysinfo.RegisterDrive("Null VFS", func() vfs.VFS { return vfs.NewNullVFS(50 * 1024 * 1024) }) // 50 MB/s
 
 	configDir := GetF4ConfigDir()
 

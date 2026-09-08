@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -31,7 +32,7 @@ func TestDriveMenuPlatformRowsAlignColumns(t *testing.T) {
 }
 
 func TestDriveMenuPhysicalDiskHasNoTypeDescription(t *testing.T) {
-	got := driveMenuPlatformItemText(DriveEntry{Name: "Physical Disks"}, driveMenuShowType)
+	got := driveMenuPlatformItemText(sysinfo.DriveEntry{Name: "Physical Disks"}, driveMenuShowType)
 	if got != "Physical Disks" {
 		t.Fatalf("physical disk row = %q, want no type suffix", got)
 	}
@@ -64,7 +65,7 @@ func TestDriveMenuOptions_DefaultsAndFormatting(t *testing.T) {
 	if parseDriveMenuOptions("not-a-number") != defaultDriveMenuOptions {
 		t.Fatalf("invalid options did not use defaults")
 	}
-	if got := driveMenuPlatformItemText(DriveEntry{Name: "/ Root"}, driveMenuShowType|driveMenuShowFilesystem); !strings.Contains(got, "/") {
+	if got := driveMenuPlatformItemText(sysinfo.DriveEntry{Name: "/ Root"}, driveMenuShowType|driveMenuShowFilesystem); !strings.Contains(got, "/") {
 		t.Fatalf("root row lost its name: %q", got)
 	}
 	if got := driveMenuSize(1024*1024*3, false); got != "3 MiB" {

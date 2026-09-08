@@ -1,6 +1,6 @@
 //go:build linux
 
-package main
+package sysinfo
 
 import (
 	"bufio"
@@ -9,10 +9,10 @@ import (
 	"syscall"
 )
 
-// fsInfo populates as many fields as the current OS can supply for
+// FsInfo populates as many fields as the current OS can supply for
 // the filesystem holding path. ok=false if the value can't be
 // determined (path missing, non-local backend, etc.).
-func fsInfo(path string) (FSInfo, bool) {
+func FS(path string) (FSInfo, bool) {
 	if path == "" {
 		return FSInfo{}, false
 	}

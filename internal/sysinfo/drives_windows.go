@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package sysinfo
 
 import (
 	"os"
@@ -10,7 +10,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-func getPlatformDrives() []DriveEntry {
+func GetPlatformDrives() []DriveEntry {
 	if hostmode.Posix() {
 		// No drive letters in posix mode -- the whole point of WINE.md
 		// Part E is that under Wine this looks like the Linux build, not
