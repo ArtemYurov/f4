@@ -165,6 +165,15 @@ that press a key and expect an action would therefore have passed in the
 editor's package **by finding nothing to do** — green because the registry was
 empty. They stayed with the table.
 
+**And the wrapper is the material form of the rule.** In `cmd/f4` such a test
+presses through `pressKey`, which installs `GlobalHotkeysMgr` and
+`macro.MacroMgr` and passes the real macro filter. `testutil.PressKey` with a
+`nil` filter skips the dispatch entirely, so the test measures the widget's own
+key handling and goes green on every platform where the widget happens to
+handle that key. Nineteen tests were moved for the action layer and then
+converted to the nil form in the same wave; two platforms disagreed about
+whether the widget handled the key, which is the only reason it surfaced.
+
 Checked against the waves already done, and the class had not fired before:
 `internal/*` holds two `RunAction` occurrences and both are mock methods, no
 test there names `LookupHotkey`, and `RegisterAction` is called only from

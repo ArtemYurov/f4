@@ -184,6 +184,34 @@ and `TestMain` — the waves would otherwise strand.
     ```
     gh run list --repo ArtemYurov/f4 --workflow=build.yml --limit 3
     ```
+  - **A run number without its revision is not a fact.** Write it as
+    "34219411634 — green on 947d58a9", and before calling a run current, ask
+    what it actually tested:
+    ```
+    gh run view <id> --repo ArtemYurov/f4 --json headSha,conclusion -q '.headSha[0:8]+" "+.conclusion'
+    git rev-list --count <headSha>..HEAD
+    ```
+    A second number above zero is how many commits the run is behind, and its
+    "green" belongs to a different tree. The last known green was quoted for
+    three waves while it described a revision from before `internal/terminal`,
+    `internal/media`, `internal/fileops` and `internal/editor` existed; the
+    first push after that found seven red cells at once.
+
+    The number is not the cause. Phases 6 and 7 closed without a push, and a
+    phase boundary without a push is a boundary **without** CI, not one with CI
+    deferred.
+  - **`F4_FORCE_TESTS=1` belongs in the local sweep**, beside the cross-build and
+    the `GOOS` vet. `testutil.SkipIfNoRelevantChanges` skips by a hash of the
+    files a test covers, and never skips in CI, where `CI=1` is set. A full local
+    run can therefore be green because a test silently did not run —
+    `TestAllDialogs_LayoutValidation` is the one that matters, and it was green
+    locally and panicking in CI at the same time. Same class as `xbuild.sh`
+    swallowing `go build`'s status.
+  - **`go test` makes a package's own directory the working directory.** Any path
+    a test builds relative to it moves with the test and breaks silently. Task 43
+    counts eight tests that read `lang/`, `help/` or `styles/` from disk; the
+    ConPTY bundle check is a ninth, and it broke because CI copies the bundle to
+    `cmd/f4`, where the test used to live.
   - *Not after every commit in CI.* One run is ~30 jobs against 20 free-tier
     runners, and `concurrency` cancels the in-flight run on the same ref
     (`build.yml:29-31`), so consecutive pushes would queue up and kill each
@@ -708,6 +736,29 @@ The other cell, `TestMainMenuFilePath_HasExpectedSuffix` on linux/amd64, is
 still open and its lead is unchanged: an empty `cachedF4ConfigDir` observed
 between `setupPortableIni`'s cleanup replacing `configDirOnce` and the next
 `Do` completing.
+
+### Closed: the empty config directory, and the flake it caused
+
+`GetF4ConfigDir` returned `""` whenever a test had swapped `CachedF4ConfigDir`
+and put back the empty value it found before the resolver first ran:
+`ConfigDirOnce` had already fired, so nothing recomputed it. Fifteen tests
+assign that cache directly, and any of them ordered before a reader produced
+it.
+
+What it looked like from outside: `filepath.Join("", "settings.ini")` is
+`"settings.ini"`, relative to the working directory — which for `go test` is
+the package's own. A shuffled run left `settings.ini`, `session.ini` and
+`playlist.json` in `cmd/f4`, and `TestMainMenuFilePath_HasExpectedSuffix`
+failed with `MainMenuFilePath()="settings/user_menu.ini"` instead of the
+`f4/`-prefixed path. That is the CI-only failure recorded below, and the lead
+noted there — "an empty `cachedF4ConfigDir` observed between `setupPortableIni`'s
+cleanup and the next `Do`" — was right about the mechanism and wrong about the
+race: no concurrency is needed, only an order.
+
+`GetF4ConfigDir` now treats an empty cache as unresolved and resolves again.
+No branch of `ResolveProfileDir` can return `""`, so the value is unambiguous.
+Verified: eight shuffle seeds of the flaking test, zero failures, and no stray
+files left in the package directory.
 
 ### Two CI-only test failures, cause not identified
 

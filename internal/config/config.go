@@ -61,32 +61,42 @@ func LocalLangDir() string {
 }
 
 func GetF4ConfigDir() string {
-	ConfigDirOnce.Do(func() {
-		exe, err := Executable()
-		if err != nil {
-			exe = os.Args[0]
-		}
-		if abs, err := filepath.Abs(exe); err == nil {
-			exe = abs
-		}
-		exeDir := filepath.Dir(exe)
-
-		// F4HOME mirrors Far3's FARHOME: the directory the executable was
-		// started from. It is exported so that Profile= in <exe>.ini,
-		// user menu commands, macros and plugins can all refer to it, and
-		// it is set before the ini is read so the ini can already use it.
-		if os.Getenv("F4HOME") == "" {
-			_ = os.Setenv("F4HOME", exeDir)
-		}
-
-		// Ищем f4.exe.ini (имя_бинарника.ini) или f4.ini в папке программы
-		ini := ini.Load(PortableIniPath(exe))
-		CachedF4ConfigDir, CachedF4Portable = ResolveProfileDir(exeDir, ini)
-		if CachedF4Portable {
-			_ = os.MkdirAll(CachedF4ConfigDir, 0700)
-		}
-	})
+	ConfigDirOnce.Do(resolveConfigDir)
+	// No branch of ResolveProfileDir returns "": the system branch yields at
+	// least "f4", the portable branch at least "Profile". So an empty value
+	// here means the resolver has not run — which a test leaves behind when it
+	// swaps the cache and puts back the "" it found before the first call. Path
+	// joins would silently become relative to the working directory.
+	if CachedF4ConfigDir == "" {
+		resolveConfigDir()
+	}
 	return CachedF4ConfigDir
+}
+
+func resolveConfigDir() {
+	exe, err := Executable()
+	if err != nil {
+		exe = os.Args[0]
+	}
+	if abs, err := filepath.Abs(exe); err == nil {
+		exe = abs
+	}
+	exeDir := filepath.Dir(exe)
+
+	// F4HOME mirrors Far3's FARHOME: the directory the executable was
+	// started from. It is exported so that Profile= in <exe>.ini,
+	// user menu commands, macros and plugins can all refer to it, and
+	// it is set before the ini is read so the ini can already use it.
+	if os.Getenv("F4HOME") == "" {
+		_ = os.Setenv("F4HOME", exeDir)
+	}
+
+	// Ищем f4.exe.ini (имя_бинарника.ini) или f4.ini в папке программы
+	ini := ini.Load(PortableIniPath(exe))
+	CachedF4ConfigDir, CachedF4Portable = ResolveProfileDir(exeDir, ini)
+	if CachedF4Portable {
+		_ = os.MkdirAll(CachedF4ConfigDir, 0700)
+	}
 }
 
 // ResolveProfileDir picks the configuration directory from the executable
