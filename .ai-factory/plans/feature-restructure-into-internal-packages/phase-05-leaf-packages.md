@@ -66,6 +66,34 @@ each wave phase file so a task can be implemented from one file.
    everything else stays unexported. Update `command_palette_coverage_test.go`'s
    file→target-package map (one line, Task 2 step 3) if this wave owns an audited
    symbol, and add the package to `architecture_test.go`'s layer map (one line).
+   **How to do the rewrite.** Do not hand-edit the call sites; there are hundreds
+   per wave. Drive it from the compiler, in a loop: build, read the `undefined:`
+   names out of the output, export the ones the moved package declares, qualify
+   them at the call sites, insert the import into any file that gained a
+   reference, and repeat until the build is clean. A second loop over
+   `"…" imported and not used` removes the imports the wave orphaned. Four
+   hazards, each of which produces a tree that compiles into something wrong
+   rather than failing loudly, so check for all four before committing:
+
+   - **String literals.** A word-boundary rewrite of `Action` hits every
+     `"Action.App.ScreenGrab"` catalogue key — 375 of them in Task 21. Skip
+     anything inside quotes; the repair is to re-scan the literals afterwards
+     and undo the qualifier there.
+   - **Method declarations.** `func (h *host) RegisterDrive(…)` becomes
+     `func (h *host) sysinfo.RegisterDrive(…)`, which is a syntax error — the
+     good case, because it stops the build.
+   - **Struct fields and composite-literal keys.** `hotkeyRow.Action` and
+     `Action:` in a literal are names, not references. These compile as
+     "invalid field name", which is also loud.
+   - **Locals shadowing the package.** 61 loops read `for _, action := range …`.
+     Rename the local inside the affected function; renaming the package
+     qualifier instead is how a wave loses a call it meant to keep.
+
+   And check the round trip on anything the rewrite touched that carried data: a
+   struct literal replaced by a constructor drops the fields the constructor does
+   not take. Task 20 lost two seeded history fixtures that way, and only one of
+   the two failed a test.
+
 6. **Close the references and compare against the baseline.** Grep `docs/`,
    `README.md`, `AGENTS.md` and `.ai-factory/rules/base.md` for every path this
    wave changed; fix the CI and tooling lines this wave touches. A surviving
