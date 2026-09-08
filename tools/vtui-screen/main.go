@@ -18,16 +18,16 @@ import (
 )
 
 const (
-	dumpHeader = "VTUI_SCREEN_DUMP_V1 "
-	textHeader = "--- TEXT PREVIEW ---"
+	dumpHeader     = "VTUI_SCREEN_DUMP_V1 "
+	textHeader     = "--- TEXT PREVIEW ---"
 	metadataHeader = "--- CELL METADATA (RLE) ---"
 	metadataFormat = "Format: [AttrHex]xRepeatCount ..."
-	maxDimension = 10000
-	maxCells = 50_000_000
+	maxDimension   = 10000
+	maxCells       = 50_000_000
 
-	isFgRGB uint64 = 0x0100
-	isBgRGB uint64 = 0x0200
-	foregroundDim uint64 = 0x1000
+	isFgRGB          uint64 = 0x0100
+	isBgRGB          uint64 = 0x0200
+	foregroundDim    uint64 = 0x1000
 	commonLvbReverse uint64 = 0x4000
 )
 
