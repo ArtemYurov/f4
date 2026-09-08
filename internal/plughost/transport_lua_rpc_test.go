@@ -1,4 +1,4 @@
-package main
+package plughost
 
 import (
 	"context"
@@ -16,12 +16,18 @@ import (
 
 // mockHostAPI captures logs from the plugin for verification
 type mockHostAPI struct {
-	coreAPI
+	*luaTestHostAPI
 	logs []string
 }
 
 func (m *mockHostAPI) Log(msg string) {
 	m.logs = append(m.logs, msg)
+}
+
+// RegisterDrive reaches the real registry: the test below asserts the plugin's
+// drive through sysinfo.Drives, not through a recorded call.
+func (m *mockHostAPI) RegisterDrive(name string, factory func() vfs.VFS) {
+	sysinfo.RegisterDrive(name, factory)
 }
 
 func TestLuaPluginIntegration(t *testing.T) {
@@ -42,7 +48,7 @@ func TestLuaPluginIntegration(t *testing.T) {
 	// 3. Initialize the real RPC plugin pointing to the dummy script
 	pluginPath := filepath.Join(testutil.ModuleRootDir(t), "plugins", "dummy_lua", "plugin.lua")
 	p := NewRPCPlugin(pluginPath)
-	host := &mockHostAPI{}
+	host := &mockHostAPI{luaTestHostAPI: newLuaTestHostAPI()}
 
 	// We need to run Init in a timeout because it's a blocking RPC call
 	done := make(chan error, 1)

@@ -1,56 +1,25 @@
-package main
+package plughost
 
 import (
 	"context"
-	"io"
 	"strings"
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
-	"github.com/unxed/f4/sdk/f4rpc"
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
-func setupTestSessions(t *testing.T) (coreSess, pluginSess *f4rpc.Session) {
-	t.Helper()
-
-	// coreSess: reads from p2cR, writes to c2pW
-	// pluginSess: reads from c2pR, writes to p2cW
-	c2pR, c2pW := io.Pipe()
-	p2cR, p2cW := io.Pipe()
-
-	coreSess = f4rpc.NewSession(p2cR, c2pW)
-	pluginSess = f4rpc.NewSession(c2pR, p2cW)
-
-	serveErrs := make(chan error, 2)
-	go func() { serveErrs <- coreSess.Serve() }()
-	go func() { serveErrs <- pluginSess.Serve() }()
-	t.Cleanup(func() {
-		if err := c2pW.Close(); err != nil {
-			t.Errorf("close core-to-plugin pipe: %v", err)
-		}
-		if err := p2cW.Close(); err != nil {
-			t.Errorf("close plugin-to-core pipe: %v", err)
-		}
-		for range 2 {
-			if err := <-serveErrs; err != nil {
-				t.Errorf("serve test RPC session: %v", err)
-			}
-		}
-	})
-	return
-}
-
 func TestRPCPlugin_Handshake(t *testing.T) {
-	coreSess, pluginSess := setupTestSessions(t)
+	coreSess, pluginSess := testutil.RPCSessionPair(t)
 
 	pluginSess.Register("Plugin.Init", func(data msgpack.RawMessage) (any, error) {
 		return map[string]any{"Drives": []string{"TestDrive"}}, nil
 	})
 
-	api := &coreAPI{}
+	api := newLuaTestHostAPI()
 	p := &RPCPlugin{path: "test", sess: coreSess, api: api}
 
 	type PluginInitRes struct{ Drives []string }
@@ -66,7 +35,7 @@ func TestRPCPlugin_Handshake(t *testing.T) {
 }
 
 func TestRPCPlugin_VFS_Proxy(t *testing.T) {
-	coreSess, pluginSess := setupTestSessions(t)
+	coreSess, pluginSess := testutil.RPCSessionPair(t)
 
 	wrapper := &rpcFileWrapper{
 		sess: coreSess,
@@ -96,7 +65,7 @@ func TestRPCPlugin_VFS_Proxy(t *testing.T) {
 }
 
 func TestRPCPlugin_Highlighter_Proxy(t *testing.T) {
-	coreSess, pluginSess := setupTestSessions(t)
+	coreSess, pluginSess := testutil.RPCSessionPair(t)
 
 	h := &rpcHighlighter{transport: coreSess}
 
@@ -111,7 +80,7 @@ func TestRPCPlugin_Highlighter_Proxy(t *testing.T) {
 }
 
 func TestRPCPlugin_Hotkey_Proxy(t *testing.T) {
-	coreSess, pluginSess := setupTestSessions(t)
+	coreSess, pluginSess := testutil.RPCSessionPair(t)
 
 	hotkeyTriggered := false
 	pluginSess.Register("Plugin.OnHotkey", func(data msgpack.RawMessage) (any, error) {
@@ -132,7 +101,7 @@ func TestRPCPlugin_Hotkey_Proxy(t *testing.T) {
 }
 
 func TestRPCPlugin_Progress_Proxy(t *testing.T) {
-	coreSess, pluginSess := setupTestSessions(t)
+	coreSess, pluginSess := testutil.RPCSessionPair(t)
 
 	updateMsg := ""
 	updatePct := -1
@@ -158,7 +127,7 @@ func TestRPCPlugin_Progress_Proxy(t *testing.T) {
 	}
 }
 func TestRPCPlugin_InputBox_Proxy(t *testing.T) {
-	coreSess, pluginSess := setupTestSessions(t)
+	coreSess, pluginSess := testutil.RPCSessionPair(t)
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
 	coreSess.Register("Host.InputBox", func(data msgpack.RawMessage) (any, error) {
@@ -176,7 +145,7 @@ func TestRPCPlugin_InputBox_Proxy(t *testing.T) {
 }
 
 func TestRPCPlugin_SetAttributes_Proxy(t *testing.T) {
-	coreSess, pluginSess := setupTestSessions(t)
+	coreSess, pluginSess := testutil.RPCSessionPair(t)
 
 	v := &RPCVFS{sess: coreSess, driveName: "TestDrive"}
 	item := vfs.VFSItem{Name: "file", UnixMode: 0644}
@@ -198,7 +167,7 @@ func TestRPCPlugin_SetAttributes_Proxy(t *testing.T) {
 	}
 }
 func TestRPCPlugin_Progress_Cancellation(t *testing.T) {
-	coreSess, pluginSess := setupTestSessions(t)
+	coreSess, pluginSess := testutil.RPCSessionPair(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	// Inject a mock task context into core side manually
@@ -241,7 +210,7 @@ func TestRPCPlugin_NativePermissionDenied(t *testing.T) {
 	}
 
 	p := NewRPCPlugin(pluginPath)
-	err = p.Init(&coreAPI{})
+	err = p.Init(newLuaTestHostAPI())
 	if err == nil {
 		t.Fatal("Expected Init to fail due to Denied Native permission")
 	}

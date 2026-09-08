@@ -1,12 +1,13 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/plughost"
 	"strings"
 	"testing"
 )
 
 func TestBuildPlugRingRowsGroupsByCategory(t *testing.T) {
-	items := []PlugRingItem{
+	items := []plughost.PlugRingItem{
 		{ID: "zip", Name: "Zip", Category: "archive", Entrypoint: "plugin.lua"},
 		{ID: "ftp", Name: "Ftp", Category: "network", Entrypoint: "plugin.lua"},
 		{ID: "sftp", Name: "Sftp", Category: "network", Entrypoint: "plugin.lua"},
@@ -43,18 +44,18 @@ func TestBuildPlugRingRowsGroupsByCategory(t *testing.T) {
 		}
 	}
 
-	if len(headings) != 2 || headings[0] != PlugRingCategoryTitle("archive") {
+	if len(headings) != 2 || headings[0] != plughost.PlugRingCategoryTitle("archive") {
 		t.Errorf("headings = %v, want archives first", headings)
 	}
 }
 
 func TestBuildPlugRingRowsStatuses(t *testing.T) {
-	items := []PlugRingItem{
+	items := []plughost.PlugRingItem{
 		{ID: "a", Name: "Fresh", Version: "1.0", Entrypoint: "plugin.lua"},
 		{ID: "b", Name: "Old", Version: "2.0", Entrypoint: "plugin.lua"},
 		{ID: "c", Name: "New", Version: "1.0", Entrypoint: "plugin.lua"},
 	}
-	installed := map[string]PlugRingItem{
+	installed := map[string]plughost.PlugRingItem{
 		"a": {ID: "a", Version: "1.0"},
 		"b": {ID: "b", Version: "1.0"},
 	}
@@ -77,7 +78,7 @@ func TestBuildPlugRingRowsStatuses(t *testing.T) {
 }
 
 func TestBuildPlugRingRowsMarksWhatCannotRunHere(t *testing.T) {
-	items := []PlugRingItem{
+	items := []plughost.PlugRingItem{
 		{ID: "jit", Name: "Needs LuaJIT", Entrypoint: "plugin.lua", Runtimes: []string{"luajit"}},
 	}
 

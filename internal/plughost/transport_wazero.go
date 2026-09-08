@@ -1,4 +1,8 @@
-package main
+// Do not rename this file to *_wasm.go. Go reads the _wasm suffix as an
+// implicit GOARCH constraint, so the file would silently drop out of the build
+// on every other architecture — the package still compiles, the WASM transport
+// just stops existing.
+package plughost
 
 import (
 	"context"

@@ -19,6 +19,7 @@ import (
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/piecetable"
+	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
@@ -4809,7 +4810,7 @@ func actionManagePlugins(pf *PanelsFrame) {
 
 	lb := vtui.NewListBox(0, 0, width-4, 10, config.App.RegisteredPlugins)
 
-	btnPerms.OnClick = func() { actionPluginPermissions(PluginPermissions()) }
+	btnPerms.OnClick = func() { plughost.ActionPluginPermissions(plughost.PluginPermissions()) }
 
 	dlg.AddItem(lb)
 	dlg.AddItem(btnAdd)
@@ -4845,8 +4846,8 @@ func actionManagePlugins(pf *PanelsFrame) {
 				lb.Items = config.App.RegisteredPlugins
 				lb.UpdateRows()
 				vtui.FrameManager.Redraw()
-				if GlobalPluginManager != nil {
-					GlobalPluginManager.LoadExternalPlugin(path)
+				if plughost.GlobalPluginManager != nil {
+					plughost.GlobalPluginManager.LoadExternalPlugin(path)
 				}
 			}
 		})

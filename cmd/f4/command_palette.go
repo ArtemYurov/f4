@@ -9,6 +9,7 @@ import (
 
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -324,9 +325,9 @@ func commandPalettePluginEntries(pf *PanelsFrame) []commandPaletteEntry {
 			categoryKey = "CommandPalette.CategoryPluginConfig"
 			category = i18n.Msg("CommandPalette.CategoryPluginConfig")
 		}
-		for _, command := range pluginCommandsSnapshot(location, pf) {
-			label := action.PlainLabel(pluginCommandDisplayLabel(command))
-			description := pluginCommandDisplayDescription(command)
+		for _, command := range plughost.PluginCommandsSnapshot(location, pf) {
+			label := action.PlainLabel(plughost.PluginCommandDisplayLabel(command))
+			description := plughost.PluginCommandDisplayDescription(command)
 			if description == "" {
 				description = command.ID
 			}
@@ -335,8 +336,8 @@ func commandPalettePluginEntries(pf *PanelsFrame) []commandPaletteEntry {
 				englishDescription = command.ID
 			}
 			searchFields := []string{category, command.Label, command.Description}
-			searchFields = append(searchFields, pluginCommandSearchTerms(command)...)
-			translationKeys := append([]string{categoryKey}, pluginCommandTranslationKeys(command)...)
+			searchFields = append(searchFields, plughost.PluginCommandSearchTerms(command)...)
+			translationKeys := append([]string{categoryKey}, plughost.PluginCommandTranslationKeys(command)...)
 			searchFields = append(searchFields, commandPaletteTranslations(translationKeys...)...)
 			entries = append(entries, commandPaletteEntry{
 				Key:                fmt.Sprintf("plugin:%d:%s", location, strings.ToLower(command.ID)),
@@ -511,7 +512,7 @@ func executeCommandPaletteEntry(entry commandPaletteEntry) bool {
 	case commandPaletteSourceAction:
 		return RunAction(entry.ID)
 	case commandPaletteSourcePlugin:
-		return executeRegisteredPluginCommand(entry.pluginLocation, entry.ID, entry.panels)
+		return plughost.ExecutePluginCommand(entry.pluginLocation, entry.ID, entry.panels)
 	case commandPaletteSourceLegacyPlugin:
 		items := pluginMenuItemsSnapshot()
 		if entry.legacyIndex >= 0 && entry.legacyIndex < len(items) && items[entry.legacyIndex].Handler != nil {

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/f4/vfs"
 )
 
@@ -65,7 +66,7 @@ func (c *coreAPI) RegisterMacroCallProvider(provider vfs.MacroCallProvider) (vfs
 		macroCallRegistry.byID[id] = registration
 	}
 
-	return &unregisterFunc{fn: func() {
+	return plughost.NewUnregisterFunc(func() {
 		macroCallRegistry.Lock()
 		for _, id := range ids {
 			if current := macroCallRegistry.byID[id]; current != nil && current.token == token {
@@ -73,7 +74,7 @@ func (c *coreAPI) RegisterMacroCallProvider(provider vfs.MacroCallProvider) (vfs
 			}
 		}
 		macroCallRegistry.Unlock()
-	}}, nil
+	}), nil
 }
 
 func dispatchMacroPluginCall(ctx context.Context, id string, callContext vfs.MacroCallContext, args []any) ([]any, error) {

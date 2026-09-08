@@ -1,16 +1,17 @@
-package main
+package plughost
 
 import (
 	"context"
 	"path/filepath"
 	"testing"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
 func TestRPCVFS_ReadDir(t *testing.T) {
-	clientSess, serverSess := setupTestSessions(t)
+	clientSess, serverSess := testutil.RPCSessionPair(t)
 
 	// Мокаем ответ от плагина
 	serverSess.Register("VFS.ReadDir", func(data msgpack.RawMessage) (any, error) {

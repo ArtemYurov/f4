@@ -25,6 +25,7 @@ import (
 	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs/hostmode"
 	"github.com/unxed/vtinput"
@@ -45,6 +46,17 @@ func RegisterGlobalHotkey(vk uint16, mods vtinput.ControlKeyState, handler func(
 	pluginRegistryMu.Lock()
 	GlobalHotkeys = append(GlobalHotkeys, HotkeyEntry{VK: vk, Mods: mods, Handler: handler})
 	pluginRegistryMu.Unlock()
+}
+
+// findPanelsFrame locates the panels frame of the active screen, if any.
+func findPanelsFrame() *PanelsFrame {
+	if vtui.FrameManager == nil {
+		return nil
+	}
+	if pf, ok := vtui.FrameManager.GetTopFrame().(*PanelsFrame); ok {
+		return pf
+	}
+	return findPanelsFrameAnyScreen()
 }
 
 func globalHotkeysSnapshot() []HotkeyEntry {
@@ -4738,7 +4750,7 @@ func (pf *PanelsFrame) Clone() *PanelsFrame {
 
 func (pf *PanelsFrame) showPluginMenu() {
 	items := pluginMenuItemsSnapshot()
-	commands := pluginCommandsSnapshot(vfs.PluginCommandPanel, pf)
+	commands := plughost.PluginCommandsSnapshot(vfs.PluginCommandPanel, pf)
 	if len(items) == 0 && len(commands) == 0 {
 		vtui.ShowMessage(" Plugins ", "No plugins registered for F11 menu.", []string{"&Ok"})
 		return
@@ -4818,7 +4830,7 @@ func (pf *PanelsFrame) showPluginMenu() {
 		case idx >= len(items) && idx < len(items)+len(commands):
 			commandID := commands[idx-len(items)].ID
 			vtui.FrameManager.PostTask(func() {
-				executeRegisteredPluginCommand(vfs.PluginCommandPanel, commandID, pf)
+				plughost.ExecutePluginCommand(vfs.PluginCommandPanel, commandID, pf)
 			})
 		}
 	}, pluginMenuKeyLabels(pf))

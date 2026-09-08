@@ -306,6 +306,58 @@ Three files the call graph assigns here despite their names: `api.go` (the
    `hotkeys.go`, `actions_sqlite.go`.
 6. Add `"internal/plughost": 2` to the auditor's layer map.
 
+### What the wave actually found
+
+The interface is **seven methods, not five**, and the count moved twice while it
+was being measured — which is why each of the four waves after this one measures
+its own instead of copying this number.
+
+- Two of the five in the finding are not needed. `vfs.App` already declares
+  `RunProgressTask` and `Menu`, so reaching the current application covers both:
+  one `Current() vfs.App` replaced two entries.
+- Four were missing. `AskOverwrite` and `AskError` (`file_ops.go`, layer 3) are
+  called from `newHostMethods` and the finding did not count them.
+  `OpenPanelProvider` is what step 3's cut needs — the provider registry has to
+  sit below both `coreAPI` and `internal/panel`, so opening one is the piece
+  that stays above. `IsStale` carries the panel-liveness check that
+  `executeRegisteredPluginCommand` did inline with a `*PanelsFrame` type
+  assertion; translating it as `Current() != app` silently rejected every app
+  object that is not a panels frame, which two tests caught.
+
+**Four files the task assigns here do not belong here**, all of them assigned by
+name rather than by the call graph:
+
+- `api.go` — the finding already moved it out; `coreAPI` implements `vfs.HostAPI`
+  and calls five application functions.
+- `plugin_hotkeys.go` — every binding function takes `*HotkeyManager`, and
+  `pluginMenuKeyLabels` is called from `panels_frame.go`. It travels to
+  `internal/app`, so `command_palette_coverage_test.go`'s map entry becomes
+  `app` rather than being deleted.
+- `plugring_ui.go` — three `*PanelsFrame` functions; it is the catalogue's UI.
+- `sqlite_actions.go` — registers an application action from `init()`. Nothing
+  about it is host plumbing.
+
+`plugin_contributions.go` and `panel_plugins.go` **split** rather than move: the
+two registries go to the host because `internal/panel` reads them, while
+`coreAPI`'s methods, `actionPluginConfiguration` and the whole
+`pluginPanelInstance` machinery stay above.
+
+**`transport_wasm.go` is not a legal filename.** Go reads `_wasm` as an implicit
+GOARCH constraint, so the file compiles nowhere except `GOARCH=wasm` and the
+package still builds — with the WASM transport silently absent. It is
+`transport_wazero.go`, with a comment saying why.
+
+**The palette auditor had a latent bug this wave triggered.**
+`commandPaletteCountF4Surfaces` derived "which packages are ours" from
+`commandPaletteTargetPackage`, a map documented to empty itself as waves land.
+Removing the last entry naming `plughost` dropped a live surface from the count.
+It now reads `architectureLayers`, so the constant survives the map emptying.
+
+**The plugin registries stayed behind on purpose.** `PluginMenuItems` and
+`GlobalHotkeys` share `pluginRegistryMu` and are read by some thirty `cmd/f4`
+files; their only plugin-facing entry is `coreAPI`, which stays. Moving them
+would have exported a mutex-shared pair for no boundary gain.
+
 ### Required Interfaces and Contracts
 
 - `internal/plughost` imports `sdk/`, `vfs`, `internal/luaplug`,

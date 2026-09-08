@@ -1,4 +1,4 @@
-package main
+package plughost
 
 import (
 	"context"
@@ -470,7 +470,7 @@ func RunExternalUI(cols, rows int, execPath string, args []string) error {
 	}
 
 	go host.readLoop()
-	SetupUI()
+	App.SetupUI()
 	vtui.FrameManager.Run(reader)
 	_ = sender.Send(map[string]any{"type": "quit"})
 	return nil
@@ -581,7 +581,7 @@ func (h *ExtUiHost) handleMessage(msg map[string]any) {
 			"text": vtui.GetClipboard(),
 		})
 	case "clipboard_set":
-		setF4Clipboard(extUiString(msg, "text"))
+		App.SetClipboard(extUiString(msg, "text"))
 	case "ui_action":
 		action := msg
 		if nested, ok := msg["action"].(map[string]any); ok {
@@ -589,7 +589,7 @@ func (h *ExtUiHost) handleMessage(msg map[string]any) {
 		}
 		if vtui.FrameManager != nil {
 			vtui.FrameManager.PostTask(func() {
-				if HandleSemanticAction(action) {
+				if App.RunSemanticAction(action) {
 					vtui.FrameManager.Redraw()
 				}
 			})

@@ -1,4 +1,4 @@
-package main
+package plughost
 
 import (
 	"encoding/json"
@@ -45,12 +45,12 @@ type RPCPanelEventResponse struct {
 	Close    bool
 }
 
-func registerRPCPluginPanels(
+func RegisterRPCPluginPanels(
 	api vfs.HostAPI,
 	back PluginTransport,
 	pluginName string,
 	descriptors []PluginPanelDescriptor,
-	registrations *pluginSessionRegistrations,
+	registrations *PluginSessionRegistrations,
 ) error {
 	if len(descriptors) == 0 {
 		return nil

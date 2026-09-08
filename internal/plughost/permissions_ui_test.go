@@ -1,4 +1,4 @@
-package main
+package plughost
 
 import (
 	"path/filepath"
@@ -102,7 +102,7 @@ func TestPluginPermissionsDialogListsAndRevokes(t *testing.T) {
 		t.Fatalf("Remember: %v", err)
 	}
 
-	actionPluginPermissions(store)
+	ActionPluginPermissions(store)
 
 	top := vtui.FrameManager.GetTopFrame()
 	dlg, ok := top.(vtui.Container)
@@ -151,7 +151,7 @@ func TestPluginPermissionsDialogWithNothingGranted(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
 	store := LoadPermissionStore(filepath.Join(t.TempDir(), "perms.json"))
-	actionPluginPermissions(store)
+	ActionPluginPermissions(store)
 
 	dlg, ok := vtui.FrameManager.GetTopFrame().(vtui.Container)
 	if !ok {

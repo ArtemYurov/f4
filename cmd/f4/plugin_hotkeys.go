@@ -11,6 +11,7 @@ import (
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -37,22 +38,16 @@ func pluginActionForName(name string) (action.Action, bool) {
 	switch {
 	case strings.HasPrefix(lowerName, "plugin.command."):
 		id := strings.TrimSpace(rawName[len("Plugin.Command."):])
-		pluginCommandRegistry.RLock()
-		registered, ok := pluginCommandRegistry.byID[strings.ToLower(id)]
-		if ok {
-			registered.command = clonePluginCommand(registered.command)
-		}
-		pluginCommandRegistry.RUnlock()
+		command, ok := plughost.PluginCommandByID(id)
 		if !ok {
 			return action.Action{}, false
 		}
-		command := registered.command
 		actionName := pluginCommandActionName(command.ID)
 		return action.Action{
 			Name:        actionName,
 			Area:        "Shell",
-			Label:       pluginCommandDisplayLabel(command),
-			Description: pluginCommandDisplayDescription(command),
+			Label:       plughost.PluginCommandDisplayLabel(command),
+			Description: plughost.PluginCommandDisplayDescription(command),
 			Handler:     func() bool { return runPluginHotkeyAction(actionName) },
 		}, true
 	case strings.HasPrefix(lowerName, "plugin.legacy."):
@@ -85,12 +80,7 @@ func runPluginHotkeyAction(name string) bool {
 	name = strings.TrimSpace(name)
 	if strings.HasPrefix(strings.ToLower(name), "plugin.command.") {
 		id := strings.TrimSpace(name[len("Plugin.Command."):])
-		pluginCommandRegistry.RLock()
-		registered, ok := pluginCommandRegistry.byID[strings.ToLower(id)]
-		if ok {
-			registered.command = clonePluginCommand(registered.command)
-		}
-		pluginCommandRegistry.RUnlock()
+		command, ok := plughost.PluginCommandByID(id)
 		if !ok {
 			return false
 		}
@@ -98,7 +88,7 @@ func runPluginHotkeyAction(name string) bool {
 		if pf == nil {
 			return false
 		}
-		return executeRegisteredPluginCommand(registered.command.Location, registered.command.ID, pf)
+		return plughost.ExecutePluginCommand(command.Location, command.ID, pf)
 	}
 
 	if strings.HasPrefix(strings.ToLower(name), "plugin.legacy.") {
@@ -280,7 +270,7 @@ func buildPluginMenuEntries(items []PluginMenuItem, commands []vfs.PluginCommand
 	}
 	for _, command := range commands {
 		entries = append(entries, pluginMenuEntry{
-			Label:      pluginCommandDisplayLabel(command),
+			Label:      plughost.PluginCommandDisplayLabel(command),
 			ActionName: pluginCommandActionName(command.ID),
 			Declared:   command.Shortcut,
 		})
@@ -367,14 +357,9 @@ func pluginActionDefaultShortcut(name string) string {
 		return ""
 	}
 	id := strings.TrimSpace(name[len("Plugin.Command."):])
-	pluginCommandRegistry.RLock()
-	registered, ok := pluginCommandRegistry.byID[strings.ToLower(id)]
-	if ok {
-		shortcut := registered.command.Shortcut
-		pluginCommandRegistry.RUnlock()
-		return shortcut
+	if command, ok := plughost.PluginCommandByID(id); ok {
+		return command.Shortcut
 	}
-	pluginCommandRegistry.RUnlock()
 	return ""
 }
 
@@ -549,19 +534,15 @@ func pluginMenuKeyLabels(pf *PanelsFrame) *vtui.KeySet {
 // the F11 menu as well. A user can therefore assign a shortcut once and keep
 // it when moving to another drive or when a plugin changes its visibility.
 func pluginHotkeyActionsSnapshot() []action.Action {
-	pluginCommandRegistry.RLock()
-	commandIDs := append([]string(nil), pluginCommandRegistry.order...)
-	pluginCommandRegistry.RUnlock()
+	commandIDs := plughost.PluginCommandIDs()
 
 	actions := make([]action.Action, 0, len(commandIDs)+len(pluginMenuItemsSnapshot()))
 	for _, id := range commandIDs {
-		pluginCommandRegistry.RLock()
-		registered, ok := pluginCommandRegistry.byID[id]
-		pluginCommandRegistry.RUnlock()
+		command, ok := plughost.PluginCommandByID(id)
 		if !ok {
 			continue
 		}
-		if action, ok := pluginActionForName(pluginCommandActionName(registered.command.ID)); ok {
+		if action, ok := pluginActionForName(pluginCommandActionName(command.ID)); ok {
 			actions = append(actions, action)
 		}
 	}

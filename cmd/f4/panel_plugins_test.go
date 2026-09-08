@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/unxed/f4/internal/plughost"
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -77,41 +79,41 @@ func TestPanelProviderOpensInActiveSlotAndReceivesContext(t *testing.T) {
 }
 
 func TestRPCPanelProviderOpensVUIAndForwardsEvent(t *testing.T) {
-	coreSess, pluginSess := setupTestSessions(t)
+	coreSess, pluginSess := testutil.RPCSessionPair(t)
 
 	document := []byte(`{"vuiVersion":1,"root":{"type":"Dialog","props":{"title":"Panel"}}}`)
 	pluginSess.Register("Plugin.OpenPanel", func(data msgpack.RawMessage) (any, error) {
-		var request RPCPanelOpenRequest
+		var request plughost.RPCPanelOpenRequest
 		if err := msgpack.Unmarshal(data, &request); err != nil {
 			return nil, err
 		}
 		if request.ID != "remote.panel" || request.Context.Side != 1 {
 			t.Fatalf("unexpected open request: %+v", request)
 		}
-		return RPCPanelOpenResponse{Document: document}, nil
+		return plughost.RPCPanelOpenResponse{Document: document}, nil
 	})
 	pluginSess.Register("Plugin.PanelEvent", func(data msgpack.RawMessage) (any, error) {
-		var request RPCPanelEventRequest
+		var request plughost.RPCPanelEventRequest
 		if err := msgpack.Unmarshal(data, &request); err != nil {
 			return nil, err
 		}
 		if request.Kind != "key" || request.Event.VirtualKeyCode != vtinput.VK_F4 {
 			t.Fatalf("unexpected event request: %+v", request)
 		}
-		return RPCPanelEventResponse{Handled: true, Document: document}, nil
+		return plughost.RPCPanelEventResponse{Handled: true, Document: document}, nil
 	})
 	pluginSess.Register("Plugin.ClosePanel", func(data msgpack.RawMessage) (any, error) { return nil, nil })
 
 	api := &coreAPI{}
-	registrations := &pluginSessionRegistrations{}
-	if err := registerRPCPluginPanels(api, coreSess, "test-rpc", []PluginPanelDescriptor{{
+	registrations := &plughost.PluginSessionRegistrations{}
+	if err := plughost.RegisterRPCPluginPanels(api, coreSess, "test-rpc", []plughost.PluginPanelDescriptor{{
 		ID: "remote.panel", Title: "Remote panel",
 	}}, registrations); err != nil {
 		t.Fatal(err)
 	}
 	defer registrations.Unregister()
 
-	provider, ok := lookupPanelProvider("remote.panel")
+	provider, ok := plughost.LookupPanelProvider("remote.panel")
 	if !ok {
 		t.Fatal("RPC panel was not registered")
 	}

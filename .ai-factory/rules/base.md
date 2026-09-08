@@ -13,6 +13,13 @@
 - Types: `PascalCase`; Far-derived structures keep the names of their C++ originals
   even when Go style would suggest otherwise
 - Packages: single lowercase word (`vfs`, `wincon`, `ttyx`, `cloudfox`, `envman`)
+- **Language: English.** Comments, identifiers and error strings in new or
+  rewritten code are English, because the perimeter already is — the
+  architecture document, the agent instructions, this file, commit messages —
+  and because a warning is worthless to the contributor it was written for if
+  they cannot read it. Roughly 55 of some 600 files carry Russian comments from
+  the project's author; those stay as they are. Translating them is its own
+  piece of work, not something a move commit smuggles in.
 - **`config` vs `Settings`** — the two are not synonyms here, and keeping them
   apart is what stops one from swallowing the other:
   - `config` names the application's configuration: the package

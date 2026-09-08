@@ -6,6 +6,7 @@ import (
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -116,7 +117,7 @@ func BuildMenuBarItems(area string) []vtui.MenuBarItem {
 			menus[command.MenuPath] = m
 			order = append(order, command.MenuPath)
 		}
-		text := action.PlainLabel(pluginCommandDisplayLabel(command))
+		text := action.PlainLabel(plughost.PluginCommandDisplayLabel(command))
 		if !strings.Contains(text, "&") {
 			text = "&" + text
 		}
@@ -134,7 +135,7 @@ func BuildMenuBarItems(area string) []vtui.MenuBarItem {
 			UserData: history.MenuHistoryItemKey("plugin:" + command.ID),
 			OnClick: func() {
 				if pf := findPanelsFrameAnyScreen(); pf != nil {
-					executeRegisteredPluginCommand(vfs.PluginCommandPanel, command.ID, pf)
+					plughost.ExecutePluginCommand(vfs.PluginCommandPanel, command.ID, pf)
 				}
 			},
 		})
@@ -161,7 +162,7 @@ func BuildMenuBarItems(area string) []vtui.MenuBarItem {
 		// frame manager. Do not pass a typed-nil *PanelsFrame as vfs.App to
 		// plugin visibility callbacks: some plugins inspect the panel state.
 		if pf := findPanelsFrameAnyScreen(); pf != nil {
-			for _, command := range pluginCommandsSnapshot(vfs.PluginCommandPanel, pf) {
+			for _, command := range plughost.PluginCommandsSnapshot(vfs.PluginCommandPanel, pf) {
 				if command.MenuPath != "" {
 					appendPluginCommand(command)
 				}

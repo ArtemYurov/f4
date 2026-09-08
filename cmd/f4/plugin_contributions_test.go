@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/f4/vfs"
 )
 
@@ -23,21 +24,21 @@ func TestPluginCommandRegistrationVisibilityAndCleanup(t *testing.T) {
 	}
 	t.Cleanup(registration.Unregister)
 
-	if commands := pluginCommandsSnapshot(vfs.PluginCommandPanel, nil); len(commands) != 0 {
+	if commands := plughost.PluginCommandsSnapshot(vfs.PluginCommandPanel, nil); len(commands) != 0 {
 		t.Fatalf("hidden command was returned: %#v", commands)
 	}
 	visible = true
-	commands := pluginCommandsSnapshot(vfs.PluginCommandPanel, nil)
+	commands := plughost.PluginCommandsSnapshot(vfs.PluginCommandPanel, nil)
 	if len(commands) != 1 || commands[0].ID != "test.plugin-command" {
 		t.Fatalf("visible command snapshot = %#v", commands)
 	}
-	if config := pluginCommandsSnapshot(vfs.PluginCommandConfig, nil); len(config) != 0 {
+	if config := plughost.PluginCommandsSnapshot(vfs.PluginCommandConfig, nil); len(config) != 0 {
 		t.Fatalf("command leaked into config menu: %#v", config)
 	}
 
 	registration.Unregister()
 	registration.Unregister()
-	if commands := pluginCommandsSnapshot(vfs.PluginCommandPanel, nil); len(commands) != 0 {
+	if commands := plughost.PluginCommandsSnapshot(vfs.PluginCommandPanel, nil); len(commands) != 0 {
 		t.Fatalf("unregistered command remains: %#v", commands)
 	}
 }
@@ -69,11 +70,11 @@ func TestPluginCommandExecutionReResolvesAfterUnregister(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !executeRegisteredPluginCommand(vfs.PluginCommandPanel, "test.stale-menu-command", nil) || called != 1 {
+	if !plughost.ExecutePluginCommand(vfs.PluginCommandPanel, "test.stale-menu-command", nil) || called != 1 {
 		t.Fatalf("live command execution: called=%d", called)
 	}
 	registration.Unregister()
-	if executeRegisteredPluginCommand(vfs.PluginCommandPanel, "test.stale-menu-command", nil) || called != 1 {
+	if plughost.ExecutePluginCommand(vfs.PluginCommandPanel, "test.stale-menu-command", nil) || called != 1 {
 		t.Fatalf("unregistered command executed: called=%d", called)
 	}
 }
@@ -102,7 +103,7 @@ func TestPluginCommandRegistrationClonesMetadata(t *testing.T) {
 	searchTerms[0] = "mutated by plugin"
 	localizedLabels["ru"] = "mutated by plugin"
 	localizedDescriptions["ru"] = "mutated by plugin"
-	commands := pluginCommandsSnapshot(vfs.PluginCommandPanel, nil)
+	commands := plughost.PluginCommandsSnapshot(vfs.PluginCommandPanel, nil)
 	if len(commands) != 1 ||
 		!reflect.DeepEqual(commands[0].SearchKeys, []string{"Test.PluginCommand.Search"}) ||
 		!reflect.DeepEqual(commands[0].SearchTerms, []string{"literal alias"}) ||
@@ -115,7 +116,7 @@ func TestPluginCommandRegistrationClonesMetadata(t *testing.T) {
 	commands[0].SearchTerms[0] = "mutated snapshot"
 	commands[0].LocalizedLabels["ru"] = "mutated snapshot"
 	commands[0].LocalizedDescriptions["ru"] = "mutated snapshot"
-	commands = pluginCommandsSnapshot(vfs.PluginCommandPanel, nil)
+	commands = plughost.PluginCommandsSnapshot(vfs.PluginCommandPanel, nil)
 	if len(commands) != 1 ||
 		!reflect.DeepEqual(commands[0].SearchKeys, []string{"Test.PluginCommand.Search"}) ||
 		!reflect.DeepEqual(commands[0].SearchTerms, []string{"literal alias"}) ||
@@ -143,18 +144,18 @@ func TestPluginCommandOwnedLocalizationUsesCurrentAndFallbackLanguages(t *testin
 
 	config.App.Language = "fr_CA"
 	config.App.FallbackLanguage = "de"
-	if got := pluginCommandDisplayLabel(command); got != "Libelle francais" {
+	if got := plughost.PluginCommandDisplayLabel(command); got != "Libelle francais" {
 		t.Fatalf("regional current-language label = %q", got)
 	}
-	if got := pluginCommandDisplayDescription(command); got != "Description francaise" {
+	if got := plughost.PluginCommandDisplayDescription(command); got != "Description francaise" {
 		t.Fatalf("regional current-language description = %q", got)
 	}
 
 	config.App.Language = "it"
-	if got := pluginCommandDisplayLabel(command); got != "Deutsche Beschriftung" {
+	if got := plughost.PluginCommandDisplayLabel(command); got != "Deutsche Beschriftung" {
 		t.Fatalf("fallback-language label = %q", got)
 	}
-	if got := pluginCommandSearchTerms(command); !reflect.DeepEqual(got, []string{
+	if got := plughost.PluginCommandSearchTerms(command); !reflect.DeepEqual(got, []string{
 		"literal alias",
 		"Deutsche Beschriftung",
 		"Libelle francais",
@@ -180,7 +181,7 @@ func TestPluginCommandExecutionRejectsClosedPanelsFrame(t *testing.T) {
 	t.Cleanup(registration.Unregister)
 
 	panels := &PanelsFrame{closed: true}
-	if executeRegisteredPluginCommand(vfs.PluginCommandPanel, "TEST.CLOSED-PANELS-FRAME-COMMAND", panels) {
+	if plughost.ExecutePluginCommand(vfs.PluginCommandPanel, "TEST.CLOSED-PANELS-FRAME-COMMAND", panels) {
 		t.Fatal("command executed for a closed PanelsFrame")
 	}
 	if called != 0 {
@@ -208,13 +209,13 @@ func TestPluginCommandDisplayMetadataTracksActiveLanguage(t *testing.T) {
 	config.App.FallbackLanguage = ""
 	config.App.Language = "ru"
 	initLang()
-	if got := pluginCommandDisplayLabel(command); got != "Извлечь файлы" {
+	if got := plughost.PluginCommandDisplayLabel(command); got != "Извлечь файлы" {
 		t.Fatalf("Russian label = %q", got)
 	}
-	if got := pluginCommandDisplayDescription(command); got != "Извлечь выбранный архив в пассивную панель" {
+	if got := plughost.PluginCommandDisplayDescription(command); got != "Извлечь выбранный архив в пассивную панель" {
 		t.Fatalf("Russian description = %q", got)
 	}
-	if got := pluginCommandTranslationKeys(command); !reflect.DeepEqual(got, []string{
+	if got := plughost.PluginCommandTranslationKeys(command); !reflect.DeepEqual(got, []string{
 		"Archive.Command.Extract",
 		"Archive.Command.Extract.Desc",
 		"Attributes.Archive",
@@ -224,11 +225,11 @@ func TestPluginCommandDisplayMetadataTracksActiveLanguage(t *testing.T) {
 
 	config.App.Language = "en"
 	initLang()
-	if got := pluginCommandDisplayLabel(command); got != command.Label {
+	if got := plughost.PluginCommandDisplayLabel(command); got != command.Label {
 		t.Fatalf("English label = %q, want %q", got, command.Label)
 	}
 	missing := vfs.PluginCommand{Label: "Fallback label", LabelKey: "Test.Missing.PluginCommand.Label"}
-	if got := pluginCommandDisplayLabel(missing); got != missing.Label {
+	if got := plughost.PluginCommandDisplayLabel(missing); got != missing.Label {
 		t.Fatalf("missing localization returned %q, want fallback %q", got, missing.Label)
 	}
 }

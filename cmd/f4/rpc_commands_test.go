@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/f4/vfs"
 	"github.com/vmihailenco/msgpack/v5"
 )
@@ -15,7 +16,7 @@ func TestPluginInitResponseAcceptsLegacyAndExtendedWireFormats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var legacyResponse PluginInitResponse
+	var legacyResponse plughost.PluginInitResponse
 	if err := msgpack.Unmarshal(legacy, &legacyResponse); err != nil {
 		t.Fatalf("legacy Plugin.Init response: %v", err)
 	}
@@ -25,7 +26,7 @@ func TestPluginInitResponseAcceptsLegacyAndExtendedWireFormats(t *testing.T) {
 
 	extended, err := msgpack.Marshal(map[string]any{
 		"Drives": []string{"New drive"},
-		"Commands": []PluginCommandDescriptor{{
+		"Commands": []plughost.PluginCommandDescriptor{{
 			ID:       "sample.command",
 			Location: uint8(vfs.PluginCommandPanel),
 			Label:    "Sample command",
@@ -34,7 +35,7 @@ func TestPluginInitResponseAcceptsLegacyAndExtendedWireFormats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var extendedResponse PluginInitResponse
+	var extendedResponse plughost.PluginInitResponse
 	if err := msgpack.Unmarshal(extended, &extendedResponse); err != nil {
 		t.Fatalf("extended Plugin.Init response: %v", err)
 	}
@@ -45,12 +46,12 @@ func TestPluginInitResponseAcceptsLegacyAndExtendedWireFormats(t *testing.T) {
 
 type rpcCommandTestTransport struct {
 	methods  []string
-	requests []PluginRunCommandRequest
+	requests []plughost.PluginRunCommandRequest
 }
 
 func (transport *rpcCommandTestTransport) Call(method string, params any, _ any) error {
 	transport.methods = append(transport.methods, method)
-	if request, ok := params.(PluginRunCommandRequest); ok {
+	if request, ok := params.(plughost.PluginRunCommandRequest); ok {
 		transport.requests = append(transport.requests, request)
 	}
 	return nil
@@ -88,8 +89,8 @@ func TestRPCPluginCommandsRegisterLocalizeExecuteAndUnregister(t *testing.T) {
 	t.Cleanup(func() { config.App.Language = oldLanguage })
 
 	transport := &rpcCommandTestTransport{}
-	registrations := &pluginSessionRegistrations{}
-	descriptor := PluginCommandDescriptor{
+	registrations := &plughost.PluginSessionRegistrations{}
+	descriptor := plughost.PluginCommandDescriptor{
 		ID:          commandID,
 		Location:    uint8(vfs.PluginCommandPanel),
 		Label:       "Show greeting",
@@ -105,53 +106,53 @@ func TestRPCPluginCommandsRegisterLocalizeExecuteAndUnregister(t *testing.T) {
 		SearchTerms:  []string{"hello", "привет"},
 		ActiveDrives: []string{"RPC Test Drive"},
 	}
-	if err := registerRPCPluginCommands(&coreAPI{}, transport, "test-rpc", []PluginCommandDescriptor{descriptor}, registrations); err != nil {
+	if err := plughost.RegisterRPCPluginCommands(&coreAPI{}, transport, "test-rpc", []plughost.PluginCommandDescriptor{descriptor}, registrations); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(registrations.Unregister)
 
-	hiddenApp := &rpcCommandTestApp{active: NewRPCVFS(transport, "Different Drive")}
-	if command, ok := findPluginCommandByID(pluginCommandsSnapshot(vfs.PluginCommandPanel, hiddenApp), commandID); ok {
+	hiddenApp := &rpcCommandTestApp{active: plughost.NewRPCVFS(transport, "Different Drive")}
+	if command, ok := findPluginCommandByID(plughost.PluginCommandsSnapshot(vfs.PluginCommandPanel, hiddenApp), commandID); ok {
 		t.Fatalf("drive-scoped RPC command leaked into another drive: %#v", command)
 	}
 
-	app := &rpcCommandTestApp{active: NewRPCVFS(transport, "rpc test drive")}
-	command, ok := findPluginCommandByID(pluginCommandsSnapshot(vfs.PluginCommandPanel, app), commandID)
+	app := &rpcCommandTestApp{active: plughost.NewRPCVFS(transport, "rpc test drive")}
+	command, ok := findPluginCommandByID(plughost.PluginCommandsSnapshot(vfs.PluginCommandPanel, app), commandID)
 	if !ok {
 		t.Fatal("RPC command is missing in its active drive")
 	}
-	if got := pluginCommandDisplayLabel(command); got != "Показать RPC-приветствие" {
+	if got := plughost.PluginCommandDisplayLabel(command); got != "Показать RPC-приветствие" {
 		t.Fatalf("localized label = %q", got)
 	}
-	if got := pluginCommandDisplayDescription(command); got != "Показать приветствие внешнего плагина" {
+	if got := plughost.PluginCommandDisplayDescription(command); got != "Показать приветствие внешнего плагина" {
 		t.Fatalf("localized description = %q", got)
 	}
 	if command.MenuPath != "Commands" {
 		t.Fatalf("menu path = %q, want Commands", command.MenuPath)
 	}
 	wantSearch := []string{"hello", "привет", "Показать RPC-приветствие", "Показать приветствие внешнего плагина"}
-	if got := pluginCommandSearchTerms(command); !reflect.DeepEqual(got, wantSearch) {
+	if got := plughost.PluginCommandSearchTerms(command); !reflect.DeepEqual(got, wantSearch) {
 		t.Fatalf("search terms = %#v, want %#v", got, wantSearch)
 	}
-	if !executeRegisteredPluginCommand(vfs.PluginCommandPanel, commandID, app) {
+	if !plughost.ExecutePluginCommand(vfs.PluginCommandPanel, commandID, app) {
 		t.Fatal("live RPC command was not executed")
 	}
 	if !reflect.DeepEqual(transport.methods, []string{"Plugin.RunCommand"}) ||
-		!reflect.DeepEqual(transport.requests, []PluginRunCommandRequest{{ID: commandID}}) {
+		!reflect.DeepEqual(transport.requests, []plughost.PluginRunCommandRequest{{ID: commandID}}) {
 		t.Fatalf("transport calls = %#v / %#v", transport.methods, transport.requests)
 	}
 
 	registrations.Unregister()
-	if _, ok := findPluginCommandByID(pluginCommandsSnapshot(vfs.PluginCommandPanel, app), commandID); ok {
+	if _, ok := findPluginCommandByID(plughost.PluginCommandsSnapshot(vfs.PluginCommandPanel, app), commandID); ok {
 		t.Fatal("RPC command survived session cleanup")
 	}
 }
 
 func TestPluginSessionRegistrationsRejectLateContribution(t *testing.T) {
-	registrations := &pluginSessionRegistrations{}
+	registrations := &plughost.PluginSessionRegistrations{}
 	registrations.Unregister()
 	called := 0
-	if registrations.Add(&unregisterFunc{fn: func() { called++ }}) {
+	if registrations.Add(plughost.NewUnregisterFunc(func() { called++ })) {
 		t.Fatal("closed session accepted a late contribution")
 	}
 	if called != 1 {

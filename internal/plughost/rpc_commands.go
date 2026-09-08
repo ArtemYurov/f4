@@ -1,4 +1,4 @@
-package main
+package plughost
 
 import (
 	"errors"
@@ -62,16 +62,16 @@ type PluginRunCommandRequest struct {
 	ID string
 }
 
-// pluginSessionRegistrations owns contributions created by one transport.
+// PluginSessionRegistrations owns contributions created by one transport.
 // Add remains safe when Serve has already returned: a late registration is
 // immediately removed instead of escaping a disconnected session.
-type pluginSessionRegistrations struct {
+type PluginSessionRegistrations struct {
 	mu     sync.Mutex
 	closed bool
 	items  []vfs.Registration
 }
 
-func (r *pluginSessionRegistrations) Add(registration vfs.Registration) bool {
+func (r *PluginSessionRegistrations) Add(registration vfs.Registration) bool {
 	if registration == nil {
 		return false
 	}
@@ -86,7 +86,7 @@ func (r *pluginSessionRegistrations) Add(registration vfs.Registration) bool {
 	return true
 }
 
-func (r *pluginSessionRegistrations) Unregister() {
+func (r *PluginSessionRegistrations) Unregister() {
 	if r == nil {
 		return
 	}
@@ -143,12 +143,12 @@ func rpcPluginCommandVisible(activeDrives []string, app vfs.App) bool {
 	return false
 }
 
-func registerRPCPluginCommands(
+func RegisterRPCPluginCommands(
 	api vfs.HostAPI,
 	back PluginTransport,
 	pluginName string,
 	descriptors []PluginCommandDescriptor,
-	registrations *pluginSessionRegistrations,
+	registrations *PluginSessionRegistrations,
 ) error {
 	if len(descriptors) == 0 {
 		return nil

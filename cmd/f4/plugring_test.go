@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/vtui"
 	"gopkg.in/yaml.v3"
 )
@@ -21,15 +22,15 @@ func TestResolveAssetURL(t *testing.T) {
 	tpl := "https://example.com/plugin_{os}_{arch}.zip"
 	expected := "https://example.com/plugin_" + runtime.GOOS + "_" + runtime.GOARCH + ".zip"
 
-	got := ResolveAssetURL(tpl)
+	got := plughost.ResolveAssetURL(tpl)
 	if got != expected {
-		t.Errorf("ResolveAssetURL failed. Expected %q, got %q", expected, got)
+		t.Errorf("plughost.ResolveAssetURL failed. Expected %q, got %q", expected, got)
 	}
 
 	// Test no placeholders
 	plain := "https://example.com/plugin.zip"
-	if ResolveAssetURL(plain) != plain {
-		t.Errorf("ResolveAssetURL altered a string without placeholders")
+	if plughost.ResolveAssetURL(plain) != plain {
+		t.Errorf("plughost.ResolveAssetURL altered a string without placeholders")
 	}
 }
 
@@ -44,7 +45,7 @@ func TestBundledPlugRingCatalogUsesRemoteAssets(t *testing.T) {
 		t.Fatalf("read bundled PlugRing catalog: %v", err)
 	}
 
-	var items []PlugRingItem
+	var items []plughost.PlugRingItem
 	if err := yaml.Unmarshal(data, &items); err != nil {
 		t.Fatalf("parse bundled PlugRing catalog: %v", err)
 	}
@@ -80,13 +81,13 @@ func TestFetchCatalog_Success(t *testing.T) {
 	defer ts.Close()
 
 	// Override URL for testing
-	origURL := PlugRingCatalogURL
-	PlugRingCatalogURL = ts.URL
-	defer func() { PlugRingCatalogURL = origURL }()
+	origURL := plughost.PlugRingCatalogURL
+	plughost.PlugRingCatalogURL = ts.URL
+	defer func() { plughost.PlugRingCatalogURL = origURL }()
 
-	items, err := FetchCatalog(context.Background())
+	items, err := plughost.FetchCatalog(context.Background())
 	if err != nil {
-		t.Fatalf("FetchCatalog failed: %v", err)
+		t.Fatalf("plughost.FetchCatalog failed: %v", err)
 	}
 
 	if len(items) != 1 {
@@ -99,8 +100,8 @@ func TestFetchCatalog_Success(t *testing.T) {
 }
 
 func TestFetchCatalog_Errors(t *testing.T) {
-	origURL := PlugRingCatalogURL
-	defer func() { PlugRingCatalogURL = origURL }()
+	origURL := plughost.PlugRingCatalogURL
+	defer func() { plughost.PlugRingCatalogURL = origURL }()
 
 	t.Run("404 Not Found", func(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -108,8 +109,8 @@ func TestFetchCatalog_Errors(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		PlugRingCatalogURL = ts.URL
-		_, err := FetchCatalog(context.Background())
+		plughost.PlugRingCatalogURL = ts.URL
+		_, err := plughost.FetchCatalog(context.Background())
 		if err == nil || err.Error() != "server returned status 404" {
 			t.Errorf("Expected 404 error, got: %v", err)
 		}
@@ -123,8 +124,8 @@ func TestFetchCatalog_Errors(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		PlugRingCatalogURL = ts.URL
-		_, err := FetchCatalog(context.Background())
+		plughost.PlugRingCatalogURL = ts.URL
+		_, err := plughost.FetchCatalog(context.Background())
 		if err == nil {
 			t.Error("Expected YAML parse error, got nil")
 		}
@@ -146,13 +147,13 @@ func TestFetchCatalog_Dependencies(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	origURL := PlugRingCatalogURL
-	PlugRingCatalogURL = ts.URL
-	defer func() { PlugRingCatalogURL = origURL }()
+	origURL := plughost.PlugRingCatalogURL
+	plughost.PlugRingCatalogURL = ts.URL
+	defer func() { plughost.PlugRingCatalogURL = origURL }()
 
-	items, err := FetchCatalog(context.Background())
+	items, err := plughost.FetchCatalog(context.Background())
 	if err != nil {
-		t.Fatalf("FetchCatalog failed: %v", err)
+		t.Fatalf("plughost.FetchCatalog failed: %v", err)
 	}
 
 	if len(items) != 1 || len(items[0].Dependencies) != 2 || items[0].Dependencies[0] != "lua" {
@@ -179,7 +180,7 @@ func TestGetInstalledPlugRingItems(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	installed := GetInstalledPlugRingItems()
+	installed := plughost.GetInstalledPlugRingItems()
 	if len(installed) != 1 {
 		t.Fatalf("Expected 1 installed item, got %d", len(installed))
 	}
@@ -225,21 +226,21 @@ func TestCheckForPluginUpdates(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	origURL := PlugRingCatalogURL
-	PlugRingCatalogURL = ts.URL
-	defer func() { PlugRingCatalogURL = origURL }()
+	origURL := plughost.PlugRingCatalogURL
+	plughost.PlugRingCatalogURL = ts.URL
+	defer func() { plughost.PlugRingCatalogURL = origURL }()
 
-	// We override sleep duration inside CheckForPluginUpdates indirectly by running
+	// We override sleep duration inside plughost.CheckForPluginUpdates indirectly by running
 	// its core logic synchronously in our test to avoid 5-second sleep hang.
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	items, err := FetchCatalog(ctx)
+	items, err := plughost.FetchCatalog(ctx)
 	if err != nil {
-		t.Fatalf("FetchCatalog failed: %v", err)
+		t.Fatalf("plughost.FetchCatalog failed: %v", err)
 	}
 
-	installed := GetInstalledPlugRingItems()
+	installed := plughost.GetInstalledPlugRingItems()
 	updateCount := 0
 	for _, itm := range items {
 		if inst, ok := installed[itm.ID]; ok {
@@ -305,7 +306,7 @@ echo "running"
 	}))
 	defer ts.Close()
 
-	item := PlugRingItem{
+	item := plughost.PlugRingItem{
 		ID:          "e2e-plugin",
 		Name:        "E2E Plugin",
 		Version:     "1.0.0",
@@ -386,10 +387,10 @@ Loop:
 		t.Error("setup_cmd was executed, but it should have been ignored per policy")
 	}
 
-	// 4. Verify GetInstalledPlugRingItems detects it
-	installed := GetInstalledPlugRingItems()
+	// 4. Verify plughost.GetInstalledPlugRingItems detects it
+	installed := plughost.GetInstalledPlugRingItems()
 	if _, ok := installed["e2e-plugin"]; !ok {
-		t.Error("GetInstalledPlugRingItems failed to detect newly installed plugin")
+		t.Error("plughost.GetInstalledPlugRingItems failed to detect newly installed plugin")
 	}
 
 	// 5. Perform Removal

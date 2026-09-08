@@ -105,6 +105,8 @@ var architectureLayers = map[string]int{
 	// Modal dialogs, the help viewer and help/ beside it. Layer 3 for the
 	// company it keeps rather than for what it imports: it may reach every
 	// leaf and none of the interactive subsystems.
+	"internal/plughost": 2,
+
 	"internal/dialog": 3,
 
 	// Test scaffolding, placed by what it may import: testutil imports no

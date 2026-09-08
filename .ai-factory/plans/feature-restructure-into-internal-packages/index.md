@@ -218,23 +218,32 @@ and `TestMain` — the waves would otherwise strand.
   `.ai-factory/rules/base.md`, and fixes the CI lines it breaks.
 - `git mv` for anything git already tracks; the executable bit and build tags must
   survive.
-- **Track upstream continuously; merge it on a trigger, not on a schedule.**
+- **Track upstream at phase boundaries; merge whatever touches Go.**
   Upstream is active — 29 commits landed on this branch's base in a day — so a
   single sync at the start is not a plan, it is a deferral.
 
-  *Check after every commit.* It costs a second and changes nothing:
+  *Check at every phase boundary.* It costs a second and touches nothing:
   ```
   git fetch upstream --quiet
   git rev-list --count HEAD..upstream/main
-  git diff --name-only HEAD...upstream/main | grep '^cmd/f4/'
+  git diff --name-only HEAD...upstream/main
   ```
 
-  *Merge on either of two triggers:* a **phase boundary**, with every task in
-  the phase closed and the tree consistent; or **upstream touching a file the
-  next two or three tasks own**, which overrides the schedule. Merging a change
-  into `cmd/f4/actions.go` while it is still one file is an ordinary three-way
-  merge. Merging the same change once the file has been cut into six pieces
-  across four packages is a hand reconstruction of somebody else's intent.
+  *Merge if anything Go-related came in*, not only what the current wave moves.
+  Every commit left unmerged gets more expensive as files scatter: a change to
+  `cmd/f4/pty_windows.go` merges by itself while the file sits there, and becomes
+  a manual reconstruction of somebody else's intent once the file has moved to
+  `internal/term` with a new package clause. Documentation-only arrivals
+  (`docs/LUNOBOT/*` and the like) can wait for the next batch — they conflict
+  with nothing.
+
+  Waiting for a file to become "near" is the wrong instinct: upstream touches
+  what we will move several phases from now, not what we are holding. All three
+  overlaps so far went that way — `panels_frame_test.go`, `actions.go` with
+  `file_panel.go`, then `pty_windows.go`.
+
+  *If a phase runs long*, check once in the middle too, on any green commit. Not
+  on a timer — just when the phase has visibly stretched.
 
   *`git merge upstream/main`, not rebase.* Rebase replays each of our commits
   onto the new base separately, so one foreign edit to a file five of our commits
@@ -250,17 +259,11 @@ and `TestMain` — the waves would otherwise strand.
   after. Keep the backup-branch rule for operations that do rewrite history, and
   delete those branches in the same sitting.
 
-  *After each rebase:* compare against the baseline, run the cross-compilation
+  *After each merge:* compare against the baseline, run the cross-compilation
   sweep, and **re-measure every number the next tasks stand on**. This is not
   ceremony: the first mid-work rebase moved `action_registry.go`'s `init()` by
   ten lines, took `PanelsFrame` mentions inside it from 109 to 114, and added a
   106th method to `FileSystemPanel` — all of them quoted in task text.
-
-  *The cost of waiting grows.* Early phases merge cheaply because the files are
-  where upstream expects them. From the extraction waves onward every deferred
-  merge is one more foreign change landing on a file that has moved, been
-  renamed and changed its `package` clause. Later phases need this more often,
-  not less, which is the opposite of how it feels.
 
 **Open questions:** none blocking. The four package names above are the only
 planning decision the user may wish to overrule, and doing so changes four task
@@ -358,7 +361,7 @@ titles, not the ordering.
 
 ### Phase 6: Hosts and Services
 - [x] Task 25: Extract `internal/dialog`, and fix the silent dialog-test drop ([details](phase-06-hosts-and-services.md#task-25-extract-internaldialog)) (depends on 24)
-- [ ] Task 26: Extract `internal/plughost`; cut `panel_plugins.go`'s `coreAPI` method ([details](phase-06-hosts-and-services.md#task-26-extract-internalplughost)) (depends on 25)
+- [x] Task 26: Extract `internal/plughost`; cut `panel_plugins.go`'s `coreAPI` method ([details](phase-06-hosts-and-services.md#task-26-extract-internalplughost)) (depends on 25)
 - [ ] Task 27: Extract `internal/gui`; move two of three `tools/icons` paths ([details](phase-06-hosts-and-services.md#task-27-extract-internalgui)) (depends on 26)
 - [ ] Task 28: Extract `internal/macro` ([details](phase-06-hosts-and-services.md#task-28-extract-internalmacro)) (depends on 27)
 

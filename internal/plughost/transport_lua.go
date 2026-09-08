@@ -1,4 +1,4 @@
-package main
+package plughost
 
 import (
 	"fmt"
@@ -25,7 +25,7 @@ type LuaPlugin struct {
 	runtime       *luaplug.Runtime
 	bridge        *ffibridge.Bridge
 	host          map[string]f4rpc.Handler
-	registrations *pluginSessionRegistrations
+	registrations *PluginSessionRegistrations
 	// identity is who this plugin is to the permission model, taken from
 	// the manifest when it came from the catalog.
 	identity PluginIdentity
@@ -135,7 +135,7 @@ func (p *LuaPlugin) Init(api vfs.HostAPI) error {
 
 	// The host methods must exist before the script body runs: a plugin is
 	// free to log or ask for its version while it is still loading.
-	p.registrations = &pluginSessionRegistrations{}
+	p.registrations = &PluginSessionRegistrations{}
 	p.host = newHostMethods(api, p, p.path, p.bridge)
 
 	if err := runtime.LoadFile(p.path); err != nil {
@@ -148,7 +148,7 @@ func (p *LuaPlugin) Init(api vfs.HostAPI) error {
 		p.Close()
 		return fmt.Errorf("Plugin.Init failed: %w", err)
 	}
-	if err := registerRPCPluginCommands(api, p, p.path, res.Commands, p.registrations); err != nil {
+	if err := RegisterRPCPluginCommands(api, p, p.path, res.Commands, p.registrations); err != nil {
 		p.Close()
 		return err
 	}

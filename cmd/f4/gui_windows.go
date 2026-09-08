@@ -6,13 +6,14 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/vtui"
 )
 
 func RunGui(backend string) error {
 	return withGUIRuntime(func() error {
 		if backend == "qt" || strings.HasPrefix(backend, "ext:") {
-			return RunExternalUIWithMapping(backend)
+			return plughost.RunExternalUIWithMapping(backend)
 		}
 		if err := checkGUIBackendAvailability(backend); err != nil {
 			return err

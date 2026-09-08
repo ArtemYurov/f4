@@ -1,4 +1,4 @@
-package main
+package plughost
 
 import (
 	"github.com/unxed/f4/sdk/f4rpc"

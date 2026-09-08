@@ -1,4 +1,4 @@
-package main
+package plughost
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"github.com/unxed/vtui"
 )
 
-// actionPluginPermissions shows what has been granted and lets the user take
+// ActionPluginPermissions shows what has been granted and lets the user take
 // it back.
 //
 // The list is global rather than per plugin. The question somebody opens this
@@ -22,7 +22,7 @@ import (
 // The wording here is English, as it is everywhere else in the permission
 // model: the permission vocabulary itself is not translated yet, and half a
 // translation reads worse than none.
-func actionPluginPermissions(store *PermissionStore) {
+func ActionPluginPermissions(store *PermissionStore) {
 	width, height := 66, 16
 	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("Permissions.Title"))
 	dlg.ShowClose = true

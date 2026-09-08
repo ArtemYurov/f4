@@ -113,8 +113,7 @@ var commandPaletteTargetPackage = map[string]string{
 	"temp_panel.go":               "panel",
 	"user_menu_ui.go":             "panel",
 	"viewer_editor_history.go":    "panel",
-	"plugin_hotkeys.go":           "plughost",
-	"rpc_panel.go":                "plughost",
+	"plugin_hotkeys.go":           "app",
 	"viewer_view.go":              "viewer",
 }
 
@@ -152,7 +151,7 @@ var commandPaletteProcessKeyAudit = map[string]commandPaletteSurfaceAudit{
 	"dialog.(*HotkeyAssignFrame).ProcessKey": {
 		class: paletteAuditModalLocal, rationale: "the hotkey-capture dialog must consume the next key locally and is not a global command surface",
 	},
-	"plughost.(*PluginHotkeyAssignFrame).ProcessKey": {
+	"app.(*PluginHotkeyAssignFrame).ProcessKey": {
 		class: paletteAuditModalLocal, rationale: "the plugin hotkey assignment dialog captures its next key locally and is not a global command surface",
 	},
 	"media.(*ImageView).ProcessKey": {
@@ -590,7 +589,15 @@ func commandPaletteIsNewVMenuCall(call *ast.CallExpr, aliases map[string]bool, d
 // commandPaletteCountF4Surfaces counts audited surfaces that belong to f4 rather
 // than to a plugin, by the package half of their key.
 func commandPaletteCountF4Surfaces(audits ...map[string]commandPaletteSurfaceAudit) int {
-	packages := map[string]bool{"f4": true}
+	// f4's own packages, as opposed to a plugin's. commandPaletteTargetPackage
+	// cannot be the only source: it empties itself as waves land, so a surface
+	// whose file has finished moving would stop being counted and the constant
+	// below would drift down with it. The layer map names every package of
+	// ours that exists, which is what the count is actually about.
+	packages := map[string]bool{"f4": true, "app": true}
+	for path := range architectureLayers {
+		packages[strings.TrimPrefix(path, "internal/")] = true
+	}
 	for _, target := range commandPaletteTargetPackage {
 		packages[target] = true
 	}

@@ -20,6 +20,7 @@ import (
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/f4/vfs"
@@ -243,8 +244,8 @@ func main() {
 
 	defer func() {
 		SaveSession() // Гарантирует сохранение размеров и путей при любом выходе
-		if GlobalPluginManager != nil {
-			GlobalPluginManager.CloseAll()
+		if plughost.GlobalPluginManager != nil {
+			plughost.GlobalPluginManager.CloseAll()
 		}
 		shutdownProcessEnvironmentRuntime()
 		if GlobalFileState != nil {
@@ -370,12 +371,12 @@ func main() {
 			if pluginName == "" && i+1 < len(os.Args) && !strings.HasPrefix(os.Args[i+1], "-") {
 				pluginName = os.Args[i+1]
 			}
-			os.Exit(RunNewPlugin(pluginName, os.Stdout, os.Stderr))
+			os.Exit(plughost.RunNewPlugin(pluginName, os.Stdout, os.Stderr))
 		case "-test-plugins":
 			configureF4DebugLogPath(config.GetF4ConfigDir())
 			vtui.ConfigDiskLogging(true)
 			vtui.DebugLog("--- PLUGIN TEST MODE ---")
-			pm := NewPluginManager()
+			pm := plughost.NewPluginManager(&coreAPI{})
 			pm.LoadAll()
 			pm.CloseAll()
 			return
@@ -836,12 +837,12 @@ func SetupUI() {
 		}
 	}
 	if !pluginsDisabled {
-		GlobalPluginManager = NewPluginManager()
+		plughost.GlobalPluginManager = plughost.NewPluginManager(&coreAPI{})
 		// Built-ins only register local capabilities and must be ready before
 		// LoadSession restores provider-owned visual panel paths.
-		GlobalPluginManager.LoadInternal()
+		plughost.GlobalPluginManager.LoadInternal()
 	} else {
-		GlobalPluginManager = nil
+		plughost.GlobalPluginManager = nil
 		vtui.DebugLog("CORE: Plugins disabled by --no-plugins flag")
 	}
 
@@ -958,14 +959,14 @@ func SetupUI() {
 	// External plugins may post a permission dialog or call Host.RunAction
 	// during Init. Start them only after session restoration and initial frame
 	// construction, and never wait for them before the UI event loop starts.
-	if GlobalPluginManager != nil {
-		GlobalPluginManager.StartExternal()
+	if plughost.GlobalPluginManager != nil {
+		plughost.GlobalPluginManager.StartExternal()
 	}
 
 	// Background update check
 	if config.App.UpdateInterval > 0 {
 		go CheckForUpdates(panels, false)
-		go CheckForPluginUpdates()
+		go plughost.CheckForPluginUpdates()
 	}
 }
 
@@ -1307,7 +1308,7 @@ func runMountCLI() (int, bool) {
 	if cmd, _, _ := fusefs.ParseArgs(os.Args); cmd == fusefs.CmdNone {
 		return 0, false
 	}
-	GlobalPluginManager = NewPluginManager()
-	GlobalPluginManager.LoadInternal()
+	plughost.GlobalPluginManager = plughost.NewPluginManager(&coreAPI{})
+	plughost.GlobalPluginManager.LoadInternal()
 	return fusefs.RunCLI(os.Args)
 }

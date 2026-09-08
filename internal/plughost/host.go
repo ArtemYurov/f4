@@ -1,4 +1,4 @@
-package main
+package plughost
 
 import (
 	"context"
@@ -27,7 +27,7 @@ var pluginInitTimeout = 15 * time.Second
 // so adding a transport is a matter of producing those streams and nothing
 // else.
 func startPluginSession(sess *f4rpc.Session, api vfs.HostAPI, name string, bridge *ffibridge.Bridge, onServeExit func(error)) (vfs.Registration, error) {
-	registrations := &pluginSessionRegistrations{}
+	registrations := &PluginSessionRegistrations{}
 	sess.OnError = func(err error) {
 		vtui.DebugLog("RPC Plugin %q: %v", name, err)
 	}
@@ -60,11 +60,11 @@ func startPluginSession(sess *f4rpc.Session, api vfs.HostAPI, name string, bridg
 		return nil, fmt.Errorf("Plugin.Init timed out after %s", pluginInitTimeout)
 	}
 
-	if err := registerRPCPluginCommands(api, sess, name, res.Commands, registrations); err != nil {
+	if err := RegisterRPCPluginCommands(api, sess, name, res.Commands, registrations); err != nil {
 		registrations.Unregister()
 		return nil, err
 	}
-	if err := registerRPCPluginPanels(api, sess, name, res.Panels, registrations); err != nil {
+	if err := RegisterRPCPluginPanels(api, sess, name, res.Panels, registrations); err != nil {
 		registrations.Unregister()
 		return nil, err
 	}
@@ -149,12 +149,12 @@ func newHostMethods(api vfs.HostAPI, back PluginTransport, name string, bridge *
 		var req ProgressTaskReq
 		msgpack.Unmarshal(data, &req)
 		vtui.FrameManager.PostTask(func() {
-			pf := findPanelsFrame()
-			if pf == nil {
+			app := currentApp()
+			if app == nil {
 				return
 			}
 
-			pf.RunProgressTask(req.Title, req.StartMsg, req.Forked, func(ctx context.Context, update func(msg string, percent int)) error {
+			app.RunProgressTask(req.Title, req.StartMsg, req.Forked, func(ctx context.Context, update func(msg string, percent int)) error {
 				taskUpdate = update
 				taskCtx = ctx
 				taskAnchor = vtui.FrameManager.GetTopFrame()
@@ -191,7 +191,10 @@ func newHostMethods(api vfs.HostAPI, back PluginTransport, name string, bridge *
 		if ctx == nil {
 			ctx = context.Background()
 		}
-		choice, remember := AskOverwrite(ctx, req.Path, req.Src, req.Dst, taskAnchor)
+		if App == nil {
+			return AskOverwriteRes{}, nil
+		}
+		choice, remember := App.AskOverwrite(ctx, req.Path, req.Src, req.Dst, taskAnchor)
 		return AskOverwriteRes{Choice: choice, Remember: remember}, nil
 	}
 
@@ -202,8 +205,10 @@ func newHostMethods(api vfs.HostAPI, back PluginTransport, name string, bridge *
 		if ctx == nil {
 			ctx = context.Background()
 		}
-		choice := AskError(ctx, req.Op, fmt.Errorf("%s", req.Err), taskAnchor)
-		return choice, nil
+		if App == nil {
+			return 0, nil
+		}
+		return App.AskError(ctx, req.Op, fmt.Errorf("%s", req.Err), taskAnchor), nil
 	}
 
 	methods["Host.InputBox"] = func(data msgpack.RawMessage) (any, error) {
@@ -223,9 +228,8 @@ func newHostMethods(api vfs.HostAPI, back PluginTransport, name string, bridge *
 		msgpack.Unmarshal(data, &req)
 		resChan := make(chan int, 1)
 		vtui.FrameManager.PostTask(func() {
-			pf := findPanelsFrame()
-			if pf != nil {
-				pf.Menu(req.Title, req.Items, func(idx int) { resChan <- idx })
+			if app := currentApp(); app != nil {
+				app.Menu(req.Title, req.Items, func(idx int) { resChan <- idx })
 			} else {
 				resChan <- -1
 			}
@@ -234,17 +238,6 @@ func newHostMethods(api vfs.HostAPI, back PluginTransport, name string, bridge *
 	}
 
 	return methods
-}
-
-// findPanelsFrame locates the panels frame of the active screen, if any.
-func findPanelsFrame() *PanelsFrame {
-	if vtui.FrameManager == nil {
-		return nil
-	}
-	if pf, ok := vtui.FrameManager.GetTopFrame().(*PanelsFrame); ok {
-		return pf
-	}
-	return findPanelsFrameAnyScreen()
 }
 
 type rpcHighlighterProvider struct {

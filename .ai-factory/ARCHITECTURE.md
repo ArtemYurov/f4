@@ -158,13 +158,13 @@ implementations live at the top; the application core lives under `internal/`.**
   Far-era plugin ring it reproduces, next to the plugins
   that ship in the binary. It holds data, not Go files, so `./...` ignores it.
   Its `index.yaml` is fetched over HTTP from its repository path
-  (`PlugRingCatalogURL`, `cmd/f4/plugring.go:20`), which makes that path a
+  (`PlugRingCatalogURL`, `internal/plughost/plugring.go:24`), which makes that path a
   published contract: moving it means already-installed builds stop resolving
   the catalogue until they update. That is accepted here — the catalogue holds a
   single demonstration plugin, and application updates go through GitHub
   Releases, not this URL — but it is called out in the pull request rather than
   buried, and three references move with it: `PlugRingCatalogURL`, the developer
-  fallback at `cmd/f4/plugring.go:48-49`, and the `url:` inside `index.yaml`
+  fallback at `internal/plughost/plugring.go:55-56`, and the `url:` inside `index.yaml`
   that points at its own neighbour.
 - `cmd/f4` — the entry point; it is `package main` and nothing can import it anyway.
 - `embedded.go` — the root package that bridges root-level files into the binary.

@@ -17,12 +17,13 @@ import (
 	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/netproxy"
+	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/f4/internal/unpack"
 	"github.com/unxed/vtui"
 )
 
 type plugRingRow struct {
-	item   PlugRingItem
+	item   plughost.PlugRingItem
 	status string
 	// header is set on a category heading, which is a row with no plugin
 	// behind it.
@@ -79,14 +80,14 @@ func (r plugRingRow) GetCellAttr(col int, def uint64) uint64 {
 // nil where a heading is. The table is indexed by position, so without that
 // slice pressing Enter on the "Archives" heading would install whichever
 // plugin happened to sit at the same index.
-func BuildPlugRingRows(items []PlugRingItem, installed map[string]PlugRingItem) ([]vtui.TableRow, []*PlugRingItem) {
-	order, grouped := GroupPlugRingByCategory(items)
+func BuildPlugRingRows(items []plughost.PlugRingItem, installed map[string]plughost.PlugRingItem) ([]vtui.TableRow, []*plughost.PlugRingItem) {
+	order, grouped := plughost.GroupPlugRingByCategory(items)
 
 	rows := make([]vtui.TableRow, 0, len(items)+len(order))
-	selectable := make([]*PlugRingItem, 0, len(items)+len(order))
+	selectable := make([]*plughost.PlugRingItem, 0, len(items)+len(order))
 
 	for _, category := range order {
-		rows = append(rows, plugRingRow{header: PlugRingCategoryTitle(category)})
+		rows = append(rows, plugRingRow{header: plughost.PlugRingCategoryTitle(category)})
 		selectable = append(selectable, nil)
 
 		for _, item := range grouped[category] {
@@ -102,7 +103,7 @@ func BuildPlugRingRows(items []PlugRingItem, installed map[string]PlugRingItem) 
 			}
 
 			note := ""
-			if ok, reason := PlugRingItemRunsHere(entry); !ok {
+			if ok, reason := plughost.PlugRingItemRunsHere(entry); !ok {
 				status = "Unavailable"
 				note = reason
 			}
@@ -136,10 +137,10 @@ func actionPlugRing(pf *PanelsFrame) {
 
 	btnClose.OnClick = func() { dlg.Close() }
 
-	var items []PlugRingItem
+	var items []plughost.PlugRingItem
 	// shown[i] is the plugin on row i, or nil when row i is a category
 	// heading.
-	var shown []*PlugRingItem
+	var shown []*plughost.PlugRingItem
 	var refreshTask *vtui.TaskContext
 	dlg.OnResult = func(int) {
 		if refreshTask != nil {
@@ -155,7 +156,7 @@ func actionPlugRing(pf *PanelsFrame) {
 		vtui.FrameManager.Redraw()
 
 		refreshTask = vtui.RunAsync(func(ctx *vtui.TaskContext) {
-			fetched, err := FetchCatalog(ctx.Context)
+			fetched, err := plughost.FetchCatalog(ctx.Context)
 			if ctx.Err() != nil {
 				return
 			}
@@ -169,7 +170,7 @@ func actionPlugRing(pf *PanelsFrame) {
 				}
 				items = fetched
 				var rows []vtui.TableRow
-				rows, shown = BuildPlugRingRows(items, GetInstalledPlugRingItems())
+				rows, shown = BuildPlugRingRows(items, plughost.GetInstalledPlugRingItems())
 				table.SetRows(rows)
 				vtui.FrameManager.Redraw()
 			})
@@ -179,7 +180,7 @@ func actionPlugRing(pf *PanelsFrame) {
 	btnRefresh.OnClick = refresh
 
 	// selected is nil on a category heading, which is not a plugin.
-	selected := func() *PlugRingItem {
+	selected := func() *plughost.PlugRingItem {
 		idx := table.SelectPos
 		if idx >= 0 && idx < len(shown) {
 			return shown[idx]
@@ -212,7 +213,7 @@ func actionPlugRing(pf *PanelsFrame) {
 // look up, and warning that "notes.lua" is missing would send the user looking
 // for a package that does not exist.
 func entrypointNeedsInterpreterOnPath(entrypoint string) bool {
-	if IsLuaEntrypoint(entrypoint) || IsWasmEntrypoint(entrypoint) {
+	if plughost.IsLuaEntrypoint(entrypoint) || plughost.IsWasmEntrypoint(entrypoint) {
 		return false
 	}
 	fields := strings.Fields(entrypoint)
@@ -223,7 +224,7 @@ func entrypointNeedsInterpreterOnPath(entrypoint string) bool {
 	return !strings.ContainsAny(interpreter, "/\\") && !strings.HasPrefix(interpreter, ".")
 }
 
-func actionInstallPlugRingItem(pf *PanelsFrame, parent *vtui.Window, item PlugRingItem, refresh func()) {
+func actionInstallPlugRingItem(pf *PanelsFrame, parent *vtui.Window, item plughost.PlugRingItem, refresh func()) {
 	if !safePlugRingID(item.ID) {
 		vtui.ShowMessageOn(parent, " Error ", "Plugin catalog contains an invalid ID.", []string{"&Ok"})
 		return
@@ -232,13 +233,13 @@ func actionInstallPlugRingItem(pf *PanelsFrame, parent *vtui.Window, item PlugRi
 	// An entry that breaks it is not installed silently; the user is told
 	// exactly what is wrong and may insist, because the catalog in the wild
 	// predates the rule.
-	if problem := PlugRingItemProblem(item); problem != "" {
+	if problem := plughost.PlugRingItemProblem(item); problem != "" {
 		msg := fmt.Sprintf("This catalog entry does not meet f4's distribution policy:\n\n%s\n\nSee PLUGRING.md. Installing anyway is your decision.", problem)
 		if pf.Message(" Policy Warning ", msg, []string{"&Install Anyway", "Cancel"}) != 0 {
 			return
 		}
 	}
-	if ok, reason := PlugRingItemRunsHere(item); !ok {
+	if ok, reason := plughost.PlugRingItemRunsHere(item); !ok {
 		msg := fmt.Sprintf("This plugin %s.\n\nIt will install, but f4 will not be able to run it.", reason)
 		if pf.Message(" Cannot Run Here ", msg, []string{"&Install Anyway", "Cancel"}) != 0 {
 			return
@@ -265,7 +266,7 @@ func actionInstallPlugRingItem(pf *PanelsFrame, parent *vtui.Window, item PlugRi
 		}
 	}
 
-	url := ResolveAssetURL(item.URL)
+	url := plughost.ResolveAssetURL(item.URL)
 	isTarGz := strings.HasSuffix(url, ".tar.gz") || strings.HasSuffix(url, ".tgz")
 	isArchive := isTarGz || strings.HasSuffix(url, ".zip")
 
@@ -376,8 +377,8 @@ func actionInstallPlugRingItem(pf *PanelsFrame, parent *vtui.Window, item PlugRi
 				vtui.ShowMessageOn(parent, " Error ", fmt.Sprintf("Installation failed:\n%v", err), []string{"&Ok"})
 			}
 		} else {
-			if GlobalPluginManager != nil {
-				GlobalPluginManager.loadSinglePlugRingItem(item)
+			if plughost.GlobalPluginManager != nil {
+				plughost.GlobalPluginManager.LoadSinglePlugRingItem(item)
 			}
 			vtui.ShowMessageOn(parent, " Success ", "Plugin installed and loaded successfully!", []string{"&Ok"})
 			refresh()
@@ -385,7 +386,7 @@ func actionInstallPlugRingItem(pf *PanelsFrame, parent *vtui.Window, item PlugRi
 	})
 }
 
-func actionRemovePlugRingItem(pf *PanelsFrame, parent *vtui.Window, item PlugRingItem, refresh func()) {
+func actionRemovePlugRingItem(pf *PanelsFrame, parent *vtui.Window, item plughost.PlugRingItem, refresh func()) {
 	if !safePlugRingID(item.ID) {
 		vtui.ShowMessageOn(parent, " Error ", "Plugin catalog contains an invalid ID.", []string{"&Ok"})
 		return
@@ -406,7 +407,7 @@ func actionRemovePlugRingItem(pf *PanelsFrame, parent *vtui.Window, item PlugRin
 		if code == 0 {
 			// Grants belong to the plugin, not to its id. Leaving them
 			// behind would hand them to whatever is installed here next.
-			if err := PluginPermissions().Forget(item.ID); err != nil {
+			if err := plughost.PluginPermissions().Forget(item.ID); err != nil {
 				vtui.DebugLog("PLUGRING: cannot drop the permissions of %q: %v", item.ID, err)
 			}
 			err := os.RemoveAll(pluginDir)

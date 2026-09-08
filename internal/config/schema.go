@@ -102,7 +102,7 @@ func NormalizeStartupGuiBackend(value string) string {
 		return ""
 	}
 	// External UI backends are passed through untouched; RunGui routes them
-	// to RunExternalUIWithMapping, which owns their naming.
+	// to plughost.RunExternalUIWithMapping, which owns their naming.
 	if lower == "qt" || strings.HasPrefix(lower, "ext:") {
 		return trimmed
 	}

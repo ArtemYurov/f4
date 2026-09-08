@@ -1,4 +1,4 @@
-package main
+package plughost
 
 import (
 	"path/filepath"
@@ -27,30 +27,6 @@ type Plugin interface {
 	Close() error
 	GetName() string
 }
-type PluginMenuItem struct {
-	ActionName string
-	Label      string
-	Handler    func(app vfs.App)
-}
-
-var PluginMenuItems []PluginMenuItem
-
-func RegisterPluginMenuItem(label string, handler func(app vfs.App)) {
-	pluginRegistryMu.Lock()
-	PluginMenuItems = append(PluginMenuItems, PluginMenuItem{
-		ActionName: legacyPluginActionName(len(PluginMenuItems)),
-		Label:      label,
-		Handler:    handler,
-	})
-	pluginRegistryMu.Unlock()
-}
-
-func pluginMenuItemsSnapshot() []PluginMenuItem {
-	pluginRegistryMu.RLock()
-	defer pluginRegistryMu.RUnlock()
-	return append([]PluginMenuItem(nil), PluginMenuItems...)
-}
-
 type PluginManager struct {
 	mu           sync.Mutex
 	api          vfs.HostAPI
@@ -65,10 +41,8 @@ type PluginManager struct {
 
 var GlobalPluginManager *PluginManager
 
-func NewPluginManager() *PluginManager {
-	return &PluginManager{
-		api: &coreAPI{},
-	}
+func NewPluginManager(api vfs.HostAPI) *PluginManager {
+	return &PluginManager{api: api}
 }
 
 func (pm *PluginManager) LoadAll() {
@@ -160,7 +134,7 @@ func (pm *PluginManager) loadPlugRing() {
 		}
 	}
 }
-func (pm *PluginManager) loadSinglePlugRingItem(item PlugRingItem) {
+func (pm *PluginManager) LoadSinglePlugRingItem(item PlugRingItem) {
 	if item.Entrypoint == "" {
 		return
 	}

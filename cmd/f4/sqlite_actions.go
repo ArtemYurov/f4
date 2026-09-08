@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/f4/vfs"
 )
 
@@ -28,7 +29,7 @@ func actionSQLiteClient() bool {
 	if pf == nil {
 		return false
 	}
-	return executeRegisteredPluginCommand(vfs.PluginCommandPanel, sqlitePluginCommandID, pf)
+	return plughost.ExecutePluginCommand(vfs.PluginCommandPanel, sqlitePluginCommandID, pf)
 }
 
 func init() {
