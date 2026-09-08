@@ -393,7 +393,7 @@ titles, not the ordering.
 Things measured and not yet settled. Each names the evidence and the next step,
 so that whoever picks this up does not re-derive it.
 
-### Open: `internal/plughost` needs a host interface, not a file move — Task 26
+### Decided: `internal/plughost` gets an application interface — Task 26
 
 **The question.** Every extraction through Task 25 was mechanical: score the
 gate, `git mv`, requalify the call sites. Task 26 is the first that cannot be,
@@ -449,19 +449,56 @@ types and wrong about the package — the same false confidence `colors.go` and
    files to 592, ten new packages, every commit green. Phase 11 closes the pull
    request on that.
 
-**What is missing to decide.** Not a measurement — the numbers above are the
-measurement. It is a scope decision that belongs to whoever owns the pull
-request, because option 1 changes what this branch *is*: a restructuring that
-also redesigns the plugin host's boundary is a different review, and a different
-conversation with the upstream maintainer, than a restructuring that moves
-files.
+**The decision: option 1, design the boundary.** The branch promised to lay the
+application out in modules, not to move files, and seams are already how it
+does that — `config.Executable`, `keymap.Suspended`, `action.Localize`, the
+seven `TestMain` seams. The host boundary is the same technique at a larger
+size, not a new one.
 
-**What goes wrong if it is decided badly.** Choosing option 1 without saying so
-produces a pull request whose reviewer meets a new host interface halfway
-through a 300-file diff, with no issue and no discussion behind it — the exact
-"broad reorganization proposal" the maintainer already declined once. Choosing
-option 2 or 3 without recording it leaves `ARCHITECTURE.md` describing packages
-that do not exist, which is worse than describing none.
+**It is smaller than the options above suggested, and here is why.** The
+interface between the host and a plugin does not need designing: it exists and
+it is public. `vfs.HostAPI` is ten methods, and every transport already takes it
+— `Plugin.Init(api vfs.HostAPI)` at `plugins.go:26`, implemented by the RPC,
+WASM and Lua transports.
+
+What is missing is the interface in the other direction: what `internal/plughost`
+needs **from the application**. Measured, that is five methods, and they are the
+five that blocked the wave:
+
+| method | today | called from |
+|---|---|---|
+| run a progress task | `pf.RunProgressTask` | `plughost.go:157` |
+| open a menu | `pf.Menu` | `plughost.go:227` |
+| rebuild the UI | `SetupUI()` | `extui_host.go:473` |
+| set the clipboard | `setF4Clipboard` | `extui_host.go:584` |
+| run a semantic action | `HandleSemanticAction` | `extui_host.go:592` |
+
+Declared in `internal/plughost`, implemented in `internal/app`, handed to the
+host by its constructor. `newHostMethods` and `extui_host.go` then stop naming
+the panel frame, and `api.go` — the root's implementation of `vfs.HostAPI` —
+goes to `internal/app` where it belongs.
+
+**What must not be done: these five do not go into `vfs.HostAPI`.** That
+interface is the security perimeter. Everything in it is reachable by any
+plugin, including a third-party one installed from the catalogue, and
+`plugin_permissions.go:20` keeps the permission list deliberately narrow — "a
+permission f4 cannot actually enforce is theatre, and teaches people that the
+dialog means nothing". `SetupUI` would let a plugin rebuild the entire
+interface; clipboard access would hand it the user's data. A progress task and a
+menu are arguably fine in a public plugin API, but that is a product decision
+with its own discussion, not a side effect of a refactor.
+
+So: two interfaces, two audiences. `vfs.HostAPI` is what the host gives a
+plugin — public, guarded, unchanged by this branch. The new one is what the
+application gives the host — internal, and no plugin ever sees it.
+
+**This decision covers the four waves after it.** `internal/gui`,
+`internal/macro`, `internal/viewer` and `internal/term` will each hit the same
+wall, because each is a subsystem the application drives rather than a leaf it
+calls. Apply the same answer — the package declares what it needs from above,
+the root supplies it — instead of reopening the question per wave. What each
+wave still has to do on its own is *measure* its list the way Task 26's was
+measured, because five methods is this host's number and not a general one.
 
 ### Two packages the plan did not name
 
