@@ -2697,6 +2697,12 @@ func (fp *FileSystemPanel) Show(scr *vtui.ScreenBuf) {
 			totSize += e.Size
 		}
 	}
+	freeSpaceStr := ""
+	if _, isLocal := fp.vfs.(*vfs.OSVFS); isLocal {
+		if info, ok := sysinfo.FS(fp.vfs.GetPath()); ok {
+			freeSpaceStr = formatBytes(info.Free)
+		}
+	}
 
 	if config.App.ShowPanelFileInfo && fp.Y2-fp.Y1+1 > 6 {
 		p := vtui.NewPainter(scr)
@@ -2746,11 +2752,6 @@ func (fp *FileSystemPanel) Show(scr *vtui.ScreenBuf) {
 			}
 
 			rightStr := fmt.Sprintf("%s  %s", sizeStr, dateStr)
-			if _, isLocal := fp.vfs.(*vfs.OSVFS); isLocal {
-				if info, ok := sysinfo.FS(fp.vfs.GetPath()); ok {
-					rightStr = fmt.Sprintf("(%d/%d) %s  %s", totFiles, totDirs, formatBytes(info.Free), rightStr)
-				}
-			}
 
 			if fp.vfs != nil && fp.vfs.GetPath() == "net://" {
 				rightStr = ""
@@ -2812,7 +2813,10 @@ func (fp *FileSystemPanel) Show(scr *vtui.ScreenBuf) {
 		totalStr = selStr
 		attrTotal = vtui.Palette[theme.ColPanelSelectedInfo]
 	} else if totCount > 0 {
-		totalStr = fmt.Sprintf(" %s (%d) ", formatIntWithSpaces(totSize), totCount)
+		totalStr = fmt.Sprintf(" %s (%d/%d) ", formatIntWithSpaces(totSize), totFiles, totDirs)
+		if freeSpaceStr != "" {
+			totalStr = fmt.Sprintf(" %s (%d/%d) — %s ", formatIntWithSpaces(totSize), totFiles, totDirs, freeSpaceStr)
+		}
 		attrTotal = vtui.Palette[theme.ColPanelTotalInfo]
 	}
 
