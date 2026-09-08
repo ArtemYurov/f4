@@ -4933,10 +4933,11 @@ func TestFileSystemPanel_BottomFrameShowsCursorEntry(t *testing.T) {
 	bottom := func() string { return ScreenRow(scr, fp.Y2, fp.X1, fp.X2) }
 
 	// The total keeps the centre, the entry under the cursor sits in the
-	// left corner; both are spelled out in exact bytes.
+	// left corner; both are spelled out in exact bytes. The directory summary
+	// also includes the separate file/folder counts and free space.
 	fp.SetCursorIndex(2)
 	fp.Show(scr)
-	if got := bottom(); !strings.Contains(got, "▸ 1 234 567") || !strings.Contains(got, "1 234 567 (2)") {
+	if got := bottom(); !strings.Contains(got, "▸ 1 234 567") || !strings.Contains(got, "1 234 567 (1/1)") || !strings.Contains(got, "—") {
 		t.Errorf("bottom frame for a file: %q", got)
 	}
 
