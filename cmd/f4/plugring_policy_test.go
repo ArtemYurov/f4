@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -37,9 +38,18 @@ func TestRemovingAPluginDropsItsGrants(t *testing.T) {
 // user sees when they open PlugRing, so they cannot be the example of what the
 // policy forbids.
 func TestShippedCatalogMeetsItsOwnPolicy(t *testing.T) {
-	data, err := os.ReadFile(filepath.Join("plugring", "index.yaml"))
+	// Resolved from this file's own path, not from the working directory: a
+	// CWD-relative read from cmd/f4 finds nothing, and the t.Skipf below then
+	// turns the whole check into a test that asserts nothing while reporting
+	// as passed.
+	_, sourceFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	catalogPath := filepath.Join(filepath.Dir(sourceFile), "..", "..", "plugring", "index.yaml")
+	data, err := os.ReadFile(catalogPath)
 	if err != nil {
-		t.Skipf("no catalog shipped in the repository: %v", err)
+		t.Fatalf("read the shipped PlugRing catalog: %v", err)
 	}
 
 	var items []PlugRingItem

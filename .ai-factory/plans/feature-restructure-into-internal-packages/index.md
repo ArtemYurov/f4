@@ -317,7 +317,7 @@ titles, not the ordering.
 - [x] Task 12: Move the loose prose into `docs/` and delete `time.txt` ([details](phase-02-repository-root.md#task-12-move-the-loose-prose-into-docs-and-delete-timetxt))
 - [x] Task 13: Rename the 40 issue reviews to `ISSUE_<number>_<SLUG>.md` ([details](phase-02-repository-root.md#task-13-rename-the-issue-reviews-to-issue_number_slugmd)) (depends on 12)
 - [x] Task 14: Move `colorer/` to `internal/colorer/` with its own embed ([details](phase-02-repository-root.md#task-14-move-colorer-to-internalcolorer))
-- [ ] Task 15: Move `plugring/` to `plugins/plugring/` and fix its three URLs ([details](phase-02-repository-root.md#task-15-move-plugring-to-pluginsplugring))
+- [x] Task 15: Keep `plugring/` in the root; spell its URL once and make its policy test run ([details](phase-02-repository-root.md#task-15-keep-plugring-in-the-root-and-make-its-two-seams-honest))
 
 ### Phase 3: Self-Contained Subsystems Under internal/
 - [ ] Task 16: Move `piecetable`, `textlayout` and `sheet` under `internal/` ([details](phase-03-subsystems.md#task-16-move-piecetable-textlayout-and-sheet)) (depends on 15)
@@ -384,7 +384,7 @@ classification recorded in this bundle rather than in the tree; none produces on
 | 10 | 10-12 | `chore: move scripts, media and prose out of the repository root` |
 | 11 | 13 | `docs: name the issue reviews by their subject` |
 | 12 | 14 | `refactor(colorer): move the colour scheme to its consumer` |
-| 13 | 15 | `chore(plugring): move the catalogue beside the plugins` |
+| 13 | 15 | `refactor(plugring): spell the catalogue URL once` |
 | 14 | 16 | `refactor: move piecetable, textlayout and sheet under internal/` |
 | 15 | 17 | `refactor: move fusefs, vtvibe and luaplug under internal/` |
 | 16 | 18 | `refactor(actions): split the registry mechanism from its table` |
@@ -426,10 +426,8 @@ classification recorded in this bundle rather than in the tree; none produces on
   diff: the README image URL being branch-scoped and 404 until merge; the
   incremental-lint finding count measured against `origin/main`; and the three
   pre-existing failures.
-- It also states the PlugRing move **as a question, not as a decision**: that the
-  catalogue moved to `plugins/plugring/`, that this changes a published URL and
-  older builds will stop finding it after the merge, and that the move is offered
-  rather than argued — if the maintainer would rather keep the catalogue where it
-  is, say so and it goes back. Everything else in this branch is internal; this is
-  the one change users outside the repository can notice, so it does not get
-  decided in a diff.
+- Nothing in this branch changes anything a user outside the repository can
+  observe. The one candidate — moving `plugring/` and with it a published URL —
+  was considered and dropped: the catalogue is a submission surface, not a
+  compiled plugin, and its URL is a contract. The pull request says so, so that
+  the question is answered rather than left for a reviewer to ask.

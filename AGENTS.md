@@ -26,11 +26,12 @@ vfs/             # filesystem abstraction used by every panel and plugin
   hostfs/        #   host filesystem access
   hostmode/      #   host console mode
   hostpath/      #   path translation
+plugring/        # community catalogue of installable plugins: data, not a
+                 # package; a contributor adds an entry here and opens a PR
 plugins/         # one package per plugin: archive, cloudfox, netfox, mediainfo,
                  # envman, ios, android, sqlite, visren, id3editor, chroma
                  # dummy_internal / dummy_rpc / dummy_lua are transport fixtures
 sdk/             # plugin API: f4plugin, f4rpc, lua, extui
-plugring/        # plugin registry
 luaplug/         # Lua plugin engine
 piecetable/      # piece table backing the editor
 textlayout/      # text layout and wrapping

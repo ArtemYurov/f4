@@ -16,8 +16,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// defaultPlugRingCatalogURL is where the catalog is published. It is spelled
+// once: FetchCatalog compares against it to tell an overridden URL from the
+// default, and a second literal is how the two spellings drift apart.
+const defaultPlugRingCatalogURL = "https://raw.githubusercontent.com/unxed/f4/main/plugring/index.yaml"
+
 // PlugRingCatalogURL is the URL where f4 fetches the compiled YAML catalog.
-var PlugRingCatalogURL = "https://raw.githubusercontent.com/unxed/f4/main/plugring/index.yaml"
+var PlugRingCatalogURL = defaultPlugRingCatalogURL
 
 // PlugRingItem represents a single plugin available in the store.
 type PlugRingItem struct {
@@ -45,7 +50,7 @@ type PlugRingItem struct {
 // FetchCatalog downloads and parses the plugin catalog.
 func FetchCatalog(ctx context.Context) ([]PlugRingItem, error) {
 	// Developer convenience: load local index if available, but only if we are using the default URL
-	if PlugRingCatalogURL == "https://raw.githubusercontent.com/unxed/f4/main/plugring/index.yaml" {
+	if PlugRingCatalogURL == defaultPlugRingCatalogURL {
 		if data, err := os.ReadFile(filepath.Join("plugring", "index.yaml")); err == nil {
 			var items []PlugRingItem
 			if yaml.Unmarshal(data, &items) == nil {

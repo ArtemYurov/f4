@@ -28,7 +28,6 @@ so it lands alone, before any package moves. Closes issue #505.
 | `DISPATCH.md` (root) | 3 lines | Upstream's live dispatch note; the LUNOBOT notes beside it went to `docs/LUNOBOT/` and this one did not |
 | `colorer/configs/base/hrd/rgb/radiola.hrd` | 1 file | The entire `colorer/` tree |
 | `embedded.go:12` | `//go:embed colorer/…/radiola.hrd` | Root package's second embed |
-| `cmd/f4/plugring.go:20` | `PlugRingCatalogURL` | Published catalogue URL containing the path |
 | `cmd/f4/plugring.go:48-49` | dev fallback | Compares against that same literal URL |
 | `plugring/index.yaml:7` | `url:` | Points at its own neighbour `hello_plugring.lua` |
 | `cmd/f4/plugring_test.go:40` | `runtime.Caller` → `../../plugring/index.yaml` | Works today; breaks on the move |
@@ -381,71 +380,66 @@ go test ./cmd/f4 -run '^TestColorer'
 
 ---
 
-## Task 15: Move `plugring/` to `plugins/plugring/`
+## Task 15: Keep `plugring/` in the root, and make its two seams honest
 
 ### Intent
 
-The catalogue of installable plugins belongs next to the plugins that ship in the
-binary. It holds data, not Go files, so `./...` ignores it either way.
+The catalogue was going to move to `plugins/plugring/`, on the reasoning that a
+catalogue of plugins belongs beside the plugins. It does not, and the move was
+reverted after it was made.
+
+`plugins/` holds the Go packages compiled into the binary. `plugring/` holds a
+community catalogue of plugins that are **downloaded at runtime from somewhere
+else** — the opposite kind of thing — and it is the surface an outside
+contributor is pointed at: `docs/PLUGINS.md` and `docs/PLUGRING.md` both tell a
+plugin author to add an entry to `plugring/` in a fork and open a pull request.
+A submission surface belongs where somebody browsing the repository sees it,
+not two levels down inside the compiled plugins.
+
+It also has a published URL. Moving it breaks that URL for every build already
+in the field, and buys nothing in return.
+
+Note while reading those two documents: they say "a workflow compiles the
+frontmatter into the index f4 downloads". No such workflow exists —
+`.github/workflows/` holds `build.yml` and `conpty-probe.yml`, neither of which
+mentions plugring, and `index.yaml` is maintained by hand. That is a
+documentation bug, not this plan's business, but it is worth reporting upstream.
 
 ### Implementation Steps
 
-1. `git mv plugring plugins/plugring`. Two files move: `index.yaml` and
-   `hello_plugring.lua`.
-2. `cmd/f4/plugring.go:20` — update `PlugRingCatalogURL` to
-   `https://raw.githubusercontent.com/unxed/f4/main/plugins/plugring/index.yaml`.
-3. `cmd/f4/plugring.go:48-49` — the developer fallback compares against the same
-   literal. Do not leave two spellings: extract the URL into the single
-   `PlugRingCatalogURL` variable and have the fallback compare against that
-   variable, so the next move touches one line.
-4. `plugins/plugring/index.yaml:7` — the `url:` field points at its own neighbour
-   `hello_plugring.lua` through the same raw-GitHub path. Update it.
-5. `cmd/f4/plugring_test.go:40` — resolves the catalogue with `runtime.Caller(0)`
-   and `filepath.Join(dir, "..", "..", "plugring", "index.yaml")`. This **works
-   today** and breaks on the move: change the join to
-   `"..", "..", "plugins", "plugring", "index.yaml"`.
-6. `cmd/f4/plugring_policy_test.go:40` reads a CWD-relative
-   `filepath.Join("plugring", "index.yaml")`. The test's working directory is
-   `cmd/f4/`, so it has always taken the `t.Skipf` branch and has never asserted
-   anything. Decide explicitly and record the choice in the commit message:
-   - **fix** — switch it to the same `runtime.Caller` resolution as
-     `plugring_test.go` so it actually enforces the shipped-catalogue policy; or
-   - **delete** — `git rm` it, because `plugring_test.go` already covers the
-     catalogue.
-   Prefer fixing: the test asserts the shipped entries meet the policy f4 enforces
-   on everyone else, which is a real invariant and is currently unguarded.
-7. Sweep: `grep -rn 'plugring/' . --exclude-dir=.git` — three `docs/` files
-   reference the path.
+1. `plugring/` stays where it is. `PlugRingCatalogURL` and the `url:` field in
+   `index.yaml` keep their published paths, and `docs/PLUGINS.md`,
+   `docs/PLUGRING.md` keep theirs.
+2. Spell the catalogue URL **once**. `FetchCatalog` compared a second copy of
+   the literal against the variable to tell an overridden URL from the default;
+   two spellings of one URL are how they drift apart. Extract
+   `const defaultPlugRingCatalogURL` and initialise the variable from it.
+3. Repair `cmd/f4/plugring_policy_test.go`. It reads a CWD-relative
+   `plugring/index.yaml`, and the test's working directory is `cmd/f4/`, so it
+   has always taken its `t.Skipf` branch: it reports as passed and asserts
+   nothing. Resolve the catalogue from the test's own source path with
+   `runtime.Caller`, the way `plugring_test.go` already does, and turn the skip
+   into a failure — the file is shipped in the repository, so not finding it is
+   a broken test rather than an absent fixture.
+
+   Repair rather than delete: it asserts that the shipped entries meet the
+   policy f4 enforces on everyone else, which is a real invariant and was
+   unguarded.
+4. Record `plugring/` in `AGENTS.md` and `.ai-factory/rules/base.md` for what it
+   is — data, not a Go package, and deliberately in the root.
 
 ### Required Interfaces and Contracts
 
-```go
-// cmd/f4/plugring.go
-var PlugRingCatalogURL = "https://raw.githubusercontent.com/unxed/f4/main/plugins/plugring/index.yaml"
-```
-
-- **The catalogue URL is a published contract.** Already-installed builds fetch
-  the old path and stop resolving the catalogue until they update. This is
-  accepted — the catalogue holds a single demonstration plugin and application
-  updates go through GitHub Releases, not this URL — but it must be stated in the
-  pull-request body, not buried in a diff.
-- `index.yaml`'s schema is unchanged; only the `url:` value moves.
-- After step 3 the URL literal appears exactly once in Go code.
+- The published catalogue URL does not change. Builds in the field keep
+  resolving it.
+- After step 2 the URL literal appears exactly once in Go code.
+- `index.yaml`'s schema and contents are untouched.
 
 ### Error Handling and Logging
 
-The existing catalogue-fetch failure path is unchanged: a network failure already
-surfaces to the user through the PlugRing UI. Do not add a fallback to the old
-URL — a silent dual-path fetch would hide the contract change this task is
-deliberately making visible.
+Unchanged. A catalogue fetch failure already surfaces through the PlugRing UI.
 
 ### Tests
-
-- `cmd/f4/plugring_test.go` — updated path, must pass and must actually read the
-  file (assert the read succeeds rather than skipping).
-- `cmd/f4/plugring_policy_test.go` — per the step-6 decision. If fixed, it must
-  now *run*: assert `t.Skipf` is no longer reachable by checking the test reports
-  as passed rather than skipped.
 
 ```
 go test ./cmd/f4 -run '^TestBundledPlugRing|^TestShippedCatalog' -v
@@ -453,17 +447,14 @@ go test ./cmd/f4 -run '^TestBundledPlugRing|^TestShippedCatalog' -v
 
 ### Acceptance Criteria
 
-- `ls plugring` fails; `ls plugins/plugring/index.yaml` succeeds.
-- `grep -rn 'unxed/f4/main/plugring' .` returns nothing.
+- `ls plugring/index.yaml` succeeds and the root still holds the directory.
+- `grep -c 'raw.githubusercontent' cmd/f4/plugring.go` returns `1`.
 - Both plugring tests report `--- PASS`, neither reports `--- SKIP`.
-- The PR body states the catalogue URL change.
 
 ### Verification
 
 - `go test ./cmd/f4 -run '^TestBundledPlugRing|^TestShippedCatalog' -v`
 - Expected result: two `--- PASS` lines, zero `--- SKIP` lines.
-- `grep -rn 'plugring' cmd/f4/plugring.go | grep -c 'raw.githubusercontent'`
-- Expected result: `1`.
 
 ---
 
@@ -481,9 +472,10 @@ go test ./cmd/f4 -run '^TestBundledPlugRing|^TestShippedCatalog' -v
   leaves a reader unable to tell which is authoritative.
   **Mitigation:** step 2 requires reading both and recording a per-pair decision in
   the commit message; a plain `git mv` of both is explicitly forbidden.
-- **Risk:** the plugring URL change is noticed only after release.
-  **Mitigation:** it is a stated PR-body item and step 3 collapses the literal to
-  one place.
+- **Risk:** a later reader re-proposes moving `plugring/` under `plugins/`,
+  having seen only that both hold plugins.
+  **Mitigation:** Task 15 records why it stays: `plugins/` is compiled into the
+  binary, `plugring/` is a submission surface with a published URL.
 
 ## Phase Completion Checklist
 
@@ -491,6 +483,6 @@ go test ./cmd/f4 -run '^TestBundledPlugRing|^TestShippedCatalog' -v
 - The repository root contains only the seven files listed in Task 12's contract.
 - `CGO_ENABLED=0 go build ./...` and `go test -timeout 25m ./...` match the Task 1
   baseline.
-- `grep -rn 'ISSUE_[0-9]*_SOLUTION_REVIEW\|unxed/f4/main/plugring\|screenshot.png'`
-  finds no stale reference.
+- `grep -rn 'ISSUE_[0-9]*_SOLUTION_REVIEW\|screenshot.png'` finds no stale
+  reference.
 - `index.md` task checkboxes 10-15 are ticked.
