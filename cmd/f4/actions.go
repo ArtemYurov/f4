@@ -5250,7 +5250,7 @@ func actionLanguage(pf *PanelsFrame) {
 	uiLangs := listAvailableUILanguages()
 	helpLangs := listAvailableHelpLanguages()
 
-	width, height := 54, 13
+	width, height := 54, 15
 	dlg := vtui.NewCenteredDialog(width, height, Msg("LanguageSettings.Title"))
 	dlg.ShowClose = true
 
@@ -5281,6 +5281,8 @@ func actionLanguage(pf *PanelsFrame) {
 	comboHelp.Menu.SetSelectPos(selectedHelp)
 	comboHelp.Edit.SetText(helpNames[selectedHelp])
 	lblHelp := vtui.NewLabel(0, 0, Msg("HelpLanguage.Title")+":", comboHelp)
+	chkLocalFiles := vtui.NewCheckbox(0, 0, Msg("LanguageSettings.UseLocalFiles"), false)
+	chkLocalFiles.State = boolToCheckboxState(AppConfig.UseLocalLanguageFiles)
 
 	btnOk := vtui.NewButton(0, 0, Msg("vtui.Ok"))
 	btnOk.IsDefault = true
@@ -5290,6 +5292,7 @@ func actionLanguage(pf *PanelsFrame) {
 	dlg.AddItem(comboUI)
 	dlg.AddItem(lblHelp)
 	dlg.AddItem(comboHelp)
+	dlg.AddItem(chkLocalFiles)
 	dlg.AddItem(btnOk)
 	dlg.AddItem(btnCancel)
 
@@ -5305,6 +5308,8 @@ func actionLanguage(pf *PanelsFrame) {
 	rowHelp.Add(comboHelp, vtui.Margins{}, vtui.AlignLeft)
 	vbox.Add(rowHelp, vtui.Margins{Top: 1}, vtui.AlignFill)
 
+	vbox.Add(chkLocalFiles, vtui.Margins{Top: 1}, vtui.AlignFill)
+
 	hbox := vtui.NewHBoxLayout(0, 0, width-4, 1)
 	hbox.HorizontalAlign = vtui.AlignCenter
 	hbox.Spacing = 2
@@ -5318,6 +5323,7 @@ func actionLanguage(pf *PanelsFrame) {
 	btnOk.OnClick = func() {
 		uiChanged := false
 		helpChanged := false
+		localFilesChanged := AppConfig.UseLocalLanguageFiles != (chkLocalFiles.State != 0)
 		suggestFontChoice := false
 		if idx := comboUI.Menu.SelectPos; idx >= 0 && idx < len(uiLangs) {
 			if AppConfig.Language != uiLangs[idx].code {
@@ -5332,7 +5338,10 @@ func actionLanguage(pf *PanelsFrame) {
 				helpChanged = true
 			}
 		}
-		if uiChanged || helpChanged {
+		if localFilesChanged {
+			AppConfig.UseLocalLanguageFiles = chkLocalFiles.State != 0
+		}
+		if uiChanged || helpChanged || localFilesChanged {
 			SaveConfig()
 			InitLang()
 			InitHelpSystem()
