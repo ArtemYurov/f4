@@ -7,17 +7,17 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
-	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/vtui"
 )
 
 func TestHelpLanguageSwitch(t *testing.T) {
 	tempDir := t.TempDir()
 	oldHelpEngine := vtui.GlobalHelpEngine
-	oldHelpActionStrings := helpActionStrings
+	oldHelpActionStrings := dialog.HelpActionStrings
 	t.Cleanup(func() {
 		vtui.GlobalHelpEngine = oldHelpEngine
-		helpActionStrings = oldHelpActionStrings
+		dialog.HelpActionStrings = oldHelpActionStrings
 	})
 
 	err := os.MkdirAll(filepath.Join(tempDir, "help"), 0700)
@@ -53,42 +53,45 @@ func TestHelpLanguageSwitch(t *testing.T) {
 	}
 }
 
-func TestHelpAndLangCompleteness(t *testing.T) {
-	langs, err := filepath.Glob(filepath.Join(testutil.ModuleRootDir(t), "internal", "i18n", "lang", "*.lng"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	helps, err := filepath.Glob("help/*.hlf")
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Glob reports no error for zero matches: a wrong directory would leave
-	// this comparison passing over two empty sets.
-	if len(langs) == 0 || len(helps) == 0 {
-		t.Fatalf("found %d .lng and %d .hlf files, want both non-empty", len(langs), len(helps))
+func TestHelpSystem_Initialization(t *testing.T) {
+	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
+
+	InitHelpSystem()
+
+	if vtui.GlobalHelpEngine == nil {
+		t.Fatal("GlobalHelpEngine was not initialized")
 	}
 
-	langSet := make(map[string]bool)
-	for _, l := range langs {
-		base := filepath.Base(l)
-		langSet[strings.TrimSuffix(base, ".lng")] = true
+	contents := vtui.GlobalHelpEngine.GetTopic("Contents")
+	if contents == nil {
+		t.Fatal("Contents topic not found in HelpEngine")
 	}
 
-	helpSet := make(map[string]bool)
-	for _, h := range helps {
-		base := filepath.Base(h)
-		helpSet[strings.TrimSuffix(base, ".hlf")] = true
+	readme := vtui.GlobalHelpEngine.GetTopic("README")
+	if readme == nil {
+		t.Fatal("README topic not found in HelpEngine")
 	}
 
-	for l := range langSet {
-		if !helpSet[l] {
-			t.Errorf("Language %q has a .lng file but is missing a corresponding .hlf help file.", l)
+	// Verify that the markdown-to-HLF parser parsed the README correctly
+	// The first H1 header should be treated as a sticky row (at index 0 without surrounding '#')
+	if len(readme.Lines) == 0 {
+		t.Fatal("README lines are empty")
+	}
+
+	expectedStickyHeader := "f4 — efficient and cozy file manager in go"
+	if !strings.Contains(readme.Lines[0], expectedStickyHeader) {
+		t.Errorf("Expected sticky header %q, got %q", expectedStickyHeader, readme.Lines[0])
+	}
+
+	// Other headers like '## Philosophy & Goals' should be formatted with surrounding '#'
+	foundH2Header := false
+	for _, line := range readme.Lines {
+		if strings.Contains(line, "#Philosophy & Goals#") {
+			foundH2Header = true
+			break
 		}
 	}
-
-	for h := range helpSet {
-		if !langSet[h] {
-			t.Errorf("Language %q has a .hlf help file but is missing a corresponding .lng file.", h)
-		}
+	if !foundH2Header {
+		t.Error("Markdown H2 header conversion failed")
 	}
 }

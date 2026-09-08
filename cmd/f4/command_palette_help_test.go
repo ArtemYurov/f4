@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -25,8 +26,7 @@ func TestCommandPaletteHelpProviderFiltersFrameworkFallbacks(t *testing.T) {
 	t.Cleanup(func() {
 		vtui.GlobalHelpEngine = previousHelp
 		GlobalHotkeysMgr = previousHotkeys
-		currentHelpSearch = nil
-		currentHelpZoom = nil
+		dialog.ResetHelpState()
 	})
 
 	engine := vtui.NewHelpEngine(nil)
@@ -121,8 +121,7 @@ func TestCommandPaletteHelpProviderExecutesLiveStateExactly(t *testing.T) {
 	previousHelp := vtui.GlobalHelpEngine
 	t.Cleanup(func() {
 		vtui.GlobalHelpEngine = previousHelp
-		currentHelpSearch = nil
-		currentHelpZoom = nil
+		dialog.ResetHelpState()
 	})
 
 	engine := vtui.NewHelpEngine(nil)
@@ -134,7 +133,7 @@ func TestCommandPaletteHelpProviderExecutesLiveStateExactly(t *testing.T) {
 	vtui.FrameManager.Push(help)
 	help.SwitchTopic("Second")
 	for _, char := range "needle" {
-		if !handleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: char}) {
+		if !dialog.HandleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: char}) {
 			t.Fatalf("Help search did not consume %q", char)
 		}
 	}
@@ -160,19 +159,19 @@ func TestCommandPaletteHelpProviderExecutesLiveStateExactly(t *testing.T) {
 		t.Fatalf("Russian Help query = %#v", results)
 	}
 
-	if !executeCommandPaletteEntry(byID["Help.FindNext"]) || currentHelpSearch.selected != 1 {
-		t.Fatalf("Help.FindNext selected %d, want 1", currentHelpSearch.selected)
+	if !executeCommandPaletteEntry(byID["Help.FindNext"]) || dialog.CurrentHelpSearch.Selected != 1 {
+		t.Fatalf("Help.FindNext selected %d, want 1", dialog.CurrentHelpSearch.Selected)
 	}
-	if !executeCommandPaletteEntry(byID["Help.FindPrevious"]) || currentHelpSearch.selected != 0 {
-		t.Fatalf("Help.FindPrevious selected %d, want 0", currentHelpSearch.selected)
+	if !executeCommandPaletteEntry(byID["Help.FindPrevious"]) || dialog.CurrentHelpSearch.Selected != 0 {
+		t.Fatalf("Help.FindPrevious selected %d, want 0", dialog.CurrentHelpSearch.Selected)
 	}
-	currentHelpSearch.query = []rune("absent")
-	currentHelpSearch.matches = nil
+	dialog.CurrentHelpSearch.Query = []rune("absent")
+	dialog.CurrentHelpSearch.Matches = nil
 	if executeCommandPaletteEntry(byID["Help.FindNext"]) {
 		t.Fatal("Help.FindNext reported success with no live match")
 	}
-	currentHelpSearch.query = []rune("needle")
-	updateHelpSearch(help)
+	dialog.CurrentHelpSearch.Query = []rune("needle")
+	dialog.UpdateHelpSearch(help)
 
 	before := [4]int{}
 	before[0], before[1], before[2], before[3] = help.GetPosition()
@@ -189,7 +188,7 @@ func TestCommandPaletteHelpProviderExecutesLiveStateExactly(t *testing.T) {
 		t.Fatalf("restored Help bounds = %v, want %v", got, before)
 	}
 
-	if !executeCommandPaletteEntry(byID["Help.ClearSearch"]) || currentHelpSearch != nil {
+	if !executeCommandPaletteEntry(byID["Help.ClearSearch"]) || dialog.CurrentHelpSearch != nil {
 		t.Fatal("Help.ClearSearch did not clear the live query")
 	}
 	if executeCommandPaletteEntry(byID["Help.FindNext"]) {
@@ -198,7 +197,7 @@ func TestCommandPaletteHelpProviderExecutesLiveStateExactly(t *testing.T) {
 	if !executeCommandPaletteEntry(byID["Help.Back"]) {
 		t.Fatal("Help.Back failed")
 	}
-	if historyLen, ok := nestedHelpLen(reflect.ValueOf(help), "history"); !ok || historyLen != 0 {
+	if historyLen, ok := dialog.NestedHelpLen(reflect.ValueOf(help), "history"); !ok || historyLen != 0 {
 		t.Fatalf("Help.Back history = %d, readable=%v", historyLen, ok)
 	}
 	if !executeCommandPaletteEntry(byID["Help.Contents"]) || !strings.Contains(help.GetTitle(), "Contents") {

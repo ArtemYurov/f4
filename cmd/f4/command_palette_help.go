@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtui"
 )
@@ -49,12 +50,12 @@ func commandPaletteHelpEntries(help commandPaletteHelpFrame) []commandPaletteEnt
 	}
 
 	queryActive := func() bool {
-		topicName, _, topicOK := helpTopicForFrame(help)
-		return topicOK && currentHelpSearch != nil && currentHelpSearch.frame == help &&
-			currentHelpSearch.topicName == topicName && len(currentHelpSearch.query) > 0
+		topicName, _, topicOK := dialog.HelpTopicForFrame(help)
+		return topicOK && dialog.CurrentHelpSearch != nil && dialog.CurrentHelpSearch.Frame == help &&
+			dialog.CurrentHelpSearch.TopicName == topicName && len(dialog.CurrentHelpSearch.Query) > 0
 	}
 	hasHistory := func() bool {
-		length, ok := nestedHelpLen(reflect.ValueOf(help), "history")
+		length, ok := dialog.NestedHelpLen(reflect.ValueOf(help), "history")
 		return ok && length > 0
 	}
 	closeShortcut := "Esc, F10"
@@ -68,7 +69,7 @@ func commandPaletteHelpEntries(help commandPaletteHelpFrame) []commandPaletteEnt
 			return true
 		}),
 		newEntry("Zoom", "CommandPalette.Help.Zoom", "Toggle Help zoom", "Toggle the Help window between normal and full-screen size", "F5", nil, func() bool {
-			return toggleHelpZoom(help)
+			return dialog.ToggleHelpZoom(help)
 		}),
 		newEntry("Contents", "CommandPalette.Help.Contents", "Help contents", "Open the Help contents topic", "", nil, func() bool {
 			if vtui.GlobalHelpEngine == nil || vtui.GlobalHelpEngine.GetTopic("Contents") == nil {
@@ -89,13 +90,13 @@ func commandPaletteHelpEntries(help commandPaletteHelpFrame) []commandPaletteEnt
 	if queryActive() {
 		entries = append(entries,
 			newEntry("FindNext", "CommandPalette.Help.FindNext", "Next Help search result", "Move to the next match in the active Help search", "F3, Ctrl+Enter", queryActive, func() bool {
-				return moveHelpSearch(help, false)
+				return dialog.MoveHelpSearch(help, false)
 			}),
 			newEntry("FindPrevious", "CommandPalette.Help.FindPrevious", "Previous Help search result", "Move to the previous match in the active Help search", "Shift+F3, Ctrl+Shift+Enter", queryActive, func() bool {
-				return moveHelpSearch(help, true)
+				return dialog.MoveHelpSearch(help, true)
 			}),
 			newEntry("ClearSearch", "CommandPalette.Help.ClearSearch", "Clear Help search", "Clear the active Help search query", "Esc", queryActive, func() bool {
-				currentHelpSearch = nil
+				dialog.CurrentHelpSearch = nil
 				vtui.FrameManager.Redraw()
 				return true
 			}),

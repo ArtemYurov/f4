@@ -24,6 +24,7 @@ import (
 	"github.com/charlievieth/strcase"
 	"github.com/coregx/coregex"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/numeric"
@@ -1419,13 +1420,13 @@ func (ev *EditorView) processKeyHex(e *vtinput.InputEvent) bool {
 func (ev *EditorView) askGoto() {
 	if ev.HexMode || ev.DecodeMode {
 		current := ev.li.GetLineOffset(ev.CursorLine) + ev.CursorPos
-		title, prompt := gotoText("Editor.GotoOffsetTitle", " Go to offset "), gotoText("Editor.GotoOffsetPrompt", "Byte offset:")
-		showGotoOffsetDialog(ev, title, prompt, int64(current), func(offset int64) {
+		title, prompt := dialog.GotoText("Editor.GotoOffsetTitle", " Go to offset "), dialog.GotoText("Editor.GotoOffsetPrompt", "Byte offset:")
+		dialog.ShowGotoOffset(ev, title, prompt, int64(current), func(offset int64) {
 			ev.gotoOffset(int(offset))
 		})
 		return
 	}
-	showEditorPositionDialog(ev, ev.CursorLine+1, ev.CursorPos+1, func(line, position int) {
+	dialog.ShowEditorPosition(ev, ev.CursorLine+1, ev.CursorPos+1, func(line, position int) {
 		ev.gotoLinePosition(line, position)
 	})
 }

@@ -1,4 +1,4 @@
-package main
+package dialog
 
 import (
 	"os"
@@ -25,7 +25,7 @@ func TestEnvironmentManagerHelpIsAvailableInEnglishAndRussian(t *testing.T) {
 				t.Fatalf("%s must define EnvironmentManager exactly once", path)
 			}
 
-			engine := vtui.NewHelpEngine(&memoryHelpVFS{files: map[string]string{"envman.hlf": normalized}})
+			engine := vtui.NewHelpEngine(NewMemoryHelpVFS(map[string]string{"envman.hlf": normalized}))
 			if err := engine.LoadFile("envman.hlf"); err != nil {
 				t.Fatal(err)
 			}

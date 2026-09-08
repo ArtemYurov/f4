@@ -1,4 +1,4 @@
-package main
+package dialog
 
 import (
 	"fmt"
@@ -9,12 +9,12 @@ import (
 	"github.com/unxed/vtui"
 )
 
-// parseGotoOffset parses the byte position entered in a viewer/editor jump
+// ParseGotoOffset parses the byte position entered in a viewer/editor jump
 // dialog. The checkbox selects the default base, while an explicit Far-style
 // hexadecimal prefix or suffix wins: 0xNN, $NN and NNh are hexadecimal. A
 // trailing d is only accepted as a decimal suffix in decimal mode, because d
 // is a valid hexadecimal digit and must remain usable in hexadecimal mode.
-func parseGotoOffset(text string, hexadecimal bool) (int64, error) {
+func ParseGotoOffset(text string, hexadecimal bool) (int64, error) {
 	s := strings.TrimSpace(text)
 	if s == "" {
 		return 0, fmt.Errorf("empty offset")
@@ -52,7 +52,7 @@ func parseGotoOffset(text string, hexadecimal bool) (int64, error) {
 	return n, nil
 }
 
-func gotoText(key, fallback string) string {
+func GotoText(key, fallback string) string {
 	value := i18n.Msg(key)
 	if strings.HasPrefix(value, "{") {
 		return fallback
@@ -60,7 +60,7 @@ func gotoText(key, fallback string) string {
 	return value
 }
 
-func showGotoOffsetDialog(anchor vtui.Frame, title, prompt string, current int64, onOK func(int64)) *vtui.Window {
+func ShowGotoOffset(anchor vtui.Frame, title, prompt string, current int64, onOK func(int64)) *vtui.Window {
 	const width, height = 48, 11
 	dlg := vtui.NewCenteredDialog(width, height, title)
 	dlg.ShowClose = true
@@ -70,7 +70,7 @@ func showGotoOffsetDialog(anchor vtui.Frame, title, prompt string, current int64
 	editOffset.SelectAll()
 	lblOffset.FocusLink = editOffset
 	dlg.SetFocusedItem(editOffset)
-	chkHex := vtui.NewCheckbox(0, 0, gotoText("Goto.Hexadecimal", "Hexadecimal"), false)
+	chkHex := vtui.NewCheckbox(0, 0, GotoText("Goto.Hexadecimal", "Hexadecimal"), false)
 	btnOK := vtui.NewButton(0, 0, i18n.Msg("vtui.Ok"))
 	btnOK.IsDefault = true
 	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
@@ -95,7 +95,7 @@ func showGotoOffsetDialog(anchor vtui.Frame, title, prompt string, current int64
 	vbox.Apply()
 
 	btnOK.OnClick = func() {
-		offset, err := parseGotoOffset(editOffset.GetText(), chkHex.State == 1)
+		offset, err := ParseGotoOffset(editOffset.GetText(), chkHex.State == 1)
 		if err != nil {
 			vtui.ShowMessageOn(dlg, title, err.Error(), []string{"&Ok"})
 			return
@@ -111,16 +111,16 @@ func showGotoOffsetDialog(anchor vtui.Frame, title, prompt string, current int64
 	return dlg
 }
 
-func showEditorPositionDialog(anchor vtui.Frame, line, position int, onOK func(line, position int)) *vtui.Window {
+func ShowEditorPosition(anchor vtui.Frame, line, position int, onOK func(line, position int)) *vtui.Window {
 	const width, height = 48, 13
-	dlg := vtui.NewCenteredDialog(width, height, gotoText("Editor.GotoTitle", "Go to position"))
+	dlg := vtui.NewCenteredDialog(width, height, GotoText("Editor.GotoTitle", "Go to position"))
 	dlg.ShowClose = true
 
-	lblLine := vtui.NewLabel(0, 0, gotoText("Editor.GotoLine", "Line:"), nil)
+	lblLine := vtui.NewLabel(0, 0, GotoText("Editor.GotoLine", "Line:"), nil)
 	editLine := vtui.NewEdit(0, 0, 18, strconv.Itoa(line))
 	lblLine.FocusLink = editLine
 	dlg.SetFocusedItem(editLine)
-	lblPosition := vtui.NewLabel(0, 0, gotoText("Editor.GotoPosition", "Position:"), nil)
+	lblPosition := vtui.NewLabel(0, 0, GotoText("Editor.GotoPosition", "Position:"), nil)
 	editPosition := vtui.NewEdit(0, 0, 18, strconv.Itoa(position))
 
 	btnOK := vtui.NewButton(0, 0, i18n.Msg("vtui.Ok"))
@@ -152,7 +152,7 @@ func showEditorPositionDialog(anchor vtui.Frame, line, position int, onOK func(l
 		line, lineErr := strconv.Atoi(strings.TrimSpace(editLine.GetText()))
 		position, positionErr := strconv.Atoi(strings.TrimSpace(editPosition.GetText()))
 		if lineErr != nil || positionErr != nil || line < 1 || position < 1 {
-			vtui.ShowMessageOn(dlg, dlg.GetTitle(), gotoText("Editor.GotoInvalid", "Line and position must be positive numbers."), []string{"&Ok"})
+			vtui.ShowMessageOn(dlg, dlg.GetTitle(), GotoText("Editor.GotoInvalid", "Line and position must be positive numbers."), []string{"&Ok"})
 			return
 		}
 		if onOK != nil {

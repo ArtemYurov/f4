@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -25,14 +26,14 @@ func TestParseGotoOffset(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if got, err := parseGotoOffset(test.text, test.hex); err != nil || got != test.want {
-				t.Fatalf("parseGotoOffset(%q, %v) = %d, %v; want %d", test.text, test.hex, got, err, test.want)
+			if got, err := dialog.ParseGotoOffset(test.text, test.hex); err != nil || got != test.want {
+				t.Fatalf("dialog.ParseGotoOffset(%q, %v) = %d, %v; want %d", test.text, test.hex, got, err, test.want)
 			}
 		})
 	}
 	for _, text := range []string{"", "-1", "nope", "0x"} {
-		if _, err := parseGotoOffset(text, false); err == nil {
-			t.Errorf("parseGotoOffset(%q) accepted invalid input", text)
+		if _, err := dialog.ParseGotoOffset(text, false); err == nil {
+			t.Errorf("dialog.ParseGotoOffset(%q) accepted invalid input", text)
 		}
 	}
 }
@@ -44,7 +45,7 @@ func TestGotoOffsetDialogCheckboxSelectsHexadecimalInput(t *testing.T) {
 	vtui.FrameManager.Push(anchor)
 
 	var got int64 = -1
-	dlg := showGotoOffsetDialog(anchor, "Go to offset", "Byte offset:", 0, func(offset int64) {
+	dlg := dialog.ShowGotoOffset(anchor, "Go to offset", "Byte offset:", 0, func(offset int64) {
 		got = offset
 	})
 	var edit *vtui.Edit

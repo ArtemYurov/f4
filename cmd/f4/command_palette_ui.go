@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -99,7 +100,7 @@ func newCommandPaletteDialog(
 	queryPrompt := vtui.NewText(0, 0, i18n.Msg("CommandPalette.QueryPrompt"), 0)
 	query := vtui.NewEdit(0, 0, max(1, contentWidth-2), "")
 	table := vtui.NewTable(0, 0, contentWidth, max(1, height-4), commandPaletteColumns(width))
-	useDialogTableColors(table)
+	dialog.UseTableColors(table)
 	table.ShowScrollBar = true
 	table.AlwaysShowCursor = true
 	table.SetCanFocus(false)

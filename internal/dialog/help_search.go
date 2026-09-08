@@ -1,4 +1,4 @@
-package main
+package dialog
 
 import (
 	"reflect"
@@ -11,21 +11,21 @@ import (
 	"github.com/unxed/vtui"
 )
 
-type helpSearchMatch struct {
+type HelpSearchMatch struct {
 	line       int
 	start, end int // rune offsets in the visible (markup-free) line
 }
 
-type helpSearchState struct {
-	frame     vtui.Frame
-	topicName string
-	query     []rune
-	matches   []helpSearchMatch
-	selected  int
+type HelpSearchState struct {
+	Frame     vtui.Frame
+	TopicName string
+	Query     []rune
+	Matches   []HelpSearchMatch
+	Selected  int
 	scrollTop int
 }
 
-var currentHelpSearch *helpSearchState
+var CurrentHelpSearch *HelpSearchState
 
 type helpWindowBounds struct {
 	x1, y1, x2, y2 int
@@ -38,7 +38,15 @@ type helpZoomState struct {
 
 var currentHelpZoom *helpZoomState
 
-func helpTopicForFrame(frame vtui.Frame) (string, *vtui.HelpTopic, bool) {
+// ResetHelpState drops the search and zoom a help window accumulated. Both are
+// package state that outlives the window, so a test that opened one has to say
+// so before the next opens another.
+func ResetHelpState() {
+	CurrentHelpSearch = nil
+	currentHelpZoom = nil
+}
+
+func HelpTopicForFrame(frame vtui.Frame) (string, *vtui.HelpTopic, bool) {
 	if frame == nil || vtui.GlobalHelpEngine == nil {
 		return "", nil, false
 	}
@@ -52,19 +60,19 @@ func helpTopicForFrame(frame vtui.Frame) (string, *vtui.HelpTopic, bool) {
 	return name, topic, topic != nil
 }
 
-func handleHelpSearchHotkey(e *vtinput.InputEvent) bool {
+func HandleHelpSearchHotkey(e *vtinput.InputEvent) bool {
 	if e == nil {
 		return false
 	}
 	frame := vtui.FrameManager.GetTopFrame()
-	_, _, isHelp := helpTopicForFrame(frame)
+	_, _, isHelp := HelpTopicForFrame(frame)
 	if !isHelp {
 		return false
 	}
 
 	if e.Type == vtinput.MouseEventType {
 		if helpZoomButtonHit(frame, e) {
-			toggleHelpZoom(frame)
+			ToggleHelpZoom(frame)
 			return true
 		}
 		return false
@@ -76,113 +84,113 @@ func handleHelpSearchHotkey(e *vtinput.InputEvent) bool {
 	alt := (e.ControlKeyState & (vtinput.LeftAltPressed | vtinput.RightAltPressed)) != 0
 	shift := (e.ControlKeyState & vtinput.ShiftPressed) != 0
 	if e.VirtualKeyCode == vtinput.VK_F5 && !shift && !ctrl && !alt {
-		toggleHelpZoom(frame)
+		ToggleHelpZoom(frame)
 		return true
 	}
 
 	if (e.VirtualKeyCode == vtinput.VK_F3 && !ctrl && !alt) ||
 		(e.VirtualKeyCode == vtinput.VK_RETURN && ctrl && !alt) {
-		moveHelpSearch(frame, shift)
+		MoveHelpSearch(frame, shift)
 		return true
 	}
 	if e.VirtualKeyCode == vtinput.VK_ESCAPE && !shift && !ctrl && !alt &&
-		currentHelpSearch != nil && currentHelpSearch.frame == frame && len(currentHelpSearch.query) > 0 {
+		CurrentHelpSearch != nil && CurrentHelpSearch.Frame == frame && len(CurrentHelpSearch.Query) > 0 {
 		// Let HelpView receive Escape so it closes immediately. Clear only the
 		// search overlay state here; Backspace remains the search-editing key.
-		currentHelpSearch = nil
+		CurrentHelpSearch = nil
 		return false
 	}
 
 	if e.VirtualKeyCode == vtinput.VK_BACK && !shift && !ctrl && !alt {
-		if currentHelpSearch != nil && currentHelpSearch.frame == frame && len(currentHelpSearch.query) > 0 {
-			currentHelpSearch.query = currentHelpSearch.query[:len(currentHelpSearch.query)-1]
-			updateHelpSearch(frame)
+		if CurrentHelpSearch != nil && CurrentHelpSearch.Frame == frame && len(CurrentHelpSearch.Query) > 0 {
+			CurrentHelpSearch.Query = CurrentHelpSearch.Query[:len(CurrentHelpSearch.Query)-1]
+			UpdateHelpSearch(frame)
 			return true
 		}
 		// HelpView closes itself when PopTopic is called with empty history.
 		// Preserve Backspace for topic navigation, but never let it close the
 		// root Help window.
-		if historyLen, ok := nestedHelpLen(reflect.ValueOf(frame), "history"); !ok || historyLen == 0 {
+		if historyLen, ok := NestedHelpLen(reflect.ValueOf(frame), "history"); !ok || historyLen == 0 {
 			return true
 		}
 	}
 	if e.Char != 0 && !ctrl && !alt && unicode.IsPrint(e.Char) {
 		ensureHelpSearch(frame)
-		currentHelpSearch.query = append(currentHelpSearch.query, e.Char)
-		updateHelpSearch(frame)
+		CurrentHelpSearch.Query = append(CurrentHelpSearch.Query, e.Char)
+		UpdateHelpSearch(frame)
 		return true
 	}
 	return false
 }
 
 func ensureHelpSearch(frame vtui.Frame) {
-	topicName, _, ok := helpTopicForFrame(frame)
+	TopicName, _, ok := HelpTopicForFrame(frame)
 	if !ok {
 		return
 	}
-	if currentHelpSearch == nil || currentHelpSearch.frame != frame || currentHelpSearch.topicName != topicName {
-		currentHelpSearch = &helpSearchState{frame: frame, topicName: topicName, selected: -1}
+	if CurrentHelpSearch == nil || CurrentHelpSearch.Frame != frame || CurrentHelpSearch.TopicName != TopicName {
+		CurrentHelpSearch = &HelpSearchState{Frame: frame, TopicName: TopicName, Selected: -1}
 	}
 }
 
-func updateHelpSearch(frame vtui.Frame) {
+func UpdateHelpSearch(frame vtui.Frame) {
 	ensureHelpSearch(frame)
-	if currentHelpSearch == nil {
+	if CurrentHelpSearch == nil {
 		return
 	}
-	_, topic, ok := helpTopicForFrame(frame)
+	_, topic, ok := HelpTopicForFrame(frame)
 	if !ok {
-		currentHelpSearch = nil
+		CurrentHelpSearch = nil
 		return
 	}
-	if len(currentHelpSearch.query) == 0 {
-		currentHelpSearch = nil
+	if len(CurrentHelpSearch.Query) == 0 {
+		CurrentHelpSearch = nil
 		vtui.FrameManager.Redraw()
 		return
 	}
-	currentHelpSearch.matches = collectHelpMatches(topic, string(currentHelpSearch.query))
-	currentHelpSearch.selected = -1
-	if len(currentHelpSearch.matches) > 0 {
-		currentHelpSearch.selected = 0
-		currentHelpSearch.scrollTop = scrollHelpToLine(frame, topic, currentHelpSearch.matches[0].line)
+	CurrentHelpSearch.Matches = collectHelpMatches(topic, string(CurrentHelpSearch.Query))
+	CurrentHelpSearch.Selected = -1
+	if len(CurrentHelpSearch.Matches) > 0 {
+		CurrentHelpSearch.Selected = 0
+		CurrentHelpSearch.scrollTop = scrollHelpToLine(frame, topic, CurrentHelpSearch.Matches[0].line)
 	}
 	vtui.FrameManager.Redraw()
 }
 
-func moveHelpSearch(frame vtui.Frame, reverse bool) bool {
-	topicName, topic, ok := helpTopicForFrame(frame)
-	if !ok || currentHelpSearch == nil || currentHelpSearch.frame != frame ||
-		currentHelpSearch.topicName != topicName || len(currentHelpSearch.matches) == 0 {
+func MoveHelpSearch(frame vtui.Frame, reverse bool) bool {
+	TopicName, topic, ok := HelpTopicForFrame(frame)
+	if !ok || CurrentHelpSearch == nil || CurrentHelpSearch.Frame != frame ||
+		CurrentHelpSearch.TopicName != TopicName || len(CurrentHelpSearch.Matches) == 0 {
 		return false
 	}
 	if reverse {
-		currentHelpSearch.selected--
-		if currentHelpSearch.selected < 0 {
-			currentHelpSearch.selected = len(currentHelpSearch.matches) - 1
+		CurrentHelpSearch.Selected--
+		if CurrentHelpSearch.Selected < 0 {
+			CurrentHelpSearch.Selected = len(CurrentHelpSearch.Matches) - 1
 		}
 	} else {
-		currentHelpSearch.selected++
-		if currentHelpSearch.selected >= len(currentHelpSearch.matches) {
-			currentHelpSearch.selected = 0
+		CurrentHelpSearch.Selected++
+		if CurrentHelpSearch.Selected >= len(CurrentHelpSearch.Matches) {
+			CurrentHelpSearch.Selected = 0
 		}
 	}
-	currentHelpSearch.scrollTop = scrollHelpToLine(frame, topic, currentHelpSearch.matches[currentHelpSearch.selected].line)
+	CurrentHelpSearch.scrollTop = scrollHelpToLine(frame, topic, CurrentHelpSearch.Matches[CurrentHelpSearch.Selected].line)
 	vtui.FrameManager.Redraw()
 	return true
 }
 
-func collectHelpMatches(topic *vtui.HelpTopic, query string) []helpSearchMatch {
-	queryRunes := []rune(query)
+func collectHelpMatches(topic *vtui.HelpTopic, Query string) []HelpSearchMatch {
+	queryRunes := []rune(Query)
 	if topic == nil || len(queryRunes) == 0 {
 		return nil
 	}
-	var matches []helpSearchMatch
+	var matches []HelpSearchMatch
 	for lineIdx, rawLine := range topic.Lines {
 		line, _ := visibleHelpLine(rawLine)
 		runes := []rune(line)
 		for start := 0; start+len(queryRunes) <= len(runes); start++ {
-			if strings.EqualFold(string(runes[start:start+len(queryRunes)]), query) {
-				matches = append(matches, helpSearchMatch{line: lineIdx, start: start, end: start + len(queryRunes)})
+			if strings.EqualFold(string(runes[start:start+len(queryRunes)]), Query) {
+				matches = append(matches, HelpSearchMatch{line: lineIdx, start: start, end: start + len(queryRunes)})
 			}
 		}
 	}
@@ -278,7 +286,7 @@ func nestedHelpInt(value reflect.Value, name string) (int, bool) {
 	return 0, false
 }
 
-func nestedHelpLen(value reflect.Value, name string) (int, bool) {
+func NestedHelpLen(value reflect.Value, name string) (int, bool) {
 	for value.IsValid() && (value.Kind() == reflect.Pointer || value.Kind() == reflect.Interface) {
 		if value.IsNil() {
 			return 0, false
@@ -293,7 +301,7 @@ func nestedHelpLen(value reflect.Value, name string) (int, bool) {
 	}
 	for _, embeddedName := range []string{"HelpView", "BaseWindow"} {
 		if embedded := value.FieldByName(embeddedName); embedded.IsValid() {
-			if result, ok := nestedHelpLen(embedded, name); ok {
+			if result, ok := NestedHelpLen(embedded, name); ok {
 				return result, true
 			}
 		}
@@ -320,7 +328,7 @@ func helpZoomButtonHit(frame vtui.Frame, e *vtinput.InputEvent) bool {
 	return my == y1 && mx >= x2-offset && mx <= x2-offset+2
 }
 
-func toggleHelpZoom(frame vtui.Frame) bool {
+func ToggleHelpZoom(frame vtui.Frame) bool {
 	resizable, ok := frame.(interface {
 		ChangeSize(int, int)
 		MoveRelative(int, int)
@@ -414,11 +422,11 @@ func drawHelpWindowControls(scr *vtui.ScreenBuf, frame vtui.Frame) {
 	scr.Write(x2-offset, y1, vtui.StringToCharInfo(closeButton, attr))
 }
 
-func renderHelpSearch(scr *vtui.ScreenBuf) {
+func RenderHelpSearch(scr *vtui.ScreenBuf) {
 	frame := vtui.FrameManager.GetTopFrame()
-	topicName, topic, isHelp := helpTopicForFrame(frame)
+	TopicName, topic, isHelp := HelpTopicForFrame(frame)
 	if !isHelp {
-		currentHelpSearch = nil
+		CurrentHelpSearch = nil
 		currentHelpZoom = nil
 		return
 	}
@@ -429,16 +437,16 @@ func renderHelpSearch(scr *vtui.ScreenBuf) {
 	x1, y1, x2, y2 := frame.GetPosition()
 	titleAttr := scr.GetCell((x1+x2)/2, y1).Attributes
 	vtui.NewPainter(scr).DrawTitle(x1, y2, x2, i18n.Msg("Help.SearchHint"), titleAttr)
-	if currentHelpSearch == nil || currentHelpSearch.frame != frame || currentHelpSearch.topicName != topicName {
-		currentHelpSearch = nil
+	if CurrentHelpSearch == nil || CurrentHelpSearch.Frame != frame || CurrentHelpSearch.TopicName != TopicName {
+		CurrentHelpSearch = nil
 		return
 	}
-	drawHelpSearchTitle(scr, frame, topicName, string(currentHelpSearch.query))
+	drawHelpSearchTitle(scr, frame, TopicName, string(CurrentHelpSearch.Query))
 	if actual, ok := helpViewScrollTop(frame); ok {
-		currentHelpSearch.scrollTop = actual
+		CurrentHelpSearch.scrollTop = actual
 	}
 	contentWidth := (x2 - x1 - 1) - 1 // inner width minus scrollbar
-	for matchIndex, match := range currentHelpSearch.matches {
+	for matchIndex, match := range CurrentHelpSearch.Matches {
 		if match.line < 0 || match.line >= len(topic.Lines) {
 			continue
 		}
@@ -457,14 +465,14 @@ func renderHelpSearch(scr *vtui.ScreenBuf) {
 		if match.line < topic.StickyRows {
 			lineY += match.line
 		} else {
-			lineY += topic.StickyRows + (match.line - topic.StickyRows - currentHelpSearch.scrollTop)
+			lineY += topic.StickyRows + (match.line - topic.StickyRows - CurrentHelpSearch.scrollTop)
 		}
 		if lineY < y1+1 || lineY > y2-1 {
 			continue
 		}
 		foreground := vtui.GetRGBFore(vtui.Palette[vtui.ColHelpLink])
 		cells := vtui.StringToCharInfo(string(runes[match.start:match.end]), 0)
-		if matchIndex == currentHelpSearch.selected {
+		if matchIndex == CurrentHelpSearch.Selected {
 			selectedAttr := vtui.SetRGBFore(
 				vtui.Palette[vtui.ColHelpSelectedLink],
 				0xFFFF00,
@@ -481,14 +489,14 @@ func renderHelpSearch(scr *vtui.ScreenBuf) {
 	}
 }
 
-func drawHelpSearchTitle(scr *vtui.ScreenBuf, frame vtui.Frame, topicName, query string) {
+func drawHelpSearchTitle(scr *vtui.ScreenBuf, frame vtui.Frame, TopicName, Query string) {
 	x1, y1, x2, _ := frame.GetPosition()
 	// Sample the title drawn by HelpView so both foreground and background stay
 	// exactly as they were before search became active.
 	baseAttr := scr.GetCell((x1+x2)/2, y1).Attributes
 	highlightAttr := vtui.SetRGBFore(baseAttr, vtui.GetRGBFore(vtui.Palette[vtui.ColHelpLink]))
-	cells := vtui.StringToCharInfo(" Help: "+topicName+" [", baseAttr)
-	cells = append(cells, vtui.StringToCharInfo(query, highlightAttr)...)
+	cells := vtui.StringToCharInfo(" Help: "+TopicName+" [", baseAttr)
+	cells = append(cells, vtui.StringToCharInfo(Query, highlightAttr)...)
 	cells = append(cells, vtui.StringToCharInfo("] ", baseAttr)...)
 	maxCells := x2 - x1 - 1
 	if len(cells) > maxCells {

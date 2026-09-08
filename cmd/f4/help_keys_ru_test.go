@@ -6,6 +6,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/dialog"
 )
 
 func TestGenerateKeysHelpTopic_Russian(t *testing.T) {
@@ -55,8 +56,8 @@ func TestGenerateKeysHelpTopicsFitHelpWidth(t *testing.T) {
 	} {
 		topic := generateKeysHelpTopic(tc.name, "t", tc.areas, "")
 		for lineNo, line := range topic.Lines {
-			if width := runewidth.StringWidth(line); width > generatedHelpLineWidth {
-				t.Errorf("%s line %d is %d columns wide, want <= %d: %q", tc.name, lineNo, width, generatedHelpLineWidth, line)
+			if width := runewidth.StringWidth(line); width > dialog.GeneratedHelpLineWidth {
+				t.Errorf("%s line %d is %d columns wide, want <= %d: %q", tc.name, lineNo, width, dialog.GeneratedHelpLineWidth, line)
 			}
 		}
 	}
@@ -78,10 +79,10 @@ func TestGenerateKeysHelpTopic_HelpLanguageOverridesUI(t *testing.T) {
 	config.App.Language = "en"
 	initLang()
 
-	oldStrings := helpActionStrings
-	defer func() { helpActionStrings = oldStrings }()
-	helpActionStrings = loadHelpLangStrings("ru")
-	if helpActionStrings == nil {
+	oldStrings := dialog.HelpActionStrings
+	defer func() { dialog.HelpActionStrings = oldStrings }()
+	dialog.HelpActionStrings = dialog.LoadHelpLangStrings("ru")
+	if dialog.HelpActionStrings == nil {
 		t.Fatal("Russian help strings not found")
 	}
 

@@ -1,4 +1,4 @@
-package main
+package dialog
 
 import (
 	"strings"
@@ -34,10 +34,10 @@ func proxyModeIndex(mode int) int {
 	return 0
 }
 
-// actionProxySettings edits the proxy every outgoing connection uses: update
+// ActionProxySettings edits the proxy every outgoing connection uses: update
 // checks and downloads, the plugin ring, colorer schemes and — unless the
 // connection says otherwise — netfox sites.
-func actionProxySettings() {
+func ActionProxySettings() {
 	width, height := 64, 15
 	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("ProxySettings.Title"))
 	dlg.ShowClose = true

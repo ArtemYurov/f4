@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
@@ -754,13 +755,13 @@ func (r queueRow) GetCellAttr(col int, def uint64) uint64 {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if t.State == "Error" {
-		return themedForeground(def, vtui.ColWarnHighlightBoxTitle)
+		return dialog.ThemedForeground(def, vtui.ColWarnHighlightBoxTitle)
 	}
 	if t.State == "Done" {
-		return themedForeground(def, vtui.ColDialogText)
+		return dialog.ThemedForeground(def, vtui.ColDialogText)
 	}
 	if t.State == "Running" || t.State == "Scanning" {
-		return themedForeground(def, vtui.ColDialogHighlightText)
+		return dialog.ThemedForeground(def, vtui.ColDialogHighlightText)
 	}
 	if t.State == "Cancelled" || t.State == "Cancelling" {
 		return vtui.DimColor(def)
@@ -793,7 +794,7 @@ func NewQueueFrame() *QueueFrame {
 		{Title: i18n.Msg("Queue.ColProgress"), Width: 24},
 		{Title: i18n.Msg("Queue.ColSpeed"), Width: 12},
 	}, btnCancel, btnClear)
-	useDialogTableColors(qf.table)
+	dialog.UseTableColors(qf.table)
 	qf.table.Sortable = true
 	qf.table.QuickSearch = true
 	qf.table.ShowScrollBar = true

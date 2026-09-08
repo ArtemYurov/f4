@@ -52,7 +52,7 @@ var bidiControls = map[rune]string{
 func TestTranslationsHaveNoBidiControls(t *testing.T) {
 	testutil.SkipIfNoRelevantChanges(t, "lang_bidi",
 		"lang/*.lng",
-		"../../cmd/f4/help/*.hlf",
+		"../../internal/dialog/help/*.hlf",
 		"lang_bidi_test.go",
 	)
 
@@ -60,12 +60,12 @@ func TestTranslationsHaveNoBidiControls(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot list language files: %v", err)
 	}
-	helpPaths, err := filepath.Glob(filepath.Join(testutil.ModuleRootDir(t), "cmd", "f4", "help", "*.hlf"))
+	helpPaths, err := filepath.Glob(filepath.Join(testutil.ModuleRootDir(t), "internal", "dialog", "help", "*.hlf"))
 	if err != nil {
 		t.Fatalf("cannot list help files: %v", err)
 	}
 	if len(helpPaths) == 0 {
-		t.Fatal("no .hlf files under cmd/f4/help; the help directory moved without this path")
+		t.Fatal("no .hlf files under internal/dialog/help; the help directory moved without this path")
 	}
 	paths = append(paths, helpPaths...)
 	if len(paths) == 0 {

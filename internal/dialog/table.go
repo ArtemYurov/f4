@@ -1,10 +1,10 @@
-package main
+package dialog
 
 import "github.com/unxed/vtui"
 
-// useDialogTableColors makes a table embedded in a dialog follow the dialog
+// UseTableColors makes a table embedded in a dialog follow the dialog
 // palette instead of the panel-oriented ColTable palette.
-func useDialogTableColors(table *vtui.Table) {
+func UseTableColors(table *vtui.Table) {
 	table.ColorTextIdx = vtui.ColDialogText
 	table.ColorSelectedTextIdx = vtui.ColDialogSelectedButton
 	table.ColorItemSelectTextIdx = vtui.ColDialogHighlightText
@@ -16,9 +16,9 @@ func useDialogTableColors(table *vtui.Table) {
 	}
 }
 
-// themedForeground applies only a theme color's foreground so row-specific
+// ThemedForeground applies only a theme color's foreground so row-specific
 // accents keep the normal or selected background supplied by the table.
-func themedForeground(attr uint64, paletteIdx int) uint64 {
+func ThemedForeground(attr uint64, paletteIdx int) uint64 {
 	themeAttr := vtui.Palette[paletteIdx]
 	if themeAttr&vtui.IsFgRGB != 0 {
 		return vtui.SetRGBFore(attr, vtui.GetRGBFore(themeAttr))

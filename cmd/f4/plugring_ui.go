@@ -14,6 +14,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/netproxy"
 	"github.com/unxed/f4/internal/unpack"
@@ -60,13 +61,13 @@ func (r plugRingRow) GetCellText(col int) string {
 func (r plugRingRow) GetCellAttr(col int, def uint64) uint64 {
 	switch {
 	case r.header != "":
-		return themedForeground(def, vtui.ColDialogHighlightText)
+		return dialog.ThemedForeground(def, vtui.ColDialogHighlightText)
 	case r.note != "":
 		return vtui.DimColor(def)
 	case r.status == "Update":
-		return themedForeground(def, vtui.ColDialogHighlightText)
+		return dialog.ThemedForeground(def, vtui.ColDialogHighlightText)
 	case r.status == "Installed":
-		return themedForeground(def, vtui.ColDialogText)
+		return dialog.ThemedForeground(def, vtui.ColDialogText)
 	}
 	return def
 }
@@ -128,7 +129,7 @@ func actionPlugRing(pf *PanelsFrame) {
 		{Title: i18n.Msg("PlugRing.ColAuthor"), Width: 10},
 		{Title: i18n.Msg("PlugRing.ColDescription"), Width: 0},
 	}, btnInstall, btnRemove, btnRefresh, btnClose)
-	useDialogTableColors(table)
+	dialog.UseTableColors(table)
 	table.Sortable = true    // click a column header to sort, again to reverse
 	table.QuickSearch = true // type to fuzzy-filter (Myers bit-vector)
 	table.ShowScrollBar = true

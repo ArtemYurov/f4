@@ -1,4 +1,4 @@
-package main
+package dialog
 
 import (
 	"reflect"
@@ -18,13 +18,13 @@ func newSearchableHelpForTestAtSize(t *testing.T, width, height int, lines []str
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(width, height)
 	vtui.FrameManager.Init(scr)
-	engine := vtui.NewHelpEngine(&memoryHelpVFS{files: map[string]string{}})
+	engine := vtui.NewHelpEngine(&MemoryHelpVFS{files: map[string]string{}})
 	engine.AddTopic(&vtui.HelpTopic{Name: "Test", Lines: lines})
 	oldEngine := vtui.GlobalHelpEngine
 	vtui.GlobalHelpEngine = engine
 	t.Cleanup(func() {
 		vtui.GlobalHelpEngine = oldEngine
-		currentHelpSearch = nil
+		CurrentHelpSearch = nil
 		currentHelpZoom = nil
 	})
 	view := vtui.NewHelpView(engine, "Test")
@@ -50,34 +50,34 @@ func TestHelpSearchFindsCaseInsensitiveMatchesAndCycles(t *testing.T) {
 	})
 
 	for _, r := range "needle" {
-		if !handleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: r}) {
+		if !HandleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: r}) {
 			t.Fatalf("character %q was not consumed", r)
 		}
 	}
-	if got := currentHelpSearch.matches[currentHelpSearch.selected]; got.line != 1 || got.start != 6 {
+	if got := CurrentHelpSearch.Matches[CurrentHelpSearch.Selected]; got.line != 1 || got.start != 6 {
 		t.Fatalf("first match = %#v, want line 1 at rune 6", got)
 	}
-	if !moveHelpSearch(view, false) || currentHelpSearch.matches[currentHelpSearch.selected].line != 2 || currentHelpSearch.matches[currentHelpSearch.selected].start != 7 {
-		t.Fatalf("F3 did not advance to the next line: %#v", currentHelpSearch.matches[currentHelpSearch.selected])
+	if !MoveHelpSearch(view, false) || CurrentHelpSearch.Matches[CurrentHelpSearch.Selected].line != 2 || CurrentHelpSearch.Matches[CurrentHelpSearch.Selected].start != 7 {
+		t.Fatalf("F3 did not advance to the next line: %#v", CurrentHelpSearch.Matches[CurrentHelpSearch.Selected])
 	}
-	if !moveHelpSearch(view, false) || currentHelpSearch.matches[currentHelpSearch.selected].start != 18 {
-		t.Fatalf("F3 did not advance to the second occurrence: %#v", currentHelpSearch.matches[currentHelpSearch.selected])
+	if !MoveHelpSearch(view, false) || CurrentHelpSearch.Matches[CurrentHelpSearch.Selected].start != 18 {
+		t.Fatalf("F3 did not advance to the second occurrence: %#v", CurrentHelpSearch.Matches[CurrentHelpSearch.Selected])
 	}
-	if !moveHelpSearch(view, true) || currentHelpSearch.matches[currentHelpSearch.selected].start != 7 {
-		t.Fatalf("Shift+F3 did not move backwards: %#v", currentHelpSearch.matches[currentHelpSearch.selected])
+	if !MoveHelpSearch(view, true) || CurrentHelpSearch.Matches[CurrentHelpSearch.Selected].start != 7 {
+		t.Fatalf("Shift+F3 did not move backwards: %#v", CurrentHelpSearch.Matches[CurrentHelpSearch.Selected])
 	}
 }
 
 func TestHelpSearchRendersHighlightAndHint(t *testing.T) {
 	view, scr := newSearchableHelpForTest(t, []string{"before Needle after"})
 	for _, r := range "needle" {
-		handleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: r})
+		HandleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: r})
 	}
 	view.Show(scr)
 	x1, y1, _, y2 := view.GetPosition()
 	titleAttr := scr.GetCell((view.X1+view.X2)/2, y1).Attributes
 	titleBackground := vtui.GetRGBBack(titleAttr)
-	renderHelpSearch(scr)
+	RenderHelpSearch(scr)
 
 	matchCell := scr.GetCell(x1+2+len("before "), y1+1)
 	if got, want := vtui.GetRGBFore(matchCell.Attributes), uint32(0xFFFF00); got != want {
@@ -118,30 +118,30 @@ func TestHelpSearchRendersHighlightAndHint(t *testing.T) {
 func TestHelpSearchHotkeysRepeatAndBackspace(t *testing.T) {
 	_, _ = newSearchableHelpForTest(t, []string{"one needle", "two needle"})
 	for _, r := range "needle" {
-		handleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: r})
+		HandleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: r})
 	}
-	if !handleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_RETURN, ControlKeyState: vtinput.LeftCtrlPressed}) {
+	if !HandleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_RETURN, ControlKeyState: vtinput.LeftCtrlPressed}) {
 		t.Fatal("Ctrl+Enter was not consumed by help search")
 	}
-	if currentHelpSearch.matches[currentHelpSearch.selected].line != 1 {
-		t.Fatalf("Ctrl+Enter match line = %d, want 1", currentHelpSearch.matches[currentHelpSearch.selected].line)
+	if CurrentHelpSearch.Matches[CurrentHelpSearch.Selected].line != 1 {
+		t.Fatalf("Ctrl+Enter match line = %d, want 1", CurrentHelpSearch.Matches[CurrentHelpSearch.Selected].line)
 	}
-	if !handleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_RETURN, ControlKeyState: vtinput.LeftCtrlPressed | vtinput.ShiftPressed}) {
+	if !HandleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_RETURN, ControlKeyState: vtinput.LeftCtrlPressed | vtinput.ShiftPressed}) {
 		t.Fatal("Ctrl+Shift+Enter was not consumed by help search")
 	}
-	if currentHelpSearch.matches[currentHelpSearch.selected].line != 0 {
-		t.Fatalf("Ctrl+Shift+Enter match line = %d, want 0", currentHelpSearch.matches[currentHelpSearch.selected].line)
+	if CurrentHelpSearch.Matches[CurrentHelpSearch.Selected].line != 0 {
+		t.Fatalf("Ctrl+Shift+Enter match line = %d, want 0", CurrentHelpSearch.Matches[CurrentHelpSearch.Selected].line)
 	}
-	if !handleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_F3}) {
+	if !HandleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_F3}) {
 		t.Fatal("F3 was not consumed by help search")
 	}
-	if currentHelpSearch.matches[currentHelpSearch.selected].line != 1 {
-		t.Fatalf("F3 match line = %d, want 1", currentHelpSearch.matches[currentHelpSearch.selected].line)
+	if CurrentHelpSearch.Matches[CurrentHelpSearch.Selected].line != 1 {
+		t.Fatalf("F3 match line = %d, want 1", CurrentHelpSearch.Matches[CurrentHelpSearch.Selected].line)
 	}
-	if !handleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_BACK}) {
+	if !HandleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_BACK}) {
 		t.Fatal("Backspace was not consumed by help search")
 	}
-	if got := string(currentHelpSearch.query); got != "needl" {
+	if got := string(CurrentHelpSearch.Query); got != "needl" {
 		t.Fatalf("query after Backspace = %q, want needl", got)
 	}
 }
@@ -149,12 +149,12 @@ func TestHelpSearchHotkeysRepeatAndBackspace(t *testing.T) {
 func TestHelpSearchEscapeClosesHelpImmediately(t *testing.T) {
 	view, _ := newSearchableHelpForTest(t, []string{"one needle"})
 	for _, r := range "needle" {
-		handleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: r})
+		HandleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: r})
 	}
-	if handleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_ESCAPE}) {
+	if HandleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_ESCAPE}) {
 		t.Fatal("Escape was consumed before HelpView could close")
 	}
-	if currentHelpSearch != nil {
+	if CurrentHelpSearch != nil {
 		t.Fatal("Escape left Help search state active")
 	}
 	view.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_ESCAPE})
@@ -166,7 +166,7 @@ func TestHelpSearchEscapeClosesHelpImmediately(t *testing.T) {
 func TestHelpBackspaceDoesNotCloseRootTopic(t *testing.T) {
 	view, _ := newSearchableHelpForTest(t, []string{"root help"})
 	backspace := &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_BACK}
-	if !handleHelpSearchHotkey(backspace) {
+	if !HandleHelpSearchHotkey(backspace) {
 		t.Fatal("Backspace on the root Help topic was not consumed")
 	}
 	if view.IsDone() || vtui.FrameManager.GetTopFrame() != view {
@@ -179,11 +179,11 @@ func TestHelpBackspaceStillReturnsToPreviousTopic(t *testing.T) {
 	vtui.GlobalHelpEngine.AddTopic(&vtui.HelpTopic{Name: "Second", Lines: []string{"second topic"}})
 	view.SwitchTopic("Second")
 	backspace := &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_BACK}
-	if handleHelpSearchHotkey(backspace) {
+	if HandleHelpSearchHotkey(backspace) {
 		t.Fatal("Backspace with topic history should be passed to HelpView")
 	}
 	view.ProcessKey(backspace)
-	historyLen, ok := nestedHelpLen(reflect.ValueOf(view), "history")
+	historyLen, ok := NestedHelpLen(reflect.ValueOf(view), "history")
 	if view.IsDone() || !ok || historyLen != 0 {
 		t.Fatalf("Backspace did not return to the previous topic: history=%d, %v; done=%v", historyLen, ok, view.IsDone())
 	}
@@ -192,10 +192,10 @@ func TestHelpBackspaceStillReturnsToPreviousTopic(t *testing.T) {
 func TestHelpSearchHighlightsAllVisibleMatches(t *testing.T) {
 	view, scr := newSearchableHelpForTest(t, []string{"needle and NEEDLE"})
 	for _, r := range "needle" {
-		handleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: r})
+		HandleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: r})
 	}
 	view.Show(scr)
-	renderHelpSearch(scr)
+	RenderHelpSearch(scr)
 	x1, y1, _, _ := view.GetPosition()
 	first := scr.GetCell(x1+2, y1+1)
 	second := scr.GetCell(x1+2+len("needle and "), y1+1)
@@ -224,19 +224,19 @@ func TestHelpSearchHighlightFollowsManualScrolling(t *testing.T) {
 	wrapped := &struct{ *vtui.HelpView }{HelpView: view}
 	vtui.FrameManager.Push(wrapped)
 	for _, r := range "needle" {
-		handleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: r})
+		HandleHelpSearchHotkey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: r})
 	}
 
 	wrapped.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_NEXT})
 	wrapped.Show(scr)
-	renderHelpSearch(scr)
+	RenderHelpSearch(scr)
 
 	scrollTop, ok := helpViewScrollTop(wrapped)
 	if !ok || scrollTop == 0 {
 		t.Fatalf("HelpView scrollTop = %d, want a positive value after PageDown", scrollTop)
 	}
-	if currentHelpSearch.scrollTop != scrollTop {
-		t.Fatalf("search scrollTop = %d, actual HelpView scrollTop = %d", currentHelpSearch.scrollTop, scrollTop)
+	if CurrentHelpSearch.scrollTop != scrollTop {
+		t.Fatalf("search scrollTop = %d, actual HelpView scrollTop = %d", CurrentHelpSearch.scrollTop, scrollTop)
 	}
 	x1, y1, _, _ := view.GetPosition()
 	staleCell := scr.GetCell(x1+2, y1+1)
@@ -261,7 +261,7 @@ func TestHelpSearchReadsScrollPositionFromEmbeddedHelpView(t *testing.T) {
 func TestHelpShowsZoomButtonAndRestoresPreviousBounds(t *testing.T) {
 	view, scr := newSearchableHelpForTestAtSize(t, 80, 40, []string{"Help text"})
 	view.Show(scr)
-	renderHelpSearch(scr)
+	RenderHelpSearch(scr)
 	if !view.ShowZoom {
 		t.Fatal("Help zoom support was not enabled")
 	}
@@ -269,7 +269,7 @@ func TestHelpShowsZoomButtonAndRestoresPreviousBounds(t *testing.T) {
 	if got := testutil.Rune(scr.GetCell(x2-6, y1).Char); got != vtui.UIStrings.ZoomSymbol {
 		t.Fatalf("zoom button symbol = %q, want %q", got, vtui.UIStrings.ZoomSymbol)
 	}
-	if !handleHelpSearchHotkey(&vtinput.InputEvent{
+	if !HandleHelpSearchHotkey(&vtinput.InputEvent{
 		Type: vtinput.MouseEventType, KeyDown: true,
 		ButtonState: vtinput.FromLeft1stButtonPressed, MouseX: testutil.Int16(x2 - 6), MouseY: testutil.Int16(y1),
 	}) {
@@ -280,7 +280,7 @@ func TestHelpShowsZoomButtonAndRestoresPreviousBounds(t *testing.T) {
 		t.Fatalf("zoomed Help bounds start at (%d,%d), zoom state=%v", maxX1, maxY1, currentHelpZoom)
 	}
 	_, _, zoomedX2, _ := view.GetPosition()
-	if !handleHelpSearchHotkey(&vtinput.InputEvent{
+	if !HandleHelpSearchHotkey(&vtinput.InputEvent{
 		Type: vtinput.MouseEventType, KeyDown: true,
 		ButtonState: vtinput.FromLeft1stButtonPressed, MouseX: testutil.Int16(zoomedX2 - 6), MouseY: 0,
 	}) {

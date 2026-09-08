@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
@@ -2407,8 +2408,8 @@ func actionCopyMove(pf *PanelsFrame, isMove bool) {
 		return
 	}
 
-	dlg := newFileDialog(title, copyDialogHeight)
-	width, height := dlg.size()
+	dlg := dialog.NewFileDialog(title, dialog.CopyBoxHeight)
+	width, height := dlg.Size()
 
 	promptLbl := vtui.NewLabel(0, 0, fmt.Sprintf(prompt, len(names)), nil)
 	dlg.AddItem(promptLbl)
@@ -2469,7 +2470,7 @@ func actionCopyMove(pf *PanelsFrame, isMove bool) {
 	// The same VBox re-applied to the new dialog rectangle is what stretches
 	// the destination field when the f4 window is resized; the button row
 	// re-centers itself from HBoxLayout.SetPosition.
-	dlg.setLayout(func() {
+	dlg.SetLayout(func() {
 		vbox.SetPosition(dlg.X1+2, dlg.Y1+2, dlg.X2-2, dlg.Y2-2)
 		vbox.Apply()
 	})
@@ -2488,7 +2489,7 @@ func actionRename(pf *PanelsFrame) {
 		return
 	}
 
-	fileInputBox(i18n.Msg("Dialog.RenameTitle"), fmt.Sprintf(i18n.Msg("Dialog.RenamePrompt"), name), name, func(newName string) {
+	dialog.FileInputBox(i18n.Msg("Dialog.RenameTitle"), fmt.Sprintf(i18n.Msg("Dialog.RenamePrompt"), name), name, func(newName string) {
 		if newName == "" || newName == name {
 			return
 		}
@@ -2668,7 +2669,7 @@ func actionCopyInPlace(pf *PanelsFrame) {
 
 	sourceVFS := fsp.vfs
 	sourceBasePath := sourceVFS.GetPath()
-	fileInputBox(" Copy ", "Copy '"+name+"' to:", name, func(newName string) {
+	dialog.FileInputBox(" Copy ", "Copy '"+name+"' to:", name, func(newName string) {
 		if newName == "" || newName == name {
 			return
 		}

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/vtui"
 )
@@ -41,9 +42,9 @@ func TestPortableSettingsDialogUsesContextHelp(t *testing.T) {
 }
 
 func TestPortableSettingsHelpTopicIsRegistered(t *testing.T) {
-	engine := vtui.NewHelpEngine(&memoryHelpVFS{files: map[string]string{
-		"help.hlf": defaultHelpData,
-	}})
+	engine := vtui.NewHelpEngine(dialog.NewMemoryHelpVFS(map[string]string{
+		"help.hlf": dialog.DefaultHelpData,
+	}))
 	if err := engine.LoadFile("help.hlf"); err != nil {
 		t.Fatal(err)
 	}

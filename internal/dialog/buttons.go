@@ -1,11 +1,11 @@
-package main
+package dialog
 
 import "github.com/unxed/vtui"
 
-// dialogButtonRows packs fixed-width buttons into centered rows that fit the
+// ButtonRows packs fixed-width buttons into centered rows that fit the
 // available dialog content width. Long translations therefore wrap instead of
 // painting over the dialog border.
-func dialogButtonRows(buttons []*vtui.Button, availableWidth, spacing int) []*vtui.HBoxLayout {
+func ButtonRows(buttons []*vtui.Button, availableWidth, spacing int) []*vtui.HBoxLayout {
 	if availableWidth < 1 {
 		availableWidth = 1
 	}

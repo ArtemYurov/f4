@@ -3,13 +3,14 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
 
 func TestDialogTableUsesThemePalette(t *testing.T) {
 	table := vtui.NewTable(0, 0, 20, 5, []vtui.TableColumn{{Title: "Value", Width: 20}})
-	useDialogTableColors(table)
+	dialog.UseTableColors(table)
 
 	if table.ColorTextIdx != vtui.ColDialogText ||
 		table.ColorSelectedTextIdx != vtui.ColDialogSelectedButton ||

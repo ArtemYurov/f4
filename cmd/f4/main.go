@@ -14,6 +14,7 @@ import (
 
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
@@ -908,7 +909,7 @@ func SetupUI() {
 		if handlePanelPathEditHotkey(e) {
 			return true
 		}
-		if handleHelpSearchHotkey(e) {
+		if dialog.HandleHelpSearchHotkey(e) {
 			return true
 		}
 		if panels.shellMode == ShellModeSimpleInline && panels.consoleViewActive() && panels.isTopFrame() {
@@ -941,7 +942,7 @@ func SetupUI() {
 			renumberWorkspaceScreens()
 		}
 		UpdateWindowTitle(scr)
-		renderHelpSearch(scr)
+		dialog.RenderHelpSearch(scr)
 		if panels.shellMode == ShellModeSimpleInline && panels.consoleViewActive() {
 			onTop := panels.isTopFrame()
 			if onTop {

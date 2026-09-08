@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/piecetable"
@@ -770,8 +771,8 @@ func (vv *ViewerView) ProcessKey(e *vtinput.InputEvent) bool {
 // is a byte offset, which needs no counting at all.
 func (vv *ViewerView) askGoto() {
 	if vv.HexMode || vv.DecodeMode {
-		title, prompt := gotoText("Viewer.GotoOffsetTitle", " Go to offset "), gotoText("Viewer.GotoOffsetPrompt", "Byte offset:")
-		showGotoOffsetDialog(vv, title, prompt, vv.TopOffset, func(offset int64) {
+		title, prompt := dialog.GotoText("Viewer.GotoOffsetTitle", " Go to offset "), dialog.GotoText("Viewer.GotoOffsetPrompt", "Byte offset:")
+		dialog.ShowGotoOffset(vv, title, prompt, vv.TopOffset, func(offset int64) {
 			vv.gotoPosition(offset)
 		})
 		return

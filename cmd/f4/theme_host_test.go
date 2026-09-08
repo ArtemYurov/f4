@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
@@ -28,7 +29,7 @@ func TestColors_HelpBoxOverrideReachesHelpViewFrame(t *testing.T) {
 Help.Box = foreground:#102030 | background:#405060
 `)))
 
-	engine := vtui.NewHelpEngine(&memoryHelpVFS{files: map[string]string{}})
+	engine := vtui.NewHelpEngine(dialog.NewMemoryHelpVFS(map[string]string{}))
 	engine.AddTopic(&vtui.HelpTopic{Name: "Test", Lines: []string{"text"}})
 	view := vtui.NewHelpView(engine, "Test")
 	view.SetPosition(0, 0, 30, 5)
@@ -62,7 +63,7 @@ Scrollbar = foreground:#C0C0C0 | background:#0000A0
 Help.Scrollbar = foreground:#102030 | background:#405060
 `)))
 
-	engine := vtui.NewHelpEngine(&memoryHelpVFS{files: map[string]string{}})
+	engine := vtui.NewHelpEngine(dialog.NewMemoryHelpVFS(map[string]string{}))
 	lines := make([]string, 40)
 	for i := range lines {
 		lines[i] = "help line"

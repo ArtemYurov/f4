@@ -13,7 +13,7 @@ import (
 func TestLanguageAlphabetsContamination(t *testing.T) {
 	testutil.SkipIfNoRelevantChanges(t, "lang_scripts",
 		"lang/*.lng",
-		"../../cmd/f4/help/*.hlf",
+		"../../internal/dialog/help/*.hlf",
 		"lang_scripts_test.go",
 	)
 	// A map of scripts that are strictly bound to specific languages.

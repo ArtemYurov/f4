@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/dialog"
 	"strings"
 	"testing"
 )
@@ -44,10 +45,10 @@ func TestGenerateKeysHelpTopic_HelpLanguageOverridesUI_Turkish(t *testing.T) {
 	config.App.Language = "en"
 	initLang()
 
-	oldStrings := helpActionStrings
-	defer func() { helpActionStrings = oldStrings }()
-	helpActionStrings = loadHelpLangStrings("tr")
-	if helpActionStrings == nil {
+	oldStrings := dialog.HelpActionStrings
+	defer func() { dialog.HelpActionStrings = oldStrings }()
+	dialog.HelpActionStrings = dialog.LoadHelpLangStrings("tr")
+	if dialog.HelpActionStrings == nil {
 		t.Fatal("Turkish help strings not found")
 	}
 

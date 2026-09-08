@@ -22,6 +22,7 @@ import (
 	"github.com/mattn/go-runewidth"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/f4/internal/theme"
@@ -3432,7 +3433,7 @@ func (pf *PanelsFrame) HandleCommand(cmd int, args any) bool {
 		actionUpdateSettings(pf)
 		return true
 	case CmProxySettings:
-		actionProxySettings()
+		dialog.ActionProxySettings()
 		return true
 	case CmPlugins:
 		actionManagePlugins(pf)

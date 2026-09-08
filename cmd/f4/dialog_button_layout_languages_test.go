@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtui"
 )
@@ -34,7 +35,7 @@ func TestLayout_FileOpConflictButtons_AllLanguages(t *testing.T) {
 			vtui.NewButton(0, 0, i18n.Msg("FileOp.Resume")),
 			vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel")),
 		}
-		rows := dialogButtonRows(buttons, width-4, 1)
+		rows := dialog.ButtonRows(buttons, width-4, 1)
 		dlg := vtui.NewDialog(0, 0, width-1, 2+2*len(rows), i18n.Msg("Warning.Title"))
 		for _, button := range buttons {
 			dlg.AddItem(button)

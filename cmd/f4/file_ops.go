@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -1667,7 +1668,7 @@ func AskOverwrite(ctx context.Context, destPath string, srcStat, dstStat vfs.VFS
 			vtui.NewButton(0, 0, i18n.Msg("FileOp.Resume")),
 			vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel")),
 		}
-		buttonRows := dialogButtonRows(buttons, width-4, 1)
+		buttonRows := dialog.ButtonRows(buttons, width-4, 1)
 		height := 11 + 2*len(buttonRows)
 		dlg = vtui.NewCenteredDialog(width, height, i18n.Msg("Warning.Title"))
 		dlg.IsWarning = true

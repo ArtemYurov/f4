@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/dialog"
 	"strings"
 	"testing"
 )
@@ -44,10 +45,10 @@ func TestGenerateKeysHelpTopic_HelpLanguageOverridesUI_Hebrew(t *testing.T) {
 	config.App.Language = "en"
 	initLang()
 
-	oldStrings := helpActionStrings
-	defer func() { helpActionStrings = oldStrings }()
-	helpActionStrings = loadHelpLangStrings("he")
-	if helpActionStrings == nil {
+	oldStrings := dialog.HelpActionStrings
+	defer func() { dialog.HelpActionStrings = oldStrings }()
+	dialog.HelpActionStrings = dialog.LoadHelpLangStrings("he")
+	if dialog.HelpActionStrings == nil {
 		t.Fatal("Hebrew help strings not found")
 	}
 

@@ -8,6 +8,7 @@ import (
 
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/vtinput"
@@ -393,7 +394,7 @@ func actionHotkeyConfig(pf *PanelsFrame) {
 		{Title: i18n.Msg("Hotkeys.ColWhen"), Width: 17},
 		{Title: i18n.Msg("Hotkeys.ColDescription"), Width: 0},
 	}, btnAssign, btnUnbind, btnSave, btnCancel)
-	useDialogTableColors(table)
+	dialog.UseTableColors(table)
 	table.ShowScrollBar = true
 	table.Sortable = true // click a column header to sort, again to reverse
 	//table.QuickSearch = true // type to fuzzy-filter (Myers bit-vector)

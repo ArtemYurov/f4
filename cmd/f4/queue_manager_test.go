@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
@@ -374,7 +375,7 @@ func TestQueueFrameUsesDialogThemeColors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.state, func(t *testing.T) {
 			got := (queueRow{task: &QueueTask{State: tt.state}}).GetCellAttr(0, def)
-			want := themedForeground(def, tt.paletteIdx)
+			want := dialog.ThemedForeground(def, tt.paletteIdx)
 			if got != want {
 				t.Fatalf("%s attr = %#x, want themed attr %#x", tt.state, got, want)
 			}
