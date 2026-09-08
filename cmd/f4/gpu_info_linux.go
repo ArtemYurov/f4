@@ -110,8 +110,8 @@ func enumerateLinuxGPUs() []GPUInfo {
 				// PowerShell blocked, /mnt/c not mounted) — at
 				// least confirm the passthrough is there.
 				out = append(out, GPUInfo{
-					Model:  Msg("InfoPanel.GPUWSLVirt"),
-					Driver: "dxgkrnl",
+					ModelKey: "InfoPanel.GPUWSLVirt",
+					Driver:   "dxgkrnl",
 				})
 			}
 		}

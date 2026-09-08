@@ -129,6 +129,16 @@ func NewInfoPanel(src *FileSystemPanel) *InfoPanel {
 	return ip
 }
 
+// gpuModelLabel renders a GPU's model. A probe that could not read a vendor
+// string reports a catalogue key instead, and resolving it is the panel's job:
+// the probes must not reach into localization.
+func gpuModelLabel(g GPUInfo) string {
+	if g.ModelKey != "" {
+		return Msg(g.ModelKey)
+	}
+	return g.Model
+}
+
 func (ip *InfoPanel) SetPosition(x1, y1, x2, y2 int) {
 	ip.ScreenObject.SetPosition(x1, y1, x2, y2)
 	if ip.frame != nil {
@@ -879,7 +889,7 @@ func (ip *InfoPanel) Show(scr *vtui.ScreenBuf) {
 				if len(gpus) > 1 {
 					label = fmt.Sprintf("%s %d", label, i+1)
 				}
-				row(label, g.Model, true)
+				row(label, gpuModelLabel(g), true)
 				if g.Driver != "" {
 					dLabel := Msg("InfoPanel.GPUDriver")
 					if len(gpus) > 1 {

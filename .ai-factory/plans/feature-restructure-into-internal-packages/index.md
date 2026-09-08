@@ -253,7 +253,7 @@ titles, not the ordering.
 - [x] Task 4: Move `F4Config`'s three stray field types into `config.go` ([details](phase-01-baseline-and-barriers.md#task-4-move-f4configs-field-types-into-configgo))
 - [x] Task 5: Stop `queue_manager.go` starting a goroutine from `init()` ([details](phase-01-baseline-and-barriers.md#task-5-stop-starting-a-goroutine-from-init))
 - [x] Task 6: Lift the drive registry out of `panels_frame.go` ([details](phase-01-baseline-and-barriers.md#task-6-lift-the-drive-registry-out-of-panels_framego))
-- [ ] Task 7: Remove sysinfo's last localization call (`gpu_info_linux.go:113`) ([details](phase-01-baseline-and-barriers.md#task-7-remove-sysinfos-last-localization-call))
+- [x] Task 7: Remove sysinfo's last localization call (`gpu_info_linux.go:113`) ([details](phase-01-baseline-and-barriers.md#task-7-remove-sysinfos-last-localization-call))
 - [ ] Task 8: Add the module boundary auditor `cmd/f4/architecture_test.go` ([details](phase-01-baseline-and-barriers.md#task-8-add-the-module-boundary-auditor))
 - [ ] Task 9: Split the shared frame harness into `internal/testutil` + `internal/paneltest` ([details](phase-01-baseline-and-barriers.md#task-9-give-the-shared-frame-harness-a-home))
 - [ ] Task 43: Assign every `cmd/f4` file to a wave — 23 stray sources, 154 subject-less tests, 61 multi-package tests, 48 shared helpers ([details](phase-01-baseline-and-barriers.md#task-43-assign-every-cmdf4-file-to-a-wave)) (depends on 8)

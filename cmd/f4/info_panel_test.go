@@ -1433,3 +1433,20 @@ func TestFormatBytesCommas(t *testing.T) {
 		}
 	}
 }
+
+// TestInfoPanelLocalizesGPUModelKey covers the one adapter whose name the
+// probe cannot read: WSL passthrough without interop reports a catalogue key,
+// and the panel must render the sentence, not the key.
+func TestInfoPanelLocalizesGPUModelKey(t *testing.T) {
+	const key = "InfoPanel.GPUWSLVirt"
+	want := Msg(key)
+	if strings.HasPrefix(want, "{") {
+		t.Fatalf("%s is missing from the message catalogue", key)
+	}
+	if got := gpuModelLabel(GPUInfo{ModelKey: key, Driver: "dxgkrnl"}); got != want {
+		t.Errorf("gpuModelLabel with a key = %q, want %q", got, want)
+	}
+	if got := gpuModelLabel(GPUInfo{Model: "NVIDIA GeForce RTX 4090"}); got != "NVIDIA GeForce RTX 4090" {
+		t.Errorf("gpuModelLabel with a vendor name = %q, want it untouched", got)
+	}
+}
