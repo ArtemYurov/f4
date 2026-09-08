@@ -158,6 +158,14 @@ cannot see it. Task 33 lost three test tails and five whole tests that way, and
 only the literal-diff check plus a comparison against the previous revision
 found them. One parser costs less than that comparison did.
 
+**Deleting a line from the palette auditor's target map and adding the package
+to the layer map is one operation, not two.** The auditor counts f4's own
+surfaces from *both* maps — a file taken out of the first and not entered in the
+second stops being counted, silently. On the cmdline wave the count fell from
+42 to 40 and that was the only sign. Same family as a sweep that finds nothing
+and a test that passes by never dispatching: a check that quietly starts
+measuring less than it should.
+
 **The palette auditor's target map empties itself, and a wave that forgets its
 line leaves litter.** `commandPaletteTargetPackage` forward-declares where each
 `cmd/f4` file will land so audit keys survive the move; the wave that moves a

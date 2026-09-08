@@ -229,6 +229,13 @@ and `TestMain` — the waves would otherwise strand.
   `upstream/main`. Whatever the fork is behind by is reported as yours. Task 39
   levels them before it measures anything.
 
+  **Task 39's premise has changed and the task must be re-measured, not
+  executed as written.** It was written around a rename git cannot detect
+  against `origin/main` dumping a file's whole share of the backlog into the
+  report at once. That share has been paid down wave by wave: after Task 35,
+  `golangci-lint --new-from-rev=origin/main` reports **nothing** across the
+  tree. Measure first; the task's shape depends on what is left.
+
   **Pass `--max-same-issues=0 --max-issues-per-linter=0`.** The defaults are 3
   and 50, and the tool prints the count *after* truncation. A run that ends
   "3 issues: errcheck: 3" looks like a short list to fix and was 30 in the config
@@ -245,6 +252,14 @@ and `TestMain` — the waves would otherwise strand.
 - **Move by `//go:build` line, never by filename.** `pty_unix.go` is
   `//go:build linux`; `solaris_pty.go` is `//go:build !windows` and holds no PTY
   code. 97 non-test files carry a tag across 28 distinct expressions.
+- **Export a symbol declared under several build tags in every variant at once.**
+  The compiler on your platform shows exactly one: only your half compiles
+  locally, and the other stays lower-case until the cross-build says so. The
+  check is not "it built" but
+  `grep -l "func <name>" <every variant>` and a comparison of the case between
+  them. `IsBatchCommand` and `ResolveWindowsCommand` are declared once for
+  `windows` and once for `!windows`; exporting them on darwin left two targets
+  failing.
 - No rewrites inside a move commit. A reviewer must read the diff as a rename.
 - Tests move with their subject in the same commit; a test without a subject
   moves with the wave Task 43's roster names.
