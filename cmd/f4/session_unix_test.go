@@ -251,8 +251,8 @@ func TestAdoptClientTerminal_ForgetsFar2lNegotiation(t *testing.T) {
 		t.Fatalf("pipe: %v", err)
 	}
 	t.Cleanup(func() {
-		r.Close()
-		w.Close()
+		_ = r.Close()
+		_ = w.Close()
 	})
 
 	if restore := adoptClientTerminal(r); restore != nil {

@@ -66,15 +66,15 @@ This is done **once, here**, not fourteen times during the waves.
    two shards taking alternate entries of the sorted package list, or a split on a
    stable hash of the import path. The requirement is that **no shard definition
    names a package path**, so the next restructuring does not have to touch it.
-2. Simplify the shard router at `build.yml:1035-1075`. The `cmd_affected` special
+3. Simplify the shard router at `build.yml:1035-1075`. The `cmd_affected` special
    case and the `./cmd/f4/...` argument branch exist only to serve the named
    shards; with a computed split, the router reduces to "map each affected package
    to its shard".
-3. Replace the race matrix at `build.yml:1271-1273`. Drop the `cmd/f4 A` /
+4. Replace the race matrix at `build.yml:1271-1273`. Drop the `cmd/f4 A` /
    `B-L` / `rest` letter split and its `run:` filters, and drop the `packages`
    scope's exclusion at `build.yml:1332` — with no giant package there is nothing
    to exclude. Shard by package the same way as the lint job.
-4. Keep the two behaviours that are not about sharding:
+5. Keep the two behaviours that are not about sharding:
    - the global `-skip '^TestAllDialogs_LayoutValidation$'` at `build.yml:1187`
      and its single-threaded re-run. Confirm which package it points at — Task 25
      step 5 leaves it at `./internal/dialog`, `./cmd/f4` or `./internal/panel`
@@ -84,7 +84,7 @@ This is done **once, here**, not fourteen times during the waves.
    - the race-instrumented cache keys at `build.yml:1288-1296`. Update the
      `cache-key` values to match the new shard names; the reason for a separate key
      (the shared setup-go key is claimed by a non-race job) still holds.
-5. **Measure.** Record the wall-clock of the `lint` and `race` jobs before and
+6. **Measure.** Record the wall-clock of the `lint` and `race` jobs before and
    after on the same commit. A rebalancing that makes CI slower is not done.
 
 ### Required Interfaces and Contracts
@@ -150,32 +150,39 @@ Finding this locally costs one run. Finding it in review costs the PR.
 
 ### Implementation Steps
 
-1. Fetch the base and run the same command CI runs, over the whole branch:
+1. **Level `origin/main` with `upstream/main` first.** The incremental lint takes
+   `origin/main` as its base, and the fork lags upstream — 37 commits at the time
+   this step was added. Every one of those commits is reported as this branch's
+   work: the first CI run of the branch returned two gosec findings in
+   `cmd/f4/input_translation.go`, which came from the upstream commit `5b21864e`
+   and not from this work at all. Until the bases agree, a backlog measurement
+   says nothing, because there is no telling whose backlog it is.
+2. Fetch the base and run the same command CI runs, over the whole branch:
    ```
    git fetch origin main
    golangci-lint run --new-from-rev=origin/main ./...
    ```
-2. Record the finding count. Compare against a run on `origin/main` itself to
+3. Record the finding count. Compare against a run on `origin/main` itself to
    establish what the pre-existing backlog is:
    ```
    git stash && git checkout origin/main
    golangci-lint run ./... 2>&1 | tail -1
    git checkout - && git stash pop
    ```
-3. If the branch run reports substantially more than the genuine new-code findings,
+4. If the branch run reports substantially more than the genuine new-code findings,
    rename detection failed. Do not fix it by adding nolint directives. Instead
    state the measured numbers in the PR body — "golangci-lint's `--new-from-rev`
    does not track these renames; the incremental job reports N findings, of which
    the pre-existing backlog on `main` is M" — so the maintainer sees a known
    quantity rather than a mystery.
-4. Run the strict configuration over the new packages only, where it is meaningful:
+5. Run the strict configuration over the new packages only, where it is meaningful:
    ```
    golangci-lint run -c .golangci-strict.yml ./internal/numeric/... ./internal/toast/... ./internal/history/... ./internal/action/...
    ```
    These four are new code written during this work, so they can be held to the
    strict bar.
 
-5. Verify that **every commit** on the branch builds, not only `HEAD`. The
+6. Verify that **every commit** on the branch builds, not only `HEAD`. The
    plan's central invariant is that any commit can be checked out and built, and
    checking `HEAD` alone never tests it:
    ```
@@ -377,7 +384,7 @@ transition and leaving a description of the result.
    - **Code Examples**
    - "Not every directory here is one module", inside Dependency Rules — six
      `go.mod` files is a standing fact
-6. **Anti-Patterns** (last section): "**Adding to the flat package**" must be
+7. **Anti-Patterns** (last section): "**Adding to the flat package**" must be
    reworded. There is no flat package any more, but the rule it protects survives:
    a new feature belongs in the module it serves, and if none fits, in a new
    package — never appended to whichever package is nearest.

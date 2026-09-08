@@ -177,6 +177,19 @@ and `TestMain` — the waves would otherwise strand.
     runners, and `concurrency` cancels the in-flight run on the same ref
     (`build.yml:28-30`), so consecutive pushes would queue up and kill each
     other. Eleven phase runs give the same coverage as twenty-seven commit runs.
+- **Lint what you touched, before you commit.**
+  `golangci-lint run --new-from-rev=origin/main <the packages you changed>`, at the
+  version CI pins (v2.13.1). Incremental mode says nothing about existing code —
+  roughly 2450 findings of backlog sit behind it — but every line the diff calls
+  new is checked, and that has two consequences. An edit inside a file is checked
+  at once. And a file that *moves* changes its `package` line, so if git does not
+  detect the rename the whole file counts as new and empties its share of the
+  backlog into the report; Task 39 is written for exactly that.
+
+  Note what "new" means here: the base is `origin/main`, the fork's own main, not
+  `upstream/main`. Whatever the fork is behind by is reported as yours. Task 39
+  levels them before it measures anything.
+
 - **Move by `//go:build` line, never by filename.** `pty_unix.go` is
   `//go:build linux`; `solaris_pty.go` is `//go:build !windows` and holds no PTY
   code. 97 non-test files carry a tag across 28 distinct expressions.
