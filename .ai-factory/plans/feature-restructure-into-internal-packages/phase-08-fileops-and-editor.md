@@ -63,6 +63,29 @@ package's size, not a choice.
 
 ## Task 32: Extract `internal/fileops`
 
+
+### Roster deviations measured before the wave
+
+**`fuse_mount_action.go` and `fuse_mount_list.go` go to `internal/app`
+(Task 36), not here.** Measured: the first scores `PanelsFrame` ×4 and
+`FileSystemPanel` ×1 and has two `init()`; the second scores `PanelsFrame` ×2.
+`internal/fileops` is layer 1 and cannot hold either. `internal/panel` cannot
+either: both call `findPanelsFrameAnyScreen`, which `framework_actions.go`
+declares and which travels whole to `internal/app`, so a panel home would need
+the upward edge the auditor forbids. Nothing in either file is called from
+outside it — every function is a `Handler:` value reached through the action
+registry, the same shape that made `framework_actions.go` not a primitive.
+512 lines between them.
+
+This is the fourth roster entry assigned by filename rather than by the graph,
+after `kitty_*` (media, actually term), `command_runner*` (cmdline, actually
+term) and `colors.go` (which the grep wrongly held back).
+
+**`attributes_dialog.go` scores `PanelsFrame` ×8** and its two platform files
+score zero. Its name asks for `internal/dialog`; measure it on the wave rather
+than deciding here, and note that dialog and fileops are both layer 3, so the
+gate alone will not settle it.
+
 ### Intent
 
 Copy, move, delete, the background job queue, folder comparison and the

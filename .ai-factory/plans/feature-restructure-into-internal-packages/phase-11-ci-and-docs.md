@@ -732,18 +732,34 @@ whole tree.
    If every caller uses all three, it is one package and stays one.
    Apply the same question to the largest results — `term`, `panel`, `app` — and
    to anything over roughly forty files.
-3. **Decide the two files whose home is genuinely arguable** rather than leaving
+3. **Ask whether `internal/term` should be `internal/terminal`.** The short name
+   is taken: `golang.org/x/term` is used in five files, and where both are
+   imported — `cmd/f4/main.go` — ours wins the bare name and the other needs an
+   alias. The first alias tried was `xterm`, which names a real terminal
+   emulator and reads, in terminal-compatibility code, as a compatibility check
+   rather than as a package; it is `goterm` now, and that is a workaround, not
+   an answer. `terminal` would need no alias anywhere, and the tree already
+   holds `piecetable`, `textlayout` and `hideconsole`, so the usual "Go names
+   packages short" argument is weaker here than usual.
+
+   Not done during the waves: 66 imports and roughly 710 `term.<Symbol>`
+   references, and a blind replacement breaks the very thing it is for, because
+   `term.` also spells `x/term`'s `IsTerminal`, `GetSize` and `MakeRaw`. Isolated
+   from the moves, on a settled tree, it is a mechanical change with a check
+   that runs.
+
+4. **Decide the two files whose home is genuinely arguable** rather than leaving
    them where the wave put them by default: `player_panel.go` (a panel over the
    media engine — media or panel?) and `sixel_layers.go` (graphics — media or
    term?). State the reason, not just the choice.
-4. **Check that no new flat package appeared.** The failure this whole branch
+5. **Check that no new flat package appeared.** The failure this whole branch
    exists to undo is one package accumulating unrelated code. Verify no extracted
    package holds files from two unrelated subjects, and that `internal/app` holds
    wiring rather than features that found no other home.
-5. **Verify the tree against `ARCHITECTURE.md` as rewritten in Task 41** — the
+6. **Verify the tree against `ARCHITECTURE.md` as rewritten in Task 41** — the
    layer table, the dependency rules, the file-naming convention. Where the code
    and the document disagree, one of them is wrong; say which.
-6. **Write the outcome into the PR body**, in a short section: what was reviewed,
+7. **Write the outcome into the PR body**, in a short section: what was reviewed,
    what stays as is, and what is proposed as a follow-up with the evidence behind
    it. A reviewer should not have to ask whether the structure was thought about
    after it was built.

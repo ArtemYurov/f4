@@ -30,7 +30,7 @@ import (
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
-	xterm "golang.org/x/term"
+	goterm "golang.org/x/term"
 )
 
 // startupDirEnv and startupDirRightEnv carry the panel directories of this
@@ -93,7 +93,7 @@ func rememberStartupDirs(args []string) {
 	if os.Getenv(startupDirEnv) != "" {
 		return
 	}
-	if !xterm.IsTerminal(int(os.Stdin.Fd())) {
+	if !goterm.IsTerminal(int(os.Stdin.Fd())) {
 		return
 	}
 	cwd, err := os.Getwd()
@@ -741,7 +741,7 @@ func InitCore() *vtui.ScreenBuf {
 	}
 	width, height, err := vtui.GetTerminalSize()
 	if err != nil {
-		vtui.DebugLog("CORE: xterm.GetSize(0) failed: %v", err)
+		vtui.DebugLog("CORE: goterm.GetSize(0) failed: %v", err)
 	}
 	if p := term.ProbeConsole(); true {
 		vtui.DebugLog("ENV: wine=%v backend=%q size=%dx%d consoleBuffer=%v window=%dx%d",
