@@ -121,11 +121,17 @@ func ensureProfileLayout(dir string) error {
 	return nil
 }
 
-// copyProfileDir copies every file under src into dst, keeping files that
-// already exist in dst and skipping crash logs. It never deletes anything, so
-// switching modes twice cannot lose data: the user ends up with two copies
-// rather than none.
+// copyProfileDir copies every non-crash file under src into dst, keeping files
+// that already exist in dst. It never deletes anything, so switching modes
+// twice cannot lose data: the user ends up with two copies rather than none.
 func copyProfileDir(src, dst string) error {
+	return transferProfileDir(src, dst, true)
+}
+
+// transferProfileDir copies files under src into dst. When skipCrashes is
+// false, it is suitable for Move: every source file is transferred before the
+// caller removes the old profile. A failed transfer never changes src.
+func transferProfileDir(src, dst string, skipCrashes bool) error {
 	src, dst = filepath.Clean(src), filepath.Clean(dst)
 	if src == dst {
 		return nil
@@ -154,7 +160,7 @@ func copyProfileDir(src, dst string) error {
 		if rel == "." {
 			return os.MkdirAll(dst, 0700)
 		}
-		if d.IsDir() && rel == "crashes" {
+		if skipCrashes && d.IsDir() && rel == "crashes" {
 			return filepath.SkipDir
 		}
 		target := filepath.Join(dst, rel)
@@ -222,8 +228,12 @@ func actionPortableSettings(pf *PanelsFrame) {
 	if wasPortable {
 		chkPortable.State = 1
 	}
-	chkCopy := vtui.NewCheckbox(0, 0, Msg("PortableSettings.CopyProfile"), false)
-	chkCopy.State = 1
+	transferModes := []string{Msg("PortableSettings.Copy"), Msg("PortableSettings.Move")}
+	comboTransfer := vtui.NewComboBox(0, 0, 18, transferModes)
+	comboTransfer.DropdownOnly = true
+	comboTransfer.Menu.SetSelectPos(0)
+	comboTransfer.Edit.SetText(transferModes[0])
+	lblTransfer := vtui.NewLabel(0, 0, Msg("PortableSettings.Transfer"), comboTransfer)
 
 	// Both paths can be long (a deep %APPDATA% or a build sandbox); keep the
 	// tail, which is the part that tells the two locations apart.
@@ -243,7 +253,8 @@ func actionPortableSettings(pf *PanelsFrame) {
 	dlg.AddItem(current)
 	dlg.AddItem(iniInfo)
 	dlg.AddItem(chkPortable)
-	dlg.AddItem(chkCopy)
+	dlg.AddItem(lblTransfer)
+	dlg.AddItem(comboTransfer)
 	dlg.AddItem(note)
 	dlg.AddItem(note2)
 	dlg.AddItem(btnOk)
@@ -253,7 +264,10 @@ func actionPortableSettings(pf *PanelsFrame) {
 	vbox.Add(current, vtui.Margins{}, vtui.AlignLeft)
 	vbox.Add(iniInfo, vtui.Margins{}, vtui.AlignLeft)
 	vbox.Add(chkPortable, vtui.Margins{Top: 1}, vtui.AlignLeft)
-	vbox.Add(chkCopy, vtui.Margins{Left: 3}, vtui.AlignLeft)
+	transferRow := vtui.NewHBoxLayout(0, 0, width-4, 1)
+	transferRow.Add(lblTransfer, vtui.Margins{Left: 3, Right: 1}, vtui.AlignLeft)
+	transferRow.Add(comboTransfer, vtui.Margins{}, vtui.AlignLeft)
+	vbox.Add(transferRow, vtui.Margins{}, vtui.AlignFill)
 	vbox.Add(note, vtui.Margins{Top: 1}, vtui.AlignLeft)
 	vbox.Add(note2, vtui.Margins{}, vtui.AlignLeft)
 
@@ -272,7 +286,7 @@ func actionPortableSettings(pf *PanelsFrame) {
 			dlg.Close()
 			return
 		}
-		if err := applyPortableMode(iniPath, enable, chkCopy.State == 1); err != nil {
+		if err := applyPortableMode(iniPath, enable, comboTransfer.Menu.SelectPos == 1); err != nil {
 			vtui.ShowMessage(Msg("Error.Title"), err.Error(), []string{Msg("vtui.Ok")})
 			return
 		}
@@ -286,25 +300,41 @@ func actionPortableSettings(pf *PanelsFrame) {
 // applyPortableMode flushes what the running instance has in memory, copies
 // the profile if asked, and only then rewrites the ini. Ordering matters: if
 // the copy fails the ini is untouched and the next start is unchanged.
-func applyPortableMode(iniPath string, enable, copyProfile bool) error {
+func applyPortableMode(iniPath string, enable, moveProfile bool) error {
 	SaveConfig()
 	src := GetF4ConfigDir()
 	var dst string
 	if enable {
 		dst = portableProfileDir()
-		if err := ensureProfileLayout(dst); err != nil {
+	} else {
+		dst = systemProfileDir()
+	}
+	if moveProfile {
+		if err := transferProfileDir(src, dst, false); err != nil {
 			return err
 		}
 	} else {
-		dst = systemProfileDir()
-		if err := os.MkdirAll(dst, 0700); err != nil {
-			return err
-		}
-	}
-	if copyProfile {
 		if err := copyProfileDir(src, dst); err != nil {
 			return err
 		}
 	}
-	return setPortableMode(iniPath, enable)
+	// Create the conventional layout only after the transfer has succeeded.
+	// In particular, a destination accidentally nested inside src must not
+	// modify the source before transferProfileDir can reject it.
+	if enable {
+		if err := ensureProfileLayout(dst); err != nil {
+			return err
+		}
+	} else if err := os.MkdirAll(dst, 0700); err != nil {
+		return err
+	}
+	if err := setPortableMode(iniPath, enable); err != nil {
+		return err
+	}
+	if moveProfile && filepath.Clean(src) != filepath.Clean(dst) {
+		if err := os.RemoveAll(src); err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -234,6 +234,44 @@ func TestCopyProfileDir_NoClobberSkipsCrashes(t *testing.T) {
 	}
 }
 
+func TestTransferProfileDir_MoveKeepsSourceOnTransferFailure(t *testing.T) {
+	src := filepath.Join(t.TempDir(), "src")
+	dst := filepath.Join(src, "Profile")
+	if err := os.MkdirAll(src, 0700); err != nil {
+		t.Fatal(err)
+	}
+	marker := filepath.Join(src, "settings.ini")
+	if err := os.WriteFile(marker, []byte("keep"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := transferProfileDir(src, dst, false); err == nil {
+		t.Fatal("copying a profile into itself should fail before a move can remove the source")
+	}
+	if got, err := os.ReadFile(marker); err != nil || string(got) != "keep" {
+		t.Fatalf("source profile changed after failed transfer: %q, %v", got, err)
+	}
+}
+
+func TestTransferProfileDir_MoveIncludesCrashLogs(t *testing.T) {
+	src := filepath.Join(t.TempDir(), "src")
+	dst := filepath.Join(t.TempDir(), "dst")
+	crash := filepath.Join(src, "crashes", "1.log")
+	if err := os.MkdirAll(filepath.Dir(crash), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(crash, []byte("diagnostic"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := transferProfileDir(src, dst, false); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := os.ReadFile(filepath.Join(dst, "crashes", "1.log")); err != nil || string(got) != "diagnostic" {
+		t.Fatalf("crash log was not transferred for Move: %q, %v", got, err)
+	}
+}
+
 func TestEnsureProfileLayout(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "Profile")
 	if err := ensureProfileLayout(dir); err != nil {
