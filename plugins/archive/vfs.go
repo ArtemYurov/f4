@@ -1906,6 +1906,7 @@ func (v *ArchiveVFS) Clone() vfs.VFS {
 	}
 	parent, arcPath, backingPath := v.parent, v.arcPath, v.backingPath
 	displayName, format, password, innerPath := v.displayName, v.format, v.password, v.innerPath
+	sfxOffset, sfxSuffix := v.sfxOffset, v.sfxSuffix
 	v.mu.Unlock()
 
 	var finalPath string
