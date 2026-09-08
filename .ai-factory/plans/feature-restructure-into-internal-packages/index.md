@@ -412,10 +412,18 @@ completing (`portable_paths_test.go:44-49`, `config.go:118`). That is a race
 between a fixture's teardown and any concurrent reader, and shuffling changes
 which tests are adjacent enough to hit it.
 
-Next step, in order: run `go test ./cmd/f4 -shuffle=<seed>` over several seeds on
-this branch and on `upstream/main`, and compare. If it reproduces on
-`upstream/main` it is pre-existing and belongs in the PR body rather than in a
-fix here.
+The next full matrix run, on a tree that differed only by the 32-bit fixes to
+`internal/numeric`, was **green on all 34 cells** — neither cell failed again.
+Two failures that do not reproduce on the following run are consistent with a
+seed-dependent order sensitivity and inconsistent with a deterministic
+regression, which is the reading the evidence above already pointed at.
+
+Not closed, though: a flake that fails one run in two is still a flake, and on a
+branch this size it will be read as "the restructuring broke something". Next
+step, in order: run `go test ./cmd/f4 -shuffle=<seed>` over several seeds on this
+branch and on `upstream/main`, and compare. If it reproduces on `upstream/main`
+it is pre-existing, and it belongs in the PR body as a known flake rather than in
+a fix here.
 
 ---
 
