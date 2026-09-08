@@ -355,8 +355,13 @@ upstream merge that must happen first, the open tails and the tool hazards.
 - **Task 34 depends on Tasks 26, 29, 30, 32 and 33** — `panel_plugins.go`'s
   `coreAPI` method is cut out in Task 26, and `internal/panel` imports viewer,
   term, fileops and editor.
-- **Task 35 depends on Task 34** — `internal/cmdline` may import
-  `internal/panel`; the reverse edge is forbidden and Task 34 step 4 removes it.
+- **Task 34 depends on Task 35**, not the other way round. The dependency the
+  plan recorded rested on a cycle that measurement did not find: five files
+  rostered for `internal/cmdline` read private members of the panel types and
+  belong to `internal/panel`, and with them placed there `internal/cmdline`
+  names no panel type at all. The command line goes first because thirteen of
+  its seventeen files move mechanically, and because a boundary that exists
+  before the panel wave starts cannot be crossed by accident.
 - **Task 36 depends on every wave** — the composition root is what is left.
 - **Task 41 depends on Task 37** — `ARCHITECTURE.md` can describe the tree as a
   fact only once the tree is the tree.
@@ -422,9 +427,9 @@ upstream merge that must happen first, the open tails and the tool hazards.
 - [x] Task 32: Extract `internal/fileops` ([details](phase-08-fileops-and-editor.md#task-32-extract-internalfileops)) (depends on 5, 30, 31)
 - [x] Task 33: Extract `internal/editor` ([details](phase-08-fileops-and-editor.md#task-33-extract-internaleditor)) (depends on 14, 29, 32)
 
-### Phase 9: Panels and the Command Line
-- [ ] Task 34: Extract `internal/panel`, finish `semantic.go`, fill `internal/paneltest` ([details](phase-09-panel-and-cmdline.md#task-34-extract-internalpanel)) (depends on 26, 33)
-- [ ] Task 35: Extract `internal/cmdline`; delete `semantic.go` ([details](phase-09-panel-and-cmdline.md#task-35-extract-internalcmdline)) (depends on 34)
+### Phase 9: The Command Line and the Panels
+- [ ] Task 35: Extract `internal/cmdline` ([details](phase-09-panel-and-cmdline.md#task-35-extract-internalcmdline)) (depends on 33) — runs first
+- [ ] Task 34: Extract `internal/panel`, finish `semantic.go`, fill `internal/paneltest` ([details](phase-09-panel-and-cmdline.md#task-34-extract-internalpanel)) (depends on 26, 33, 35)
 
 ### Phase 10: The Composition Root
 - [ ] Task 36: Extract `internal/app` ([details](phase-10-composition-root.md#task-36-extract-internalapp)) (depends on 35)
@@ -736,6 +741,45 @@ The other cell, `TestMainMenuFilePath_HasExpectedSuffix` on linux/amd64, is
 still open and its lead is unchanged: an empty `cachedF4ConfigDir` observed
 between `setupPortableIni`'s cleanup replacing `configDirOnce` and the next
 `Do` completing.
+
+### Task 35 step 3 is wrong in its premise, and there is no cycle
+
+The step reads "resolve the non-zeros against the panel type:
+`command_prefix_registry.go` (1), `cmd_session.go` (2), `simple_exec.go` (2),
+`apply_command.go` (5). A command that acts on the active panel takes it as a
+parameter." There is nothing to resolve. All five read **private** members of
+`PanelsFrame` and `FileSystemPanel`, and a parameter does not open a private
+member:
+
+| File | Private members reached |
+|---|---|
+| `cmd_session.go` | eight — `catchUpProcessEnvironment`, `endExecution`, `executing`, `ignoreNextPrompt`, `localPTY`, `noteLocalShellBusy`, `shellPromptReady`, `termView` |
+| `apply_command.go` | nine, across both types — `activeIdx`, `closed`, `getActivePanel`, `getInactivePanel`, `ptyMutex`, `entries`, `vfs`, `clearSelectionIfUnchanged`, `getRawSelectedName` |
+| `simple_exec.go` | eight, plus two methods declared on `*PanelsFrame` |
+| `command_prefix_registry.go` | three — `closed`, `getActivePanel`, `switchToVFS` |
+| `remote_command.go` | two — `getActivePanel`, `vfs` |
+
+So the five belong to `internal/panel` by Go's rule, not by anyone's decision.
+
+**And with them gone, the edge `cmdline → panel` does not exist.** The cycle the
+step was written to break is not there. `internal/panel` imports
+`internal/cmdline` in one direction, on one layer, the way `internal/editor`
+imports `internal/viewer`. No interface, no seam.
+
+For the record, since the shape of the alternative matters: `panel → cmdline` is
+272 references to `.cmdLine` (257 of them production) across seventeen distinct
+members, and one of the seventeen is `semanticModel`, an unexported method. The
+interface the step implied would have required exporting a private method to
+satisfy a rule about a cycle that does not exist. The reverse direction is zero.
+
+**Order: `internal/cmdline` is extracted before `internal/panel`.** Thirteen of
+the roster's seventeen files name no panel type at all and move mechanically;
+the boundary then exists before the largest wave starts, which is what stops a
+file from going the wrong way because it happened to sit next door.
+
+Two roster corrections found in the same pass: `commands.go` is listed for
+`internal/cmdline` and became `internal/appcmd` in Task 33, and
+`simple_exec_other.go` / `simple_exec_windows.go` from step 5 do not exist.
 
 ### Closed: the empty config directory, and the flake it caused
 

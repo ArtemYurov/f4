@@ -102,6 +102,21 @@ so filter on the first letter instead; and struct fields are not in the model at
 all — `fsp.vfs` does not appear — so the query names candidates and grep
 confirms them.
 
+## Fourteen files placed by name, and what the graph said
+
+The count is worth keeping because it is the branch's most reliable finding: a
+file's name is evidence, and the graph is the verdict. `kitty_*` (media by name,
+terminal by graph), `command_runner*` (cmdline, terminal), `colors.go`,
+`attributes_dialog.go` (fileops, dialog), `fuse_mount_*` ×2 (fileops, panel),
+`async_buffer.go` (app, editor), and then five at once in Task 35's roster —
+`cmd_session.go`, `apply_command.go`, `simple_exec.go`,
+`command_prefix_registry.go`, `remote_command.go`: all named for the command
+line, all reading private members of the panel types, all `internal/panel`.
+
+Two of the fourteen came from blocks written to *correct* the roster, which is
+the part worth remembering: a correction goes stale like the thing it corrects,
+and the check that catches it is the same one — measure before moving.
+
 ## Four mechanical traps, each hit once
 
 **Both obvious ways of listing paths for a pointed commit are wrong, in

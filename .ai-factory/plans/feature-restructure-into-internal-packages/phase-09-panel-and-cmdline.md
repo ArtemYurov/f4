@@ -1,7 +1,7 @@
-# Phase 9: Panels and the Command Line
+# Phase 9: The Command Line and the Panels
 
 Plan: [index.md](index.md)
-Tasks: 34-35
+Tasks: 35 then 34
 Depends on: Phase 8
 
 ## Objective
@@ -271,16 +271,24 @@ package, so the wave is a move rather than an excavation.
 
 1. Move the type home: `command_line.go` (`CommandLine` ×16, 12 methods across two
    files) → `line.go`.
-2. Move the zero-score files whole: `commands.go` → `commands.go`,
+2. Move the zero-score files whole — thirteen of them, none naming a panel
+   type. (`commands.go` is no longer among them: it became `internal/appcmd` in
+   Task 33, because the editor needed its constants first.)
    `command_quotes.go` → `quotes.go`, `command_quoting.go` → `quoting.go`,
    `remote_command.go` → `remote.go`,
    `resolve_command_other.go` / `resolve_command_windows.go` → `resolve_*.go`
    (by build tag).
-3. Resolve the non-zeros against the panel type, which now lives in
-   `internal/panel`: `command_prefix_registry.go` (1), `cmd_session.go` (2),
-   `simple_exec.go` (2), `apply_command.go` (5). A command that acts on the active
-   panel takes it as a parameter; `internal/cmdline` may import `internal/panel`
-   (both layer 3, and Task 34 step 4 ensured the reverse edge does not exist).
+3. **`command_prefix_registry.go`, `cmd_session.go`, `simple_exec.go`,
+   `apply_command.go` and `remote_command.go` are not here.** An earlier version
+   of this step asked for their panel references to be resolved by parameter;
+   they cannot be. All five read private members of `PanelsFrame` and
+   `FileSystemPanel` — `cmd_session.go` eight of them, `apply_command.go` nine,
+   `simple_exec.go` eight plus two methods declared on `*PanelsFrame` — and a
+   parameter does not open a private member. They belong to `internal/panel` by
+   Go's rule; Task 34 takes them. See `index.md`.
+
+   What that leaves: `internal/cmdline` names no panel type at all, and
+   `internal/panel` imports it in one direction.
 4. Move the apply-command family: `apply_command.go`, `apply_command_batch.go`,
    `apply_command_output.go`, `apply_command_resources.go`,
    `apply_command_subst.go`, `apply_command_transcript.go`,
@@ -289,10 +297,10 @@ package, so the wave is a move rather than an excavation.
    `apply_output.go`, `apply_resources.go`, `apply_subst.go`,
    `apply_transcript.go`, `apply_shortname_other.go`,
    `apply_shortname_windows.go`, `apply_shutdown.go`.
-5. Move the session and history files: `cmd_session.go` → `session.go`,
-   `simple_exec.go` / `simple_exec_other.go` / `simple_exec_windows.go` →
-   `exec*.go`. There is no `history_hint*.go` source: `history_hint_test.go`
-   drives `actionCommandHistory` and is an `internal/app` test.
+5. `cmd_session.go` and `simple_exec.go` go to `internal/panel` (step 3);
+   `simple_exec_other.go` and `simple_exec_windows.go` do not exist. There is no
+   `history_hint*.go` source either: `history_hint_test.go` drives
+   `actionCommandHistory` and is an `internal/app` test.
 6. **`command_runner*.go`, `shell_mode.go` and `wine_probe*.go` are explicitly
    NOT here.** They went to `internal/terminal` in Task 30 because their callers are
    `pty_*`. Leaving them in cmdline inverts the layers.
