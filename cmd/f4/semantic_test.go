@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/f4/vfs"
@@ -112,11 +113,11 @@ func TestPanelsFrameSemanticActionAcceptsQMLNumbers(t *testing.T) {
 
 func TestSemantic_EditorViewActions(t *testing.T) {
 	vtui.SetDefaultPalette()
-	pt := piecetable.New([]byte("hello"))
-	ev := NewEditorView(pt, nil, "test.txt")
+	Pt := piecetable.New([]byte("hello"))
+	ev := editor.NewEditorView(Pt, nil, "test.txt")
 	defer ev.Close()
-	ev.modified = false
-	ev.CursorPos = ev.getLineLength(0)
+	ev.Modified = false
+	ev.CursorPos = ev.GetLineLength(0)
 
 	// 1. Test insertText
 	actionInsert := map[string]any{
@@ -130,7 +131,7 @@ func TestSemantic_EditorViewActions(t *testing.T) {
 	if ev.GetText() != "hello world" {
 		t.Errorf("expected 'hello world', got %q", ev.GetText())
 	}
-	if !ev.modified {
+	if !ev.Modified {
 		t.Error("editor should be marked as modified after insertion")
 	}
 

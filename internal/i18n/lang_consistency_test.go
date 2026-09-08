@@ -145,10 +145,10 @@ func TestLangConsistency(t *testing.T) {
 	coverage := make(map[string]int)
 	seenCodes := make(map[string]bool)
 
-	for _, file := range files {
-		data, err := os.ReadFile(file)
+	for _, File := range files {
+		data, err := os.ReadFile(File)
 		if err != nil {
-			t.Errorf("Failed to read %s: %v", file, err)
+			t.Errorf("Failed to read %s: %v", File, err)
 			continue
 		}
 
@@ -156,12 +156,12 @@ func TestLangConsistency(t *testing.T) {
 		stringsMap := LoadLangMapFromINI(ini)
 
 		code := ini.GetString("Language", "Code", "")
-		expectedCode := strings.TrimSuffix(filepath.Base(file), ".lng")
+		expectedCode := strings.TrimSuffix(filepath.Base(File), ".lng")
 		if code != expectedCode {
-			t.Errorf("%s: [Language] Code is '%s', expected '%s'", file, code, expectedCode)
+			t.Errorf("%s: [Language] Code is '%s', expected '%s'", File, code, expectedCode)
 		}
 		if ini.GetString("Language", "Name", "") == "" {
-			t.Errorf("%s: [Language] Name is missing", file)
+			t.Errorf("%s: [Language] Name is missing", File)
 		}
 		seenCodes[code] = true
 
@@ -175,7 +175,7 @@ func TestLangConsistency(t *testing.T) {
 		}
 		if !updateBaseline {
 			if expected, ok := baseline[code]; !ok {
-				t.Errorf("%s has no coverage baseline; add %s=<covered key count>", file, code)
+				t.Errorf("%s has no coverage baseline; add %s=<covered key count>", File, code)
 			} else if coverage[code] < expected {
 				t.Errorf("%s covers %d/%d English keys, baseline requires at least %d", code, coverage[code], len(enKeys), expected)
 			}
@@ -184,7 +184,7 @@ func TestLangConsistency(t *testing.T) {
 			t.Logf("%s coverage: %d/%d (%.1f%%); missing keys (%d): %s", code, coverage[code], len(enKeys), 100*float64(coverage[code])/float64(len(enKeys)), len(missingKeys), strings.Join(missingKeys, ", "))
 		}
 
-		if filepath.Base(file) == "en.lng" {
+		if filepath.Base(File) == "en.lng" {
 			continue
 		}
 
@@ -209,15 +209,15 @@ func TestLangConsistency(t *testing.T) {
 				key := strings.TrimSpace(line[:idx])
 				targetRawStrings[key] = line[idx+1:]
 				if seenKeys[key] {
-					t.Errorf("%s: Duplicate key found: %s", file, key)
+					t.Errorf("%s: Duplicate key found: %s", File, key)
 				}
 				seenKeys[key] = true
 
 				if _, ok := enStrings[key]; !ok {
-					t.Errorf("%s: Key '%s' does not exist in en.lng", file, key)
+					t.Errorf("%s: Key '%s' does not exist in en.lng", File, key)
 				}
 			} else {
-				t.Errorf("%s: Invalid line without '=' in [Strings]: %s", file, line)
+				t.Errorf("%s: Invalid line without '=' in [Strings]: %s", File, line)
 			}
 		}
 
@@ -254,27 +254,27 @@ func TestLangConsistency(t *testing.T) {
 				// Missing keys are perfectly fine and explicitly allowed for contributors.
 				// The runtime localization engine will elegantly fallback to the English base
 				// (or the user's secondary language).
-				t.Logf("Tech Debt -> %s: Missing key '%s' (will fallback at runtime)", file, key)
+				t.Logf("Tech Debt -> %s: Missing key '%s' (will fallback at runtime)", File, key)
 				continue
 			}
 
 			enNewlines := strings.Count(enVal, "\n")
 			valNewlines := strings.Count(val, "\n")
 			if enNewlines != valNewlines {
-				t.Logf("Tech Debt -> %s: Key '%s' has %d newlines, expected %d (outdated translation)", file, key, valNewlines, enNewlines)
+				t.Logf("Tech Debt -> %s: Key '%s' has %d newlines, expected %d (outdated translation)", File, key, valNewlines, enNewlines)
 				continue
 			}
 
 			enPlaces := placeholderRe.FindAllString(enVal, -1)
 			valPlaces := placeholderRe.FindAllString(val, -1)
 			if len(enPlaces) != len(valPlaces) {
-				t.Logf("Tech Debt -> %s: Key '%s' has %v placeholders, expected %v (outdated translation)", file, key, valPlaces, enPlaces)
+				t.Logf("Tech Debt -> %s: Key '%s' has %v placeholders, expected %v (outdated translation)", File, key, valPlaces, enPlaces)
 				continue
 			} else {
 				mismatch := false
 				for i := range enPlaces {
 					if enPlaces[i] != valPlaces[i] {
-						t.Logf("Tech Debt -> %s: Key '%s' placeholder mismatch at %d: %s vs %s (outdated translation)", file, key, i, valPlaces[i], enPlaces[i])
+						t.Logf("Tech Debt -> %s: Key '%s' placeholder mismatch at %d: %s vs %s (outdated translation)", File, key, i, valPlaces[i], enPlaces[i])
 						mismatch = true
 						break
 					}
@@ -289,7 +289,7 @@ func TestLangConsistency(t *testing.T) {
 				s := match[:len(match)-1]
 				for i := 0; i < len(s); i++ {
 					if _, ok := enStrings[s[i:]]; ok {
-						t.Errorf("%s: Key '%s' contains a merged line pattern for key '%s'", file, key, s[i:])
+						t.Errorf("%s: Key '%s' contains a merged line pattern for key '%s'", File, key, s[i:])
 						break
 					}
 				}
@@ -299,11 +299,11 @@ func TestLangConsistency(t *testing.T) {
 			enRawVal := enRawStrings[key]
 			valRawVal := targetRawStrings[key]
 			if strings.HasPrefix(enRawVal, " ") != strings.HasPrefix(valRawVal, " ") {
-				t.Logf("Tech Debt -> %s: Key '%s' leading space mismatch (outdated translation)", file, key)
+				t.Logf("Tech Debt -> %s: Key '%s' leading space mismatch (outdated translation)", File, key)
 				continue
 			}
 			if strings.HasSuffix(enRawVal, " ") != strings.HasSuffix(valRawVal, " ") {
-				t.Logf("Tech Debt -> %s: Key '%s' trailing space mismatch (outdated translation)", file, key)
+				t.Logf("Tech Debt -> %s: Key '%s' trailing space mismatch (outdated translation)", File, key)
 				continue
 			}
 
@@ -312,7 +312,7 @@ func TestLangConsistency(t *testing.T) {
 			valHasAmp := hasHotkey(val)
 
 			if !enHasAmp && valHasAmp {
-				t.Logf("Tech Debt -> %s: Key '%s' has unexpected hotkey '&' (outdated translation)", file, key)
+				t.Logf("Tech Debt -> %s: Key '%s' has unexpected hotkey '&' (outdated translation)", File, key)
 				continue
 			}
 
@@ -320,19 +320,19 @@ func TestLangConsistency(t *testing.T) {
 				valNoDbl := strings.ReplaceAll(val, "&&", "")
 				ampCount := strings.Count(valNoDbl, "&")
 				if ampCount > 1 {
-					t.Errorf("%s: Key '%s' has multiple single '&'", file, key)
+					t.Errorf("%s: Key '%s' has multiple single '&'", File, key)
 				}
 				idx := strings.Index(valNoDbl, "&")
 				if idx == len(valNoDbl)-1 {
-					t.Errorf("%s: Key '%s' has '&' at the end of the string", file, key)
+					t.Errorf("%s: Key '%s' has '&' at the end of the string", File, key)
 				} else {
 					nextChar := []rune(valNoDbl[idx+1:])[0]
 					if !unicode.IsLetter(nextChar) && !unicode.IsDigit(nextChar) {
-						t.Errorf("%s: Key '%s' has invalid char after '&': %c", file, key, nextChar)
+						t.Errorf("%s: Key '%s' has invalid char after '&': %c", File, key, nextChar)
 					}
 					if code == "zh" || code == "ja" || code == "ko" {
 						if nextChar < 'A' || (nextChar > 'Z' && nextChar < 'a') || nextChar > 'z' {
-							t.Errorf("%s: Key '%s' in CJK must use Latin letter for hotkey, got: %c", file, key, nextChar)
+							t.Errorf("%s: Key '%s' in CJK must use Latin letter for hotkey, got: %c", File, key, nextChar)
 						}
 					}
 				}
@@ -352,7 +352,7 @@ func TestLangConsistency(t *testing.T) {
 						}
 					}
 					if !allowed && info.Lang != whatlanggo.Eng {
-						t.Errorf("%s: Key '%s' detected as %s with high confidence (%.2f)", file, key, info.Lang.String(), info.Confidence)
+						t.Errorf("%s: Key '%s' detected as %s with high confidence (%.2f)", File, key, info.Lang.String(), info.Confidence)
 					}
 				}
 			}

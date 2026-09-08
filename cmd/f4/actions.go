@@ -15,6 +15,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/dialog"
+	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/gui"
 	"github.com/unxed/f4/internal/history"
@@ -649,7 +650,7 @@ func actionSortMenuForPanel(pf *PanelsFrame, fsp *FileSystemPanel) {
 
 func actionEditFileExternal(pf *PanelsFrame, v vfs.VFS, path string, size int64) {
 	rememberViewerEditorHistory(v, path, historyModeEdit)
-	cmdStr := configuredExternalEditorCommand()
+	cmdStr := editor.ConfiguredExternalEditorCommand()
 	if cmdStr == "" {
 		cmdStr = os.Getenv("EDITOR")
 		if cmdStr == "" {
@@ -797,21 +798,6 @@ func actionEditFileExternal(pf *PanelsFrame, v vfs.VFS, path string, size int64)
 	})
 }
 
-// configuredExternalEditorCommand selects the editor configured for the
-// renderer family that started this f4 session. The old single command
-// remains a fallback so existing settings continue to work after the split
-// configuration is introduced.
-func configuredExternalEditorCommand() string {
-	if gui.Running {
-		if config.App.ExternalEditorGUI != "" {
-			return config.App.ExternalEditorGUI
-		}
-	} else if config.App.ExternalEditorConsole != "" {
-		return config.App.ExternalEditorConsole
-	}
-	return config.App.ExternalEditorCommand
-}
-
 func runExternalEditor(pf *PanelsFrame, cmdStr, path string) {
 	parts := strings.Fields(cmdStr)
 	if len(parts) == 0 {
@@ -823,7 +809,7 @@ func runExternalEditor(pf *PanelsFrame, cmdStr, path string) {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	configureExternalEditorProcess(cmd)
+	editor.ConfigureExternalEditorProcess(cmd)
 	if fsp := pf.getActivePanel(); fsp != nil {
 		if _, isLocal := fsp.vfs.(*vfs.OSVFS); isLocal {
 			cmd.Dir = fsp.vfs.GetPath()
@@ -846,8 +832,8 @@ func runExternalEditor(pf *PanelsFrame, cmdStr, path string) {
 
 func showEditor(pf *PanelsFrame, v vfs.VFS, path string, f vfs.ReadAtCloser) {
 	var pt *piecetable.PieceTable
-	var buf *AsyncBuffer
-	var mapped *MappedFile
+	var buf *editor.AsyncBuffer
+	var mapped *editor.MappedFile
 	cpID := config.App.EditorDefaultCodePage
 	binary := false
 	dataOffset := int64(0)
@@ -888,16 +874,16 @@ func showEditor(pf *PanelsFrame, v vfs.VFS, path string, f vfs.ReadAtCloser) {
 			// refused — keeps the lazily fetched chunk buffer.
 			if config.App.EditorMemoryMap {
 				var mapErr error
-				mapped, mapErr = MapEditorFileWithOffset(v, f, dataOffset)
-				if mapErr != nil && mapErr != errNotMappable {
+				mapped, mapErr = editor.MapEditorFileWithOffset(v, f, dataOffset)
+				if mapErr != nil && mapErr != editor.ErrNotMappable {
 					vtui.DebugLog("EDITOR: memory mapping %s failed, reading lazily instead: %v", path, mapErr)
 				}
 			}
 			if mapped != nil {
 				pt = piecetable.New(mapped.Bytes())
 			} else {
-				buf = NewAsyncBufferWithOffset(context.Background(), f, dataOffset)
-				buf.prewarm()
+				buf = editor.NewAsyncBufferWithOffset(context.Background(), f, dataOffset)
+				buf.Prewarm()
 				pt = piecetable.NewWithBuffer(buf)
 			}
 		} else {
@@ -917,43 +903,43 @@ func showEditor(pf *PanelsFrame, v vfs.VFS, path string, f vfs.ReadAtCloser) {
 	// A mapped or lazily loaded file is indexed by StartIndexing below; anything
 	// else — an empty buffer, or a file decoded into memory — has its index
 	// built with it, as it always has.
-	var editor *EditorView
+	var ev *editor.EditorView
 	if mapped != nil || buf != nil {
-		editor = NewEditorViewIndexedLater(pt, v, path)
+		ev = editor.NewEditorViewIndexedLater(pt, v, path)
 	} else {
-		editor = NewEditorView(pt, v, path)
+		ev = editor.NewEditorView(pt, v, path)
 	}
-	editor.Codepage = cpID
-	editor.binaryFile = binary
-	editor.utf8BOM = cpID == 65001 && dataOffset != 0
+	ev.Codepage = cpID
+	ev.BinaryFile = binary
+	ev.Utf8BOM = cpID == 65001 && dataOffset != 0
 	// The decode view's processor mode comes off the header read above,
 	// like the codepage: the buffer behind a lazily loaded file may not
 	// have its first bytes when the mode is first wanted.
-	editor.DisasmMode = viewer.DetectX86Mode(header)
+	ev.DisasmMode = viewer.DetectX86Mode(header)
 	// StartIndexing skips hex, so binary files open without a line scan.
 	if _, isDisks := v.(*vfs.DisksVFS); isDisks || binary {
-		editor.HexMode = true
+		ev.HexMode = true
 	}
 	// A saved position is a line number, meaningless for a hex view.
 	if fileops.GlobalFileState != nil && path != "" && !binary {
 		if state := fileops.GlobalFileState.GetState(fileops.FileStateKey(v, path)); state != nil {
-			editor.applyRememberedWordWrap(state.EditorWrap)
-			editor.targetLine = state.EditorLine
-			editor.targetPos = state.EditorPos
-			editor.targetTopRow = state.EditorTopRow
-			editor.targetLeft = state.EditorLeft
+			ev.ApplyRememberedWordWrap(state.EditorWrap)
+			ev.TargetLine = state.EditorLine
+			ev.TargetPos = state.EditorPos
+			ev.TargetTopRow = state.EditorTopRow
+			ev.TargetLeft = state.EditorLeft
 		}
 	}
-	editor.file = f
-	editor.asyncBuf = buf
-	editor.mapped = mapped
-	editor.ResizeConsole(pf.lastW, pf.lastH)
-	editor.StartIndexing()
+	ev.File = f
+	ev.AsyncBuf = buf
+	ev.Mapped = mapped
+	ev.ResizeConsole(pf.lastW, pf.lastH)
+	ev.StartIndexing()
 
-	vtui.FrameManager.AddScreen(editor)
+	vtui.FrameManager.AddScreen(ev)
 }
 
-func findOpenedEditor(v vfs.VFS, path string) (*EditorView, int) {
+func findOpenedEditor(v vfs.VFS, path string) (*editor.EditorView, int) {
 	var absPath string
 	isLocal := false
 	if osvfs, ok := v.(*vfs.OSVFS); ok {
@@ -967,16 +953,16 @@ func findOpenedEditor(v vfs.VFS, path string) (*EditorView, int) {
 
 	for i, s := range vtui.FrameManager.Screens {
 		for _, f := range s.Frames {
-			if ev, ok := f.(*EditorView); ok && !ev.IsDone() {
-				if isLocal && ev.vfs != nil {
-					if evOSVFS, evOk := ev.vfs.(*vfs.OSVFS); evOk {
-						evAbsPath, _ := evOSVFS.Abs(ev.filePath)
+			if ev, ok := f.(*editor.EditorView); ok && !ev.IsDone() {
+				if isLocal && ev.Vfs != nil {
+					if evOSVFS, evOk := ev.Vfs.(*vfs.OSVFS); evOk {
+						evAbsPath, _ := evOSVFS.Abs(ev.FilePath)
 						if evAbsPath == absPath {
 							return ev, i
 						}
 					}
 				} else {
-					if ev.filePath == path {
+					if ev.FilePath == path {
 						return ev, i
 					}
 				}
@@ -991,7 +977,7 @@ func actionOpenEditor(pf *PanelsFrame, v vfs.VFS, path string) {
 	existingEditor, screenIdx := findOpenedEditor(v, path)
 	if existingEditor != nil {
 		var buttons []string
-		if existingEditor.modified {
+		if existingEditor.Modified {
 			buttons = []string{i18n.Msg("FileOp.BtnCurrent"), i18n.Msg("FileOp.BtnNewInstance"), i18n.Msg("vtui.Cancel")}
 		} else {
 			buttons = []string{i18n.Msg("FileOp.BtnCurrent"), i18n.Msg("FileOp.BtnReload"), i18n.Msg("FileOp.BtnNewInstance"), i18n.Msg("vtui.Cancel")}
@@ -1018,7 +1004,7 @@ func actionOpenEditor(pf *PanelsFrame, v vfs.VFS, path string) {
 }
 
 func openEditorInternal(pf *PanelsFrame, v vfs.VFS, path string) {
-	if config.App.EditorHighlighter == "Colorer" && !SchemasExist() {
+	if config.App.EditorHighlighter == "Colorer" && !editor.SchemasExist() {
 		// Read on the goroutine that starts this work, not inside it: the
 		// work outlives the call, and reading the global from it races
 		// anything that reassigns vtui.FrameManager meanwhile.
@@ -1026,7 +1012,7 @@ func openEditorInternal(pf *PanelsFrame, v vfs.VFS, path string) {
 		go func() {
 			msg := "Colorer syntax highlighting schemas are missing.\nWould you like to download them from elfmz/far2l GitHub?"
 			if pf.Message(" Download Colorer Schemas ", msg, []string{"&Yes", "&No"}) == 0 {
-				DownloadColorerSchemas(pf, func(success bool) {
+				editor.DownloadColorerSchemas(pf, func(success bool) {
 					uiFrames.PostTask(func() {
 						if !success {
 							config.App.EditorHighlighter = "Chroma"
@@ -1190,8 +1176,8 @@ func actionOpenViewer(pf *PanelsFrame, v vfs.VFS, path string) {
 	}
 	openViewerInternal(pf, v, path)
 }
-func actionSwitchEditorToViewer(ev *EditorView) {
-	if ev == nil || ev.filePath == "" || ev.vfs == nil {
+func actionSwitchEditorToViewer(ev *editor.EditorView) {
+	if ev == nil || ev.FilePath == "" || ev.Vfs == nil {
 		return
 	}
 
@@ -1199,19 +1185,19 @@ func actionSwitchEditorToViewer(ev *EditorView) {
 		targetOffset := int64(0)
 		if ev.HexMode || ev.DecodeMode {
 			targetOffset = int64(ev.HexTopOffset)
-		} else if ev.li != nil && ev.CursorLine >= 0 {
+		} else if ev.Li != nil && ev.CursorLine >= 0 {
 			// The index owns the answer to "where is line N", and on a file
 			// that is still being scanned it may not have reached the cursor
 			// yet — which used to open the viewer at the top of the file
 			// instead of where the editor was.
-			ev.ensureIndexedToLine(ev.CursorLine)
-			if ev.CursorLine < ev.li.LineCount() {
-				targetOffset = int64(ev.li.GetLineOffset(ev.CursorLine))
+			ev.EnsureIndexedToLine(ev.CursorLine)
+			if ev.CursorLine < ev.Li.LineCount() {
+				targetOffset = int64(ev.Li.GetLineOffset(ev.CursorLine))
 			}
 		}
 
 		ctx := context.Background()
-		vv, err := viewer.NewViewerView(ctx, ev.vfs, ev.filePath)
+		vv, err := viewer.NewViewerView(ctx, ev.Vfs, ev.FilePath)
 		if err != nil {
 			vtui.ShowMessage(" Error ", fmt.Sprintf("Failed to open file in vv:\n%v", err), []string{"&Ok"})
 			return
@@ -1286,10 +1272,10 @@ func actionSwitchEditorToViewer(ev *EditorView) {
 		if vtui.FrameManager != nil {
 			vtui.FrameManager.Redraw()
 		}
-		rememberViewerEditorHistory(ev.vfs, ev.filePath, historyModeView)
+		rememberViewerEditorHistory(ev.Vfs, ev.FilePath, historyModeView)
 	}
 
-	if ev.modified {
+	if ev.Modified {
 		msg := "The file has been modified.\nDo you want to save it?"
 		dlg := vtui.ShowMessage(" Confirm ", msg, []string{"&Save", "&Don't Save", "Cancel"})
 		dlg.OnResult = func(code int) {
@@ -1330,8 +1316,8 @@ func actionSwitchViewerToEditor(vv *viewer.ViewerView) {
 	}
 
 	var pt *piecetable.PieceTable
-	var buf *AsyncBuffer
-	var mapped *MappedFile
+	var buf *editor.AsyncBuffer
+	var mapped *editor.MappedFile
 	cpID := vv.Codepage
 	dataOffset := int64(0)
 	if vv.Backend != nil {
@@ -1341,16 +1327,16 @@ func actionSwitchViewerToEditor(vv *viewer.ViewerView) {
 	if cpID == 65001 {
 		if config.App.EditorMemoryMap {
 			var mapErr error
-			mapped, mapErr = MapEditorFileWithOffset(vv.VFS, f, dataOffset)
-			if mapErr != nil && mapErr != errNotMappable {
+			mapped, mapErr = editor.MapEditorFileWithOffset(vv.VFS, f, dataOffset)
+			if mapErr != nil && mapErr != editor.ErrNotMappable {
 				vtui.DebugLog("EDITOR: memory mapping %s failed, reading lazily instead: %v", vv.Path, mapErr)
 			}
 		}
 		if mapped != nil {
 			pt = piecetable.New(mapped.Bytes())
 		} else {
-			buf = NewAsyncBufferWithOffset(ctx, f, dataOffset)
-			buf.prewarm()
+			buf = editor.NewAsyncBufferWithOffset(ctx, f, dataOffset)
+			buf.Prewarm()
 			pt = piecetable.NewWithBuffer(buf)
 		}
 	} else {
@@ -1366,53 +1352,53 @@ func actionSwitchViewerToEditor(vv *viewer.ViewerView) {
 	}
 
 	// Same rule as opening from the panel: a file the indexer owns must not be
-	// indexed on the way in, or switching to the editor pays the whole file's
+	// indexed on the way in, or switching to the ev pays the whole file's
 	// scan on the UI thread before it appears — twenty seconds of it on the
 	// 8 GB test file.
-	var editor *EditorView
+	var ev *editor.EditorView
 	if mapped != nil || buf != nil {
-		editor = NewEditorViewIndexedLater(pt, vv.VFS, vv.Path)
+		ev = editor.NewEditorViewIndexedLater(pt, vv.VFS, vv.Path)
 	} else {
-		editor = NewEditorView(pt, vv.VFS, vv.Path)
+		ev = editor.NewEditorView(pt, vv.VFS, vv.Path)
 	}
-	editor.file = f
-	editor.asyncBuf = buf
-	editor.mapped = mapped
-	editor.Codepage = cpID
-	editor.binaryFile = vv.HexMode
-	editor.utf8BOM = cpID == 65001 && vv.Backend != nil && vv.Backend.DataOffset != 0
-	editor.applyRememberedWordWrap(vv.WrapMode)
-	editor.HexMode = vv.HexMode
-	editor.DecodeMode = vv.DecodeMode
-	editor.DisasmMode = vv.DisasmMode
+	ev.File = f
+	ev.AsyncBuf = buf
+	ev.Mapped = mapped
+	ev.Codepage = cpID
+	ev.BinaryFile = vv.HexMode
+	ev.Utf8BOM = cpID == 65001 && vv.Backend != nil && vv.Backend.DataOffset != 0
+	ev.ApplyRememberedWordWrap(vv.WrapMode)
+	ev.HexMode = vv.HexMode
+	ev.DecodeMode = vv.DecodeMode
+	ev.DisasmMode = vv.DisasmMode
 
 	targetOff := int(vv.TopOffset)
-	if editor.HexMode || editor.DecodeMode {
-		editor.HexTopOffset = targetOff &^ 0xF
-		editor.CursorLine = editor.li.GetLineAtOffset(targetOff)
-		editor.CursorPos = targetOff - editor.li.GetLineOffset(editor.CursorLine)
+	if ev.HexMode || ev.DecodeMode {
+		ev.HexTopOffset = targetOff &^ 0xF
+		ev.CursorLine = ev.Li.GetLineAtOffset(targetOff)
+		ev.CursorPos = targetOff - ev.Li.GetLineOffset(ev.CursorLine)
 	} else {
 		line, pos := 0, 0
-		if !editor.awaitOffset(targetOff) {
-			line = editor.CursorLine
-			pos = editor.CursorPos
+		if !ev.AwaitOffset(targetOff) {
+			line = ev.CursorLine
+			pos = ev.CursorPos
 		} else {
 			// The file has not been read that far — a chunk of a lazily
 			// loaded one is still on its way — so the offset has no line yet.
-			// The editor opens at the top and the scan puts the cursor where
+			// The ev opens at the top and the scan puts the cursor where
 			// the viewer was when it reads past it, rather than guessing now.
 			vtui.DebugLog("EDITOR: viewer offset %d is past the index; the scan will place it",
 				targetOff)
 		}
-		editor.CursorLine = line
-		editor.CursorPos = pos
-		editor.targetLine = line
-		editor.targetPos = pos
-		editor.targetTopRow = editor.engine.GetRowOffset(line)
-		editor.targetLeft = 0
-		editor.ScrollTopRow = editor.targetTopRow
+		ev.CursorLine = line
+		ev.CursorPos = pos
+		ev.TargetLine = line
+		ev.TargetPos = pos
+		ev.TargetTopRow = ev.Engine.GetRowOffset(line)
+		ev.TargetLeft = 0
+		ev.ScrollTopRow = ev.TargetTopRow
 	}
-	editor.StartIndexing()
+	ev.StartIndexing()
 
 	w := vtui.FrameManager.GetScreenSize()
 	h := vtui.FrameManager.GetScreenHeight()
@@ -1422,7 +1408,7 @@ func actionSwitchViewerToEditor(vv *viewer.ViewerView) {
 	if h <= 0 {
 		h = 25
 	}
-	editor.ResizeConsole(w, h)
+	ev.ResizeConsole(w, h)
 
 	screenIdx := -1
 	if vtui.FrameManager != nil {
@@ -1447,13 +1433,13 @@ func actionSwitchViewerToEditor(vv *viewer.ViewerView) {
 		// on SwitchScreen() to pick it up.
 		if screenIdx == vtui.FrameManager.ActiveIdx {
 			vtui.FrameManager.RemoveFrame(vv)
-			vtui.FrameManager.Push(editor)
+			vtui.FrameManager.Push(ev)
 		} else {
-			vtui.FrameManager.Screens[screenIdx].Frames = []vtui.Frame{editor}
+			vtui.FrameManager.Screens[screenIdx].Frames = []vtui.Frame{ev}
 			vtui.FrameManager.SwitchScreen(screenIdx)
 		}
 	} else if vtui.FrameManager != nil {
-		vtui.FrameManager.AddScreen(editor)
+		vtui.FrameManager.AddScreen(ev)
 	}
 	if vtui.FrameManager != nil {
 		vtui.FrameManager.Redraw()
@@ -1741,7 +1727,7 @@ func actionViewerSearchAgain(vv *viewer.ViewerView, reverse bool) {
 
 func runViewerSearch(vv *viewer.ViewerView, pattern string, reverse bool) {
 	vtui.FrameManager.PostTask(func() {
-		runSearchWithProgress(pattern, func(ctx *vtui.TaskContext, dlg *vtui.Window) {
+		editor.RunSearchWithProgress(pattern, func(ctx *vtui.TaskContext, dlg *vtui.Window) {
 			start := vv.TopOffset + 1
 			if reverse {
 				start = vv.TopOffset
@@ -2627,9 +2613,9 @@ func actionEditorSettings(pf *PanelsFrame) {
 	lblHighlighter := vtui.NewLabel(0, 0, i18n.Msg("EditorSettings.Highlighter"), comboHighlighter)
 	schemeNames := []string{""}
 	schemeItems := []string{i18n.Msg("ColorerSettings.BuiltIn")}
-	for _, scheme := range ListColorerSchemes() {
+	for _, scheme := range editor.ListColorerSchemes() {
 		schemeNames = append(schemeNames, scheme.Name)
-		schemeItems = append(schemeItems, colorerSchemeLabel(scheme))
+		schemeItems = append(schemeItems, editor.ColorerSchemeLabel(scheme))
 	}
 	selectedScheme := 0
 	for i := 1; i < len(schemeNames); i++ {
@@ -2853,7 +2839,7 @@ func actionEditorSettings(pf *PanelsFrame) {
 		if pos := comboScheme.Menu.SelectPos; pos > 0 && pos < len(schemeNames) {
 			config.App.EditorColorerScheme = schemeNames[pos]
 		}
-		SetColorerScheme(config.App.EditorColorerScheme)
+		editor.SetColorerScheme(config.App.EditorColorerScheme)
 		config.App.EditorExpandTabs = comboExpand.Menu.SelectPos
 		config.App.EditorAutodetectCodePage = chkEditorAutodetect.State == 1
 		if pos := comboEditorCodepage.Menu.SelectPos; pos >= 0 && pos < len(editorCodepageIDs) {

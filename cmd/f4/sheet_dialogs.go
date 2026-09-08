@@ -89,13 +89,13 @@ func sheetResolvePath(path string) string {
 
 // loadSheetCSV reads a CSV file into a fresh sheet.
 func loadSheetCSV(path string) (*sheet.Sheet, error) {
-	file, err := os.Open(path)
+	File, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = file.Close() }()
+	defer func() { _ = File.Close() }()
 	target := sheet.New()
-	if err := target.ImportCSV(file); err != nil {
+	if err := target.ImportCSV(File); err != nil {
 		return nil, err
 	}
 	return target, nil
@@ -103,28 +103,28 @@ func loadSheetCSV(path string) (*sheet.Sheet, error) {
 
 // exportSheetCSV writes the displayed values of a sheet as CSV.
 func exportSheetCSV(doc *sheet.Sheet, path string) error {
-	file, err := os.Create(path)
+	File, err := os.Create(path)
 	if err != nil {
 		return err
 	}
-	if err := doc.ExportCSV(file); err != nil {
-		_ = file.Close()
+	if err := doc.ExportCSV(File); err != nil {
+		_ = File.Close()
 		return err
 	}
-	return file.Close()
+	return File.Close()
 }
 
 // exportSheetText writes the sheet laid out with its current column widths.
 func exportSheetText(doc *sheet.Sheet, path string) error {
-	file, err := os.Create(path)
+	File, err := os.Create(path)
 	if err != nil {
 		return err
 	}
-	if err := doc.ExportText(file); err != nil {
-		_ = file.Close()
+	if err := doc.ExportText(File); err != nil {
+		_ = File.Close()
 		return err
 	}
-	return file.Close()
+	return File.Close()
 }
 
 // askSheetPath shows a one line file name prompt.

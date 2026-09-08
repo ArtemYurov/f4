@@ -29,9 +29,9 @@ func TestColors_HelpBoxOverrideReachesHelpViewFrame(t *testing.T) {
 Help.Box = foreground:#102030 | background:#405060
 `)))
 
-	engine := vtui.NewHelpEngine(dialog.NewMemoryHelpVFS(map[string]string{}))
-	engine.AddTopic(&vtui.HelpTopic{Name: "Test", Lines: []string{"text"}})
-	view := vtui.NewHelpView(engine, "Test")
+	Engine := vtui.NewHelpEngine(dialog.NewMemoryHelpVFS(map[string]string{}))
+	Engine.AddTopic(&vtui.HelpTopic{Name: "Test", Lines: []string{"text"}})
+	view := vtui.NewHelpView(Engine, "Test")
 	view.SetPosition(0, 0, 30, 5)
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(32, 7)
@@ -63,13 +63,13 @@ Scrollbar = foreground:#C0C0C0 | background:#0000A0
 Help.Scrollbar = foreground:#102030 | background:#405060
 `)))
 
-	engine := vtui.NewHelpEngine(dialog.NewMemoryHelpVFS(map[string]string{}))
+	Engine := vtui.NewHelpEngine(dialog.NewMemoryHelpVFS(map[string]string{}))
 	lines := make([]string, 40)
 	for i := range lines {
 		lines[i] = "help line"
 	}
-	engine.AddTopic(&vtui.HelpTopic{Name: "Long", Lines: lines})
-	view := vtui.NewHelpView(engine, "Long")
+	Engine.AddTopic(&vtui.HelpTopic{Name: "Long", Lines: lines})
+	view := vtui.NewHelpView(Engine, "Long")
 	view.SetPosition(0, 0, 30, 8)
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(32, 10)

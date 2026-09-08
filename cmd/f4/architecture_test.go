@@ -73,6 +73,7 @@ var architectureLayers = map[string]int{
 	// The registry mechanism. The table that fills it stays in the root: its
 	// closures reach every view in the application.
 	"internal/action": 0,
+	"internal/appcmd": 0,
 
 	// The hardware probes. A leaf in the strict sense: it imports no package of
 	// ours, which is what lets any layer call it.
@@ -116,6 +117,7 @@ var architectureLayers = map[string]int{
 	// fileops starts here with the per-file state store, which the viewer and
 	// the editor both read; Task 32 brings the rest.
 	"internal/fileops": 1,
+	"internal/editor":  3,
 
 	// Layer 3, not the 1 the plan assigned: the terminal reads gui.Running to
 	// tell a window from a TTY, and the viewer's URL model to underline a link

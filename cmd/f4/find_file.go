@@ -13,6 +13,7 @@ import (
 	"github.com/charlievieth/strcase"
 	"github.com/coregx/coregex"
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/appcmd"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -497,9 +498,9 @@ func (srw *SearchResultsWindow) ProcessKey(e *vtinput.InputEvent) bool {
 	case vtinput.VK_F5:
 		return srw.sendToTempPanel()
 	case vtinput.VK_F3:
-		return srw.HandleCommand(CmView, nil)
+		return srw.HandleCommand(appcmd.CmView, nil)
 	case vtinput.VK_F4:
-		return srw.HandleCommand(CmEdit, nil)
+		return srw.HandleCommand(appcmd.CmEdit, nil)
 	}
 
 	return srw.Window.ProcessKey(e)
@@ -510,10 +511,10 @@ func (srw *SearchResultsWindow) HandleCommand(cmd int, args any) bool {
 	if idx >= 0 && idx < len(srw.found) {
 		ff := srw.found[idx]
 		switch cmd {
-		case CmView:
+		case appcmd.CmView:
 			actionOpenViewer(srw.pf, srw.vfs, ff.Path)
 			return true
-		case CmEdit:
+		case appcmd.CmEdit:
 			actionOpenEditor(srw.pf, srw.vfs, ff.Path)
 			return true
 		}
@@ -601,8 +602,8 @@ func ShowSearchResults(pf *PanelsFrame, v vfs.VFS, found []FoundFile) {
 	btnGo.OnClick = doGoTo
 	btnPanel.OnClick = func() { srw.sendToTempPanel() }
 	btnClose.OnClick = func() { srw.Close() }
-	btnView.OnClick = func() { srw.HandleCommand(CmView, nil) }
-	btnEdit.OnClick = func() { srw.HandleCommand(CmEdit, nil) }
+	btnView.OnClick = func() { srw.HandleCommand(appcmd.CmView, nil) }
+	btnEdit.OnClick = func() { srw.HandleCommand(appcmd.CmEdit, nil) }
 
 	vbox := vtui.NewVBoxLayout(srw.X1+2, srw.Y1+2, dlgW-4, dlgH-4)
 	vbox.Add(srw.table, vtui.Margins{Bottom: 1}, vtui.AlignFill)

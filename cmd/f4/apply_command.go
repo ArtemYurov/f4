@@ -260,9 +260,9 @@ func (s *applyCommandSession) contextFor(name string) ApplyCommandContext {
 }
 
 func applyCommandFileForTarget(capture applyPanelCapture, name string) ApplyCommandFile {
-	for _, file := range capture.snapshot.Selected {
-		if file.Name == name {
-			return file
+	for _, File := range capture.snapshot.Selected {
+		if File.Name == name {
+			return File
 		}
 	}
 	return ApplyCommandFile{Name: name, ShortName: name}

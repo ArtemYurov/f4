@@ -87,7 +87,7 @@ func TestViewerRenderHighlightsCurrentSearchResult(t *testing.T) {
 
 	data := []byte("needle before needle after")
 	backend := &ViewerBackend{
-		file:      &vfs.MemoryReadAtCloser{Data: data},
+		File:      &vfs.MemoryReadAtCloser{Data: data},
 		size:      int64(len(data)),
 		cacheData: data,
 	}
@@ -153,17 +153,17 @@ func (f *largeBinaryFile) ReadAt(ctx context.Context, p []byte, off int64) (int,
 
 type singleFileVFS struct {
 	vfs.VFS
-	file vfs.ReadAtCloser
+	File vfs.ReadAtCloser
 }
 
 func (v *singleFileVFS) Open(context.Context, string) (vfs.ReadAtCloser, error) {
-	return v.file, nil
+	return v.File, nil
 }
 
 func TestViewerLargeBinaryOpensLazilyInHexMode(t *testing.T) {
-	file := &largeBinaryFile{size: 300 * 1024 * 1024}
+	File := &largeBinaryFile{size: 300 * 1024 * 1024}
 	base := vfs.NewOSVFS(t.TempDir())
-	vv, err := NewViewerView(context.Background(), &singleFileVFS{VFS: base, file: file}, "large.7z")
+	vv, err := NewViewerView(context.Background(), &singleFileVFS{VFS: base, File: File}, "large.7z")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,9 +171,9 @@ func TestViewerLargeBinaryOpensLazilyInHexMode(t *testing.T) {
 	if !vv.HexMode {
 		t.Fatal("large binary file did not open in hex mode")
 	}
-	file.mu.Lock()
-	maxRead := file.maxRead
-	file.mu.Unlock()
+	File.mu.Lock()
+	maxRead := File.maxRead
+	File.mu.Unlock()
 	if maxRead > 16*1024 {
 		t.Fatalf("opening binary file read %d bytes at once, want at most the 16 KiB header", maxRead)
 	}
@@ -229,11 +229,11 @@ func (m *mockCloseFile) ReadAt(ctx context.Context, p []byte, off int64) (int, e
 
 type mockCloseVFS struct {
 	vfs.VFS
-	file *mockCloseFile
+	File *mockCloseFile
 }
 
 func (m *mockCloseVFS) Open(ctx context.Context, path string) (vfs.ReadAtCloser, error) {
-	return m.file, nil
+	return m.File, nil
 }
 
 func TestViewerView_NavigationAndEOF(t *testing.T) {
@@ -327,11 +327,11 @@ func TestViewerView_EndJumpReadsOnlyTailOfLargeFile(t *testing.T) {
 	}{{name: "wrapped", wrap: true}, {name: "unwrapped", wrap: false}} {
 		t.Run(tc.name, func(t *testing.T) {
 			vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-			file := &tailTrackingFile{size: fileSize}
+			File := &tailTrackingFile{size: fileSize}
 			indexer := &indexingVFS{offsets: []int64{0}, total: 1}
 			ctx, cancel := context.WithCancel(context.Background())
 			backend := &ViewerBackend{
-				file:         file,
+				File:         File,
 				size:         fileSize,
 				indexer:      indexer,
 				totalLines:   -1,
@@ -359,7 +359,7 @@ func TestViewerView_EndJumpReadsOnlyTailOfLargeFile(t *testing.T) {
 			if indexer.calls != 0 {
 				t.Fatalf("End jump made %d whole-file line-index calls", indexer.calls)
 			}
-			ranges := file.ranges()
+			ranges := File.ranges()
 			if len(ranges) != 1 {
 				t.Fatalf("End jump made %d range reads, want one: %+v", len(ranges), ranges)
 			}
@@ -550,7 +550,7 @@ func TestViewerBar_Content(t *testing.T) {
 }
 func TestViewerView_FileClosure(t *testing.T) {
 	mockFile := &mockCloseFile{}
-	v := &mockCloseVFS{file: mockFile}
+	v := &mockCloseVFS{File: mockFile}
 
 	vv, err := NewViewerView(context.Background(), v, "test.txt")
 	if err != nil {
@@ -1011,9 +1011,9 @@ func TestViewerView_Codepages_TrimsPartialHeader(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	file := &partialHeaderFile{data: raw}
+	File := &partialHeaderFile{data: raw}
 	base := vfs.NewOSVFS(t.TempDir())
-	vv, err := NewViewerView(context.Background(), &singleFileVFS{VFS: base, file: file}, "partial.txt")
+	vv, err := NewViewerView(context.Background(), &singleFileVFS{VFS: base, File: File}, "partial.txt")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -238,7 +238,7 @@ var commandPaletteNewVMenuAudit = map[string]commandPaletteSurfaceAudit{
 	"dialog.NewCodepageMenu#1": {
 		class: paletteAuditDynamicAction, rationale: "the registered viewer, editor and convert-codepage actions all open the runtime codepage list through this builder",
 	},
-	"editor.(*EditorView).showBase64Menu#1": {
+	"editor.(*EditorView).ShowBase64Menu#1": {
 		class: paletteAuditDynamicAction, rationale: "the registered editor Base64 action opens its two fixed transformations",
 	},
 	"panel.(*assocEditorState).openList#1": {
@@ -402,9 +402,9 @@ func TestCommandPaletteProductionCommandSurfaceInventory(t *testing.T) {
 	newVMenus := make(map[string]bool)
 
 	for _, source := range files {
-		aliases, dotImport := commandPaletteVTUIImportAliases(source.file)
+		aliases, dotImport := commandPaletteVTUIImportAliases(source.File)
 		packageOrdinal := 0
-		for _, declaration := range source.file.Decls {
+		for _, declaration := range source.File.Decls {
 			function, ok := declaration.(*ast.FuncDecl)
 			if !ok {
 				ast.Inspect(declaration, func(node ast.Node) bool {
@@ -451,7 +451,7 @@ type commandPaletteParsedGo struct {
 	// are built from, so that moving a file does not rewrite them.
 	path string
 	pkg  string
-	file *ast.File
+	File *ast.File
 	fset *token.FileSet
 }
 
@@ -509,7 +509,7 @@ func commandPaletteParseProductionGo(t *testing.T) []commandPaletteParsedGo {
 		files = append(files, commandPaletteParsedGo{
 			path: slashed,
 			pkg:  commandPalettePackageOf(slashed),
-			file: parsed,
+			File: parsed,
 			fset: fset,
 		})
 	}
@@ -545,10 +545,10 @@ func commandPaletteFunctionIdentity(t *testing.T, fset *token.FileSet, function 
 	return "(" + receiver.String() + ")." + function.Name.Name
 }
 
-func commandPaletteVTUIImportAliases(file *ast.File) (map[string]bool, bool) {
+func commandPaletteVTUIImportAliases(File *ast.File) (map[string]bool, bool) {
 	aliases := make(map[string]bool)
 	dotImport := false
-	for _, spec := range file.Imports {
+	for _, spec := range File.Imports {
 		path, err := strconv.Unquote(spec.Path.Value)
 		if err != nil || path != "github.com/unxed/vtui" {
 			continue

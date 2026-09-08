@@ -108,7 +108,7 @@ var macroAreaAliases = map[string]string{
 
 // NewLuaMacroEngine starts an engine with no macros loaded.
 func NewLuaMacroEngine(host MacroHost) (*LuaMacroEngine, error) {
-	engine := &LuaMacroEngine{
+	Engine := &LuaMacroEngine{
 		host:   host,
 		byArea: make(map[string]map[string][]*LuaMacro),
 	}
@@ -126,16 +126,16 @@ func NewLuaMacroEngine(host MacroHost) (*LuaMacroEngine, error) {
 	if err != nil {
 		return nil, err
 	}
-	engine.rt = runtime
+	Engine.rt = runtime
 
 	if err := runtime.Do(func(L *lua.LState) error {
-		engine.installAPI(L)
+		Engine.installAPI(L)
 		return nil
 	}); err != nil {
 		runtime.Close()
 		return nil, err
 	}
-	return engine, nil
+	return Engine, nil
 }
 
 // LoadDir loads every .lua file under dir, the way Far reads its Macros

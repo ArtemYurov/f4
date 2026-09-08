@@ -18,16 +18,16 @@ func newSearchableHelpForTestAtSize(t *testing.T, width, height int, lines []str
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(width, height)
 	vtui.FrameManager.Init(scr)
-	engine := vtui.NewHelpEngine(&MemoryHelpVFS{files: map[string]string{}})
-	engine.AddTopic(&vtui.HelpTopic{Name: "Test", Lines: lines})
+	Engine := vtui.NewHelpEngine(&MemoryHelpVFS{files: map[string]string{}})
+	Engine.AddTopic(&vtui.HelpTopic{Name: "Test", Lines: lines})
 	oldEngine := vtui.GlobalHelpEngine
-	vtui.GlobalHelpEngine = engine
+	vtui.GlobalHelpEngine = Engine
 	t.Cleanup(func() {
 		vtui.GlobalHelpEngine = oldEngine
 		CurrentHelpSearch = nil
 		currentHelpZoom = nil
 	})
-	view := vtui.NewHelpView(engine, "Test")
+	view := vtui.NewHelpView(Engine, "Test")
 	vtui.FrameManager.Push(view)
 	return view, scr
 }

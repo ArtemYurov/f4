@@ -13,6 +13,7 @@ import (
 
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/sysinfo"
@@ -376,10 +377,10 @@ func aiAskAction() bool {
 	}
 
 	switch f := top.(type) {
-	case *EditorView:
-		ctxParts = append(ctxParts, "Editor: "+f.vfs.Base(f.filePath))
+	case *editor.EditorView:
+		ctxParts = append(ctxParts, "Editor: "+f.Vfs.Base(f.FilePath))
 		ctxParts = append(ctxParts, fmt.Sprintf("Line: %d", f.CursorLine+1))
-		if f.selActive || f.rectSelActive {
+		if f.SelActive || f.RectSelActive {
 			ctxParts = append(ctxParts, "[Text is selected]")
 		}
 	case *viewer.ViewerView:

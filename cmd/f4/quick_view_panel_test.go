@@ -111,8 +111,8 @@ func TestQuickView_TextFilePreview(t *testing.T) {
 	vtui.SetDefaultPalette()
 
 	tmp := t.TempDir()
-	filePath := filepath.Join(tmp, "hello.txt")
-	if err := os.WriteFile(filePath, []byte("first line\nsecond line\n"), 0600); err != nil {
+	FilePath := filepath.Join(tmp, "hello.txt")
+	if err := os.WriteFile(FilePath, []byte("first line\nsecond line\n"), 0600); err != nil {
 		t.Fatalf("write: %v", err)
 	}
 
@@ -690,7 +690,7 @@ func TestQuickView_ImageFilePreview(t *testing.T) {
 	vtui.SetDefaultPalette()
 
 	tmp := t.TempDir()
-	filePath := filepath.Join(tmp, "image.qoi")
+	FilePath := filepath.Join(tmp, "image.qoi")
 
 	// Valid 1x1 QOI file bytes:
 	// "qoif" + width(1) + height(1) + channels(4) + colorspace(0) + tagRGBA(0xff) + R(255), G(0), B(0), A(255)
@@ -702,7 +702,7 @@ func TestQuickView_ImageFilePreview(t *testing.T) {
 		0xff, 0xff, 0x00, 0x00, 0xff,
 	}
 
-	if err := os.WriteFile(filePath, qoiBytes, 0600); err != nil {
+	if err := os.WriteFile(FilePath, qoiBytes, 0600); err != nil {
 		t.Fatalf("write: %v", err)
 	}
 

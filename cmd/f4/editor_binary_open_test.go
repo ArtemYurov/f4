@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
@@ -68,20 +69,20 @@ func TestStartIndexingSkipsHexAndDecodeModes(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	testutil.DrainPendingTasks()
 
-	pt := piecetable.New([]byte("line one\nline two\n"))
+	Pt := piecetable.New([]byte("line one\nline two\n"))
 	for _, tc := range []struct {
 		mode string
 		hex  bool
 		deco bool
 	}{{"hex", true, false}, {"decode", false, true}} {
-		ev := newEditorView(pt, nil, "", false, true)
+		ev := editor.NewEditorViewWith(Pt, nil, "", false, true)
 		ev.HexMode, ev.DecodeMode = tc.hex, tc.deco
-		ev.targetLine = 1
+		ev.TargetLine = 1
 		ev.StartIndexing()
-		if ev.targetLine != -1 {
-			t.Errorf("%s mode must clear a pending target line, got %d", tc.mode, ev.targetLine)
+		if ev.TargetLine != -1 {
+			t.Errorf("%s mode must clear a pending target line, got %d", tc.mode, ev.TargetLine)
 		}
-		if ev.indexing || ev.indexIsComplete() {
+		if ev.Indexing || ev.IndexIsComplete() {
 			t.Errorf("%s mode must not run the line-index scan", tc.mode)
 		}
 	}
@@ -92,7 +93,7 @@ func TestEditorHexRenderSkipsTextLayout(t *testing.T) {
 	testutil.DrainPendingTasks()
 
 	buffer := &editorRenderTrackingBuffer{data: make([]byte, 128*1024)}
-	ev := NewEditorViewIndexedLater(piecetable.NewWithBuffer(buffer), nil, "sample.bin")
+	ev := editor.NewEditorViewIndexedLater(piecetable.NewWithBuffer(buffer), nil, "sample.bin")
 	defer ev.Close()
 	ev.HexMode = true
 	ev.SetPosition(0, 0, 80, 24)
@@ -112,25 +113,25 @@ func TestBinaryEditorSkipsColorer(t *testing.T) {
 	config.App.EditorHighlighter = "Colorer"
 	t.Cleanup(func() { config.App.EditorHighlighter = oldHighlighter })
 
-	ev := newEditorView(piecetable.New([]byte{0, 1, 2, 3}), nil, "sample.bin", false, true)
+	ev := editor.NewEditorViewWith(piecetable.New([]byte{0, 1, 2, 3}), nil, "sample.bin", false, true)
 	defer ev.Close()
-	if !ev.binaryFile {
+	if !ev.BinaryFile {
 		t.Fatal("binary buffer was not detected")
 	}
-	if ev.highlighter != nil {
-		t.Fatalf("binary editor initialized %T; Colorer must be skipped", ev.highlighter)
+	if ev.Highlighter != nil {
+		t.Fatalf("binary editor initialized %T; Colorer must be skipped", ev.Highlighter)
 	}
 }
 
 func TestAwaitOffsetAsyncDoesNotReadOnUIThread(t *testing.T) {
 	buffer := &editorRenderTrackingBuffer{data: bytes.Repeat([]byte("x"), 1024*1024)}
-	ev := newEditorView(piecetable.NewWithBuffer(buffer), nil, "", false, true)
+	ev := editor.NewEditorViewWith(piecetable.NewWithBuffer(buffer), nil, "", false, true)
 	defer ev.Close()
 
 	buffer.reset()
-	ev.indexing = true
-	ev.indexStatus = IndexStatus{Phase: IndexScanning, Total: int64(len(buffer.data))}
-	if !ev.awaitOffsetAsync(0) {
+	ev.Indexing = true
+	ev.IndexStatus = editor.IndexStatus{Phase: editor.IndexScanning, Total: int64(len(buffer.data))}
+	if !ev.AwaitOffsetAsync(0) {
 		t.Fatal("awaitOffsetAsync() did not start waiting for the index")
 	}
 	if got := buffer.largestRead(); got != 0 {
@@ -140,15 +141,15 @@ func TestAwaitOffsetAsyncDoesNotReadOnUIThread(t *testing.T) {
 
 func TestEditorEscapeCancelsIndexing(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	ev := newEditorView(piecetable.New([]byte("text")), nil, "", false, true)
+	ev := editor.NewEditorViewWith(piecetable.New([]byte("text")), nil, "", false, true)
 	defer ev.Close()
 
 	cancelled := false
-	ev.indexing = true
-	ev.indexStatus = IndexStatus{Phase: IndexScanning, Total: 4, Scanned: 1}
-	ev.indexCancel = func() { cancelled = true }
-	ev.targetOffset = 123
-	ev.targetLine = -1
+	ev.Indexing = true
+	ev.IndexStatus = editor.IndexStatus{Phase: editor.IndexScanning, Total: 4, Scanned: 1}
+	ev.IndexCancel = func() { cancelled = true }
+	ev.TargetOffset = 123
+	ev.TargetLine = -1
 
 	escape := &vtinput.InputEvent{
 		Type:           vtinput.KeyEventType,
@@ -162,36 +163,14 @@ func TestEditorEscapeCancelsIndexing(t *testing.T) {
 	if !handled {
 		t.Fatal("Escape was not handled while indexing")
 	}
-	if !cancelled || ev.indexing || ev.indexCancel != nil {
-		t.Errorf("indexing was not cancelled: cancelled=%v indexing=%v cancel=%v", cancelled, ev.indexing, ev.indexCancel != nil)
+	if !cancelled || ev.Indexing || ev.IndexCancel != nil {
+		t.Errorf("indexing was not cancelled: cancelled=%v indexing=%v cancel=%v", cancelled, ev.Indexing, ev.IndexCancel != nil)
 	}
-	if ev.targetOffset != -1 || ev.targetLine != -1 {
-		t.Errorf("pending target was not cleared: offset=%d line=%d", ev.targetOffset, ev.targetLine)
+	if ev.TargetOffset != -1 || ev.TargetLine != -1 {
+		t.Errorf("pending target was not cleared: offset=%d line=%d", ev.TargetOffset, ev.TargetLine)
 	}
-	if ev.IndexState().Phase != IndexIdle {
+	if ev.IndexState().Phase != editor.IndexIdle {
 		t.Errorf("index phase = %v, want idle", ev.IndexState().Phase)
-	}
-}
-
-func TestEditorEscapeCancelsColorer(t *testing.T) {
-	ch := &ColorerHighlighter{}
-	ev := &EditorView{
-		highlighter:     ch,
-		colorerIndexing: true,
-		colorerCancel:   ch.Cancel,
-	}
-	e := &vtinput.InputEvent{
-		Type:           vtinput.KeyEventType,
-		KeyDown:        true,
-		VirtualKeyCode: vtinput.VK_ESCAPE,
-	}
-
-	if !ev.VetoActionKey(e) {
-		t.Fatal("Escape was not reserved for the editor while Colorer is working")
-	}
-	ev.cancelColorer()
-	if !ch.disabled || ev.colorerIndexing || ev.colorerCancel != nil {
-		t.Fatalf("Colorer was not cancelled: disabled=%v indexing=%v cancel=%v", ch.disabled, ev.colorerIndexing, ev.colorerCancel != nil)
 	}
 }
 
@@ -243,10 +222,10 @@ func TestShowEditorBinaryOpensInHex(t *testing.T) {
 	if !ev.HexMode || ev.Codepage != 65001 {
 		t.Errorf("binary file must open in hex with codepage 65001, got hex=%v cp=%d", ev.HexMode, ev.Codepage)
 	}
-	if !ev.binaryFile {
+	if !ev.BinaryFile {
 		t.Error("binary file must disable syntax parsing without disabling text editing")
 	}
-	if ev.indexing || ev.indexIsComplete() {
+	if ev.Indexing || ev.IndexIsComplete() {
 		t.Error("binary file in hex mode must not run the line-index scan")
 	}
 }

@@ -22,12 +22,12 @@ func TestRecordedMacroRoundTrip(t *testing.T) {
 	source := RecordedMacroToLua("Shell", "CtrlA", "Copy and confirm", events)
 
 	host := newFakeMacroHost()
-	engine := newTestMacroEngine(t, host, source)
+	Engine := newTestMacroEngine(t, host, source)
 
-	if engine.Count() != 1 {
-		t.Fatalf("Count = %d, want 1; exported source was:\n%s", engine.Count(), source)
+	if Engine.Count() != 1 {
+		t.Fatalf("Count = %d, want 1; exported source was:\n%s", Engine.Count(), source)
 	}
-	macro := engine.Find("Shell", "CtrlA")
+	macro := Engine.Find("Shell", "CtrlA")
 	if macro == nil {
 		t.Fatalf("the exported macro did not bind its key; source was:\n%s", source)
 	}
@@ -35,7 +35,7 @@ func TestRecordedMacroRoundTrip(t *testing.T) {
 		t.Errorf("description = %q, want it carried over", macro.Description)
 	}
 
-	fireMacro(t, engine, "CtrlA")
+	fireMacro(t, Engine, "CtrlA")
 	if got := strings.Join(host.injectedKeys(), " "); got != "F5 Enter Esc" {
 		t.Fatalf("replayed %q, want \"F5 Enter Esc\"", got)
 	}
@@ -43,12 +43,12 @@ func TestRecordedMacroRoundTrip(t *testing.T) {
 
 func TestRecordedMacroDefaults(t *testing.T) {
 	source := RecordedMacroToLua("", "CtrlB", "", nil)
-	engine := newTestMacroEngine(t, newFakeMacroHost(), source)
+	Engine := newTestMacroEngine(t, newFakeMacroHost(), source)
 
-	if engine.Find("Viewer", "CtrlB") == nil {
+	if Engine.Find("Viewer", "CtrlB") == nil {
 		t.Errorf("an export without an area did not become Common; source was:\n%s", source)
 	}
-	macro := engine.Find("Shell", "CtrlB")
+	macro := Engine.Find("Shell", "CtrlB")
 	if macro == nil || macro.Description == "" {
 		t.Error("an export without a description did not get one")
 	}
@@ -58,8 +58,8 @@ func TestRecordedMacroEscapesText(t *testing.T) {
 	description := `say "hi" \ here`
 	source := RecordedMacroToLua("Shell", "CtrlC", description, nil)
 
-	engine := newTestMacroEngine(t, newFakeMacroHost(), source)
-	macro := engine.Find("Shell", "CtrlC")
+	Engine := newTestMacroEngine(t, newFakeMacroHost(), source)
+	macro := Engine.Find("Shell", "CtrlC")
 	if macro == nil {
 		t.Fatalf("quoting broke the exported file:\n%s", source)
 	}
@@ -80,8 +80,8 @@ func TestRecordedMacroWrapsLongSequences(t *testing.T) {
 	}
 
 	host := newFakeMacroHost()
-	engine := newTestMacroEngine(t, host, source)
-	fireMacro(t, engine, "CtrlD")
+	Engine := newTestMacroEngine(t, host, source)
+	fireMacro(t, Engine, "CtrlD")
 
 	if got := host.injectedKeys(); len(got) != len(events) {
 		t.Fatalf("replayed %d keys, want %d", len(got), len(events))
@@ -93,8 +93,8 @@ func TestRecordedMacroSkipsUnusableEvents(t *testing.T) {
 	source := RecordedMacroToLua("Shell", "CtrlE", "with a hole", events)
 
 	host := newFakeMacroHost()
-	engine := newTestMacroEngine(t, host, source)
-	fireMacro(t, engine, "CtrlE")
+	Engine := newTestMacroEngine(t, host, source)
+	fireMacro(t, Engine, "CtrlE")
 
 	if got := strings.Join(host.injectedKeys(), " "); got != "F5 Tab" {
 		t.Fatalf("replayed %q, want \"F5 Tab\"", got)
@@ -104,10 +104,10 @@ func TestRecordedMacroSkipsUnusableEvents(t *testing.T) {
 func TestSaveRecordedMacroTakesEffectImmediately(t *testing.T) {
 	dir := t.TempDir()
 	host := newFakeMacroHost()
-	engine := newTestMacroEngine(t, host, "")
+	Engine := newTestMacroEngine(t, host, "")
 
 	manager := NewMacroManager("")
-	manager.Lua = engine
+	manager.Lua = Engine
 
 	events := []*vtinput.InputEvent{keymap.ParseFarKey("F7"), keymap.ParseFarKey("Esc")}
 	if err := manager.SaveRecordedMacro(dir, "Shell", "CtrlA", "make and cancel", events); err != nil {
@@ -119,7 +119,7 @@ func TestSaveRecordedMacroTakesEffectImmediately(t *testing.T) {
 	}
 
 	// No restart: the macro has to work in the session that recorded it.
-	fireMacro(t, engine, "CtrlA")
+	fireMacro(t, Engine, "CtrlA")
 	if got := strings.Join(host.injectedKeys(), " "); got != "F7 Esc" {
 		t.Fatalf("replayed %q, want \"F7 Esc\"", got)
 	}

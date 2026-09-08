@@ -71,13 +71,13 @@ func TestVisRenHelpReference(t *testing.T) {
 					seenTopics[name] = true
 				}
 			}
-			engine := vtui.NewHelpEngine(NewMemoryHelpVFS(map[string]string{"visren.hlf": tc.data}))
-			if err := engine.LoadFile("visren.hlf"); err != nil {
+			Engine := vtui.NewHelpEngine(NewMemoryHelpVFS(map[string]string{"visren.hlf": tc.data}))
+			if err := Engine.LoadFile("visren.hlf"); err != nil {
 				t.Fatal(err)
 			}
-			FlattenVisRenHelp(engine)
+			FlattenVisRenHelp(Engine)
 			for _, name := range topics {
-				topic := engine.GetTopic(name)
+				topic := Engine.GetTopic(name)
 				if topic == nil {
 					t.Fatalf("topic %q is missing", name)
 				}
@@ -98,9 +98,9 @@ func TestVisRenHelpReference(t *testing.T) {
 					}
 				}
 			}
-			index := engine.GetTopic("VisRen")
+			index := Engine.GetTopic("VisRen")
 			for _, name := range topics[1:] {
-				section := engine.GetTopic(name)
+				section := Engine.GetTopic(name)
 				if section == nil || len(section.Lines) == 0 {
 					continue
 				}
@@ -113,11 +113,11 @@ func TestVisRenHelpReference(t *testing.T) {
 				t.Fatalf("VisRen index has %d links, want %d", len(index.Links), len(topics)-1)
 			}
 			for _, link := range index.Links {
-				if engine.GetTopic(link.Target) == nil {
+				if Engine.GetTopic(link.Target) == nil {
 					t.Errorf("VisRen link %q targets missing topic %q", link.Text, link.Target)
 				}
 			}
-			contents := engine.GetTopic("Contents")
+			contents := Engine.GetTopic("Contents")
 			linkedFromContents := false
 			for _, link := range contents.Links {
 				linkedFromContents = linkedFromContents || link.Target == "VisRen"

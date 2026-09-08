@@ -1124,19 +1124,19 @@ func TestRecursiveCopy_SelfAndSubfolderProtection(t *testing.T) {
 	}
 
 	// 3. File self-copy
-	filePath := filepath.Join(tmpDir, "myfile.txt")
-	if err := os.WriteFile(filePath, []byte("data"), 0600); err != nil {
+	FilePath := filepath.Join(tmpDir, "myfile.txt")
+	if err := os.WriteFile(FilePath, []byte("data"), 0600); err != nil {
 		t.Fatal(err)
 	}
 
-	err = recursiveCopy(tCtx.Context, v, filePath, v, filePath, &FileOpState{}, 0)
+	err = recursiveCopy(tCtx.Context, v, FilePath, v, FilePath, &FileOpState{}, 0)
 	if err == nil || !strings.Contains(err.Error(), "file onto itself") {
 		t.Errorf("Expected file self-copy error, got: %v", err)
 	}
 
 	// 4. File into own subfolder
-	fileSubPath := filepath.Join(filePath, "sub")
-	err = recursiveCopy(tCtx.Context, v, filePath, v, fileSubPath, &FileOpState{}, 0)
+	fileSubPath := filepath.Join(FilePath, "sub")
+	err = recursiveCopy(tCtx.Context, v, FilePath, v, fileSubPath, &FileOpState{}, 0)
 	if err == nil || !strings.Contains(err.Error(), "subfolder") {
 		t.Errorf("Expected file into subfolder error, got: %v", err)
 	}

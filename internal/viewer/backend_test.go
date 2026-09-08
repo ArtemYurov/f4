@@ -33,7 +33,7 @@ func TestViewerBackendPreservesBackgroundReadError(t *testing.T) {
 	want := errors.New("remote range failed")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	backend := &ViewerBackend{file: &failingViewerFile{err: want}, size: 16, ctx: ctx, cancelCtx: cancel}
+	backend := &ViewerBackend{File: &failingViewerFile{err: want}, size: 16, ctx: ctx, cancelCtx: cancel}
 
 	if _, err := backend.ReadAt(0, 4); err != piecetable.ErrLoading {
 		t.Fatalf("first ReadAt error = %v, want ErrLoading", err)
@@ -141,7 +141,7 @@ func TestViewerView_NonUTF8OffsetsUseDecodedStream(t *testing.T) {
 		t.Fatalf("backend size = %d, want decoded UTF-8 stream larger than raw %d", vv.Backend.Size(), len(raw))
 	}
 	data := make([]byte, int(vv.Backend.Size()))
-	n, err := vv.Backend.file.ReadAt(context.Background(), data, 0)
+	n, err := vv.Backend.File.ReadAt(context.Background(), data, 0)
 	if err != nil {
 		t.Fatalf("ReadAt decoded stream: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestViewerView_NonUTF8OffsetsUseDecodedStream(t *testing.T) {
 	vv.HexMode = true
 	vv.ReloadWithCodepage(866)
 	data = make([]byte, len(raw))
-	n, err = vv.Backend.file.ReadAt(context.Background(), data, 0)
+	n, err = vv.Backend.File.ReadAt(context.Background(), data, 0)
 	if err != nil && err != io.EOF {
 		t.Fatalf("ReadAt raw hex stream: %v", err)
 	}
@@ -355,7 +355,7 @@ func TestViewerBackendSearchFrom(t *testing.T) {
 func TestViewerSearchOffsetBothDirections(t *testing.T) {
 	data := []byte("zero needle middle needle end")
 	vb := &ViewerBackend{
-		file:         &vfs.MemoryReadAtCloser{Data: data},
+		File:         &vfs.MemoryReadAtCloser{Data: data},
 		size:         int64(len(data)),
 		cacheOff:     0,
 		cacheData:    data,
@@ -437,7 +437,7 @@ func TestViewerBackend_UTF8BOMUsesLogicalOffsets(t *testing.T) {
 func TestViewerSearchMatchOptions(t *testing.T) {
 	data := []byte("Needles needle NEEDLE42 needle")
 	vb := &ViewerBackend{
-		file:      &vfs.MemoryReadAtCloser{Data: data},
+		File:      &vfs.MemoryReadAtCloser{Data: data},
 		size:      int64(len(data)),
 		cacheOff:  0,
 		cacheData: data,
@@ -475,7 +475,7 @@ func TestViewerSearchMatchOptions(t *testing.T) {
 func TestViewerSearchMatchRejectsInvalidRegexp(t *testing.T) {
 	data := []byte("text")
 	vb := &ViewerBackend{
-		file:      &vfs.MemoryReadAtCloser{Data: data},
+		File:      &vfs.MemoryReadAtCloser{Data: data},
 		size:      int64(len(data)),
 		cacheOff:  0,
 		cacheData: data,

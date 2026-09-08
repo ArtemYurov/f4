@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtui"
@@ -52,7 +53,7 @@ func colorerCrossAttr(region string, base uint64) uint64 {
 	if !colorerIsActive() {
 		return base
 	}
-	rd := colorerGetRegionDefine(region)
+	rd := editor.ColorerGetRegionDefine(region)
 	if rd == nil {
 		return base
 	}
@@ -98,9 +99,9 @@ func actionColorerSettings(pf *PanelsFrame) {
 	// name is what the config stores, so the two lists are kept in step.
 	schemeNames := []string{}
 	schemeItems := []string{}
-	for _, scheme := range ListColorerSchemes() {
+	for _, scheme := range editor.ListColorerSchemes() {
 		schemeNames = append(schemeNames, scheme.Name)
-		schemeItems = append(schemeItems, colorerSchemeLabel(scheme))
+		schemeItems = append(schemeItems, editor.ColorerSchemeLabel(scheme))
 	}
 	if len(schemeItems) == 0 {
 		schemeNames = append(schemeNames, "")
@@ -221,8 +222,8 @@ func actionColorerSettings(pf *PanelsFrame) {
 		config.App.EditorColorerCatalog = strings.TrimSpace(editCatalog.GetText())
 		// The catalog may now point somewhere else, so the styles are dropped
 		// instead of being kept under the same name.
-		ResetColorerScheme()
-		SetColorerScheme(config.App.EditorColorerScheme)
+		editor.ResetColorerScheme()
+		editor.SetColorerScheme(config.App.EditorColorerScheme)
 		config.SaveConfig()
 	}
 
@@ -235,22 +236,22 @@ func actionColorerSettings(pf *PanelsFrame) {
 
 	btnReload.OnClick = func() {
 		apply()
-		ResetColorerSessions()
-		ResetColorerRegions()
+		editor.ResetColorerSessions()
+		editor.ResetColorerRegions()
 		vtui.FrameManager.Redraw()
 	}
 
 	btnDownload.OnClick = func() {
 		apply()
 		dlg.Close()
-		DownloadColorerSchemas(pf, func(success bool) {
+		editor.DownloadColorerSchemas(pf, func(success bool) {
 			if !success {
 				return
 			}
-			ResetColorerSessions()
-			ResetColorerRegions()
-			ResetColorerScheme()
-			SetColorerScheme(config.App.EditorColorerScheme)
+			editor.ResetColorerSessions()
+			editor.ResetColorerRegions()
+			editor.ResetColorerScheme()
+			editor.SetColorerScheme(config.App.EditorColorerScheme)
 		})
 	}
 

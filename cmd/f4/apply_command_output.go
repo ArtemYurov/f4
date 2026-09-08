@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/theme"
@@ -223,13 +224,13 @@ func (v *applyOutputView) refresh() {
 	v.btnClose.SetDisabled(false)
 }
 
-func newApplyTranscriptEditor(model *applyBatchViewModel, width, height int) *EditorView {
+func newApplyTranscriptEditor(model *applyBatchViewModel, width, height int) *editor.EditorView {
 	lines := model.transcript.Snapshot()
 	text := strings.Join(lines, "\n")
 	if len(lines) > 0 {
 		text += "\n"
 	}
-	editor := NewEditorView(piecetable.New([]byte(text)), nil, "")
+	editor := editor.NewEditorView(piecetable.New([]byte(text)), nil, "")
 	editor.DisplayTitle = i18n.Msg("ApplyCommand.OutputEditorTitle")
 	editor.ResizeConsole(width, height)
 	return editor

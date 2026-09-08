@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/appcmd"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtui"
 )
@@ -49,12 +50,12 @@ func TestPanelsFrame_SideMenusExposeDriveHotkeys(t *testing.T) {
 	pf := &PanelsFrame{}
 
 	left := pf.leftMenu().SubItems
-	if !findSideDriveMenuItem(left, i18n.Msg("Menu.Left.DriveMenu"), "Alt+F1", CmLeftDriveMenu) {
+	if !findSideDriveMenuItem(left, i18n.Msg("Menu.Left.DriveMenu"), "Alt+F1", appcmd.CmLeftDriveMenu) {
 		t.Fatalf("left drive menu has no drive item: %+v", left)
 	}
 
 	right := pf.rightMenu().SubItems
-	if !findSideDriveMenuItem(right, i18n.Msg("Menu.Right.DriveMenu"), "Alt+F2", CmRightDriveMenu) {
+	if !findSideDriveMenuItem(right, i18n.Msg("Menu.Right.DriveMenu"), "Alt+F2", appcmd.CmRightDriveMenu) {
 		t.Fatalf("right drive menu has no drive item: %+v", right)
 	}
 }
@@ -75,8 +76,8 @@ func TestPanelsFrame_SideMenuExposesWorkspaceHotkeys(t *testing.T) {
 		label    string
 		shortcut string
 	}{
-		{command: CmWorkspaceNew, label: "Action.Workspace.New", shortcut: "Ctrl+N"},
-		{command: CmWorkspaceClose, label: "Action.Workspace.Close", shortcut: "Ctrl+W"},
+		{command: appcmd.CmWorkspaceNew, label: "Action.Workspace.New", shortcut: "Ctrl+N"},
+		{command: appcmd.CmWorkspaceClose, label: "Action.Workspace.Close", shortcut: "Ctrl+W"},
 	} {
 		found := false
 		for _, item := range items {
@@ -122,13 +123,13 @@ func TestPanelsFrame_GetMenuBarKeepsNativeWorkspaceHotkeys(t *testing.T) {
 		return nil
 	}
 
-	if item := find(CmWorkspaceNew); item == nil || item.Shortcut != "Ctrl+N" {
+	if item := find(appcmd.CmWorkspaceNew); item == nil || item.Shortcut != "Ctrl+N" {
 		if item == nil {
 			t.Fatal("Left menu has no New workspace item after GetMenuBar refresh")
 		}
 		t.Fatalf("New workspace shortcut after GetMenuBar refresh = %q, want Ctrl+N", item.Shortcut)
 	}
-	if item := find(CmWorkspaceClose); item == nil || item.Shortcut != "Ctrl+W" {
+	if item := find(appcmd.CmWorkspaceClose); item == nil || item.Shortcut != "Ctrl+W" {
 		if item == nil {
 			t.Fatal("Left menu has no Close workspace item after GetMenuBar refresh")
 		}
@@ -136,7 +137,7 @@ func TestPanelsFrame_GetMenuBarKeepsNativeWorkspaceHotkeys(t *testing.T) {
 	}
 
 	GlobalHotkeysMgr.Bind("Shell", "CtrlN", "None")
-	if item := find(CmWorkspaceNew); item == nil || item.Shortcut != "" {
+	if item := find(appcmd.CmWorkspaceNew); item == nil || item.Shortcut != "" {
 		if item == nil {
 			t.Fatal("Left menu lost New workspace item after explicit unbind")
 		}

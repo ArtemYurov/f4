@@ -58,7 +58,7 @@ func TestLuaPluginCallSupportsMultipleResultsAndArrays(t *testing.T) {
 		}
 		return []any{true, int64(2), []string{"Format", "Duration"}, []string{"Matroska", "1 min"}}, nil
 	}
-	engine := newTestMacroEngine(t, host, `
+	Engine := newTestMacroEngine(t, host, `
 		ok_result = false
 		count_result = 0
 		first_key = ""
@@ -71,10 +71,10 @@ func TestLuaPluginCallSupportsMultipleResultsAndArrays(t *testing.T) {
 			second_value = values[2]
 		end }
 	`)
-	if !fireMacro(t, engine, "CtrlP") {
+	if !fireMacro(t, Engine, "CtrlP") {
 		t.Fatal("macro was not consumed")
 	}
-	values := macroGlobals(t, engine, "ok_result", "count_result", "first_key", "second_value")
+	values := macroGlobals(t, Engine, "ok_result", "count_result", "first_key", "second_value")
 	if values["ok_result"] != lua.LTrue || values["count_result"] != lua.LNumber(2) ||
 		values["first_key"] != lua.LString("Format") || values["second_value"] != lua.LString("1 min") {
 		t.Fatalf("Plugin.Call globals = %#v", values)

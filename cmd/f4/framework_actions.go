@@ -315,12 +315,12 @@ func dumpScreenTo(path string) error {
 	if vtui.FrameManager == nil || vtui.FrameManager.Screen() == nil {
 		return fmt.Errorf("screen buffer is not initialized")
 	}
-	file, err := os.Create(path)
+	File, err := os.Create(path)
 	if err != nil {
 		return err
 	}
-	vtui.FrameManager.Screen().Dump(file)
-	return file.Close()
+	vtui.FrameManager.Screen().Dump(File)
+	return File.Close()
 }
 
 // screenDumpCandidateDirs lists, in priority order, where actionScreenDump

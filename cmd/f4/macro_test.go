@@ -124,7 +124,7 @@ func TestMacro_GetCurrentArea(t *testing.T) {
 	}
 	vtui.FrameManager.Pop()
 
-	// 4. EditorView -> "Editor"
+	// 4. editor.EditorView -> "Editor"
 	fEditor := &mockAreaFrame{typ: vtui.TypeUser + 2}
 	vtui.FrameManager.Push(fEditor)
 	if area := macroCurrentArea(); area != "Editor" {
@@ -1121,16 +1121,16 @@ func TestMacro_ReassignAndCleanup(t *testing.T) {
 	}
 	mgr.Save()
 
-	engine, err := macro.NewLuaMacroEngine(f4MacroHost{})
+	Engine, err := macro.NewLuaMacroEngine(f4MacroHost{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		if err := engine.Close(); err != nil {
+		if err := Engine.Close(); err != nil {
 			t.Errorf("close Lua macro engine: %v", err)
 		}
 	})
-	mgr.Lua = engine
+	mgr.Lua = Engine
 
 	scriptDir := filepath.Join(config.GetF4ConfigDir(), "Macros", "scripts")
 	if err := os.MkdirAll(scriptDir, 0700); err != nil {
@@ -1141,7 +1141,7 @@ func TestMacro_ReassignAndCleanup(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := engine.LoadString("test", `Macro { area = "Common"; key = "F3"; action = function() end }`); err != nil {
+	if err := Engine.LoadString("test", `Macro { area = "Common"; key = "F3"; action = function() end }`); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1156,7 +1156,7 @@ func TestMacro_ReassignAndCleanup(t *testing.T) {
 	if _, ok := mgr.Macros["Common"][key]; ok {
 		t.Error("Macro should be deleted from INI")
 	}
-	if engine.Find("Common", "F3") != nil {
+	if Engine.Find("Common", "F3") != nil {
 		t.Error("Macro should be deleted from Lua Engine")
 	}
 	if _, err := os.Stat(scriptPath); !os.IsNotExist(err) {

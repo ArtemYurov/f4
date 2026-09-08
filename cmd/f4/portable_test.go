@@ -42,13 +42,13 @@ func TestPortableSettingsDialogUsesContextHelp(t *testing.T) {
 }
 
 func TestPortableSettingsHelpTopicIsRegistered(t *testing.T) {
-	engine := vtui.NewHelpEngine(dialog.NewMemoryHelpVFS(map[string]string{
+	Engine := vtui.NewHelpEngine(dialog.NewMemoryHelpVFS(map[string]string{
 		"help.hlf": dialog.DefaultHelpData,
 	}))
-	if err := engine.LoadFile("help.hlf"); err != nil {
+	if err := Engine.LoadFile("help.hlf"); err != nil {
 		t.Fatal(err)
 	}
-	topic := engine.GetTopic("PortableSettings")
+	topic := Engine.GetTopic("PortableSettings")
 	if topic == nil {
 		t.Fatal("PortableSettings help topic is missing")
 	}

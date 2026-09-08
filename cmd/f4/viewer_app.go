@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/appcmd"
 	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/vtinput"
@@ -29,10 +30,10 @@ func (viewerApplication) ActionForKey(area, key string) string {
 
 func (viewerApplication) HandleCommand(v *viewer.ViewerView, cmd int, args any) bool {
 	switch cmd {
-	case CmSwitchToEditor:
+	case appcmd.CmSwitchToEditor:
 		actionSwitchViewerToEditor(v)
 		return true
-	case CmSearch:
+	case appcmd.CmSearch:
 		actionViewerSearch(v)
 		return true
 	}

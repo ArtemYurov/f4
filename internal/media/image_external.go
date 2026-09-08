@@ -186,17 +186,17 @@ func decodeImageExternally(ctx context.Context, data []byte) (*vtui.ImageSurface
 	// and jxl are containers that are read by seeking around them, and both
 	// ImageMagick's delegates and ffmpeg refuse a stream they cannot
 	// rewind. The whole file is in memory already, so this costs one write.
-	file, err := os.CreateTemp("", "f4img-*"+sniffImageSuffix(data))
+	File, err := os.CreateTemp("", "f4img-*"+sniffImageSuffix(data))
 	if err != nil {
 		return nil, err
 	}
-	name := file.Name()
+	name := File.Name()
 	defer os.Remove(name)
-	if _, err := file.Write(data); err != nil {
-		file.Close()
+	if _, err := File.Write(data); err != nil {
+		File.Close()
 		return nil, err
 	}
-	if err := file.Close(); err != nil {
+	if err := File.Close(); err != nil {
 		return nil, err
 	}
 

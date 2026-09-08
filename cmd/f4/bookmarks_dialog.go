@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/appcmd"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -53,12 +54,12 @@ func (b *bookmarksFrame) Show(scr *vtui.ScreenBuf) {
 // no "apply" step and nothing to undo on Esc.
 type bookmarksDialog struct {
 	pf   *PanelsFrame
-	file string
+	File string
 	set  BookmarkSet
 	menu *vtui.VMenu
 }
 
-// ShowBookmarksDialog is the entry point wired to CmBookmarks.
+// ShowBookmarksDialog is the entry point wired to appcmd.CmBookmarks.
 func ShowBookmarksDialog(pf *PanelsFrame) {
 	ShowBookmarksDialogAt(pf, 0, nil)
 }
@@ -89,16 +90,16 @@ func newBookmarksDialog(pf *PanelsFrame, path string) (*bookmarksDialog, error) 
 	if err != nil {
 		return nil, err
 	}
-	return &bookmarksDialog{pf: pf, file: path, set: set}, nil
+	return &bookmarksDialog{pf: pf, File: path, set: set}, nil
 }
 
 // open builds the menu and pushes it as a modal frame, cursor on slot.
 func (d *bookmarksDialog) open(slot int, onClose func()) {
-	// Empty rows carry CmBookmarkEmptySlot, which is permanently disabled:
+	// Empty rows carry appcmd.CmBookmarkEmptySlot, which is permanently disabled:
 	// vtui then draws them dimmed and swallows Enter on them, which is
 	// exactly the "empty slot is a no-op" behavior far2l has. No other
 	// menu uses this command, so it never needs re-enabling.
-	vtui.FrameManager.DisabledCommands.Disable(CmBookmarkEmptySlot)
+	vtui.FrameManager.DisabledCommands.Disable(appcmd.CmBookmarkEmptySlot)
 
 	d.menu = vtui.NewVMenu(i18n.Msg("Bookmarks.Title"))
 	d.render()
@@ -204,7 +205,7 @@ func (d *bookmarksDialog) render() {
 	for i := range d.set {
 		item := vtui.MenuItem{Text: d.rowText(i), UserData: i}
 		if d.set[i].IsEmpty() {
-			item.Command = CmBookmarkEmptySlot
+			item.Command = appcmd.CmBookmarkEmptySlot
 		}
 		d.menu.AddItem(item)
 	}
@@ -305,12 +306,12 @@ func (d *bookmarksDialog) moveSlot(slot, delta int) {
 // on-disk state wins: the in-memory copy is reloaded so the dialog never
 // shows changes that were not saved.
 func (d *bookmarksDialog) persist() bool {
-	err := SaveBookmarks(d.file, d.set)
+	err := SaveBookmarks(d.File, d.set)
 	if err != nil {
 		vtui.ShowMessage(i18n.Msg("Bookmarks.Title"),
 			fmt.Sprintf(i18n.Msg("Bookmarks.SaveError"), err),
 			[]string{"&Ok"})
-		if reloaded, lerr := LoadBookmarks(d.file); lerr == nil {
+		if reloaded, lerr := LoadBookmarks(d.File); lerr == nil {
 			d.set = reloaded
 		}
 	}

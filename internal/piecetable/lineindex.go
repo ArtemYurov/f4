@@ -65,88 +65,88 @@ type LineIndex struct {
 
 // NewLineIndex creates a new empty index.
 func NewLineIndex() *LineIndex {
-	li := &LineIndex{}
-	li.reset()
-	return li
+	Li := &LineIndex{}
+	Li.reset()
+	return Li
 }
 
 // reset returns the index to a single line starting at zero.
-func (li *LineIndex) reset() {
-	li.blocks = nil
-	li.wide = nil
-	li.useWide = false
-	li.count = 0
-	li.appendOffset(0)
+func (Li *LineIndex) reset() {
+	Li.blocks = nil
+	Li.wide = nil
+	Li.useWide = false
+	Li.count = 0
+	Li.appendOffset(0)
 }
 
 // blockForLine returns the index of the block holding the given line, which the
 // caller has already bounds-checked.
-func (li *LineIndex) blockForLine(line int) int {
-	idx := sort.Search(len(li.blocks), func(i int) bool {
-		return li.blocks[i].firstLine > line
+func (Li *LineIndex) blockForLine(line int) int {
+	idx := sort.Search(len(Li.blocks), func(i int) bool {
+		return Li.blocks[i].firstLine > line
 	})
 	return idx - 1
 }
 
 // at returns the absolute offset of line i.
-func (li *LineIndex) at(i int) int {
-	if li.useWide {
-		return li.wide[i]
+func (Li *LineIndex) at(i int) int {
+	if Li.useWide {
+		return Li.wide[i]
 	}
-	b := li.blockForLine(i)
-	blk := &li.blocks[b]
+	b := Li.blockForLine(i)
+	blk := &Li.blocks[b]
 	return blk.base + int(blk.entries[i-blk.firstLine])
 }
 
 // appendOffset adds one offset to the end, opening a new block when the last
 // one is full or when the offset is too far from its base to encode.
-func (li *LineIndex) appendOffset(off int) {
-	if li.useWide {
-		li.wide = append(li.wide, off)
-		li.count++
+func (Li *LineIndex) appendOffset(off int) {
+	if Li.useWide {
+		Li.wide = append(Li.wide, off)
+		Li.count++
 		return
 	}
 
-	if len(li.blocks) > 0 {
-		blk := &li.blocks[len(li.blocks)-1]
+	if len(Li.blocks) > 0 {
+		blk := &Li.blocks[len(Li.blocks)-1]
 		rel := off - blk.base
 		if len(blk.entries) < lineBlockTarget && fitsRelativeOffset(rel) {
 			// #nosec G115 -- fitsRelativeOffset proves rel is in the uint32 range.
 			blk.entries = append(blk.entries, uint32(rel))
-			li.count++
+			Li.count++
 			return
 		}
 	}
 
 	// A fresh block starts at the offset it is given, so its first entry is
 	// always representable.
-	li.blocks = append(li.blocks, lineBlock{
-		firstLine: li.count,
+	Li.blocks = append(Li.blocks, lineBlock{
+		firstLine: Li.count,
 		base:      off,
 		entries:   append(make([]uint32, 0, lineBlockTarget), 0),
 	})
-	li.count++
+	Li.count++
 }
 
 // switchToWide flattens the blocks into absolute offsets. It runs at most once
 // per index, for a file no relative encoding can describe.
-func (li *LineIndex) switchToWide() {
-	wide := make([]int, li.count)
-	for b := range li.blocks {
-		blk := &li.blocks[b]
+func (Li *LineIndex) switchToWide() {
+	wide := make([]int, Li.count)
+	for b := range Li.blocks {
+		blk := &Li.blocks[b]
 		for i, rel := range blk.entries {
 			wide[blk.firstLine+i] = blk.base + int(rel)
 		}
 	}
-	li.wide = wide
-	li.blocks = nil
-	li.useWide = true
+	Li.wide = wide
+	Li.blocks = nil
+	Li.useWide = true
 }
 
 // rebase recomputes a block's base from its first entry, which is what keeps
 // entries[0] at zero after a splice or a shift has moved it.
-func (li *LineIndex) rebase(b int) bool {
-	blk := &li.blocks[b]
+func (Li *LineIndex) rebase(b int) bool {
+	blk := &Li.blocks[b]
 	if len(blk.entries) == 0 || blk.entries[0] == 0 {
 		return true
 	}
@@ -160,22 +160,22 @@ func (li *LineIndex) rebase(b int) bool {
 
 // shiftFrom adds delta to every offset from line onwards. Whole blocks move by
 // their base; only the block the line falls inside has its entries touched.
-func (li *LineIndex) shiftFrom(line, delta int) {
-	if delta == 0 || line >= li.count {
+func (Li *LineIndex) shiftFrom(line, delta int) {
+	if delta == 0 || line >= Li.count {
 		return
 	}
 	if line < 0 {
 		line = 0
 	}
-	if li.useWide {
-		for i := line; i < li.count; i++ {
-			li.wide[i] += delta
+	if Li.useWide {
+		for i := line; i < Li.count; i++ {
+			Li.wide[i] += delta
 		}
 		return
 	}
 
-	b := li.blockForLine(line)
-	blk := &li.blocks[b]
+	b := Li.blockForLine(line)
+	blk := &Li.blocks[b]
 	pos := line - blk.firstLine
 	if pos == 0 {
 		blk.base += delta
@@ -183,36 +183,36 @@ func (li *LineIndex) shiftFrom(line, delta int) {
 		for i := pos; i < len(blk.entries); i++ {
 			rel := int(blk.entries[i]) + delta
 			if !fitsRelativeOffset(rel) {
-				li.switchToWide()
-				li.shiftFrom(line, delta)
+				Li.switchToWide()
+				Li.shiftFrom(line, delta)
 				return
 			}
 			// #nosec G115 -- fitsRelativeOffset above proves rel is in the uint32 range.
 			blk.entries[i] = uint32(rel)
 		}
 	}
-	for j := b + 1; j < len(li.blocks); j++ {
-		li.blocks[j].base += delta
+	for j := b + 1; j < len(Li.blocks); j++ {
+		Li.blocks[j].base += delta
 	}
 }
 
 // insertLines splices offsets in before the given line. Only the block that
 // receives them is rewritten; the blocks after it just learn that their lines
 // are numbered higher than they were.
-func (li *LineIndex) insertLines(at int, vals []int) {
+func (Li *LineIndex) insertLines(at int, vals []int) {
 	if len(vals) == 0 {
 		return
 	}
-	if li.useWide {
-		li.wide = append(li.wide, make([]int, len(vals))...)
-		copy(li.wide[at+len(vals):], li.wide[at:li.count])
-		copy(li.wide[at:], vals)
-		li.count += len(vals)
+	if Li.useWide {
+		Li.wide = append(Li.wide, make([]int, len(vals))...)
+		copy(Li.wide[at+len(vals):], Li.wide[at:Li.count])
+		copy(Li.wide[at:], vals)
+		Li.count += len(vals)
 		return
 	}
 
-	b := li.blockForLine(min(at, li.count-1))
-	blk := &li.blocks[b]
+	b := Li.blockForLine(min(at, Li.count-1))
+	blk := &Li.blocks[b]
 	pos := at - blk.firstLine
 	if pos > len(blk.entries) {
 		pos = len(blk.entries)
@@ -222,8 +222,8 @@ func (li *LineIndex) insertLines(at int, vals []int) {
 	for i, v := range vals {
 		r := v - blk.base
 		if !fitsRelativeOffset(r) {
-			li.switchToWide()
-			li.insertLines(at, vals)
+			Li.switchToWide()
+			Li.insertLines(at, vals)
 			return
 		}
 		// #nosec G115 -- fitsRelativeOffset above proves r is in the uint32 range.
@@ -234,18 +234,18 @@ func (li *LineIndex) insertLines(at int, vals []int) {
 	copy(blk.entries[pos+len(vals):], blk.entries[pos:])
 	copy(blk.entries[pos:], rel)
 
-	li.count += len(vals)
-	for j := b + 1; j < len(li.blocks); j++ {
-		li.blocks[j].firstLine += len(vals)
+	Li.count += len(vals)
+	for j := b + 1; j < len(Li.blocks); j++ {
+		Li.blocks[j].firstLine += len(vals)
 	}
-	li.rebase(b)
-	li.splitIfLarge(b)
+	Li.rebase(b)
+	Li.splitIfLarge(b)
 }
 
 // splitIfLarge halves a block that repeated inserts have grown, so that the
 // per-insert cost stays bounded by the block size.
-func (li *LineIndex) splitIfLarge(b int) {
-	blk := &li.blocks[b]
+func (Li *LineIndex) splitIfLarge(b int) {
+	blk := &Li.blocks[b]
 	if len(blk.entries) <= lineBlockMax {
 		return
 	}
@@ -262,28 +262,28 @@ func (li *LineIndex) splitIfLarge(b int) {
 	}
 	blk.entries = blk.entries[:half]
 
-	li.blocks = append(li.blocks, lineBlock{})
-	copy(li.blocks[b+2:], li.blocks[b+1:])
-	li.blocks[b+1] = tail
+	Li.blocks = append(Li.blocks, lineBlock{})
+	copy(Li.blocks[b+2:], Li.blocks[b+1:])
+	Li.blocks[b+1] = tail
 }
 
 // removeLines drops the lines in [from, to), touching only the blocks they fall
 // in and renumbering the ones after.
-func (li *LineIndex) removeLines(from, to int) {
+func (Li *LineIndex) removeLines(from, to int) {
 	if to <= from {
 		return
 	}
-	if li.useWide {
-		copy(li.wide[from:], li.wide[to:li.count])
-		li.count -= to - from
-		li.wide = li.wide[:li.count]
+	if Li.useWide {
+		copy(Li.wide[from:], Li.wide[to:Li.count])
+		Li.count -= to - from
+		Li.wide = Li.wide[:Li.count]
 		return
 	}
 
 	removed := 0
-	first := li.blockForLine(from)
-	for b := first; b < len(li.blocks) && removed < to-from; {
-		blk := &li.blocks[b]
+	first := Li.blockForLine(from)
+	for b := first; b < len(Li.blocks) && removed < to-from; {
+		blk := &Li.blocks[b]
 		start := max(from-blk.firstLine, 0)
 		end := min(to-blk.firstLine, len(blk.entries))
 		if start >= end {
@@ -293,20 +293,20 @@ func (li *LineIndex) removeLines(from, to int) {
 		blk.entries = append(blk.entries[:start], blk.entries[end:]...)
 		removed += end - start
 		if len(blk.entries) == 0 {
-			li.blocks = append(li.blocks[:b], li.blocks[b+1:]...)
+			Li.blocks = append(Li.blocks[:b], Li.blocks[b+1:]...)
 			continue
 		}
-		li.rebase(b)
+		Li.rebase(b)
 		b++
 	}
 
-	li.count -= removed
+	Li.count -= removed
 	// Every block after the first one touched has lost the same lines, so a
 	// single pass fixes the numbering.
 	line := 0
-	for b := range li.blocks {
-		li.blocks[b].firstLine = line
-		line += len(li.blocks[b].entries)
+	for b := range Li.blocks {
+		Li.blocks[b].firstLine = line
+		line += len(Li.blocks[b].entries)
 	}
 }
 
@@ -335,82 +335,82 @@ func AppendNewlineOffsets(dst []int, data []byte, base int) []int {
 // that, and the caller is the only one in a position to know the difference —
 // hence the return value. Claiming a short index is complete is worse than
 // having one, because everything downstream believes it.
-func (li *LineIndex) Rebuild(pt *PieceTable) bool {
-	li.mu.Lock()
-	defer li.mu.Unlock()
+func (Li *LineIndex) Rebuild(Pt *PieceTable) bool {
+	Li.mu.Lock()
+	defer Li.mu.Unlock()
 	// Reset index, first line always starts at 0
-	li.reset()
+	Li.reset()
 
-	if pt.Size() == 0 {
+	if Pt.Size() == 0 {
 		return true
 	}
 
 	absPos := 0
 	offsets := make([]int, 0, 4096)
-	err := pt.ForEachRange(func(data []byte) error {
+	err := Pt.ForEachRange(func(data []byte) error {
 		offsets = AppendNewlineOffsets(offsets[:0], data, absPos)
 		for _, off := range offsets {
-			li.appendOffset(off)
+			Li.appendOffset(off)
 		}
 		absPos += len(data)
 		return nil
 	})
-	return err == nil && absPos >= pt.Size()
+	return err == nil && absPos >= Pt.Size()
 }
 
 // AppendOffsets adds pre-calculated line offsets (used by background indexer).
 // It performs a safety check to ensure offsets are within reasonable bounds.
-func (li *LineIndex) AppendOffsets(offsets []int, maxAllowed int) {
-	li.mu.Lock()
-	defer li.mu.Unlock()
-	lastOffset := li.at(li.count - 1)
+func (Li *LineIndex) AppendOffsets(offsets []int, maxAllowed int) {
+	Li.mu.Lock()
+	defer Li.mu.Unlock()
+	lastOffset := Li.at(Li.count - 1)
 	for _, off := range offsets {
 		if off > lastOffset && off <= maxAllowed {
-			li.appendOffset(off)
+			Li.appendOffset(off)
 			lastOffset = off
 		}
 	}
 }
 
 // LineCount returns total number of lines.
-func (li *LineIndex) LineCount() int {
-	li.mu.RLock()
-	defer li.mu.RUnlock()
-	return li.count
+func (Li *LineIndex) LineCount() int {
+	Li.mu.RLock()
+	defer Li.mu.RUnlock()
+	return Li.count
 }
 
 // GetLineOffset returns byte offset of the specified line start (0-based).
-func (li *LineIndex) GetLineOffset(line int) int {
-	li.mu.RLock()
-	defer li.mu.RUnlock()
-	if line < 0 || line >= li.count {
+func (Li *LineIndex) GetLineOffset(line int) int {
+	Li.mu.RLock()
+	defer Li.mu.RUnlock()
+	if line < 0 || line >= Li.count {
 		return -1
 	}
-	return li.at(line)
+	return Li.at(line)
 }
 
 // GetLineAtOffset returns the line number (0-based) to which specified offset belongs.
 // Uses binary search for O(log N) speed.
-func (li *LineIndex) getLineAtOffset(offset int) int {
+func (Li *LineIndex) getLineAtOffset(offset int) int {
 	if offset <= 0 {
 		return 0
 	}
-	if li.useWide {
-		idx := sort.Search(li.count, func(i int) bool {
-			return li.wide[i] > offset
+	if Li.useWide {
+		idx := sort.Search(Li.count, func(i int) bool {
+			return Li.wide[i] > offset
 		})
 		return idx - 1
 	}
 
 	// Find the block the offset falls in first, then the line inside it: two
 	// short searches instead of one over every line in the file.
-	b := sort.Search(len(li.blocks), func(i int) bool {
-		return li.blocks[i].base > offset
+	b := sort.Search(len(Li.blocks), func(i int) bool {
+		return Li.blocks[i].base > offset
 	}) - 1
 	if b < 0 {
 		return 0
 	}
-	blk := &li.blocks[b]
+	blk := &Li.blocks[b]
 	rel := offset - blk.base
 	idx := sort.Search(len(blk.entries), func(i int) bool {
 		return int(blk.entries[i]) > rel
@@ -418,23 +418,23 @@ func (li *LineIndex) getLineAtOffset(offset int) int {
 	return blk.firstLine + idx - 1
 }
 
-func (li *LineIndex) GetLineAtOffset(offset int) int {
-	li.mu.RLock()
-	defer li.mu.RUnlock()
-	return li.getLineAtOffset(offset)
+func (Li *LineIndex) GetLineAtOffset(offset int) int {
+	Li.mu.RLock()
+	defer Li.mu.RUnlock()
+	return Li.getLineAtOffset(offset)
 }
 
 // UpdateAfterInsert incrementally updates the index after data insertion.
-func (li *LineIndex) UpdateAfterInsert(offset int, data []byte) {
-	li.mu.Lock()
-	defer li.mu.Unlock()
+func (Li *LineIndex) UpdateAfterInsert(offset int, data []byte) {
+	Li.mu.Lock()
+	defer Li.mu.Unlock()
 	lenData := len(data)
 	if lenData == 0 {
 		return
 	}
 
 	// 1. Find the line where insertion occurred
-	lineIdx := li.getLineAtOffset(offset)
+	lineIdx := Li.getLineAtOffset(offset)
 
 	// 2. Search for new line breaks in the inserted fragment
 	var newOffsets []int
@@ -447,33 +447,33 @@ func (li *LineIndex) UpdateAfterInsert(offset int, data []byte) {
 	}
 
 	// 3. Shift all subsequent offsets
-	li.shiftFrom(lineIdx+1, lenData)
+	Li.shiftFrom(lineIdx+1, lenData)
 
 	// 4. Insert new line offsets if any
 	if len(newOffsets) > 0 {
-		li.insertLines(lineIdx+1, newOffsets)
+		Li.insertLines(lineIdx+1, newOffsets)
 	}
 }
 
 // UpdateAfterDelete incrementally updates the index after data deletion.
-func (li *LineIndex) UpdateAfterDelete(offset, length int) {
-	li.mu.Lock()
-	defer li.mu.Unlock()
+func (Li *LineIndex) UpdateAfterDelete(offset, length int) {
+	Li.mu.Lock()
+	defer Li.mu.Unlock()
 	if length == 0 {
 		return
 	}
 
-	startLine := li.getLineAtOffset(offset)
-	endLine := li.getLineAtOffset(offset + length)
+	startLine := Li.getLineAtOffset(offset)
+	endLine := Li.getLineAtOffset(offset + length)
 
 	// 1. Determine how many lines were removed
 	linesRemoved := endLine - startLine
 
 	// 2. Shift all subsequent offsets
-	li.shiftFrom(endLine+1, -length)
+	Li.shiftFrom(endLine+1, -length)
 
 	// 3. Remove offsets of "collapsed" lines
 	if linesRemoved > 0 {
-		li.removeLines(startLine+1, endLine+1)
+		Li.removeLines(startLine+1, endLine+1)
 	}
 }

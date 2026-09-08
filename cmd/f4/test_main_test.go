@@ -9,6 +9,7 @@ import (
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/dialog"
+	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/f4/internal/i18n"
@@ -63,6 +64,23 @@ func installTestSeams() {
 	// SetupUI installs this in production; the test binary never runs it, and
 	// without it every action label falls back to its English spelling.
 	action.Localize = i18n.Msg
+	// internal/editor declares what it needs from above; this is the root
+	// filling it in. Each is one call site inside the editor.
+	editor.RunAction = RunAction
+	editor.LookupHotkey = func(e *vtinput.InputEvent) bool { return macroLookupHotkey(macro.MacroMgr, e) }
+	editor.MenuBarItems = BuildMenuBarItems
+	editor.CrossAttrs = EditorCrossAttrs
+	editor.KeyBarLabels = KeyBarLabelsForArea
+	editor.HotkeyAction = func(area, key string) string {
+		if GlobalHotkeysMgr == nil {
+			return ""
+		}
+		return GlobalHotkeysMgr.GetAction(area, key)
+	}
+	editor.RememberEdited = func(v vfs.VFS, path string) { rememberViewerEditorHistory(v, path, historyModeEdit) }
+	editor.SaveSession = SaveSession
+	editor.HandleWorkspaceFork = handleWorkspaceForkCommand
+	editor.SwitchToViewer = actionSwitchEditorToViewer
 
 	// Unit tests must never hand control to the user's desktop. Individual
 	// tests that exercise these routes install per-dialog/per-frame recorders.

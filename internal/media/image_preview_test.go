@@ -84,9 +84,9 @@ func jpegWithThumbnail(t *testing.T, outer, thumb []byte) []byte {
 
 func TestExifThumbnail(t *testing.T) {
 	thumb := jpegBytes(t, 8, 6)
-	file := jpegWithThumbnail(t, jpegBytes(t, 64, 48), thumb)
+	File := jpegWithThumbnail(t, jpegBytes(t, 64, 48), thumb)
 
-	got, err := exifThumbnail(file)
+	got, err := exifThumbnail(File)
 	if err != nil {
 		t.Fatalf("the thumbnail was not found: %v", err)
 	}

@@ -24,19 +24,19 @@ func (m *MacroManager) LoadLuaMacros(host MacroHost, dir string) {
 // allowed to finish; closing that interpreter happens asynchronously so a
 // reload cannot deadlock while the old macro is waiting for the UI goroutine.
 func (m *MacroManager) ReloadLuaMacros(host MacroHost, dir string) (int, error) {
-	engine, err := NewLuaMacroEngine(host)
+	Engine, err := NewLuaMacroEngine(host)
 	if err != nil {
 		return 0, fmt.Errorf("cannot start the Lua macro engine: %w", err)
 	}
-	loadErr := engine.LoadDir(dir)
-	count := engine.Count()
+	loadErr := Engine.LoadDir(dir)
+	count := Engine.Count()
 
 	old := m.Lua
 	if count == 0 {
 		m.Lua = nil
-		_ = engine.Close()
+		_ = Engine.Close()
 	} else {
-		m.Lua = engine
+		m.Lua = Engine
 	}
 	if old != nil {
 		go func() {

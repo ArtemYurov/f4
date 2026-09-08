@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/vtui"
@@ -208,11 +209,11 @@ func actionEditorGoTo() bool {
 	if vtui.FrameManager == nil {
 		return false
 	}
-	ev, ok := vtui.FrameManager.GetTopFrame().(*EditorView)
+	ev, ok := vtui.FrameManager.GetTopFrame().(*editor.EditorView)
 	if !ok || ev == nil {
 		return false
 	}
-	ev.askGoto()
+	ev.AskGoto()
 	return true
 }
 

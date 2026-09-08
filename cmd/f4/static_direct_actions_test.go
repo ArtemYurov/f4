@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/appcmd"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
@@ -196,16 +197,16 @@ func TestCustomSideMenuCommandsResolveToRegisteredActions(t *testing.T) {
 	}
 
 	wantExact := map[int]string{
-		CmLeftBrief:      "Panel.Left.ViewBrief",
-		CmRightWide:      "Panel.Right.ViewWide",
-		CmLeftSortExt:    "Panel.Left.SortByExt",
-		CmRightSortSize:  "Panel.Right.SortBySize",
-		CmLeftAIContext:  "AI.Left.ViewContext",
-		CmRightAIMem:     "AI.Right.ViewMem",
-		CmBackground:     "App.Background",
-		vtui.CmQuit:      "App.Quit",
-		CmWorkspaceNew:   "Workspace.New",
-		CmWorkspaceClose: "Workspace.Close",
+		appcmd.CmLeftBrief:      "Panel.Left.ViewBrief",
+		appcmd.CmRightWide:      "Panel.Right.ViewWide",
+		appcmd.CmLeftSortExt:    "Panel.Left.SortByExt",
+		appcmd.CmRightSortSize:  "Panel.Right.SortBySize",
+		appcmd.CmLeftAIContext:  "AI.Left.ViewContext",
+		appcmd.CmRightAIMem:     "AI.Right.ViewMem",
+		appcmd.CmBackground:     "App.Background",
+		vtui.CmQuit:             "App.Quit",
+		appcmd.CmWorkspaceNew:   "Workspace.New",
+		appcmd.CmWorkspaceClose: "Workspace.Close",
 	}
 	for command, want := range wantExact {
 		if got := commandToActionName[command]; got != want {

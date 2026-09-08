@@ -11,15 +11,15 @@ import (
 // title bars. VFS paths are kept opaque: a remote or virtual filesystem owns
 // the separator and any scheme prefix in its path, so the full-path setting
 // must not run the value through the host filepath package.
-func DisplayFileTitle(filesystem vfs.VFS, filePath string) string {
-	if filePath == "" {
+func DisplayFileTitle(filesystem vfs.VFS, FilePath string) string {
+	if FilePath == "" {
 		return ""
 	}
 	if config.App.DisplayFullPathInTitle {
-		return filePath
+		return FilePath
 	}
 	if filesystem != nil {
-		return filesystem.Base(filePath)
+		return filesystem.Base(FilePath)
 	}
-	return filepath.Base(filePath)
+	return filepath.Base(FilePath)
 }

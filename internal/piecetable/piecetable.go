@@ -82,85 +82,85 @@ type PieceTable struct {
 
 // New creates a new piece table from original text.
 func New(text []byte) *PieceTable {
-	pt := &PieceTable{
+	Pt := &PieceTable{
 		orig: MemoryBuffer(text),
 		size: len(text),
 	}
 	if len(text) > 0 {
-		pt.pieces = []Piece{{Buf: Original, Start: 0, Length: len(text)}}
+		Pt.pieces = []Piece{{Buf: Original, Start: 0, Length: len(text)}}
 	}
-	return pt
+	return Pt
 }
 
 // Size returns current logical length of the text.
-func (pt *PieceTable) Size() int {
-	pt.mu.RLock()
-	defer pt.mu.RUnlock()
-	return pt.size
+func (Pt *PieceTable) Size() int {
+	Pt.mu.RLock()
+	defer Pt.mu.RUnlock()
+	return Pt.size
 }
 
 // GetOriginalBuffer returns the underlying original buffer.
-func (pt *PieceTable) GetOriginalBuffer() Buffer {
-	pt.mu.RLock()
-	defer pt.mu.RUnlock()
-	return pt.orig
+func (Pt *PieceTable) GetOriginalBuffer() Buffer {
+	Pt.mu.RLock()
+	defer Pt.mu.RUnlock()
+	return Pt.orig
 }
 
 // offsetToPiece finds piece index and offset within it by global offset.
-func (pt *PieceTable) offsetToPiece(offset int) (pieceIdx int, offsetInPiece int) {
-	if offset == pt.size {
-		return len(pt.pieces), 0
+func (Pt *PieceTable) offsetToPiece(offset int) (pieceIdx int, offsetInPiece int) {
+	if offset == Pt.size {
+		return len(Pt.pieces), 0
 	}
 	curr := 0
-	for i, p := range pt.pieces {
+	for i, p := range Pt.pieces {
 		if offset < curr+p.Length {
 			return i, offset - curr
 		}
 		curr += p.Length
 	}
-	return len(pt.pieces), 0
+	return len(Pt.pieces), 0
 }
 
 // Insert inserts data at the specified offset.
-func (pt *PieceTable) Insert(offset int, data []byte) {
-	pt.mu.Lock()
-	defer pt.mu.Unlock()
-	if offset < 0 || offset > pt.size || len(data) == 0 {
+func (Pt *PieceTable) Insert(offset int, data []byte) {
+	Pt.mu.Lock()
+	defer Pt.mu.Unlock()
+	if offset < 0 || offset > Pt.size || len(data) == 0 {
 		return
 	}
 
-	addStart := len(pt.add)
-	pt.add = append(pt.add, data...)
+	addStart := len(Pt.add)
+	Pt.add = append(Pt.add, data...)
 	newPiece := Piece{Buf: Add, Start: addStart, Length: len(data)}
 
 	// If the table is empty
-	if pt.size == 0 {
-		pt.pieces = []Piece{newPiece}
-		pt.size += len(data)
+	if Pt.size == 0 {
+		Pt.pieces = []Piece{newPiece}
+		Pt.size += len(data)
 		return
 	}
 
 	// Optimization: if inserting at the very end and previous piece is also Add — merge them
-	if offset == pt.size && len(pt.pieces) > 0 {
-		lastIdx := len(pt.pieces) - 1
-		lastP := pt.pieces[lastIdx]
+	if offset == Pt.size && len(Pt.pieces) > 0 {
+		lastIdx := len(Pt.pieces) - 1
+		lastP := Pt.pieces[lastIdx]
 		if lastP.Buf == Add && lastP.Start+lastP.Length == addStart {
-			pt.pieces[lastIdx].Length += len(data)
-			pt.size += len(data)
+			Pt.pieces[lastIdx].Length += len(data)
+			Pt.size += len(data)
 			return
 		}
 		// Otherwise just append a new piece to the end
-		pt.pieces = append(pt.pieces, newPiece)
-		pt.size += len(data)
+		Pt.pieces = append(Pt.pieces, newPiece)
+		Pt.size += len(data)
 		return
 	}
 
 	// General case: insertion in the middle
-	idx, off := pt.offsetToPiece(offset)
-	p := pt.pieces[idx]
+	idx, off := Pt.offsetToPiece(offset)
+	p := Pt.pieces[idx]
 
 	var newPieces []Piece
-	newPieces = append(newPieces, pt.pieces[:idx]...)
+	newPieces = append(newPieces, Pt.pieces[:idx]...)
 
 	if off == 0 {
 		// Insertion exactly before the piece
@@ -172,88 +172,88 @@ func (pt *PieceTable) Insert(offset int, data []byte) {
 		newPieces = append(newPieces, left, newPiece, right)
 	}
 
-	if idx+1 < len(pt.pieces) {
-		newPieces = append(newPieces, pt.pieces[idx+1:]...)
+	if idx+1 < len(Pt.pieces) {
+		newPieces = append(newPieces, Pt.pieces[idx+1:]...)
 	}
 
-	pt.pieces = newPieces
-	pt.size += len(data)
+	Pt.pieces = newPieces
+	Pt.size += len(data)
 }
 
 // Delete removes a text fragment of specified length starting from offset.
-func (pt *PieceTable) Delete(offset, length int) {
-	pt.mu.Lock()
-	defer pt.mu.Unlock()
-	if offset < 0 || length <= 0 || offset+length > pt.size {
+func (Pt *PieceTable) Delete(offset, length int) {
+	Pt.mu.Lock()
+	defer Pt.mu.Unlock()
+	if offset < 0 || length <= 0 || offset+length > Pt.size {
 		return
 	}
 
-	startIdx, startOff := pt.offsetToPiece(offset)
-	endIdx, endOff := pt.offsetToPiece(offset + length)
+	startIdx, startOff := Pt.offsetToPiece(offset)
+	endIdx, endOff := Pt.offsetToPiece(offset + length)
 
 	var newPieces []Piece
-	newPieces = append(newPieces, pt.pieces[:startIdx]...)
+	newPieces = append(newPieces, Pt.pieces[:startIdx]...)
 
 	// Remainder of the left split piece
 	if startOff > 0 {
-		p := pt.pieces[startIdx]
+		p := Pt.pieces[startIdx]
 		newPieces = append(newPieces, Piece{Buf: p.Buf, Start: p.Start, Length: startOff})
 	}
 
 	// Remainder of the right split piece
-	if endIdx < len(pt.pieces) {
-		p := pt.pieces[endIdx]
+	if endIdx < len(Pt.pieces) {
+		p := Pt.pieces[endIdx]
 		if endOff < p.Length {
 			newPieces = append(newPieces, Piece{Buf: p.Buf, Start: p.Start + endOff, Length: p.Length - endOff})
 		}
 	}
 
 	// All pieces after endIdx
-	if endIdx+1 < len(pt.pieces) {
-		newPieces = append(newPieces, pt.pieces[endIdx+1:]...)
+	if endIdx+1 < len(Pt.pieces) {
+		newPieces = append(newPieces, Pt.pieces[endIdx+1:]...)
 	}
 
-	pt.pieces = newPieces
-	pt.size -= length
+	Pt.pieces = newPieces
+	Pt.size -= length
 }
 
 // Bytes assembles and returns all current text.
 // Note: for large file rendering in future we'll write ReadAt methods,
 // so as not to unload entire buffer into memory.
-func (pt *PieceTable) Bytes() ([]byte, error) {
-	pt.mu.RLock()
-	defer pt.mu.RUnlock()
-	res := make([]byte, 0, pt.size)
-	for _, p := range pt.pieces {
+func (Pt *PieceTable) Bytes() ([]byte, error) {
+	Pt.mu.RLock()
+	defer Pt.mu.RUnlock()
+	res := make([]byte, 0, Pt.size)
+	for _, p := range Pt.pieces {
 		if p.Buf == Original {
-			data, err := pt.orig.Read(p.Start, p.Length)
+			data, err := Pt.orig.Read(p.Start, p.Length)
 			if err != nil {
 				return nil, err
 			}
 			res = append(res, data...)
 		} else {
-			res = append(res, pt.add[p.Start:p.Start+p.Length]...)
+			res = append(res, Pt.add[p.Start:p.Start+p.Length]...)
 		}
 	}
 	return res, nil
 }
 
 // AppendRange appends the specified range to the dest slice without new allocations.
-func (pt *PieceTable) AppendRange(dest []byte, offset, length int) ([]byte, error) {
-	pt.mu.RLock()
-	defer pt.mu.RUnlock()
+func (Pt *PieceTable) AppendRange(dest []byte, offset, length int) ([]byte, error) {
+	Pt.mu.RLock()
+	defer Pt.mu.RUnlock()
 	if offset < 0 || length <= 0 {
 		return dest, nil
 	}
-	if offset+length > pt.size {
-		length = pt.size - offset
+	if offset+length > Pt.size {
+		length = Pt.size - offset
 	}
 
 	remaining := length
-	startIdx, offInPiece := pt.offsetToPiece(offset)
+	startIdx, offInPiece := Pt.offsetToPiece(offset)
 
-	for i := startIdx; i < len(pt.pieces) && remaining > 0; i++ {
-		p := pt.pieces[i]
+	for i := startIdx; i < len(Pt.pieces) && remaining > 0; i++ {
+		p := Pt.pieces[i]
 
 		take := p.Length - offInPiece
 		if take > remaining {
@@ -261,13 +261,13 @@ func (pt *PieceTable) AppendRange(dest []byte, offset, length int) ([]byte, erro
 		}
 
 		if p.Buf == Original {
-			data, err := pt.orig.Read(p.Start+offInPiece, take)
+			data, err := Pt.orig.Read(p.Start+offInPiece, take)
 			if err != nil {
 				return dest, err
 			}
 			dest = append(dest, data...)
 		} else {
-			dest = append(dest, pt.add[p.Start+offInPiece:p.Start+offInPiece+take]...)
+			dest = append(dest, Pt.add[p.Start+offInPiece:p.Start+offInPiece+take]...)
 		}
 
 		remaining -= take
@@ -279,8 +279,8 @@ func (pt *PieceTable) AppendRange(dest []byte, offset, length int) ([]byte, erro
 
 // String returns current text as a string (convenient for tests).
 // Ignore errors here to keep tests simple.
-func (pt *PieceTable) String() string {
-	b, _ := pt.Bytes()
+func (Pt *PieceTable) String() string {
+	b, _ := Pt.Bytes()
 	return string(b)
 }
 
@@ -289,10 +289,10 @@ func (pt *PieceTable) String() string {
 //
 // fn runs while the table is read-locked, so it must not edit the table it is
 // walking; every caller here only reads what it is handed.
-func (pt *PieceTable) ForEachRange(fn func(data []byte) error) error {
-	pt.mu.RLock()
-	defer pt.mu.RUnlock()
-	for _, p := range pt.pieces {
+func (Pt *PieceTable) ForEachRange(fn func(data []byte) error) error {
+	Pt.mu.RLock()
+	defer Pt.mu.RUnlock()
+	for _, p := range Pt.pieces {
 		if p.Buf == Original {
 			const chunkSize = 1024 * 1024
 			for offset := 0; offset < p.Length; offset += chunkSize {
@@ -300,7 +300,7 @@ func (pt *PieceTable) ForEachRange(fn func(data []byte) error) error {
 				if offset+take > p.Length {
 					take = p.Length - offset
 				}
-				data, err := pt.orig.Read(p.Start+offset, take)
+				data, err := Pt.orig.Read(p.Start+offset, take)
 				if err != nil {
 					return err
 				}
@@ -309,7 +309,7 @@ func (pt *PieceTable) ForEachRange(fn func(data []byte) error) error {
 				}
 			}
 		} else {
-			if err := fn(pt.add[p.Start : p.Start+p.Length]); err != nil {
+			if err := fn(Pt.add[p.Start : p.Start+p.Length]); err != nil {
 				return err
 			}
 		}
@@ -324,21 +324,21 @@ type TableState struct {
 }
 
 // GetState returns a snapshot of the current table structure.
-func (pt *PieceTable) GetState() TableState {
-	pt.mu.RLock()
-	defer pt.mu.RUnlock()
-	ps := make([]Piece, len(pt.pieces))
-	copy(ps, pt.pieces)
-	return TableState{Pieces: ps, Size: pt.size}
+func (Pt *PieceTable) GetState() TableState {
+	Pt.mu.RLock()
+	defer Pt.mu.RUnlock()
+	ps := make([]Piece, len(Pt.pieces))
+	copy(ps, Pt.pieces)
+	return TableState{Pieces: ps, Size: Pt.size}
 }
 
 // LoadState restores the table structure from a snapshot.
-func (pt *PieceTable) LoadState(s TableState) {
-	pt.mu.Lock()
-	defer pt.mu.Unlock()
-	pt.pieces = make([]Piece, len(s.Pieces))
-	copy(pt.pieces, s.Pieces)
-	pt.size = s.Size
+func (Pt *PieceTable) LoadState(s TableState) {
+	Pt.mu.Lock()
+	defer Pt.mu.Unlock()
+	Pt.pieces = make([]Piece, len(s.Pieces))
+	copy(Pt.pieces, s.Pieces)
+	Pt.size = s.Size
 }
 
 // Equals compares two table states for structural identity.
@@ -365,20 +365,20 @@ func (s TableState) Equals(other TableState) bool {
 // pieces and callers fall back to GetRange.
 //
 // The result aliases the buffer and must not be modified.
-func (pt *PieceTable) View(offset, length int) ([]byte, bool) {
-	pt.mu.RLock()
-	defer pt.mu.RUnlock()
+func (Pt *PieceTable) View(offset, length int) ([]byte, bool) {
+	Pt.mu.RLock()
+	defer Pt.mu.RUnlock()
 
-	p, offInPiece, ok := pt.pieceHolding(offset, length)
+	p, offInPiece, ok := Pt.pieceHolding(offset, length)
 	if !ok {
 		return nil, false
 	}
 	if p.Buf == Add {
 		start := p.Start + offInPiece
-		return pt.add[start : start+length], true
+		return Pt.add[start : start+length], true
 	}
 
-	v, ok := pt.orig.(Viewer)
+	v, ok := Pt.orig.(Viewer)
 	if !ok {
 		return nil, false
 	}
@@ -389,15 +389,15 @@ func (pt *PieceTable) View(offset, length int) ([]byte, bool) {
 // how far into it the range starts. It reports false for a range that is out
 // of bounds or that crosses a piece boundary — which is what makes a window
 // onto it possible at all. Callers hold the lock.
-func (pt *PieceTable) pieceHolding(offset, length int) (Piece, int, bool) {
-	if offset < 0 || length <= 0 || offset+length > pt.size {
+func (Pt *PieceTable) pieceHolding(offset, length int) (Piece, int, bool) {
+	if offset < 0 || length <= 0 || offset+length > Pt.size {
 		return Piece{}, 0, false
 	}
-	idx, offInPiece := pt.offsetToPiece(offset)
-	if idx >= len(pt.pieces) {
+	idx, offInPiece := Pt.offsetToPiece(offset)
+	if idx >= len(Pt.pieces) {
 		return Piece{}, 0, false
 	}
-	p := pt.pieces[idx]
+	p := Pt.pieces[idx]
 	if offInPiece+length > p.Length {
 		return Piece{}, 0, false
 	}
@@ -413,11 +413,11 @@ func (pt *PieceTable) pieceHolding(offset, length int) (Piece, int, bool) {
 // the range for itself instead of through the buffer. The answer is only yes
 // for a range inside one untouched Original piece, so the bytes at that
 // position are the bytes of that range no matter what has been typed elsewhere.
-func (pt *PieceTable) OriginalRange(offset, length int) (int, bool) {
-	pt.mu.RLock()
-	defer pt.mu.RUnlock()
+func (Pt *PieceTable) OriginalRange(offset, length int) (int, bool) {
+	Pt.mu.RLock()
+	defer Pt.mu.RUnlock()
 
-	p, offInPiece, ok := pt.pieceHolding(offset, length)
+	p, offInPiece, ok := Pt.pieceHolding(offset, length)
 	if !ok || p.Buf != Original {
 		return 0, false
 	}
@@ -425,20 +425,20 @@ func (pt *PieceTable) OriginalRange(offset, length int) (int, bool) {
 }
 
 // GetRange returns a byte slice for the specified range.
-func (pt *PieceTable) GetRange(offset, length int) ([]byte, error) {
-	pt.mu.RLock()
-	defer pt.mu.RUnlock()
-	if offset < 0 || length <= 0 || offset+length > pt.size {
+func (Pt *PieceTable) GetRange(offset, length int) ([]byte, error) {
+	Pt.mu.RLock()
+	defer Pt.mu.RUnlock()
+	if offset < 0 || length <= 0 || offset+length > Pt.size {
 		return nil, nil
 	}
 
 	res := make([]byte, 0, length)
 	remaining := length
 
-	startIdx, offInPiece := pt.offsetToPiece(offset)
+	startIdx, offInPiece := Pt.offsetToPiece(offset)
 
-	for i := startIdx; i < len(pt.pieces) && remaining > 0; i++ {
-		p := pt.pieces[i]
+	for i := startIdx; i < len(Pt.pieces) && remaining > 0; i++ {
+		p := Pt.pieces[i]
 
 		// Determine how much data we take from this piece
 		take := p.Length - offInPiece
@@ -449,12 +449,12 @@ func (pt *PieceTable) GetRange(offset, length int) ([]byte, error) {
 		var buf []byte
 		if p.Buf == Original {
 			var err error
-			buf, err = pt.orig.Read(p.Start+offInPiece, take)
+			buf, err = Pt.orig.Read(p.Start+offInPiece, take)
 			if err != nil {
 				return nil, err
 			}
 		} else {
-			buf = pt.add[p.Start+offInPiece : p.Start+offInPiece+take]
+			buf = Pt.add[p.Start+offInPiece : p.Start+offInPiece+take]
 		}
 
 		res = append(res, buf...)
@@ -469,18 +469,18 @@ func (pt *PieceTable) GetRange(offset, length int) ([]byte, error) {
 // UpdateOriginalBuffer safely replaces the original underlying buffer
 // without losing the current logical state and additions.
 // Used primarily for state recovery after a failed I/O operation.
-func (pt *PieceTable) UpdateOriginalBuffer(buf Buffer) {
-	pt.mu.Lock()
-	defer pt.mu.Unlock()
-	pt.orig = buf
+func (Pt *PieceTable) UpdateOriginalBuffer(buf Buffer) {
+	Pt.mu.Lock()
+	defer Pt.mu.Unlock()
+	Pt.orig = buf
 }
 func NewWithBuffer(buf Buffer) *PieceTable {
-	pt := &PieceTable{
+	Pt := &PieceTable{
 		orig: buf,
 		size: buf.Size(),
 	}
 	if buf.Size() > 0 {
-		pt.pieces = []Piece{{Buf: Original, Start: 0, Length: buf.Size()}}
+		Pt.pieces = []Piece{{Buf: Original, Start: 0, Length: buf.Size()}}
 	}
-	return pt
+	return Pt
 }

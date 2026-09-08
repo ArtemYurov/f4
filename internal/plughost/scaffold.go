@@ -135,7 +135,7 @@ func ScaffoldPlugin(dir, name string) ([]string, error) {
 	}
 
 	contents := []struct {
-		file string
+		File string
 		body string
 	}{
 		{"plugin.lua", renderScaffold(scaffoldPluginLua, name)},
@@ -145,7 +145,7 @@ func ScaffoldPlugin(dir, name string) ([]string, error) {
 
 	created := make([]string, 0, len(contents))
 	for _, entry := range contents {
-		path := filepath.Join(dir, entry.file)
+		path := filepath.Join(dir, entry.File)
 		// #nosec G703 -- entry.file comes only from the fixed three-name table above; dir is the user-selected destination root.
 		if err := os.WriteFile(path, []byte(entry.body), 0o600); err != nil {
 			return created, err

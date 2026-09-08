@@ -61,32 +61,32 @@ func (h *paletteMacroHost) injectedKeys() []string {
 // macro bindings and never runs one, so nothing here reaches the UI.
 func newTestMacroEngine(t *testing.T, host macro.MacroHost, source string) *macro.LuaMacroEngine {
 	t.Helper()
-	engine, err := macro.NewLuaMacroEngine(host)
+	Engine, err := macro.NewLuaMacroEngine(host)
 	if err != nil {
 		t.Fatalf("NewLuaMacroEngine: %v", err)
 	}
 	t.Cleanup(func() {
-		if err := engine.Close(); err != nil {
+		if err := Engine.Close(); err != nil {
 			t.Errorf("close Lua macro engine: %v", err)
 		}
 	})
 	if source != "" {
-		if err := engine.LoadString("test", source); err != nil {
+		if err := Engine.LoadString("test", source); err != nil {
 			t.Fatalf("LoadString: %v", err)
 		}
 	}
-	return engine
+	return Engine
 }
 
 func TestCommandPaletteIncludesRecordedAndLuaMacros(t *testing.T) {
 	previous := macro.MacroMgr
 	host := &paletteMacroHost{}
-	engine := newTestMacroEngine(t, host, `
+	Engine := newTestMacroEngine(t, host, `
 		Macro { area = "Shell"; key = "CtrlL"; description = "Lint current item";
 			action = function() Keys("F7") end }
 	`)
 	t.Cleanup(func() {
-		if err := engine.Close(); err != nil {
+		if err := Engine.Close(); err != nil {
 			t.Errorf("close Lua macro engine: %v", err)
 		}
 		macro.MacroMgr = previous
@@ -96,7 +96,7 @@ func TestCommandPaletteIncludesRecordedAndLuaMacros(t *testing.T) {
 			"Shell":  {"CtrlR": {keymap.ParseFarKey("F5")}},
 			"Common": {"AltR": {keymap.ParseFarKey("F6")}},
 		},
-		Lua: engine,
+		Lua: Engine,
 	}
 
 	entries := commandPaletteMacroEntries("Shell")
@@ -116,7 +116,7 @@ func TestCommandPaletteIncludesRecordedAndLuaMacros(t *testing.T) {
 	if !executeCommandPaletteEntry(byKey["lua-macro:shell:ctrll"]) {
 		t.Fatal("Lua macro did not start from the palette")
 	}
-	if !engine.WaitIdle(time.Second) {
+	if !Engine.WaitIdle(time.Second) {
 		t.Fatal("Lua macro did not finish")
 	}
 	if got := strings.Join(host.injectedKeys(), " "); got != "F7" {
@@ -127,14 +127,14 @@ func TestCommandPaletteIncludesRecordedAndLuaMacros(t *testing.T) {
 func TestCommandPaletteLuaMacroStaleAreaBindingDoesNotFallBackToCommon(t *testing.T) {
 	previous := macro.MacroMgr
 	host := &paletteMacroHost{}
-	engine := newTestMacroEngine(t, host, `
+	Engine := newTestMacroEngine(t, host, `
 		Macro { area = "Shell"; key = "CtrlX"; description = "Shell command";
 			action = function() Keys("F5") end }
 		Macro { area = "Common"; key = "CtrlX"; description = "Common command";
 			action = function() Keys("F6") end }
 	`)
 	t.Cleanup(func() { macro.MacroMgr = previous })
-	macro.MacroMgr = &macro.MacroManager{Lua: engine}
+	macro.MacroMgr = &macro.MacroManager{Lua: Engine}
 
 	var shellEntry commandPaletteEntry
 	for _, entry := range commandPaletteLuaMacroEntries("Shell", "Macros", nil) {
@@ -146,13 +146,13 @@ func TestCommandPaletteLuaMacroStaleAreaBindingDoesNotFallBackToCommon(t *testin
 	if shellEntry.Key == "" {
 		t.Fatal("Shell Lua macro entry is missing")
 	}
-	if !engine.Remove("Shell", "CtrlX") {
+	if !Engine.Remove("Shell", "CtrlX") {
 		t.Fatal("failed to remove Shell binding")
 	}
 	if executeCommandPaletteEntry(shellEntry) {
 		t.Fatal("stale Shell entry fell back to a Common macro")
 	}
-	if !engine.WaitIdle(time.Second) {
+	if !Engine.WaitIdle(time.Second) {
 		t.Fatal("macro engine did not become idle")
 	}
 	if got := strings.Join(host.injectedKeys(), " "); got != "" {

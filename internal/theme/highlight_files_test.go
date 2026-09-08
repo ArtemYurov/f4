@@ -697,8 +697,8 @@ NormalFileName = foreground:#FFFFFF
 	if fg := vtui.GetRGBFore(highlighter.GetColor(&dir, base, false, false)); fg != 0xFFFFFF {
 		t.Errorf("directory foreground = #%06x, want #FFFFFF", fg)
 	}
-	file := vfs.VFSItem{Name: "readme.txt"}
-	if got := highlighter.GetColor(&file, base, false, false); got != base {
+	File := vfs.VFSItem{Name: "readme.txt"}
+	if got := highlighter.GetColor(&File, base, false, false); got != base {
 		t.Errorf("file color = %#x, want the untouched panel color %#x", got, base)
 	}
 }

@@ -10,7 +10,7 @@ import (
 
 type fontEntry struct {
 	base string
-	file string
+	File string
 }
 
 // windowsFontFile resolves a Windows font family name (as shown in settings)
@@ -31,7 +31,7 @@ func matchWindowsFontFamily(fontName string, entries []fontEntry) string {
 
 	for _, e := range entries {
 		if strings.ToLower(e.base) == want {
-			return fontFilePath(e.file)
+			return fontFilePath(e.File)
 		}
 	}
 	// The registry records families with their style, e.g. "Cascadia Mono
@@ -44,10 +44,10 @@ func matchWindowsFontFamily(fontName string, entries []fontEntry) string {
 			continue
 		}
 		if strings.Contains(got, "regular") {
-			return fontFilePath(e.file)
+			return fontFilePath(e.File)
 		}
 		if first == "" {
-			first = fontFilePath(e.file)
+			first = fontFilePath(e.File)
 		}
 	}
 	return first

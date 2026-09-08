@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/viewer"
@@ -39,8 +40,8 @@ func TestEditorView_DisasmMode_CycleRedecodesUnderTheCursor(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
 	vtui.SetDefaultPalette()
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	pt := piecetable.New(bytes.Repeat(movRaxRcx, 8))
-	ev := NewEditorView(pt, nil, "")
+	Pt := piecetable.New(bytes.Repeat(movRaxRcx, 8))
+	ev := editor.NewEditorView(Pt, nil, "")
 	defer ev.Close()
 	ev.SetPosition(0, 0, 80, 24)
 	vtui.FrameManager.Push(ev)
@@ -48,10 +49,10 @@ func TestEditorView_DisasmMode_CycleRedecodesUnderTheCursor(t *testing.T) {
 	ev.HexTopOffset = 0
 
 	// Nothing in the buffer names a mode, so the editor decodes as 64.
-	if got := ev.disasmMode(); got != 64 {
+	if got := ev.EffectiveDisasmMode(); got != 64 {
 		t.Fatalf("initial mode = %d, want 64", got)
 	}
-	if st := ev.editorStatusText(); !strings.Contains(st, "Dec:64") {
+	if st := ev.EditorStatusText(); !strings.Contains(st, "Dec:64") {
 		t.Fatalf("status %q does not show Dec:64", st)
 	}
 	down := &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_DOWN}
@@ -66,7 +67,7 @@ func TestEditorView_DisasmMode_CycleRedecodesUnderTheCursor(t *testing.T) {
 	if ev.DisasmMode != 32 {
 		t.Fatalf("after one switch mode = %d, want 32", ev.DisasmMode)
 	}
-	if st := ev.editorStatusText(); !strings.Contains(st, "Dec:32") {
+	if st := ev.EditorStatusText(); !strings.Contains(st, "Dec:32") {
 		t.Fatalf("status %q does not show Dec:32", st)
 	}
 	ev.ProcessKey(down)
@@ -88,16 +89,16 @@ func TestEditorView_DisasmMode_CycleRedecodesUnderTheCursor(t *testing.T) {
 func TestEditorView_DecodeStepSeesTheLastBytes(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	ev := NewEditorView(piecetable.New(bytes.Repeat(movRaxRcx, 2)), nil, "")
+	ev := editor.NewEditorView(piecetable.New(bytes.Repeat(movRaxRcx, 2)), nil, "")
 	defer ev.Close()
 	ev.SetPosition(0, 0, 80, 24)
 	ev.DecodeMode = true
 	ev.DisasmMode = 64
 
-	if got := ev.decodeStep(3); got != 3 {
+	if got := ev.DecodeStep(3); got != 3 {
 		t.Fatalf("decodeStep(3) on a 6-byte buffer = %d, want 3", got)
 	}
-	if got := ev.decodeStep(6); got != 0 {
+	if got := ev.DecodeStep(6); got != 0 {
 		t.Fatalf("decodeStep at the end of the buffer = %d, want 0", got)
 	}
 }

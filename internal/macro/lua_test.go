@@ -106,30 +106,30 @@ func (h *fakeMacroHost) injectedKeys() []string {
 
 func newTestMacroEngine(t *testing.T, host MacroHost, source string) *LuaMacroEngine {
 	t.Helper()
-	engine, err := NewLuaMacroEngine(host)
+	Engine, err := NewLuaMacroEngine(host)
 	if err != nil {
 		t.Fatalf("NewLuaMacroEngine: %v", err)
 	}
 	t.Cleanup(func() {
-		if err := engine.Close(); err != nil {
+		if err := Engine.Close(); err != nil {
 			t.Errorf("close Lua macro engine: %v", err)
 		}
 	})
 
 	if source != "" {
-		if err := engine.LoadString("test", source); err != nil {
+		if err := Engine.LoadString("test", source); err != nil {
 			t.Fatalf("LoadString: %v", err)
 		}
 	}
-	return engine
+	return Engine
 }
 
 // fireMacro triggers a key and waits for the macro to finish, since macro
 // execution is asynchronous by design.
-func fireMacro(t *testing.T, engine *LuaMacroEngine, key string) bool {
+func fireMacro(t *testing.T, Engine *LuaMacroEngine, key string) bool {
 	t.Helper()
-	consumed := engine.Trigger(engine.host.CurrentArea(), keymap.ParseFarKey(key))
-	if !engine.WaitIdle(5 * time.Second) {
+	consumed := Engine.Trigger(Engine.host.CurrentArea(), keymap.ParseFarKey(key))
+	if !Engine.WaitIdle(5 * time.Second) {
 		t.Fatal("macro did not finish in time")
 	}
 	return consumed
@@ -137,10 +137,10 @@ func fireMacro(t *testing.T, engine *LuaMacroEngine, key string) bool {
 
 // macroGlobals reads globals back out of the interpreter, which is how these
 // tests observe what an action did.
-func macroGlobals(t *testing.T, engine *LuaMacroEngine, names ...string) map[string]lua.LValue {
+func macroGlobals(t *testing.T, Engine *LuaMacroEngine, names ...string) map[string]lua.LValue {
 	t.Helper()
 	values := make(map[string]lua.LValue, len(names))
-	err := engine.rt.Do(func(L *lua.LState) error {
+	err := Engine.rt.Do(func(L *lua.LState) error {
 		for _, name := range names {
 			values[name] = L.GetGlobal(name)
 		}
@@ -153,79 +153,79 @@ func macroGlobals(t *testing.T, engine *LuaMacroEngine, names ...string) map[str
 }
 
 func TestMacroRegistration(t *testing.T) {
-	engine := newTestMacroEngine(t, newFakeMacroHost(), `
+	Engine := newTestMacroEngine(t, newFakeMacroHost(), `
 		Macro { area = "Shell Editor"; key = "CtrlA CtrlB"; description = "two by two";
 			action = function() end }
 	`)
 
-	if engine.Count() != 1 {
-		t.Fatalf("Count = %d, want 1", engine.Count())
+	if Engine.Count() != 1 {
+		t.Fatalf("Count = %d, want 1", Engine.Count())
 	}
 	for _, area := range []string{"Shell", "shell", "Editor"} {
 		for _, key := range []string{"CtrlA", "ctrla", "CtrlB"} {
-			if engine.Find(area, key) == nil {
+			if Engine.Find(area, key) == nil {
 				t.Errorf("Find(%q, %q) found nothing", area, key)
 			}
 		}
 	}
-	if engine.Find("Viewer", "CtrlA") != nil {
+	if Engine.Find("Viewer", "CtrlA") != nil {
 		t.Error("a Shell macro leaked into the Viewer area")
 	}
-	if engine.Find("Shell", "CtrlC") != nil {
+	if Engine.Find("Shell", "CtrlC") != nil {
 		t.Error("an unbound key resolved to a macro")
 	}
 }
 
 func TestMacroCommonFallbackAndTerminalAlias(t *testing.T) {
-	engine := newTestMacroEngine(t, newFakeMacroHost(), `
+	Engine := newTestMacroEngine(t, newFakeMacroHost(), `
 		Macro { key = "CtrlG"; action = function() end }
 		Macro { area = "Shell"; key = "CtrlH"; action = function() end }
 	`)
 
-	if engine.Find("Viewer", "CtrlG") == nil {
+	if Engine.Find("Viewer", "CtrlG") == nil {
 		t.Error("a macro without an area did not fall back to common")
 	}
-	if engine.Find("Terminal", "CtrlH") == nil {
+	if Engine.Find("Terminal", "CtrlH") == nil {
 		t.Error("the Terminal area did not resolve to Far's shell")
 	}
 }
 
 func TestMacroLastRegistrationWins(t *testing.T) {
-	engine := newTestMacroEngine(t, newFakeMacroHost(), `
+	Engine := newTestMacroEngine(t, newFakeMacroHost(), `
 		Macro { area = "Shell"; key = "CtrlJ"; description = "first"; action = function() Keys("F1") end }
 		Macro { area = "Shell"; key = "CtrlJ"; description = "second"; action = function() Keys("F2") end }
 	`)
 
-	macro := engine.Find("Shell", "CtrlJ")
+	macro := Engine.Find("Shell", "CtrlJ")
 	if macro == nil || macro.Description != "second" {
 		t.Fatalf("Find returned %v, want the second registration", macro)
 	}
 }
 
 func TestMacroRejectsIncompleteDeclarations(t *testing.T) {
-	engine := newTestMacroEngine(t, newFakeMacroHost(), "")
+	Engine := newTestMacroEngine(t, newFakeMacroHost(), "")
 
-	if err := engine.LoadString("bad", `Macro { key = "CtrlK" }`); err == nil {
+	if err := Engine.LoadString("bad", `Macro { key = "CtrlK" }`); err == nil {
 		t.Error("a macro without an action was accepted")
 	}
-	if err := engine.LoadString("bad", `Macro { action = function() end }`); err == nil {
+	if err := Engine.LoadString("bad", `Macro { action = function() end }`); err == nil {
 		t.Error("a macro without a key was accepted")
 	}
-	if engine.Count() != 0 {
-		t.Errorf("Count = %d, want 0", engine.Count())
+	if Engine.Count() != 0 {
+		t.Errorf("Count = %d, want 0", Engine.Count())
 	}
 }
 
 func TestMacroKeysAreInjected(t *testing.T) {
 	host := newFakeMacroHost()
-	engine := newTestMacroEngine(t, host, `
+	Engine := newTestMacroEngine(t, host, `
 		Macro { area = "Shell"; key = "CtrlL"; action = function()
 			Keys("F5 Enter")
 			Keys("Esc")
 		end }
 	`)
 
-	if !fireMacro(t, engine, "CtrlL") {
+	if !fireMacro(t, Engine, "CtrlL") {
 		t.Fatal("the trigger key was not consumed")
 	}
 	got := strings.Join(host.injectedKeys(), " ")
@@ -235,28 +235,28 @@ func TestMacroKeysAreInjected(t *testing.T) {
 }
 
 func TestMacroUnboundKeyIsNotConsumed(t *testing.T) {
-	engine := newTestMacroEngine(t, newFakeMacroHost(), `
+	Engine := newTestMacroEngine(t, newFakeMacroHost(), `
 		Macro { area = "Shell"; key = "CtrlM"; action = function() end }
 	`)
 
-	if engine.Trigger("Shell", keymap.ParseFarKey("CtrlN")) {
+	if Engine.Trigger("Shell", keymap.ParseFarKey("CtrlN")) {
 		t.Fatal("an unbound key was consumed")
 	}
 }
 
 func TestMacroConditionDeclinesAndReplaysTheKey(t *testing.T) {
 	host := newFakeMacroHost()
-	engine := newTestMacroEngine(t, host, `
+	Engine := newTestMacroEngine(t, host, `
 		ran = false
 		Macro { area = "Shell"; key = "CtrlO";
 			condition = function() return false end;
 			action = function() ran = true; Keys("F9") end }
 	`)
 
-	if !fireMacro(t, engine, "CtrlO") {
+	if !fireMacro(t, Engine, "CtrlO") {
 		t.Fatal("the trigger key was not consumed")
 	}
-	if macroGlobals(t, engine, "ran")["ran"] == lua.LTrue {
+	if macroGlobals(t, Engine, "ran")["ran"] == lua.LTrue {
 		t.Error("the action ran even though the condition declined")
 	}
 
@@ -268,13 +268,13 @@ func TestMacroConditionDeclinesAndReplaysTheKey(t *testing.T) {
 
 func TestMacroConditionAccepts(t *testing.T) {
 	host := newFakeMacroHost()
-	engine := newTestMacroEngine(t, host, `
+	Engine := newTestMacroEngine(t, host, `
 		Macro { area = "Shell"; key = "CtrlP";
 			condition = function(key) return key == "CtrlP" end;
 			action = function() Keys("Tab") end }
 	`)
 
-	fireMacro(t, engine, "CtrlP")
+	fireMacro(t, Engine, "CtrlP")
 	if got := host.injectedKeys(); len(got) != 1 || got[0] != "Tab" {
 		t.Fatalf("injected %v, want [Tab]", got)
 	}
@@ -282,7 +282,7 @@ func TestMacroConditionAccepts(t *testing.T) {
 
 func TestMacroAKeyAndExit(t *testing.T) {
 	host := newFakeMacroHost()
-	engine := newTestMacroEngine(t, host, `
+	Engine := newTestMacroEngine(t, host, `
 		Macro { area = "Shell"; key = "CtrlQ"; action = function()
 			invoked = akey()
 			Keys("F3")
@@ -291,9 +291,9 @@ func TestMacroAKeyAndExit(t *testing.T) {
 		end }
 	`)
 
-	fireMacro(t, engine, "CtrlQ")
+	fireMacro(t, Engine, "CtrlQ")
 
-	if got := lua.LVAsString(macroGlobals(t, engine, "invoked")["invoked"]); got != "CtrlQ" {
+	if got := lua.LVAsString(macroGlobals(t, Engine, "invoked")["invoked"]); got != "CtrlQ" {
 		t.Errorf("akey() returned %q, want CtrlQ", got)
 	}
 	if got := host.injectedKeys(); len(got) != 1 || got[0] != "F3" {
@@ -304,7 +304,7 @@ func TestMacroAKeyAndExit(t *testing.T) {
 func TestMacroSeesArea(t *testing.T) {
 	host := newFakeMacroHost()
 	host.area = "Editor"
-	engine := newTestMacroEngine(t, host, `
+	Engine := newTestMacroEngine(t, host, `
 		Macro { area = "Editor"; key = "CtrlR"; action = function()
 			current = Area.Current
 			in_editor = Area.Editor
@@ -312,9 +312,9 @@ func TestMacroSeesArea(t *testing.T) {
 		end }
 	`)
 
-	fireMacro(t, engine, "CtrlR")
+	fireMacro(t, Engine, "CtrlR")
 
-	values := macroGlobals(t, engine, "current", "in_editor", "in_shell")
+	values := macroGlobals(t, Engine, "current", "in_editor", "in_shell")
 	if got := lua.LVAsString(values["current"]); got != "Editor" {
 		t.Errorf("Area.Current = %q, want Editor", got)
 	}
@@ -335,7 +335,7 @@ func TestMacroSeesPanelsAndCommandLine(t *testing.T) {
 	host.panels[false] = MacroPanelInfo{Path: "/tmp", Current: "core", ItemCount: 1}
 	host.cmdLine = "grep -r foo"
 
-	engine := newTestMacroEngine(t, host, `
+	Engine := newTestMacroEngine(t, host, `
 		Macro { area = "Shell"; key = "CtrlS"; action = function()
 			apath = APanel.Path
 			acur = APanel.Current
@@ -348,9 +348,9 @@ func TestMacroSeesPanelsAndCommandLine(t *testing.T) {
 		end }
 	`)
 
-	fireMacro(t, engine, "CtrlS")
+	fireMacro(t, Engine, "CtrlS")
 
-	values := macroGlobals(t, engine,
+	values := macroGlobals(t, Engine,
 		"apath", "acur", "asel", "aleft", "ppath", "cmd", "cmdempty", "unknown")
 
 	if got := lua.LVAsString(values["apath"]); got != "/home/user" {
@@ -383,12 +383,12 @@ func TestMacroPanelsAreReadAtAccessTime(t *testing.T) {
 	host := newFakeMacroHost()
 	host.panels[true] = MacroPanelInfo{Current: "before.txt"}
 
-	engine := newTestMacroEngine(t, host, `
+	Engine := newTestMacroEngine(t, host, `
 		Macro { area = "Shell"; key = "CtrlY"; action = function() seen = APanel.Current end }
 	`)
 
-	fireMacro(t, engine, "CtrlY")
-	if got := lua.LVAsString(macroGlobals(t, engine, "seen")["seen"]); got != "before.txt" {
+	fireMacro(t, Engine, "CtrlY")
+	if got := lua.LVAsString(macroGlobals(t, Engine, "seen")["seen"]); got != "before.txt" {
 		t.Fatalf("APanel.Current = %q, want before.txt", got)
 	}
 
@@ -398,21 +398,21 @@ func TestMacroPanelsAreReadAtAccessTime(t *testing.T) {
 	host.panels[true] = MacroPanelInfo{Current: "after.txt"}
 	host.mu.Unlock()
 
-	fireMacro(t, engine, "CtrlY")
-	if got := lua.LVAsString(macroGlobals(t, engine, "seen")["seen"]); got != "after.txt" {
+	fireMacro(t, Engine, "CtrlY")
+	if got := lua.LVAsString(macroGlobals(t, Engine, "seen")["seen"]); got != "after.txt" {
 		t.Fatalf("APanel.Current = %q, want after.txt", got)
 	}
 }
 
 func TestMacroMsgBox(t *testing.T) {
 	host := newFakeMacroHost()
-	engine := newTestMacroEngine(t, host, `
+	Engine := newTestMacroEngine(t, host, `
 		Macro { area = "Shell"; key = "CtrlT"; action = function()
 			msgbox("body", "Title")
 		end }
 	`)
 
-	fireMacro(t, engine, "CtrlT")
+	fireMacro(t, Engine, "CtrlT")
 
 	host.mu.Lock()
 	defer host.mu.Unlock()
@@ -422,7 +422,7 @@ func TestMacroMsgBox(t *testing.T) {
 }
 
 func TestMacroStringHelpers(t *testing.T) {
-	engine := newTestMacroEngine(t, newFakeMacroHost(), "")
+	Engine := newTestMacroEngine(t, newFakeMacroHost(), "")
 
 	cases := []struct {
 		expression string
@@ -452,7 +452,7 @@ func TestMacroStringHelpers(t *testing.T) {
 
 	for _, tc := range cases {
 		var got string
-		err := engine.rt.Do(func(L *lua.LState) error {
+		err := Engine.rt.Do(func(L *lua.LState) error {
 			if err := L.DoString("__result = " + tc.expression); err != nil {
 				return err
 			}
@@ -472,32 +472,32 @@ func TestMacroStringHelpers(t *testing.T) {
 func TestMacroFarTitleReportsCurrentWindowTitle(t *testing.T) {
 	host := newFakeMacroHost()
 	host.title = "f4 | Panels | Linux ARM64"
-	engine := newTestMacroEngine(t, host, `
+	Engine := newTestMacroEngine(t, host, `
 		Macro { area = "Shell"; key = "CtrlT"; action = function()
 			__title = Far.Title
 		end }
 	`)
 
-	if !fireMacro(t, engine, "CtrlT") {
+	if !fireMacro(t, Engine, "CtrlT") {
 		t.Fatal("title macro trigger was not consumed")
 	}
-	if got := lua.LVAsString(macroGlobals(t, engine, "__title")["__title"]); got != host.title {
+	if got := lua.LVAsString(macroGlobals(t, Engine, "__title")["__title"]); got != host.title {
 		t.Fatalf("Far.Title = %q, want %q", got, host.title)
 	}
 }
 
 func TestMacroUnsupportedDeclarationsDoNotAbortAFile(t *testing.T) {
 	host := newFakeMacroHost()
-	engine := newTestMacroEngine(t, host, `
+	Engine := newTestMacroEngine(t, host, `
 		Event { group = "ExitFAR"; action = function() end }
 		MenuItem { description = "something" }
 		Macro { area = "Shell"; key = "CtrlU"; action = function() Keys("F7") end }
 	`)
 
-	if engine.Count() != 1 {
-		t.Fatalf("Count = %d, want 1: an unsupported declaration cost the file its macros", engine.Count())
+	if Engine.Count() != 1 {
+		t.Fatalf("Count = %d, want 1: an unsupported declaration cost the file its macros", Engine.Count())
 	}
-	fireMacro(t, engine, "CtrlU")
+	fireMacro(t, Engine, "CtrlU")
 	if got := host.injectedKeys(); len(got) != 1 || got[0] != "F7" {
 		t.Fatalf("injected %v, want [F7]", got)
 	}
@@ -505,13 +505,13 @@ func TestMacroUnsupportedDeclarationsDoNotAbortAFile(t *testing.T) {
 
 func TestMacroFailingActionIsContained(t *testing.T) {
 	host := newFakeMacroHost()
-	engine := newTestMacroEngine(t, host, `
+	Engine := newTestMacroEngine(t, host, `
 		Macro { area = "Shell"; key = "CtrlV"; action = function()
 			error("boom")
 		end }
 	`)
 
-	fireMacro(t, engine, "CtrlV")
+	fireMacro(t, Engine, "CtrlV")
 
 	host.mu.Lock()
 	defer host.mu.Unlock()
@@ -539,64 +539,64 @@ func TestMacroLoadDir(t *testing.T) {
 	write(filepath.Join(dir, "notes.txt"), "ignored")
 	write(filepath.Join(dir, "broken.lua"), "this is not lua")
 
-	engine := newTestMacroEngine(t, newFakeMacroHost(), "")
+	Engine := newTestMacroEngine(t, newFakeMacroHost(), "")
 
-	if err := engine.LoadDir(dir); err == nil {
+	if err := Engine.LoadDir(dir); err == nil {
 		t.Error("LoadDir did not report the broken file")
 	}
-	if engine.Count() != 2 {
-		t.Fatalf("Count = %d, want 2: a broken file cost the other macros", engine.Count())
+	if Engine.Count() != 2 {
+		t.Fatalf("Count = %d, want 2: a broken file cost the other macros", Engine.Count())
 	}
-	if engine.Find("Shell", "CtrlX") == nil {
+	if Engine.Find("Shell", "CtrlX") == nil {
 		t.Error("macros in a subdirectory were not loaded")
 	}
 }
 
 func TestMacroLoadDirIgnoresMissingDirectory(t *testing.T) {
-	engine := newTestMacroEngine(t, newFakeMacroHost(), "")
-	if err := engine.LoadDir(filepath.Join(t.TempDir(), "absent")); err != nil {
+	Engine := newTestMacroEngine(t, newFakeMacroHost(), "")
+	if err := Engine.LoadDir(filepath.Join(t.TempDir(), "absent")); err != nil {
 		t.Fatalf("LoadDir on a missing directory returned %v", err)
 	}
 }
 
 func TestMacro_Remove(t *testing.T) {
-	engine := newTestMacroEngine(t, newFakeMacroHost(), `
+	Engine := newTestMacroEngine(t, newFakeMacroHost(), `
 		Macro { area = "Shell"; key = "CtrlZ"; action = function() Keys("F5") end }
 	`)
 
-	if engine.Count() != 1 {
-		t.Fatalf("Count = %d, want 1", engine.Count())
+	if Engine.Count() != 1 {
+		t.Fatalf("Count = %d, want 1", Engine.Count())
 	}
-	if engine.Find("Shell", "CtrlZ") == nil {
+	if Engine.Find("Shell", "CtrlZ") == nil {
 		t.Fatal("Expected to find CtrlZ macro")
 	}
 
-	if !engine.Remove("Shell", "CtrlZ") {
+	if !Engine.Remove("Shell", "CtrlZ") {
 		t.Fatal("Expected Remove to return true")
 	}
-	if engine.Count() != 0 {
-		t.Errorf("Count = %d, want 0 after Remove", engine.Count())
+	if Engine.Count() != 0 {
+		t.Errorf("Count = %d, want 0 after Remove", Engine.Count())
 	}
-	if engine.Find("Shell", "CtrlZ") != nil {
+	if Engine.Find("Shell", "CtrlZ") != nil {
 		t.Error("Expected Find to return nil after Remove")
 	}
 
-	if engine.Remove("Shell", "CtrlZ") {
+	if Engine.Remove("Shell", "CtrlZ") {
 		t.Error("Expected second Remove to return false")
 	}
 }
 
 func TestMacroExplicitRunReportsBusy(t *testing.T) {
-	engine := newTestMacroEngine(t, newFakeMacroHost(), `
+	Engine := newTestMacroEngine(t, newFakeMacroHost(), `
 		Macro { area = "Shell"; key = "CtrlX"; description = "Busy test";
 			action = function() end }
 	`)
-	engine.running.Store(true)
-	defer engine.running.Store(false)
-	if engine.Run("Shell", "CtrlX") {
+	Engine.running.Store(true)
+	defer Engine.running.Store(false)
+	if Engine.Run("Shell", "CtrlX") {
 		t.Fatal("Run reported success while the macro engine was busy")
 	}
-	if engine.RunExact("Shell", "CtrlX") {
+	if Engine.RunExact("Shell", "CtrlX") {
 		t.Fatal("RunExact reported success while the macro engine was busy")
 	}
 }

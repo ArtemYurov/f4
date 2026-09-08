@@ -10,8 +10,10 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/appcmd"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/dialog"
+	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
@@ -98,13 +100,13 @@ func isAIPanelActive() bool {
 	return false
 }
 
-func repeatEditorSearchDirection(ev *EditorView, reverse bool) {
-	if LastEditorSearch == "" {
+func repeatEditorSearchDirection(ev *editor.EditorView, reverse bool) {
+	if editor.LastEditorSearch == "" {
 		return
 	}
-	rememberedDirection := LastEditorSearchReverse
-	ev.Search(LastEditorSearch, LastEditorSearchCase, reverse, LastEditorSearchRegexp, LastEditorSearchWholeWord, true)
-	LastEditorSearchReverse = rememberedDirection
+	rememberedDirection := editor.LastEditorSearchReverse
+	ev.Search(editor.LastEditorSearch, editor.LastEditorSearchCase, reverse, editor.LastEditorSearchRegexp, editor.LastEditorSearchWholeWord, true)
+	editor.LastEditorSearchReverse = rememberedDirection
 }
 
 func init() {
@@ -120,12 +122,12 @@ func init() {
 
 	// withMultiEditor is for the handful of actions that know about the
 	// multi-caret set and act on it themselves.
-	withMultiEditor := func(fn func(ev *EditorView)) func() bool {
+	withMultiEditor := func(fn func(ev *editor.EditorView)) func() bool {
 		return func() bool {
 			if vtui.FrameManager == nil {
 				return false
 			}
-			if ev, ok := vtui.FrameManager.GetTopFrame().(*EditorView); ok {
+			if ev, ok := vtui.FrameManager.GetTopFrame().(*editor.EditorView); ok {
 				fn(ev)
 				return true
 			}
@@ -137,9 +139,9 @@ func init() {
 	// the caret set is put down here. An action that knows nothing about it
 	// would work through the primary caret alone and leave the others
 	// painted over text they no longer describe.
-	withEditor := func(fn func(ev *EditorView)) func() bool {
-		return withMultiEditor(func(ev *EditorView) {
-			ev.clearExtraCursors()
+	withEditor := func(fn func(ev *editor.EditorView)) func() bool {
+		return withMultiEditor(func(ev *editor.EditorView) {
+			ev.ClearExtraCursors()
 			fn(ev)
 		})
 	}
@@ -157,12 +159,12 @@ func init() {
 		}
 	}
 
-	editorState := func(fn func(ev *EditorView) bool) func() bool {
+	editorState := func(fn func(ev *editor.EditorView) bool) func() bool {
 		return func() bool {
 			if vtui.FrameManager == nil {
 				return false
 			}
-			if ev, ok := vtui.FrameManager.GetTopFrame().(*EditorView); ok {
+			if ev, ok := vtui.FrameManager.GetTopFrame().(*editor.EditorView); ok {
 				return fn(ev)
 			}
 			return false
@@ -1174,7 +1176,7 @@ func init() {
 			fsp := pf.getActivePanel()
 			return fsp != nil && fsp.useSortGroups
 		},
-		Handler: withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(CmSortGroups, nil) }),
+		Handler: withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmSortGroups, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:                "Panel.SortMenu",
@@ -1320,7 +1322,7 @@ func init() {
 		DescKey:             "Action.Settings.AutoUpdate.Desc",
 		MenuPath:            "Options",
 		MenuSeparatorBefore: true,
-		Handler:             withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(CmUpdateSettings, nil) }),
+		Handler:             withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmUpdateSettings, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Settings.Proxy",
@@ -1330,7 +1332,7 @@ func init() {
 		Description: "Configure the proxy used for updates, plugins and network connections",
 		DescKey:     "Action.Settings.Proxy.Desc",
 		MenuPath:    "Options",
-		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(CmProxySettings, nil) }),
+		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmProxySettings, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:                "Settings.PluginConfiguration",
@@ -1364,7 +1366,7 @@ func init() {
 		DescKey:             "Action.App.PlugRing.Desc",
 		MenuPath:            "Options",
 		MenuSeparatorBefore: true,
-		Handler:             withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(CmPlugRing, nil) }),
+		Handler:             withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmPlugRing, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:         "App.SaveSettings",
@@ -1460,7 +1462,7 @@ func init() {
 		Description: "Swap left and right panels",
 		DescKey:     "Action.Panel.Swap.Desc",
 		DefaultKeys: []string{"CtrlU"},
-		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(CmSwapPanels, nil) }),
+		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmSwapPanels, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:         "Panel.Toggle",
@@ -1819,7 +1821,7 @@ func init() {
 		Description: "Sort panel by name",
 		DescKey:     "Action.Panel.SortByName.Desc",
 		DefaultKeys: []string{"CtrlF3"},
-		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(CmSortName, nil) }),
+		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmSortName, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.SortByExt",
@@ -1828,7 +1830,7 @@ func init() {
 		Description: "Sort panel by extension",
 		DescKey:     "Action.Panel.SortByExt.Desc",
 		DefaultKeys: []string{"CtrlF4"},
-		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(CmSortExt, nil) }),
+		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmSortExt, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.SortByTime",
@@ -1837,7 +1839,7 @@ func init() {
 		Description: "Sort panel by modification time",
 		DescKey:     "Action.Panel.SortByTime.Desc",
 		DefaultKeys: []string{"CtrlF5"},
-		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(CmSortTime, nil) }),
+		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmSortTime, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.SortBySize",
@@ -1846,7 +1848,7 @@ func init() {
 		Description: "Sort panel by size",
 		DescKey:     "Action.Panel.SortBySize.Desc",
 		DefaultKeys: []string{"CtrlF6"},
-		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(CmSortSize, nil) }),
+		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmSortSize, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.SortUnsorted",
@@ -1855,7 +1857,7 @@ func init() {
 		Description: "Disable panel sorting",
 		DescKey:     "Action.Panel.SortUnsorted.Desc",
 		DefaultKeys: []string{"CtrlF7"},
-		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(CmSortUnsorted, nil) }),
+		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmSortUnsorted, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:         "Panel.LeftDriveMenu",
@@ -2004,7 +2006,7 @@ func init() {
 		DescKey:     "Action.Editor.Save.Desc",
 		DefaultKeys: []string{"F2"},
 		MenuPath:    "File",
-		Handler:     withEditor(func(ev *EditorView) { ev.SaveToFile(nil) }),
+		Handler:     withEditor(func(ev *editor.EditorView) { ev.SaveToFile(nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Editor.SaveAs",
@@ -2015,7 +2017,7 @@ func init() {
 		DescKey:     "Action.Editor.SaveAs.Desc",
 		DefaultKeys: []string{"ShiftF2"},
 		MenuPath:    "File",
-		Handler:     withEditor(func(ev *EditorView) { ev.showSaveAsDialog() }),
+		Handler:     withEditor(func(ev *editor.EditorView) { ev.ShowSaveAsDialog() }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Editor.SwitchToViewer",
@@ -2026,7 +2028,7 @@ func init() {
 		DescKey:     "Action.Editor.SwitchToViewer.Desc",
 		DefaultKeys: []string{"F6"},
 		MenuPath:    "File",
-		Handler:     withEditor(func(ev *EditorView) { actionSwitchEditorToViewer(ev) }),
+		Handler:     withEditor(func(ev *editor.EditorView) { actionSwitchEditorToViewer(ev) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Editor.Quit",
@@ -2037,7 +2039,7 @@ func init() {
 		DescKey:     "Action.Editor.Quit.Desc",
 		DefaultKeys: []string{"F10", "Esc"},
 		MenuPath:    "File",
-		Handler:     withEditor(func(ev *EditorView) { ev.tryClose() }),
+		Handler:     withEditor(func(ev *editor.EditorView) { ev.TryClose() }),
 	})
 
 	action.RegisterAction(action.Action{
@@ -2049,7 +2051,7 @@ func init() {
 		DescKey:     "Action.Editor.Undo.Desc",
 		DefaultKeys: []string{"CtrlZ"},
 		MenuPath:    "Edit",
-		Handler:     withEditor(func(ev *EditorView) { ev.Undo() }),
+		Handler:     withEditor(func(ev *editor.EditorView) { ev.Undo() }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Editor.Redo",
@@ -2060,7 +2062,7 @@ func init() {
 		DescKey:     "Action.Editor.Redo.Desc",
 		DefaultKeys: []string{"CtrlShiftZ"},
 		MenuPath:    "Edit",
-		Handler:     withEditor(func(ev *EditorView) { ev.Redo() }),
+		Handler:     withEditor(func(ev *editor.EditorView) { ev.Redo() }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Editor.Copy",
@@ -2071,8 +2073,8 @@ func init() {
 		DescKey:     "Action.Editor.Copy.Desc",
 		DefaultKeys: []string{"CtrlC", "CtrlIns"},
 		MenuPath:    "Edit",
-		Handler: withEditor(func(ev *EditorView) {
-			if ev.selActive || ev.rectSelActive {
+		Handler: withEditor(func(ev *editor.EditorView) {
+			if ev.SelActive || ev.RectSelActive {
 				ev.CopySelection()
 			}
 		}),
@@ -2086,12 +2088,12 @@ func init() {
 		DescKey:     "Action.Editor.Cut.Desc",
 		// Ctrl+X is intentionally not a default key: the editor keeps it as
 		// the classic down-movement alias when no selection exists (see
-		// EditorView.ProcessKey), and delegates to this action when there
+		// editor.EditorView.ProcessKey), and delegates to this action when there
 		// is a selection. Shift+Del is the advertised Cut hotkey.
 		DefaultKeys: []string{"ShiftDel"},
 		MenuPath:    "Edit",
-		Handler: withEditor(func(ev *EditorView) {
-			if ev.selActive || ev.rectSelActive {
+		Handler: withEditor(func(ev *editor.EditorView) {
+			if ev.SelActive || ev.RectSelActive {
 				ev.CopySelection()
 				ev.DeleteSelection()
 			}
@@ -2106,7 +2108,7 @@ func init() {
 		DescKey:     "Action.Editor.Paste.Desc",
 		DefaultKeys: []string{"ShiftIns", "CtrlV"},
 		MenuPath:    "Edit",
-		Handler: withEditor(func(ev *EditorView) {
+		Handler: withEditor(func(ev *editor.EditorView) {
 			if text := vtui.GetClipboard(); text != "" {
 				ev.PasteText(text)
 			}
@@ -2121,14 +2123,14 @@ func init() {
 		DescKey:     "Action.Editor.SelectAll.Desc",
 		DefaultKeys: []string{"CtrlA"},
 		MenuPath:    "Edit",
-		Handler: withEditor(func(ev *EditorView) {
-			ev.rectSelActive = false
-			ev.selActive = true
-			ev.selAnchorOffset = 0
-			lastLine := ev.li.LineCount() - 1
+		Handler: withEditor(func(ev *editor.EditorView) {
+			ev.RectSelActive = false
+			ev.SelActive = true
+			ev.SelAnchorOffset = 0
+			lastLine := ev.Li.LineCount() - 1
 			ev.CursorLine = lastLine
-			ev.CursorPos = ev.getLineLength(lastLine)
-			ev.ensureCursorVisible()
+			ev.CursorPos = ev.GetLineLength(lastLine)
+			ev.EnsureCursorVisible()
 		}),
 	})
 	action.RegisterAction(action.Action{
@@ -2140,7 +2142,7 @@ func init() {
 		DescKey:     "Action.Editor.DeleteLine.Desc",
 		DefaultKeys: []string{"CtrlY"},
 		MenuPath:    "Edit",
-		Handler:     withEditor(func(ev *EditorView) { ev.DeleteCurrentLine() }),
+		Handler:     withEditor(func(ev *editor.EditorView) { ev.DeleteCurrentLine() }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Editor.DuplicateLine",
@@ -2154,7 +2156,7 @@ func init() {
 		// Notepad++ nor the VS Code spelling of this command is free.
 		DefaultKeys: []string{"CtrlShiftD"},
 		MenuPath:    "Edit",
-		Handler:     withEditor(func(ev *EditorView) { ev.DuplicateLines() }),
+		Handler:     withEditor(func(ev *editor.EditorView) { ev.DuplicateLines() }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Editor.AddCursorAtNextOccurrence",
@@ -2167,7 +2169,7 @@ func init() {
 		// right-arrow alias here and Ctrl+Shift+D duplicates a line.
 		DefaultKeys: []string{"CtrlShiftN"},
 		MenuPath:    "Edit",
-		Handler:     withMultiEditor(func(ev *EditorView) { ev.AddCursorAtNextOccurrence() }),
+		Handler:     withMultiEditor(func(ev *editor.EditorView) { ev.AddCursorAtNextOccurrence() }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Editor.SelectAllOccurrences",
@@ -2178,7 +2180,7 @@ func init() {
 		DescKey:     "Action.Editor.SelectAllOccurrences.Desc",
 		DefaultKeys: []string{"CtrlShiftL"},
 		MenuPath:    "Edit",
-		Handler:     withMultiEditor(func(ev *EditorView) { ev.SelectAllOccurrences() }),
+		Handler:     withMultiEditor(func(ev *editor.EditorView) { ev.SelectAllOccurrences() }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Editor.MoveLineUp",
@@ -2191,7 +2193,7 @@ func init() {
 		// the Notepad++ spelling rather than the VS Code one.
 		DefaultKeys: []string{"CtrlShiftUp"},
 		MenuPath:    "Edit",
-		Handler:     withEditor(func(ev *EditorView) { ev.MoveLines(-1) }),
+		Handler:     withEditor(func(ev *editor.EditorView) { ev.MoveLines(-1) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Editor.MoveLineDown",
@@ -2202,7 +2204,7 @@ func init() {
 		DescKey:     "Action.Editor.MoveLineDown.Desc",
 		DefaultKeys: []string{"CtrlShiftDown"},
 		MenuPath:    "Edit",
-		Handler:     withEditor(func(ev *EditorView) { ev.MoveLines(1) }),
+		Handler:     withEditor(func(ev *editor.EditorView) { ev.MoveLines(1) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Editor.Base64Menu",
@@ -2212,7 +2214,7 @@ func init() {
 		Description: "Encode or decode the selected text as Base64",
 		DescKey:     "Action.Editor.Base64Menu.Desc",
 		DefaultKeys: []string{"F11"},
-		Handler:     withEditor(func(ev *EditorView) { ev.showBase64Menu() }),
+		Handler:     withEditor(func(ev *editor.EditorView) { ev.ShowBase64Menu() }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Editor.Base64Encode",
@@ -2222,8 +2224,8 @@ func init() {
 		Description: "Replace the selected text with its Base64 encoding",
 		DescKey:     "Action.Editor.Base64Encode.Desc",
 		MenuPath:    "Edit",
-		Handler: withEditor(func(ev *EditorView) {
-			if err := ev.transformBase64Selection(true); err != nil {
+		Handler: withEditor(func(ev *editor.EditorView) {
+			if err := ev.TransformBase64Selection(true); err != nil {
 				vtui.ShowMessage(i18n.Msg("Editor.Base64.Title"), err.Error(), []string{i18n.Msg("vtui.Ok")})
 			}
 		}),
@@ -2236,8 +2238,8 @@ func init() {
 		Description: "Replace selected Base64 text with its decoded bytes",
 		DescKey:     "Action.Editor.Base64Decode.Desc",
 		MenuPath:    "Edit",
-		Handler: withEditor(func(ev *EditorView) {
-			if err := ev.transformBase64Selection(false); err != nil {
+		Handler: withEditor(func(ev *editor.EditorView) {
+			if err := ev.TransformBase64Selection(false); err != nil {
 				vtui.ShowMessage(i18n.Msg("Editor.Base64.Title"), err.Error(), []string{i18n.Msg("vtui.Ok")})
 			}
 		}),
@@ -2251,10 +2253,10 @@ func init() {
 		DescKey:     "Action.Editor.ToggleOvertype.Desc",
 		DefaultKeys: []string{"Ins"},
 		MenuPath:    "Edit",
-		Checked:     editorState(func(ev *EditorView) bool { return ev.overtype }),
-		Handler: withEditor(func(ev *EditorView) {
-			ev.overtype = !ev.overtype
-			ev.ensureCursorVisible()
+		Checked:     editorState(func(ev *editor.EditorView) bool { return ev.Overtype }),
+		Handler: withEditor(func(ev *editor.EditorView) {
+			ev.Overtype = !ev.Overtype
+			ev.EnsureCursorVisible()
 		}),
 	})
 
@@ -2267,7 +2269,7 @@ func init() {
 		DescKey:     "Action.Editor.Search.Desc",
 		DefaultKeys: []string{"F7"},
 		MenuPath:    "Search",
-		Handler:     withEditor(func(ev *EditorView) { vtui.FrameManager.EmitCommand(CmSearch, nil) }),
+		Handler:     withEditor(func(ev *editor.EditorView) { vtui.FrameManager.EmitCommand(appcmd.CmSearch, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Editor.Replace",
@@ -2278,7 +2280,7 @@ func init() {
 		DescKey:     "Action.Editor.Replace.Desc",
 		DefaultKeys: []string{"CtrlF7"},
 		MenuPath:    "Search",
-		Handler:     withEditor(func(ev *EditorView) { vtui.FrameManager.EmitCommand(CmReplace, nil) }),
+		Handler:     withEditor(func(ev *editor.EditorView) { vtui.FrameManager.EmitCommand(appcmd.CmReplace, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Editor.SearchNext",
@@ -2289,9 +2291,9 @@ func init() {
 		DescKey:     "Action.Editor.SearchNext.Desc",
 		DefaultKeys: []string{"ShiftF7"},
 		MenuPath:    "Search",
-		Handler: withEditor(func(ev *EditorView) {
-			if LastEditorSearch != "" {
-				ev.Search(LastEditorSearch, LastEditorSearchCase, LastEditorSearchReverse, LastEditorSearchRegexp, LastEditorSearchWholeWord, true)
+		Handler: withEditor(func(ev *editor.EditorView) {
+			if editor.LastEditorSearch != "" {
+				ev.Search(editor.LastEditorSearch, editor.LastEditorSearchCase, editor.LastEditorSearchReverse, editor.LastEditorSearchRegexp, editor.LastEditorSearchWholeWord, true)
 			}
 		}),
 	})
@@ -2303,7 +2305,7 @@ func init() {
 		Description: "Continue search forwards",
 		DescKey:     "Action.Editor.SearchNext.Desc",
 		DefaultKeys: []string{"CtrlEnter"},
-		Handler:     withEditor(func(ev *EditorView) { repeatEditorSearchDirection(ev, false) }),
+		Handler:     withEditor(func(ev *editor.EditorView) { repeatEditorSearchDirection(ev, false) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Editor.SearchPrevious",
@@ -2313,7 +2315,7 @@ func init() {
 		Description: "Continue search backwards",
 		DescKey:     "Action.Editor.SearchPrevious.Desc",
 		DefaultKeys: []string{"CtrlShiftEnter"},
-		Handler:     withEditor(func(ev *EditorView) { repeatEditorSearchDirection(ev, true) }),
+		Handler:     withEditor(func(ev *editor.EditorView) { repeatEditorSearchDirection(ev, true) }),
 	})
 
 	action.RegisterAction(action.Action{
@@ -2325,20 +2327,20 @@ func init() {
 		DescKey:     "Action.Editor.WordWrap.Desc",
 		DefaultKeys: []string{"F3"},
 		MenuPath:    "Options",
-		Checked:     editorState(func(ev *EditorView) bool { return ev.WordWrap }),
-		Handler: withEditor(func(ev *EditorView) {
-			if ev.wordWrapSuppressed {
+		Checked:     editorState(func(ev *editor.EditorView) bool { return ev.WordWrap }),
+		Handler: withEditor(func(ev *editor.EditorView) {
+			if ev.WordWrapSuppressed {
 				ev.WordWrap = false
 				return
 			}
-			if !ev.WordWrap && ev.currentLineUnsafeForWordWrap() {
-				ev.disableUnsafeWordWrap()
+			if !ev.WordWrap && ev.CurrentLineUnsafeForWordWrap() {
+				ev.DisableUnsafeWordWrap()
 				return
 			}
-			ev.setWordWrap(!ev.WordWrap)
+			ev.SetWordWrap(!ev.WordWrap)
 			ev.ScrollLeft = 0
-			ev.clearCaches()
-			ev.ensureCursorVisible()
+			ev.ClearCaches()
+			ev.EnsureCursorVisible()
 		}),
 	})
 	action.RegisterAction(action.Action{
@@ -2350,16 +2352,16 @@ func init() {
 		DescKey:     "Action.Editor.HexMode.Desc",
 		DefaultKeys: []string{"F4"},
 		MenuPath:    "Options",
-		Checked:     editorState(func(ev *EditorView) bool { return ev.HexMode || ev.DecodeMode }),
-		Handler: withEditor(func(ev *EditorView) {
+		Checked:     editorState(func(ev *editor.EditorView) bool { return ev.HexMode || ev.DecodeMode }),
+		Handler: withEditor(func(ev *editor.EditorView) {
 			if !ev.HexMode && !ev.DecodeMode {
 				ev.HexMode = true
-				ev.HexTopOffset = (ev.li.GetLineOffset(ev.CursorLine) + ev.CursorPos) &^ 0xF
+				ev.HexTopOffset = (ev.Li.GetLineOffset(ev.CursorLine) + ev.CursorPos) &^ 0xF
 				ev.HexNibble = 0
 			} else if ev.HexMode {
 				ev.HexMode = false
 				ev.DecodeMode = true
-				ev.HexTopOffset = ev.li.GetLineOffset(ev.CursorLine) + ev.CursorPos
+				ev.HexTopOffset = ev.Li.GetLineOffset(ev.CursorLine) + ev.CursorPos
 				ev.HexNibble = 0
 			} else {
 				ev.DecodeMode = false
@@ -2371,9 +2373,9 @@ func init() {
 				// Do not perform the initial index read synchronously here:
 				// switching a large binary to text must leave the editor
 				// responsive while the index is built in the background.
-				ev.awaitOffsetAsync(ev.li.GetLineOffset(ev.CursorLine) + ev.CursorPos)
+				ev.AwaitOffsetAsync(ev.Li.GetLineOffset(ev.CursorLine) + ev.CursorPos)
 			}
-			ev.ensureCursorVisible()
+			ev.EnsureCursorVisible()
 			vtui.FrameManager.Redraw()
 		}),
 	})
@@ -2386,11 +2388,11 @@ func init() {
 		DescKey:     "Action.Editor.DisasmMode.Desc",
 		DefaultKeys: []string{"ShiftF4"},
 		MenuPath:    "Options",
-		Handler: withEditor(func(ev *EditorView) {
+		Handler: withEditor(func(ev *editor.EditorView) {
 			// The mode is a property of the file, not of the view, so it
 			// is switched wherever the editor is: the toast says what the
 			// decode view will read the bytes as.
-			mode := ev.cycleDisasmMode()
+			mode := ev.CycleDisasmMode()
 			toast.Show(fmt.Sprintf(i18n.Msg("Viewer.DisasmBits"), mode), time.Second)
 			vtui.FrameManager.Redraw()
 		}),
@@ -2404,8 +2406,8 @@ func init() {
 		DescKey:     "Action.Editor.ShowWhitespaces.Desc",
 		DefaultKeys: []string{"F5"},
 		MenuPath:    "Options",
-		Checked:     editorState(func(ev *EditorView) bool { return ev.ShowWhitespaces }),
-		Handler:     withEditor(func(ev *EditorView) { ev.ShowWhitespaces = !ev.ShowWhitespaces }),
+		Checked:     editorState(func(ev *editor.EditorView) bool { return ev.ShowWhitespaces }),
+		Handler:     withEditor(func(ev *editor.EditorView) { ev.ShowWhitespaces = !ev.ShowWhitespaces }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Editor.CodepageNext",
@@ -2416,9 +2418,9 @@ func init() {
 		DescKey:     "Action.Editor.CodepageNext.Desc",
 		DefaultKeys: []string{"F8"},
 		MenuPath:    "Options",
-		Handler: withEditor(func(ev *EditorView) {
+		Handler: withEditor(func(ev *editor.EditorView) {
 			next := vfs.GetNextFastSwitchCodepage(ev.Codepage)
-			fileops.SaveCodepageOverride(ev.vfs, ev.filePath, next)
+			fileops.SaveCodepageOverride(ev.Vfs, ev.FilePath, next)
 			ev.ReloadWithCodepage(next)
 			toast.Show(fmt.Sprintf("Codepage: %s", vfs.DisplayCodepageName(next)), time.Second)
 		}),
@@ -2432,7 +2434,7 @@ func init() {
 		DescKey:     "Action.Editor.CodepageMenu.Desc",
 		DefaultKeys: []string{"ShiftF8"},
 		MenuPath:    "Options",
-		Handler:     withEditor(func(ev *EditorView) { ev.showCodepageDialog() }),
+		Handler:     withEditor(func(ev *editor.EditorView) { ev.ShowCodepageDialog() }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Editor.ConvertCodepage",
@@ -2442,7 +2444,7 @@ func init() {
 		Description: "Change the file codepage without modifying text",
 		DescKey:     "Action.Editor.ConvertCodepage.Desc",
 		MenuPath:    "Options",
-		Handler:     withEditor(func(ev *EditorView) { ev.showConvertCodepageDialog() }),
+		Handler:     withEditor(func(ev *editor.EditorView) { ev.ShowConvertCodepageDialog() }),
 	})
 
 	action.RegisterAction(action.Action{
@@ -2454,9 +2456,9 @@ func init() {
 		DescKey:     "Action.Editor.InsertLeftPanelPath.Desc",
 		DefaultKeys: []string{"CtrlVK_DB"},
 		MenuPath:    "Insert",
-		Handler: withEditor(func(ev *EditorView) {
+		Handler: withEditor(func(ev *editor.EditorView) {
 			if s := leftPanelPathForEditor(); s != "" {
-				ev.insertTextAtCursor([]byte(s))
+				ev.InsertTextAtCursor([]byte(s))
 			}
 		}),
 	})
@@ -2469,9 +2471,9 @@ func init() {
 		DescKey:     "Action.Editor.InsertRightPanelPath.Desc",
 		DefaultKeys: []string{"CtrlVK_DD"},
 		MenuPath:    "Insert",
-		Handler: withEditor(func(ev *EditorView) {
+		Handler: withEditor(func(ev *editor.EditorView) {
 			if s := rightPanelPathForEditor(); s != "" {
-				ev.insertTextAtCursor([]byte(s))
+				ev.InsertTextAtCursor([]byte(s))
 			}
 		}),
 	})
@@ -2483,9 +2485,9 @@ func init() {
 		Description: "Insert the active panel's current file name at cursor",
 		DescKey:     "Action.Editor.InsertActivePanelFileName.Desc",
 		MenuPath:    "Insert",
-		Handler: withEditor(func(ev *EditorView) {
+		Handler: withEditor(func(ev *editor.EditorView) {
 			if s := activePanelNameForEditor(); s != "" {
-				ev.insertTextAtCursor([]byte(s))
+				ev.InsertTextAtCursor([]byte(s))
 			}
 		}),
 	})
@@ -2498,7 +2500,7 @@ func init() {
 		DescKey:     "Action.Editor.DeleteSpacersForward.Desc",
 		DefaultKeys: []string{"CtrlDel"},
 		MenuPath:    "Insert",
-		Handler:     withEditor(func(ev *EditorView) { ev.deleteSpacersForward() }),
+		Handler:     withEditor(func(ev *editor.EditorView) { ev.DeleteSpacersForward() }),
 	})
 
 	// --- Viewer actions ---
@@ -2599,7 +2601,7 @@ func init() {
 		DescKey:     "Action.Viewer.Search.Desc",
 		DefaultKeys: []string{"F7"},
 		MenuPath:    "Search",
-		Handler:     withViewer(func(vv *viewer.ViewerView) { vtui.FrameManager.EmitCommand(CmSearch, nil) }),
+		Handler:     withViewer(func(vv *viewer.ViewerView) { vtui.FrameManager.EmitCommand(appcmd.CmSearch, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Viewer.SearchNext",

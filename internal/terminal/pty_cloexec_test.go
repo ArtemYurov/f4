@@ -42,15 +42,15 @@ func TestPTYDescriptorsAreCloseOnExec(t *testing.T) {
 
 	for _, d := range []struct {
 		name string
-		file *os.File
+		File *os.File
 	}{
 		{"master", Pty.Master},
 		{"slave", Pty.Slave},
 	} {
-		if d.file == nil {
+		if d.File == nil {
 			t.Fatalf("%s descriptor is nil", d.name)
 		}
-		flags, err := unix.FcntlInt(d.file.Fd(), unix.F_GETFD, 0)
+		flags, err := unix.FcntlInt(d.File.Fd(), unix.F_GETFD, 0)
 		if err != nil {
 			t.Fatalf("F_GETFD on %s: %v", d.name, err)
 		}

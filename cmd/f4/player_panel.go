@@ -45,7 +45,7 @@ type PlayerPanel struct {
 	frame   *vtui.BorderedFrame
 	focused bool
 
-	engine *media.AudioEngine
+	Engine *media.AudioEngine
 	root   *playlistItem // invisible root; children are the top level
 	rows   []playlistRow // flattened view, rebuilt on every Show
 	cursor int           // index into rows; -1 = control row has the cursor
@@ -98,7 +98,7 @@ func NewPlayerPanel(src *FileSystemPanel) *PlayerPanel {
 	x1, y1, x2, y2 := src.GetPosition()
 	pp := &PlayerPanel{
 		src:    src,
-		engine: media.NewAudioEngine(),
+		Engine: media.NewAudioEngine(),
 		root:   &playlistItem{Folder: true, Expanded: true},
 		cursor: -1,
 		button: playerBtnPlay,
@@ -145,7 +145,7 @@ func (pp *PlayerPanel) Close() {
 	default:
 		close(pp.stop)
 	}
-	pp.engine.Close()
+	pp.Engine.Close()
 }
 
 // tick repaints while something is playing so the clock, the marquee and
@@ -159,13 +159,13 @@ func (pp *PlayerPanel) tick() {
 		case <-pp.stop:
 			return
 		case <-t.C:
-			if !pp.engine.IsLoaded() {
+			if !pp.Engine.IsLoaded() {
 				continue
 			}
 			vtui.FrameManager.PostTask(func() {
-				if pp.engine.Finished() {
+				if pp.Engine.Finished() {
 					if !pp.playRelative(+1) {
-						pp.engine.Stop()
+						pp.Engine.Stop()
 						pp.current = nil
 					}
 				}
@@ -381,7 +381,7 @@ func (pp *PlayerPanel) playItem(it *playlistItem) bool {
 		pp.queue = nil
 	}
 	pp.status = ""
-	if err := pp.engine.Load(it.Path); err != nil {
+	if err := pp.Engine.Load(it.Path); err != nil {
 		pp.status = err.Error()
 		pp.current = nil
 		if errors.Is(err, media.ErrNeedFFmpeg) {
@@ -395,7 +395,7 @@ func (pp *PlayerPanel) playItem(it *playlistItem) bool {
 	}
 	pp.current = it
 	pp.marquee = 0
-	pp.engine.Play()
+	pp.Engine.Play()
 	return true
 }
 
@@ -427,7 +427,7 @@ func (pp *PlayerPanel) StopIfPlaying(paths []string) {
 		set[filepath.Clean(p)] = true
 	}
 	if pp.current != nil && set[filepath.Clean(pp.current.Path)] {
-		pp.engine.Stop()
+		pp.Engine.Stop()
 		pp.current = nil
 	}
 	if pp.queue == nil {
@@ -500,9 +500,9 @@ func (pp *PlayerPanel) pressButton(b int) {
 		pp.playRelative(-1)
 	case playerBtnPlay:
 		switch {
-		case pp.engine.IsLoaded() && !pp.engine.IsPlaying():
-			pp.engine.Play()
-		case pp.engine.IsLoaded():
+		case pp.Engine.IsLoaded() && !pp.Engine.IsPlaying():
+			pp.Engine.Play()
+		case pp.Engine.IsLoaded():
 			// Play on a playing track restarts it, like WinAmp.
 			pp.playItem(pp.current)
 		case pp.cursor >= 0 && pp.cursor < len(pp.rows) && !pp.rows[pp.cursor].item.Folder:
@@ -511,9 +511,9 @@ func (pp *PlayerPanel) pressButton(b int) {
 			pp.playRelative(+1)
 		}
 	case playerBtnPause:
-		pp.engine.TogglePause()
+		pp.Engine.TogglePause()
 	case playerBtnStop:
-		pp.engine.Stop()
+		pp.Engine.Stop()
 		pp.current = nil
 		pp.queue = nil
 	case playerBtnNext:
@@ -524,7 +524,7 @@ func (pp *PlayerPanel) pressButton(b int) {
 }
 
 func (pp *PlayerPanel) adjustVolume(delta float64) {
-	pp.engine.SetVolume(pp.engine.Volume() + delta)
+	pp.Engine.SetVolume(pp.Engine.Volume() + delta)
 }
 
 // ---- keys ------------------------------------------------------------
@@ -694,14 +694,14 @@ func (pp *PlayerPanel) playlistKey(e *vtinput.InputEvent, ctrl bool) bool {
 			pp.playItem(it)
 		}
 	case vtinput.VK_SPACE:
-		if pp.engine.IsLoaded() {
-			pp.engine.TogglePause()
+		if pp.Engine.IsLoaded() {
+			pp.Engine.TogglePause()
 		} else if !it.Folder {
 			pp.playItem(it)
 		}
 	case vtinput.VK_DELETE:
 		if it == pp.current || (it.Folder && pp.currentInside(it)) {
-			pp.engine.Stop()
+			pp.Engine.Stop()
 			pp.current = nil
 		}
 		it.detach()
@@ -832,11 +832,11 @@ func (pp *PlayerPanel) Show(scr *vtui.ScreenBuf) {
 		title = pp.status
 	} else if pp.current != nil {
 		title = "♪ " + pp.current.Name
-		if pp.engine.IsLoaded() && !pp.engine.IsPlaying() && !pp.engine.Finished() {
+		if pp.Engine.IsLoaded() && !pp.Engine.IsPlaying() && !pp.Engine.Finished() {
 			title += " " + i18n.Msg("Player.PausedMark")
 		}
 	}
-	if runewidth.StringWidth(title) > w && pp.engine.IsPlaying() {
+	if runewidth.StringWidth(title) > w && pp.Engine.IsPlaying() {
 		title = marqueeSlice(title+"   ***   ", w, pp.marquee/2)
 	}
 	put(y, title, text)
@@ -844,9 +844,9 @@ func (pp *PlayerPanel) Show(scr *vtui.ScreenBuf) {
 	// Row 1: clock and stream facts.
 	clock := "--:-- / --:--"
 	facts := ""
-	if pp.engine.IsLoaded() {
-		clock = fmtClock(pp.engine.Position()) + " / " + fmtClock(pp.engine.Duration())
-		info := pp.engine.Info()
+	if pp.Engine.IsLoaded() {
+		clock = fmtClock(pp.Engine.Position()) + " / " + fmtClock(pp.Engine.Duration())
+		info := pp.Engine.Info()
 		mode := i18n.Msg("Player.Stereo")
 		if info.Mono {
 			mode = i18n.Msg("Player.Mono")
@@ -864,8 +864,8 @@ func (pp *PlayerPanel) Show(scr *vtui.ScreenBuf) {
 
 	// Rows 2-3: spectrum, two rows of eighth blocks = 16 levels per band.
 	bands := min(24, max(4, (w-2)/2))
-	spec := pp.engine.Spectrum(bands)
-	if !pp.engine.IsPlaying() {
+	spec := pp.Engine.Spectrum(bands)
+	if !pp.Engine.IsPlaying() {
 		for i := range spec {
 			spec[i] = 0
 		}
@@ -894,14 +894,14 @@ func (pp *PlayerPanel) Show(scr *vtui.ScreenBuf) {
 	}
 	volW := w - (bx - x) - 5
 	if volW >= 4 {
-		filled := int(pp.engine.Volume()*float64(volW) + 0.5)
+		filled := int(pp.Engine.Volume()*float64(volW) + 0.5)
 		bar := strings.Repeat("█", filled) + strings.Repeat("░", volW-filled)
 		attr := text
 		if pp.focused && pp.cursor < 0 && pp.button == playerBtnVolume {
 			attr = hi
 		}
 		scr.Write(bx, y+4, vtui.StringToCharInfo(bar, attr))
-		scr.Write(bx+volW, y+4, vtui.StringToCharInfo(fmt.Sprintf("%3d%%", int(pp.engine.Volume()*100+0.5)), text))
+		scr.Write(bx+volW, y+4, vtui.StringToCharInfo(fmt.Sprintf("%3d%%", int(pp.Engine.Volume()*100+0.5)), text))
 	}
 
 	// Separator on the frame's own lines.

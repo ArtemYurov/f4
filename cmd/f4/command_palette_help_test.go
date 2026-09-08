@@ -29,14 +29,14 @@ func TestCommandPaletteHelpProviderFiltersFrameworkFallbacks(t *testing.T) {
 		dialog.ResetHelpState()
 	})
 
-	engine := vtui.NewHelpEngine(nil)
-	engine.AddTopic(&vtui.HelpTopic{Name: "Contents", Lines: []string{"Contents"}})
-	vtui.GlobalHelpEngine = engine
+	Engine := vtui.NewHelpEngine(nil)
+	Engine.AddTopic(&vtui.HelpTopic{Name: "Contents", Lines: []string{"Contents"}})
+	vtui.GlobalHelpEngine = Engine
 	menu := vtui.NewMenuBar([]string{"&File"})
 	menu.Items[0].SubItems = []vtui.MenuItem{{Text: "&Open"}}
 	host := &frameworkActionTestFrame{title: "Files", menu: menu}
 	vtui.FrameManager.Push(host)
-	help := vtui.NewHelpView(engine, "Contents")
+	help := vtui.NewHelpView(Engine, "Contents")
 	vtui.FrameManager.Push(help)
 
 	entries := commandPaletteFrameEntries()
@@ -97,11 +97,11 @@ func TestCommandPaletteModalWhitelistConsumesUnknownAndAllowsSupportedFrames(t *
 	vtui.FrameManager.SyncCurrentScreen()
 
 	previousHelp := vtui.GlobalHelpEngine
-	engine := vtui.NewHelpEngine(nil)
-	engine.AddTopic(&vtui.HelpTopic{Name: "Contents", Lines: []string{"Contents"}})
-	vtui.GlobalHelpEngine = engine
+	Engine := vtui.NewHelpEngine(nil)
+	Engine.AddTopic(&vtui.HelpTopic{Name: "Contents", Lines: []string{"Contents"}})
+	vtui.GlobalHelpEngine = Engine
 	t.Cleanup(func() { vtui.GlobalHelpEngine = previousHelp })
-	help := vtui.NewHelpView(engine, "Contents")
+	help := vtui.NewHelpView(Engine, "Contents")
 	if !commandPaletteModalFrameSupported(help) ||
 		!commandPaletteModalFrameSupported(&GrabberFrame{}) ||
 		!commandPaletteModalFrameSupported(&ArkanoidFrame{}) {
@@ -124,12 +124,12 @@ func TestCommandPaletteHelpProviderExecutesLiveStateExactly(t *testing.T) {
 		dialog.ResetHelpState()
 	})
 
-	engine := vtui.NewHelpEngine(nil)
-	engine.AddTopic(&vtui.HelpTopic{Name: "Root", Lines: []string{"Root"}})
-	engine.AddTopic(&vtui.HelpTopic{Name: "Second", Lines: []string{"needle one", "needle two"}})
-	engine.AddTopic(&vtui.HelpTopic{Name: "Contents", Lines: []string{"Contents"}})
-	vtui.GlobalHelpEngine = engine
-	help := vtui.NewHelpView(engine, "Root")
+	Engine := vtui.NewHelpEngine(nil)
+	Engine.AddTopic(&vtui.HelpTopic{Name: "Root", Lines: []string{"Root"}})
+	Engine.AddTopic(&vtui.HelpTopic{Name: "Second", Lines: []string{"needle one", "needle two"}})
+	Engine.AddTopic(&vtui.HelpTopic{Name: "Contents", Lines: []string{"Contents"}})
+	vtui.GlobalHelpEngine = Engine
+	help := vtui.NewHelpView(Engine, "Root")
 	vtui.FrameManager.Push(help)
 	help.SwitchTopic("Second")
 	for _, char := range "needle" {

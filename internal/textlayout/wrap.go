@@ -18,8 +18,8 @@ type LineFragment struct {
 
 // WrapEngine отвечает за вычисление визуальной разметки текста.
 type WrapEngine struct {
-	pt            *piecetable.PieceTable
-	li            *piecetable.LineIndex
+	Pt            *piecetable.PieceTable
+	Li            *piecetable.LineIndex
 	wrapWidth     int
 	wordWrap      bool
 	fragmentCache [][]LineFragment
@@ -41,10 +41,10 @@ type WrapEngine struct {
 	noWrapCached int
 }
 
-func NewWrapEngine(pt *piecetable.PieceTable, li *piecetable.LineIndex) *WrapEngine {
+func NewWrapEngine(Pt *piecetable.PieceTable, Li *piecetable.LineIndex) *WrapEngine {
 	return &WrapEngine{
-		pt:            pt,
-		li:            li,
+		Pt:            Pt,
+		Li:            Li,
 		wrapWidth:     80,
 		wordWrap:      true,
 		fragmentCache: nil,
@@ -324,7 +324,7 @@ func (we *WrapEngine) MoveVisual(byteOffset, direction int) int {
 	}
 	frag := fragments[fragIdx]
 	we.tmpBuf = we.tmpBuf[:0]
-	we.tmpBuf, _ = we.pt.AppendRange(we.tmpBuf, frag.ByteOffsetStart, frag.ByteOffsetEnd-frag.ByteOffsetStart)
+	we.tmpBuf, _ = we.Pt.AppendRange(we.tmpBuf, frag.ByteOffsetStart, frag.ByteOffsetEnd-frag.ByteOffsetStart)
 	rel := byteOffset - frag.ByteOffsetStart
 	if rel < 0 {
 		rel = 0
@@ -354,9 +354,9 @@ func (we *WrapEngine) SetTabSize(size int) {
 	}
 }
 
-func (we *WrapEngine) SetPointers(pt *piecetable.PieceTable, li *piecetable.LineIndex) {
-	we.pt = pt
-	we.li = li
+func (we *WrapEngine) SetPointers(Pt *piecetable.PieceTable, Li *piecetable.LineIndex) {
+	we.Pt = Pt
+	we.Li = Li
 	we.InvalidateCache()
 }
 
@@ -411,7 +411,7 @@ func (we *WrapEngine) InvalidateFrom(logLineIdx int) {
 
 // GetFragments возвращает визуальные фрагменты для одной логической строки.
 func (we *WrapEngine) GetFragments(logLineIdx int) []LineFragment {
-	lineCount := we.li.LineCount()
+	lineCount := we.Li.LineCount()
 	if logLineIdx < 0 || logLineIdx >= lineCount {
 		return nil
 	}
@@ -424,10 +424,10 @@ func (we *WrapEngine) GetFragments(logLineIdx int) []LineFragment {
 		return cached.fragments
 	}
 
-	startOffset := we.li.GetLineOffset(logLineIdx)
-	endOffset := we.pt.Size()
-	if logLineIdx+1 < we.li.LineCount() {
-		endOffset = we.li.GetLineOffset(logLineIdx + 1)
+	startOffset := we.Li.GetLineOffset(logLineIdx)
+	endOffset := we.Pt.Size()
+	if logLineIdx+1 < we.Li.LineCount() {
+		endOffset = we.Li.GetLineOffset(logLineIdx + 1)
 	} else {
 		// If this is the unindexed tail, cap the processing to prevent loading gigabytes
 		if endOffset-startOffset > 64*1024 {
@@ -437,7 +437,7 @@ func (we *WrapEngine) GetFragments(logLineIdx int) []LineFragment {
 
 	we.tmpBuf = we.tmpBuf[:0]
 	var err error
-	we.tmpBuf, err = we.pt.AppendRange(we.tmpBuf, startOffset, endOffset-startOffset)
+	we.tmpBuf, err = we.Pt.AppendRange(we.tmpBuf, startOffset, endOffset-startOffset)
 
 	// If data is not ready, return a dummy visual fragment
 	if err == piecetable.ErrLoading {
@@ -605,7 +605,7 @@ func (we *WrapEngine) ensureRowCountCache(until int) {
 	if !we.wordWrap {
 		return
 	}
-	lineCount := we.li.LineCount()
+	lineCount := we.Li.LineCount()
 	if until >= lineCount {
 		until = lineCount - 1
 	}
@@ -651,9 +651,9 @@ func (we *WrapEngine) ensureRowCountCache(until int) {
 // GetTotalVisualRows возвращает общее количество визуальных строк в документе.
 func (we *WrapEngine) GetTotalVisualRows() int {
 	if !we.wordWrap {
-		return we.li.LineCount()
+		return we.Li.LineCount()
 	}
-	we.ensureRowCountCache(we.li.LineCount() - 1)
+	we.ensureRowCountCache(we.Li.LineCount() - 1)
 	return we.totalRows
 }
 
@@ -663,7 +663,7 @@ func (we *WrapEngine) GetRowOffset(logLineIdx int) int {
 		if logLineIdx < 0 {
 			return 0
 		}
-		lineCount := we.li.LineCount()
+		lineCount := we.Li.LineCount()
 		if logLineIdx >= lineCount {
 			return lineCount
 		}
@@ -674,7 +674,7 @@ func (we *WrapEngine) GetRowOffset(logLineIdx int) int {
 		return 0
 	}
 	if logLineIdx >= len(we.rowOffsets) {
-		we.ensureRowCountCache(we.li.LineCount() - 1)
+		we.ensureRowCountCache(we.Li.LineCount() - 1)
 		return we.totalRows
 	}
 	return we.rowOffsets[logLineIdx]
@@ -687,7 +687,7 @@ func (we *WrapEngine) GetLogLineAtVisualRow(visualRow int) (logLineIdx int, frag
 		return 0, 0
 	}
 	if !we.wordWrap {
-		lineCount := we.li.LineCount()
+		lineCount := we.Li.LineCount()
 		if visualRow >= lineCount {
 			if lineCount <= 0 {
 				return 0, 0
@@ -698,7 +698,7 @@ func (we *WrapEngine) GetLogLineAtVisualRow(visualRow int) (logLineIdx int, frag
 	}
 
 	// Lazy calculation until we find the row or hit EOF
-	lineCount := we.li.LineCount()
+	lineCount := we.Li.LineCount()
 	for we.validUntil < lineCount-1 {
 		var lastCalculatedRow int
 		if we.validUntil >= 0 {
@@ -736,7 +736,7 @@ func (we *WrapEngine) LogicalToVisual(byteOffset int) (visualRow, visualCol int)
 	if byteOffset < 0 {
 		byteOffset = 0
 	}
-	logLineIdx := we.li.GetLineAtOffset(byteOffset)
+	logLineIdx := we.Li.GetLineAtOffset(byteOffset)
 	totalRow := logLineIdx
 	if we.wordWrap {
 		we.ensureRowCountCache(logLineIdx)
@@ -772,7 +772,7 @@ func (we *WrapEngine) LogicalToVisual(byteOffset int) (visualRow, visualCol int)
 		isLastFragOfLine := (i == len(fragments)-1)
 		if byteOffset >= frag.ByteOffsetStart && (byteOffset < frag.ByteOffsetEnd || (isLastFragOfLine && byteOffset == frag.ByteOffsetEnd)) {
 			we.tmpBuf = we.tmpBuf[:0]
-			we.tmpBuf, _ = we.pt.AppendRange(we.tmpBuf, frag.ByteOffsetStart, frag.ByteOffsetEnd-frag.ByteOffsetStart)
+			we.tmpBuf, _ = we.Pt.AppendRange(we.tmpBuf, frag.ByteOffsetStart, frag.ByteOffsetEnd-frag.ByteOffsetStart)
 			return totalRow + i, fragmentLogicalToVisual(string(we.tmpBuf), byteOffset-frag.ByteOffsetStart, we.tabSize)
 		}
 	}
@@ -802,6 +802,6 @@ func (we *WrapEngine) VisualToLogical(visualRow, visualCol int) int {
 	}
 
 	we.tmpBuf = we.tmpBuf[:0]
-	we.tmpBuf, _ = we.pt.AppendRange(we.tmpBuf, frag.ByteOffsetStart, frag.ByteOffsetEnd-frag.ByteOffsetStart)
+	we.tmpBuf, _ = we.Pt.AppendRange(we.tmpBuf, frag.ByteOffsetStart, frag.ByteOffsetEnd-frag.ByteOffsetStart)
 	return frag.ByteOffsetStart + fragmentVisualToLogical(string(we.tmpBuf), visualCol, we.tabSize)
 }

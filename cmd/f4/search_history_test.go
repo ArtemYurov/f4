@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/piecetable"
@@ -113,12 +114,12 @@ func TestEditorSearchDialog_RemembersPattern(t *testing.T) {
 	store := useStubHistory(t)
 	store["SearchText"] = []string{"from history"}
 
-	oldSearch := LastEditorSearch
-	t.Cleanup(func() { LastEditorSearch = oldSearch })
-	LastEditorSearch = ""
+	oldSearch := editor.LastEditorSearch
+	t.Cleanup(func() { editor.LastEditorSearch = oldSearch })
+	editor.LastEditorSearch = ""
 
-	ev := NewEditorView(piecetable.New([]byte("alpha beta\n")), nil, "test.txt")
-	ev.showSearchDialog()
+	ev := editor.NewEditorView(piecetable.New([]byte("alpha beta\n")), nil, "test.txt")
+	ev.ShowSearchDialog()
 	dlg := vtui.FrameManager.GetTopFrame().(vtui.Container)
 	defer vtui.FrameManager.Pop()
 
@@ -140,12 +141,12 @@ func TestEditorReplaceDialog_UsesSeparateBuckets(t *testing.T) {
 	store := useStubHistory(t)
 	store["ReplaceText"] = []string{"stale replacement"}
 
-	oldSearch, oldReplace := LastEditorSearch, LastEditorReplace
-	t.Cleanup(func() { LastEditorSearch, LastEditorReplace = oldSearch, oldReplace })
-	LastEditorSearch, LastEditorReplace = "", ""
+	oldSearch, oldReplace := editor.LastEditorSearch, editor.LastEditorReplace
+	t.Cleanup(func() { editor.LastEditorSearch, editor.LastEditorReplace = oldSearch, oldReplace })
+	editor.LastEditorSearch, editor.LastEditorReplace = "", ""
 
-	ev := NewEditorView(piecetable.New([]byte("alpha beta\n")), nil, "test.txt")
-	ev.showReplaceDialog()
+	ev := editor.NewEditorView(piecetable.New([]byte("alpha beta\n")), nil, "test.txt")
+	ev.ShowReplaceDialog()
 	dlg := vtui.FrameManager.GetTopFrame().(vtui.Container)
 	defer vtui.FrameManager.Pop()
 

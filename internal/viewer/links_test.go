@@ -63,7 +63,7 @@ func TestViewerURLHoverMapsScreenCellToLink(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	backend := &ViewerBackend{
-		file:      &vfs.MemoryReadAtCloser{Data: data},
+		File:      &vfs.MemoryReadAtCloser{Data: data},
 		size:      int64(len(data)),
 		cacheData: data,
 		ctx:       ctx,

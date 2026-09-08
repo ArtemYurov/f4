@@ -322,7 +322,7 @@ func TestTerminalView_HistoryAndReflow(t *testing.T) {
 
 	// Проверяем фрагментацию при ширине 10
 	// Должно быть 2 фрагмента: "1234567890" и "ABCDE"
-	frags := tv.engine.GetFragments(0)
+	frags := tv.Engine.GetFragments(0)
 	if len(frags) != 2 {
 		t.Errorf("Expected 2 fragments at width 10, got %d", len(frags))
 	}
@@ -330,7 +330,7 @@ func TestTerminalView_HistoryAndReflow(t *testing.T) {
 	// Ресайзим до 5
 	tv.Resize(5, 5)
 	// Теперь должно быть 3 фрагмента по 5 символов
-	frags = tv.engine.GetFragments(0)
+	frags = tv.Engine.GetFragments(0)
 	if len(frags) != 3 {
 		t.Errorf("Reflow failed: expected 3 fragments at width 5, got %d", len(frags))
 	}

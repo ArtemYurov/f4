@@ -83,13 +83,13 @@ func NewF4HistoryProvider(configDir string) *F4HistoryProvider {
 func (hp *F4HistoryProvider) load() {
 	hp.mu.Lock()
 	defer hp.mu.Unlock()
-	file, err := os.ReadFile(hp.path)
+	File, err := os.ReadFile(hp.path)
 	if err == nil {
 		var wrapper struct {
 			Data map[string][]string        `json:"data,omitempty"`
 			Rich map[string][]HistoryRecord `json:"rich,omitempty"`
 		}
-		if err := json.Unmarshal(file, &wrapper); err == nil && (wrapper.Data != nil || wrapper.Rich != nil) {
+		if err := json.Unmarshal(File, &wrapper); err == nil && (wrapper.Data != nil || wrapper.Rich != nil) {
 			if wrapper.Data != nil {
 				hp.data = wrapper.Data
 			}
@@ -98,7 +98,7 @@ func (hp *F4HistoryProvider) load() {
 			}
 		} else {
 			var oldData map[string][]string
-			if err := json.Unmarshal(file, &oldData); err == nil {
+			if err := json.Unmarshal(File, &oldData); err == nil {
 				hp.data = oldData
 			}
 		}
@@ -144,9 +144,9 @@ func (hp *F4HistoryProvider) save() {
 	if len(hp.rich) == 0 {
 		wrapper.Rich = nil
 	}
-	file, err := json.MarshalIndent(wrapper, "", "  ")
+	File, err := json.MarshalIndent(wrapper, "", "  ")
 	if err == nil {
-		os.WriteFile(hp.path, file, 0644)
+		os.WriteFile(hp.path, File, 0644)
 	}
 }
 

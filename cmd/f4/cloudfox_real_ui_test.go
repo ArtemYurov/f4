@@ -17,6 +17,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/theme"
@@ -476,16 +477,16 @@ func runRealCloudFoxUIProvider(t *testing.T, host *realCloudFoxUIHost, connectio
 	if err := writeRealCloudFoxUIFile(ctx, workspace, fileCandidate, initial); err != nil {
 		t.Fatalf("create real UI fixture: %s", redactRealCloudFoxError(err))
 	}
-	filePath := requireRealCloudFoxUIFile(t, ctx, workspace, connection.Provider, fileName, int64(len(initial)))
+	FilePath := requireRealCloudFoxUIFile(t, ctx, workspace, connection.Provider, fileName, int64(len(initial)))
 
 	// Keep the UI surfaces independent. In particular, an editor regression
 	// must not prevent the same live run from collecting viewer and F5 results.
 	t.Run("f3-viewer", func(t *testing.T) {
-		runRealCloudFoxViewer(t, workspace, filePath, initial)
+		runRealCloudFoxViewer(t, workspace, FilePath, initial)
 	})
 	t.Run("f4-editor", func(t *testing.T) {
 		edited := append(append([]byte(nil), initial...), []byte("editor-save-marker\n")...)
-		runRealCloudFoxEditor(t, host, workspace, workspacePath, filePath, fileName, initial, edited, connection.Provider)
+		runRealCloudFoxEditor(t, host, workspace, workspacePath, FilePath, fileName, initial, edited, connection.Provider)
 	})
 	t.Run("f5-copy-roundtrip", func(t *testing.T) {
 		runRealCloudFoxF5RoundTrip(t, workspace, connection.Provider)
@@ -611,36 +612,36 @@ func runRealCloudFoxEditor(t *testing.T, host *realCloudFoxUIHost, filesystem vf
 	defer pf.Close()
 
 	actionOpenEditor(pf, filesystem, path)
-	var editor *EditorView
+	var ev *editor.EditorView
 	realCloudFoxUIWait(t, 3*time.Minute, "F4 editor to open", func() bool {
-		editor, _ = findOpenedEditor(filesystem, path)
-		return editor != nil
+		ev, _ = findOpenedEditor(filesystem, path)
+		return ev != nil
 	})
 	defer func() {
-		if editor != nil && !editor.IsDone() {
-			editor.Close()
+		if ev != nil && !ev.IsDone() {
+			ev.Close()
 		}
 	}()
-	loaded := realCloudFoxUIEditorBytes(t, editor)
+	loaded := realCloudFoxUIEditorBytes(t, ev)
 	if !bytes.Equal(loaded, initial) {
 		t.Fatal("F4 editor opened with unexpected content")
 	}
 
-	editor.SetText(string(expected))
+	ev.SetText(string(expected))
 	saved := make(chan struct{}, 1)
-	editor.SaveToFile(func() { saved <- struct{}{} })
+	ev.SaveToFile(func() { saved <- struct{}{} })
 	realCloudFoxUIWait(t, 5*time.Minute, "F4 editor save", func() bool {
 		select {
 		case <-saved:
 			return true
 		default:
-			if !editor.saving {
+			if !ev.IsSaving() {
 				t.Fatal("F4 editor save stopped without completing successfully")
 			}
 			return false
 		}
 	})
-	editor.Close()
+	ev.Close()
 
 	verifyCtx, cancelVerify := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancelVerify()
@@ -679,7 +680,7 @@ func runRealCloudFoxEditor(t *testing.T, host *realCloudFoxUIHost, filesystem vf
 	reopenedPath := requireRealCloudFoxUIFile(t, verifyCtx, reopened, provider, name, int64(len(expected)))
 
 	actionOpenEditor(pf, reopened, reopenedPath)
-	var reopenedEditor *EditorView
+	var reopenedEditor *editor.EditorView
 	realCloudFoxUIWait(t, 3*time.Minute, "saved F4 editor file to reopen", func() bool {
 		reopenedEditor, _ = findOpenedEditor(reopened, reopenedPath)
 		return reopenedEditor != nil
@@ -690,12 +691,12 @@ func runRealCloudFoxEditor(t *testing.T, host *realCloudFoxUIHost, filesystem vf
 	}
 }
 
-func realCloudFoxUIEditorBytes(t *testing.T, editor *EditorView) []byte {
+func realCloudFoxUIEditorBytes(t *testing.T, editor *editor.EditorView) []byte {
 	t.Helper()
 	var data []byte
 	realCloudFoxUIWait(t, 2*time.Minute, "F4 editor content to load", func() bool {
 		var err error
-		data, err = editor.pt.Bytes()
+		data, err = editor.Pt.Bytes()
 		if err == nil {
 			return true
 		}

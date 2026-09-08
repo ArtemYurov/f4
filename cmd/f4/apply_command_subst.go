@@ -794,11 +794,11 @@ func appendApplyCommandPanelOnce(panels []ApplyCommandPanelSelector, panel Apply
 	return append(panels, panel)
 }
 
-func applyCommandShortName(file ApplyCommandFile) string {
-	if file.ShortName != "" {
-		return file.ShortName
+func applyCommandShortName(File ApplyCommandFile) string {
+	if File.ShortName != "" {
+		return File.ShortName
 	}
-	return file.Name
+	return File.Name
 }
 
 func applyCommandStem(name string) string {
@@ -891,10 +891,10 @@ func applyCommandPanelEntries(panel ApplyCommandPanel, short, full, forwardSlash
 		files = []ApplyCommandFile{panel.Current}
 	}
 	entries := make([]string, 0, len(files))
-	for _, file := range files {
-		name := file.Name
+	for _, File := range files {
+		name := File.Name
 		if short {
-			name = applyCommandShortName(file)
+			name = applyCommandShortName(File)
 		}
 		if full && !applyCommandIsAbsolute(name, panel.PathStyle) {
 			directory := applyCommandDirectory(panel, short, false)

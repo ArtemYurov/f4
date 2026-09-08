@@ -10,6 +10,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/dialog"
+	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/piecetable"
@@ -492,8 +493,8 @@ func (s *userMenuState) pushLevel(items []UserMenuItem, title string, initialSel
 		// F5=Copy, etc. would be very surprising while the menu is open).
 		if !shift && !ctrl && !alt && e.VirtualKeyCode >= vtinput.VK_F1 && e.VirtualKeyCode <= vtinput.VK_F12 {
 			fn := uint32(e.VirtualKeyCode-vtinput.VK_F1) + 1
-			target, mapped := fnKeyTarget[fn]
-			if !mapped {
+			target, Mapped := fnKeyTarget[fn]
+			if !Mapped {
 				return true
 			}
 			uiIdx, ok := findMenuItemByUserData(menu, target)
@@ -888,7 +889,7 @@ func editCurrentMenuInExternalEditor(pf *PanelsFrame, mode MenuMode, sourcePath 
 		// returns to the menu loop after FrameManager->ExecuteModalEV).
 		defer vtui.FrameManager.PostTask(func() { ShowUserMenu(pf) })
 
-		// Compare bytes (not mtime): EditorView.SaveToFile restores the
+		// Compare bytes (not mtime): editor.EditorView.SaveToFile restores the
 		// original mtime/perms after an atomic rename to preserve file
 		// ownership semantics, so size+mtime equal can't tell us whether
 		// the user actually edited anything.
@@ -920,7 +921,7 @@ func editCurrentMenuInExternalEditor(pf *PanelsFrame, mode MenuMode, sourcePath 
 	openTempInEditor(pf, tmpPath, onClose)
 }
 
-// openTempInEditor creates an EditorView on the given path with an
+// openTempInEditor creates an editor.EditorView on the given path with an
 // OnClose hook. It mirrors actionOpenEditor's setup but reads
 // synchronously since user-menu temp files are tiny.
 func openTempInEditor(pf *PanelsFrame, path string, onClose func()) {
@@ -928,9 +929,9 @@ func openTempInEditor(pf *PanelsFrame, path string, onClose func()) {
 	v := vfs.NewOSVFS(dir)
 
 	data, _ := os.ReadFile(path)
-	pt := piecetable.New(data)
+	Pt := piecetable.New(data)
 
-	editor := NewEditorView(pt, v, path)
+	editor := editor.NewEditorView(Pt, v, path)
 	editor.OnClose = onClose
 	editor.ResizeConsole(pf.lastW, pf.lastH)
 	editor.StartIndexing()

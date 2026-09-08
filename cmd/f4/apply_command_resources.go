@@ -319,23 +319,23 @@ func encodeApplyCommandList(spec ApplyCommandListFileSpec, dialect vfs.CommandDi
 }
 
 func createLocalApplyCommandList(data []byte) (string, func(), error) {
-	file, err := os.CreateTemp("", "f4-apply-*.lst")
+	File, err := os.CreateTemp("", "f4-apply-*.lst")
 	if err != nil {
 		return "", nil, err
 	}
-	name := file.Name()
+	name := File.Name()
 	remove := func() { _ = os.Remove(name) }
-	if err := file.Chmod(0o600); err != nil {
-		_ = file.Close()
+	if err := File.Chmod(0o600); err != nil {
+		_ = File.Close()
 		remove()
 		return "", nil, err
 	}
-	if _, err := file.Write(data); err != nil {
-		_ = file.Close()
+	if _, err := File.Write(data); err != nil {
+		_ = File.Close()
 		remove()
 		return "", nil, err
 	}
-	if err := file.Close(); err != nil {
+	if err := File.Close(); err != nil {
 		remove()
 		return "", nil, err
 	}
@@ -388,31 +388,31 @@ func createRemoteApplyCommandListBlocking(ctx context.Context, target vfs.VFS, d
 	resourcePath := target.Join(dir, name)
 	privateAtCreate := false
 	var (
-		file io.WriteCloser
+		File io.WriteCloser
 		err  error
 	)
 	if creator, ok := target.(vfs.PrivateCommandFileCreator); ok {
-		file, err = creator.CreatePrivateCommandFile(ctx, resourcePath)
+		File, err = creator.CreatePrivateCommandFile(ctx, resourcePath)
 		privateAtCreate = true
 	} else {
-		file, err = target.Create(ctx, resourcePath)
+		File, err = target.Create(ctx, resourcePath)
 	}
 	if err != nil {
 		return "", nil, err
 	}
 	if !privateAtCreate && target.GetCapabilities().HasUnixPermissions {
 		if err := target.SetAttributes(ctx, resourcePath, vfs.VFSItem{UnixMode: 0o600, Uid: -1, Gid: -1}); err != nil {
-			_ = file.Close()
+			_ = File.Close()
 			removeRemoteApplyCommandList(ctx, target, resourcePath, targetWork)
 			return "", nil, err
 		}
 	}
-	if _, err := file.Write(data); err != nil {
-		_ = file.Close()
+	if _, err := File.Write(data); err != nil {
+		_ = File.Close()
 		removeRemoteApplyCommandList(ctx, target, resourcePath, targetWork)
 		return "", nil, err
 	}
-	if err := file.Close(); err != nil {
+	if err := File.Close(); err != nil {
 		removeRemoteApplyCommandList(ctx, target, resourcePath, targetWork)
 		return "", nil, err
 	}

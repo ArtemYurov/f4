@@ -150,18 +150,18 @@ func ApplyMacKeys(area string, e *vtinput.InputEvent) bool {
 	if target == "" {
 		return false
 	}
-	mapped := ParseFarKey(target)
-	if mapped == nil || (mapped.VirtualKeyCode == 0 && mapped.Char == 0) {
+	Mapped := ParseFarKey(target)
+	if Mapped == nil || (Mapped.VirtualKeyCode == 0 && Mapped.Char == 0) {
 		return false
 	}
 
-	e.VirtualKeyCode = mapped.VirtualKeyCode
+	e.VirtualKeyCode = Mapped.VirtualKeyCode
 	// The scan code described the physical key; after a substitution it
 	// belongs to no key at all.
 	e.VirtualScanCode = 0
-	e.Char = mapped.Char
-	e.UnshiftedChar = mapped.Char
-	e.ControlKeyState = (e.ControlKeyState &^ keyRemapMods) | (mapped.ControlKeyState & keyRemapMods)
+	e.Char = Mapped.Char
+	e.UnshiftedChar = Mapped.Char
+	e.ControlKeyState = (e.ControlKeyState &^ keyRemapMods) | (Mapped.ControlKeyState & keyRemapMods)
 	vtui.DebugLog("MACKEYS: %s -> %s in area %s", source, target, area)
 	syncKeyBarModifiers(e)
 	return true

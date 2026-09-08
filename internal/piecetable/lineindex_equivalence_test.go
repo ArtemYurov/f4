@@ -125,7 +125,7 @@ func TestLineIndex_MatchesDenseImplementation(t *testing.T) {
 	rng := rand.New(rand.NewSource(20260815)) // #nosec G404 -- a fixed seed makes this randomized equivalence test reproducible; no security decision uses it.
 
 	for round := 0; round < 20; round++ {
-		li := NewLineIndex()
+		Li := NewLineIndex()
 		dense := newDenseLineIndex()
 
 		// Start from a file of a few thousand lines, so several blocks exist
@@ -136,9 +136,9 @@ func TestLineIndex_MatchesDenseImplementation(t *testing.T) {
 			size += 1 + rng.Intn(40)
 			seed = append(seed, size)
 		}
-		li.AppendOffsets(seed, size+1)
+		Li.AppendOffsets(seed, size+1)
 		dense.appendOffsets(seed, size+1)
-		assertSameIndex(t, rng, -1, li, dense)
+		assertSameIndex(t, rng, -1, Li, dense)
 
 		total := size + 1
 		for step := 0; step < 60; step++ {
@@ -149,7 +149,7 @@ func TestLineIndex_MatchesDenseImplementation(t *testing.T) {
 				for i := range data {
 					data[i] = 'a'
 				}
-				li.UpdateAfterInsert(at, data)
+				Li.UpdateAfterInsert(at, data)
 				dense.updateAfterInsert(at, data)
 				total += len(data)
 			case 1: // insert with newlines
@@ -158,7 +158,7 @@ func TestLineIndex_MatchesDenseImplementation(t *testing.T) {
 				if rng.Intn(2) == 0 {
 					data = []byte("\n")
 				}
-				li.UpdateAfterInsert(at, data)
+				Li.UpdateAfterInsert(at, data)
 				dense.updateAfterInsert(at, data)
 				total += len(data)
 			default: // delete
@@ -167,11 +167,11 @@ func TestLineIndex_MatchesDenseImplementation(t *testing.T) {
 				}
 				at := rng.Intn(total - 2)
 				length := 1 + rng.Intn(min(64, total-at-1))
-				li.UpdateAfterDelete(at, length)
+				Li.UpdateAfterDelete(at, length)
 				dense.updateAfterDelete(at, length)
 				total -= length
 			}
-			assertSameIndex(t, rng, step, li, dense)
+			assertSameIndex(t, rng, step, Li, dense)
 		}
 	}
 }
@@ -180,37 +180,37 @@ func TestLineIndex_MatchesDenseImplementation(t *testing.T) {
 // interesting lines are the ones at the edges, where a lookup crosses from one
 // base to the next.
 func TestLineIndex_SpansManyBlocks(t *testing.T) {
-	li := NewLineIndex()
+	Li := NewLineIndex()
 
 	const lines = lineBlockTarget*3 + 7
 	offsets := make([]int, 0, lines)
 	for i := 1; i <= lines; i++ {
 		offsets = append(offsets, i*10)
 	}
-	li.AppendOffsets(offsets, lines*10)
+	Li.AppendOffsets(offsets, lines*10)
 
-	if got := li.LineCount(); got != lines+1 {
+	if got := Li.LineCount(); got != lines+1 {
 		t.Fatalf("line count = %d, want %d", got, lines+1)
 	}
 	for _, line := range []int{0, 1, lineBlockTarget - 1, lineBlockTarget, lineBlockTarget + 1, 2*lineBlockTarget - 1, 2 * lineBlockTarget, lines} {
 		want := line * 10
-		if got := li.GetLineOffset(line); got != want {
+		if got := Li.GetLineOffset(line); got != want {
 			t.Errorf("GetLineOffset(%d) = %d, want %d", line, got, want)
 		}
-		if got := li.GetLineAtOffset(want); got != line {
+		if got := Li.GetLineAtOffset(want); got != line {
 			t.Errorf("GetLineAtOffset(%d) = %d, want %d", want, got, line)
 		}
 	}
 
 	// An insert in the first block has to move every later block's base.
-	li.UpdateAfterInsert(5, []byte("xx"))
-	if got, want := li.GetLineOffset(lines), lines*10+2; got != want {
+	Li.UpdateAfterInsert(5, []byte("xx"))
+	if got, want := Li.GetLineOffset(lines), lines*10+2; got != want {
 		t.Errorf("after insert, GetLineOffset(%d) = %d, want %d", lines, got, want)
 	}
 	// And a delete has to move them back, including entries that end up before
 	// the base their block started with.
-	li.UpdateAfterDelete(5, 2)
-	if got, want := li.GetLineOffset(lines), lines*10; got != want {
+	Li.UpdateAfterDelete(5, 2)
+	if got, want := Li.GetLineOffset(lines), lines*10; got != want {
 		t.Errorf("after delete, GetLineOffset(%d) = %d, want %d", lines, got, want)
 	}
 }
@@ -230,25 +230,25 @@ func TestLineIndex_FallsBackPastFourGigabytes(t *testing.T) {
 		t.Skip("needs 64-bit ints")
 	}
 
-	li := NewLineIndex()
+	Li := NewLineIndex()
 	offsets := []int{10, 20, huge, huge + 10}
-	li.AppendOffsets(offsets, huge+1000)
+	Li.AppendOffsets(offsets, huge+1000)
 
-	if got := li.LineCount(); got != 5 {
+	if got := Li.LineCount(); got != 5 {
 		t.Fatalf("line count = %d, want 5", got)
 	}
 	for i, want := range []int{0, 10, 20, huge, huge + 10} {
-		if got := li.GetLineOffset(i); got != want {
+		if got := Li.GetLineOffset(i); got != want {
 			t.Errorf("GetLineOffset(%d) = %d, want %d", i, got, want)
 		}
 	}
-	if got := li.GetLineAtOffset(huge + 5); got != 3 {
+	if got := Li.GetLineAtOffset(huge + 5); got != 3 {
 		t.Errorf("GetLineAtOffset past 4 GB = %d, want 3", got)
 	}
 
 	// Edits keep working in the wide layout.
-	li.UpdateAfterInsert(0, []byte("ab"))
-	if got, want := li.GetLineOffset(4), huge+12; got != want {
+	Li.UpdateAfterInsert(0, []byte("ab"))
+	if got, want := Li.GetLineOffset(4), huge+12; got != want {
 		t.Errorf("after insert, GetLineOffset(4) = %d, want %d", got, want)
 	}
 }
@@ -257,7 +257,7 @@ func TestLineIndex_FallsBackPastFourGigabytes(t *testing.T) {
 // reaches: a deletion that collapses whole blocks rather than a few lines
 // inside one, which has to drop those blocks and renumber what follows.
 func TestLineIndex_DeleteAcrossManyBlocks(t *testing.T) {
-	li := NewLineIndex()
+	Li := NewLineIndex()
 	dense := newDenseLineIndex()
 
 	const lines = lineBlockTarget * 5
@@ -265,26 +265,26 @@ func TestLineIndex_DeleteAcrossManyBlocks(t *testing.T) {
 	for i := 1; i <= lines; i++ {
 		offsets = append(offsets, i*8)
 	}
-	li.AppendOffsets(offsets, lines*8)
+	Li.AppendOffsets(offsets, lines*8)
 	dense.appendOffsets(offsets, lines*8)
 
 	// Remove the middle three blocks' worth of text in one go.
 	from := lineBlockTarget * 8
 	length := lineBlockTarget * 3 * 8
-	li.UpdateAfterDelete(from, length)
+	Li.UpdateAfterDelete(from, length)
 	dense.updateAfterDelete(from, length)
 
-	if got, want := li.LineCount(), dense.lineCount(); got != want {
+	if got, want := Li.LineCount(), dense.lineCount(); got != want {
 		t.Fatalf("line count = %d, want %d", got, want)
 	}
 	for i := 0; i < dense.lineCount(); i++ {
-		if got, want := li.GetLineOffset(i), dense.lineOffset(i); got != want {
+		if got, want := Li.GetLineOffset(i), dense.lineOffset(i); got != want {
 			t.Fatalf("GetLineOffset(%d) = %d, want %d", i, got, want)
 		}
 	}
 	last := dense.lineOffset(dense.lineCount() - 1)
 	for off := 0; off <= last+16; off += 3 {
-		if got, want := li.GetLineAtOffset(off), dense.lineAtOffset(off); got != want {
+		if got, want := Li.GetLineAtOffset(off), dense.lineAtOffset(off); got != want {
 			t.Fatalf("GetLineAtOffset(%d) = %d, want %d", off, got, want)
 		}
 	}

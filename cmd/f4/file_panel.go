@@ -3123,13 +3123,13 @@ func (fp *FileSystemPanel) ProcessKey(e *vtinput.InputEvent) bool {
 	// of the event (notably Shift selection).
 	if fp.viewMode == ViewModeDetailed && config.App.NavigationMode != config.NavigationVim && !ctrl && !alt &&
 		(e.VirtualKeyCode == vtinput.VK_LEFT || e.VirtualKeyCode == vtinput.VK_RIGHT) {
-		mapped := *e
+		Mapped := *e
 		if e.VirtualKeyCode == vtinput.VK_LEFT {
-			mapped.VirtualKeyCode = vtinput.VK_PRIOR
+			Mapped.VirtualKeyCode = vtinput.VK_PRIOR
 		} else {
-			mapped.VirtualKeyCode = vtinput.VK_NEXT
+			Mapped.VirtualKeyCode = vtinput.VK_NEXT
 		}
-		e = &mapped
+		e = &Mapped
 	}
 
 	// Close the shift-selection session on anything other than a

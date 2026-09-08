@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -48,7 +49,7 @@ func TestEditorUnicodeInputFollowsVisualCaret(t *testing.T) {
 	defer func() { vtui.DefaultBidiMode = oldMode }()
 	configureUnicodeInput()
 
-	ev := NewEditorView(piecetable.New([]byte("שלום")), nil, "unicode.txt")
+	ev := editor.NewEditorView(piecetable.New([]byte("שלום")), nil, "unicode.txt")
 	defer ev.Close()
 	ev.SetPosition(0, 0, 80, 12)
 	ev.CursorPos = len([]byte("שלום"))
@@ -57,7 +58,7 @@ func TestEditorUnicodeInputFollowsVisualCaret(t *testing.T) {
 	// steps back over the last letter, wherever it is drawn.
 	ev.ProcessKey(unicodeKey(vtinput.VK_LEFT, 0))
 	ev.ProcessKey(unicodeKey(0, 'X'))
-	data, _ := ev.pt.Bytes()
+	data, _ := ev.Pt.Bytes()
 	if got := string(data); got != "שלוXם" {
 		t.Fatalf("editor inserted at logical text %q, want %q", got, "שלוXם")
 	}
@@ -69,18 +70,18 @@ func TestEditorUnicodeInputBackspaceRemovesGraphemeCluster(t *testing.T) {
 	configureUnicodeInput()
 
 	text := "e\u0301x"
-	ev := NewEditorView(piecetable.New([]byte(text)), nil, "combining.txt")
+	ev := editor.NewEditorView(piecetable.New([]byte(text)), nil, "combining.txt")
 	defer ev.Close()
 	ev.SetPosition(0, 0, 80, 12)
 	ev.CursorPos = len([]byte(text))
 	ev.SetFocus(true)
 	ev.ProcessKey(unicodeKey(vtinput.VK_BACK, 0))
-	data, _ := ev.pt.Bytes()
+	data, _ := ev.Pt.Bytes()
 	if got := string(data); got != "e\u0301" {
 		t.Fatalf("backspace split the grapheme input: %q, want %q", got, "e\u0301")
 	}
 	ev.ProcessKey(unicodeKey(vtinput.VK_BACK, 0))
-	data, _ = ev.pt.Bytes()
+	data, _ = ev.Pt.Bytes()
 	if got := string(data); got != "" {
 		t.Fatalf("second backspace left the combining cluster: %q", got)
 	}
@@ -92,13 +93,13 @@ func TestEditorUnicodeInputBackspaceKeepsTerminalModifierRuleInBidiMode(t *testi
 	t.Cleanup(func() { vtui.DefaultBidiMode = oldMode })
 
 	text := "ދިވެހިބަސް"
-	ev := NewEditorView(piecetable.New([]byte(text)), nil, "divehi.txt")
+	ev := editor.NewEditorView(piecetable.New([]byte(text)), nil, "divehi.txt")
 	defer ev.Close()
 	ev.SetPosition(0, 0, 80, 12)
 	ev.CursorPos = len([]byte(text))
 	ev.SetFocus(true)
 	ev.ProcessKey(unicodeKey(vtinput.VK_BACK, 0))
-	data, _ := ev.pt.Bytes()
+	data, _ := ev.Pt.Bytes()
 	if got, want := string(data), "ދިވެހިބަސ"; got != want {
 		t.Fatalf("backspace in BidiFull mode = %q, want %q", got, want)
 	}
@@ -110,13 +111,13 @@ func TestEditorUnicodeInputDeleteKeepsLogicalDirectionInBidiMode(t *testing.T) {
 	t.Cleanup(func() { vtui.DefaultBidiMode = oldMode })
 
 	text := "ދިވެހިބަސް"
-	ev := NewEditorView(piecetable.New([]byte(text)), nil, "divehi.txt")
+	ev := editor.NewEditorView(piecetable.New([]byte(text)), nil, "divehi.txt")
 	defer ev.Close()
 	ev.SetPosition(0, 0, 80, 12)
 	ev.CursorPos = 0
 	ev.SetFocus(true)
 	ev.ProcessKey(unicodeKey(vtinput.VK_DELETE, 0))
-	data, _ := ev.pt.Bytes()
+	data, _ := ev.Pt.Bytes()
 	if got, want := string(data), "ވެހިބަސް"; got != want {
 		t.Fatalf("delete in BidiFull mode = %q, want %q", got, want)
 	}
@@ -131,7 +132,7 @@ func TestEditorBidiArrowKeysMoveLogically(t *testing.T) {
 	// (unxed/f4#546): entering the Hebrew word the caret jumps to its right
 	// edge and then moves left through it while the byte offset grows.
 	text := "abc אבג def"
-	ev := NewEditorView(piecetable.New([]byte(text)), nil, "mixed-bidi.txt")
+	ev := editor.NewEditorView(piecetable.New([]byte(text)), nil, "mixed-bidi.txt")
 	defer ev.Close()
 	ev.SetPosition(0, 0, 80, 12)
 	ev.CursorPos = len([]byte("abc "))
@@ -149,7 +150,7 @@ func TestEditorBidiArrowKeysMoveLogically(t *testing.T) {
 		if ev.CursorPos != w.pos {
 			t.Fatalf("right %d: cursor at byte %d, want %d", i, ev.CursorPos, w.pos)
 		}
-		if _, col := ev.engine.LogicalToVisual(ev.CursorPos); col != w.col {
+		if _, col := ev.Engine.LogicalToVisual(ev.CursorPos); col != w.col {
 			t.Fatalf("right %d: caret drawn at column %d, want %d", i, col, w.col)
 		}
 	}

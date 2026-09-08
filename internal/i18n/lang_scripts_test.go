@@ -59,12 +59,12 @@ func TestLanguageAlphabetsContamination(t *testing.T) {
 			continue
 		}
 
-		for _, file := range files {
-			if file.IsDir() {
+		for _, File := range files {
+			if File.IsDir() {
 				continue
 			}
 
-			name := file.Name()
+			name := File.Name()
 			if !strings.HasSuffix(name, ".lng") && !strings.HasSuffix(name, ".hlf") {
 				continue
 			}

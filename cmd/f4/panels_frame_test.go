@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/appcmd"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/fileops"
@@ -1175,7 +1176,7 @@ func TestPanelsFrame_MenuCommands(t *testing.T) {
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
-	handled := pf.HandleCommand(CmLeftDetailed, nil)
+	handled := pf.HandleCommand(appcmd.CmLeftDetailed, nil)
 	if !handled {
 		t.Error("CmLeftDetailed not handled")
 	}
@@ -1183,7 +1184,7 @@ func TestPanelsFrame_MenuCommands(t *testing.T) {
 		t.Error("Left panel mode not changed to Detailed")
 	}
 
-	pf.HandleCommand(CmRightDetailed, nil)
+	pf.HandleCommand(appcmd.CmRightDetailed, nil)
 	if pf.panels[1].(*FileSystemPanel).viewMode != ViewModeDetailed {
 		t.Error("Right panel mode not changed to Detailed")
 	}
@@ -1198,12 +1199,12 @@ func TestPanelsFrame_MenuCommands(t *testing.T) {
 	}
 
 	// Sort mode commands
-	pf.HandleCommand(CmLeftSortTime, nil)
+	pf.HandleCommand(appcmd.CmLeftSortTime, nil)
 	if pf.panels[0].(*FileSystemPanel).sortMode != SortTime {
 		t.Error("Left panel sort mode not changed to Time")
 	}
 
-	pf.HandleCommand(CmRightSortSize, nil)
+	pf.HandleCommand(appcmd.CmRightSortSize, nil)
 	if pf.panels[1].(*FileSystemPanel).sortMode != SortSize {
 		t.Error("Right panel sort mode not changed to Size")
 	}
@@ -1229,13 +1230,13 @@ func TestPanelsFrame_SortCommandsUseDefaultDirection(t *testing.T) {
 	left.sortMode, left.sortReverse = SortUnsorted, true
 	right.sortMode, right.sortReverse = SortUnsorted, true
 
-	pf.HandleCommand(CmLeftSortTime, nil)
+	pf.HandleCommand(appcmd.CmLeftSortTime, nil)
 	if left.sortMode != SortTime || left.sortIsAscending() {
 		t.Fatalf("left sort command = mode %v ascending %v, want Time descending",
 			left.sortMode, left.sortIsAscending())
 	}
 
-	pf.HandleCommand(CmRightSortSize, nil)
+	pf.HandleCommand(appcmd.CmRightSortSize, nil)
 	if right.sortMode != SortSize || right.sortIsAscending() {
 		t.Fatalf("right sort command = mode %v ascending %v, want Size descending",
 			right.sortMode, right.sortIsAscending())
@@ -2259,7 +2260,7 @@ func TestPanelsFrame_SwapPanels(t *testing.T) {
 	pf.activeIdx = 0 // Active is Left
 
 	// Execute Swap
-	pf.HandleCommand(CmSwapPanels, nil)
+	pf.HandleCommand(appcmd.CmSwapPanels, nil)
 
 	// 1. Verify instances are swapped in the array
 	if pf.panels[0] != fspR || pf.panels[1] != fspL {
@@ -2285,7 +2286,7 @@ func TestPanelsFrame_SwapPanels(t *testing.T) {
 
 // TestPanelsFrame_VisualLeftRightFollowSwap makes sure resolving
 // panels by on-screen X-position keeps Ctrl+[/Ctrl+] pointing at
-// the visually-left and visually-right sides after CmSwapPanels
+// the visually-left and visually-right sides after appcmd.CmSwapPanels
 // re-slots the underlying panels array.
 func TestPanelsFrame_VisualLeftRightFollowSwap(t *testing.T) {
 	pf := NewPanelsFrame()
@@ -2322,7 +2323,7 @@ func TestPanelsFrame_VisualLeftRightFollowSwap(t *testing.T) {
 	// Swap. panels[0] now points at fspR, but that panel gets
 	// moved to X=0 by ResizeConsole (see TestPanelsFrame_SwapPanels
 	// step 3), so it's the visually-left one now.
-	pf.HandleCommand(CmSwapPanels, nil)
+	pf.HandleCommand(appcmd.CmSwapPanels, nil)
 
 	if got := pf.visualLeftFSP(); got != fspR {
 		t.Errorf("visualLeftFSP after swap: got %p, want fspR (%p)", got, fspR)
@@ -2368,7 +2369,7 @@ func TestPanelsFrame_WideFollowsSwapAndClone(t *testing.T) {
 	left := pf.panels[0]
 	pf.setWidePanel(0)
 
-	pf.HandleCommand(CmSwapPanels, nil)
+	pf.HandleCommand(appcmd.CmSwapPanels, nil)
 	if pf.widePanel != 1 || pf.activeIdx != 1 || pf.panels[1] != left {
 		t.Fatalf("Wide did not follow swapped content: wide=%d active=%d", pf.widePanel, pf.activeIdx)
 	}
@@ -4480,7 +4481,7 @@ func TestPanelsFrame_VimHotkeys_Comprehensive(t *testing.T) {
 	pf.cmdLine.Clear()
 	pressKey(pf, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: 'd'})
 	pressKey(pf, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: 'd'})
-	if cmdCaught != CmDelete {
+	if cmdCaught != appcmd.CmDelete {
 		t.Errorf("'dd' failed to emit CmDelete, got %d", cmdCaught)
 	}
 	if !pf.cmdLine.IsEmpty() {
@@ -4493,7 +4494,7 @@ func TestPanelsFrame_VimHotkeys_Comprehensive(t *testing.T) {
 	pressKey(pf, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: 'd'})
 	pressKey(pf, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_TAB})
 	pressKey(pf, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: 'd'})
-	if cmdCaught == CmDelete {
+	if cmdCaught == appcmd.CmDelete {
 		t.Error("Vim prefix should reset after switching panels via Tab")
 	}
 
@@ -4506,7 +4507,7 @@ func TestPanelsFrame_VimHotkeys_Comprehensive(t *testing.T) {
 		MouseX: 5, MouseY: 5,
 	})
 	pressKey(pf, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: 'c'})
-	if cmdCaught == CmCopy {
+	if cmdCaught == appcmd.CmCopy {
 		t.Error("Vim prefix should reset after mouse interaction")
 	}
 
@@ -5684,7 +5685,7 @@ func TestPanelsFrame_AICmds(t *testing.T) {
 	pf := NewPanelsFrame()
 	defer pf.Close()
 
-	handled := pf.HandleCommand(CmLeftAIChat, nil)
+	handled := pf.HandleCommand(appcmd.CmLeftAIChat, nil)
 	// It should gracefully handle these even if no AI panel is there
 	if !handled {
 		t.Error("CmLeftAIChat should be handled")

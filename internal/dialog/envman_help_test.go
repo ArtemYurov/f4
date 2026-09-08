@@ -25,11 +25,11 @@ func TestEnvironmentManagerHelpIsAvailableInEnglishAndRussian(t *testing.T) {
 				t.Fatalf("%s must define EnvironmentManager exactly once", path)
 			}
 
-			engine := vtui.NewHelpEngine(NewMemoryHelpVFS(map[string]string{"envman.hlf": normalized}))
-			if err := engine.LoadFile("envman.hlf"); err != nil {
+			Engine := vtui.NewHelpEngine(NewMemoryHelpVFS(map[string]string{"envman.hlf": normalized}))
+			if err := Engine.LoadFile("envman.hlf"); err != nil {
 				t.Fatal(err)
 			}
-			topic := engine.GetTopic("EnvironmentManager")
+			topic := Engine.GetTopic("EnvironmentManager")
 			if topic == nil {
 				t.Fatal("EnvironmentManager topic is missing")
 			}

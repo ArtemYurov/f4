@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -41,7 +42,7 @@ func statTextEditorTarget(filesystem vfs.VFS, path string, timeout time.Duration
 	}
 }
 
-// OpenTextEditor opens supplied UTF-8 content in f4's non-modal editor. It is
+// OpenTextEditor opens supplied UTF-8 content in f4's non-modal ev. It is
 // an optional plugin UI capability rather than part of the baseline term.App
 // interface, so existing hosts remain source compatible.
 func (pf *PanelsFrame) OpenTextEditor(request vfs.TextEditorRequest) error {
@@ -88,19 +89,19 @@ func (pf *PanelsFrame) OpenTextEditor(request vfs.TextEditorRequest) error {
 
 	// Generated plugin reports do not need a remote .editorconfig lookup. The
 	// create-new buffer must remain dirty until it is actually saved.
-	editor := newEditorView(piecetable.New(content), filesystem, path, false, true)
-	editor.DisplayTitle = request.DisplayTitle
-	editor.modified = request.Modified
-	editor.unsavedBaseline = request.Modified
-	editor.createNewTarget = !request.Temporary
+	ev := editor.NewEditorViewWith(piecetable.New(content), filesystem, path, false, true)
+	ev.DisplayTitle = request.DisplayTitle
+	ev.Modified = request.Modified
+	ev.UnsavedBaseline = request.Modified
+	ev.CreateNewTarget = !request.Temporary
 	if request.CursorLine >= 0 {
-		editor.CursorLine = request.CursorLine
+		ev.CursorLine = request.CursorLine
 	}
 	if request.CursorCol >= 0 {
-		editor.CursorPos = request.CursorCol
+		ev.CursorPos = request.CursorCol
 	}
-	editor.OnClose = func() {
-		data, readErr := editor.pt.GetRange(0, editor.pt.Size())
+	ev.OnClose = func() {
+		data, readErr := ev.Pt.GetRange(0, ev.Pt.Size())
 		data = append([]byte(nil), data...)
 		if temporaryPath != "" {
 			if removeErr := os.Remove(temporaryPath); readErr == nil && removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
@@ -111,8 +112,8 @@ func (pf *PanelsFrame) OpenTextEditor(request vfs.TextEditorRequest) error {
 			vtui.FrameManager.PostTask(func() { request.OnClose(data, readErr) })
 		}
 	}
-	editor.ResizeConsole(pf.lastW, pf.lastH)
-	editor.StartIndexing()
-	vtui.FrameManager.AddScreen(editor)
+	ev.ResizeConsole(pf.lastW, pf.lastH)
+	ev.StartIndexing()
+	vtui.FrameManager.AddScreen(ev)
 	return nil
 }

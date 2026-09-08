@@ -76,20 +76,20 @@ func buildUserMenuScriptCommand(interpreter, script string, dialect vfs.CommandD
 		// flags may be placed before the final stdin operand in the shebang.
 		return fmt.Sprintf("printf '%%s' %s | %s -", quoted, interpreter), nil
 	case vfs.CommandDialectCmd:
-		file, err := os.CreateTemp("", "f4-usermenu-*.script")
+		File, err := os.CreateTemp("", "f4-usermenu-*.script")
 		if err != nil {
 			return "", fmt.Errorf("create temporary script: %w", err)
 		}
-		path := file.Name()
+		path := File.Name()
 		cleanup := func() {
-			_ = file.Close()
+			_ = File.Close()
 			_ = os.Remove(path)
 		}
-		if _, err := file.WriteString(strings.ReplaceAll(script, "\n", "\r\n")); err != nil {
+		if _, err := File.WriteString(strings.ReplaceAll(script, "\n", "\r\n")); err != nil {
 			cleanup()
 			return "", fmt.Errorf("write temporary script: %w", err)
 		}
-		if err := file.Close(); err != nil {
+		if err := File.Close(); err != nil {
 			_ = os.Remove(path)
 			return "", fmt.Errorf("close temporary script: %w", err)
 		}

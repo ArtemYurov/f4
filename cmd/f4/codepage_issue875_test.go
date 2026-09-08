@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/testutil"
@@ -223,7 +224,7 @@ func TestEditor_Issue875_OpensEverySample(t *testing.T) {
 		if ev.HexMode {
 			t.Errorf("%s: opened as a binary", s.name)
 		}
-		text, err := ev.pt.Bytes()
+		text, err := ev.Pt.Bytes()
 		if err != nil {
 			t.Fatalf("%s: %v", s.name, err)
 		}
@@ -233,7 +234,7 @@ func TestEditor_Issue875_OpensEverySample(t *testing.T) {
 
 		ev.ReloadWithCodepage(65001)
 		ev.ReloadWithCodepage(s.codepage)
-		text, err = ev.pt.Bytes()
+		text, err = ev.Pt.Bytes()
 		if err != nil {
 			t.Fatalf("%s: %v", s.name, err)
 		}
@@ -259,10 +260,10 @@ func TestEditor_Issue875_UTF8BOMDoesNotShiftLines(t *testing.T) {
 	ev := rig.open(t, path)
 	defer ev.Close()
 
-	if !ev.utf8BOM {
+	if !ev.Utf8BOM {
 		t.Fatal("the byte-order mark was not recorded")
 	}
-	text, err := ev.pt.Bytes()
+	text, err := ev.Pt.Bytes()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -271,15 +272,15 @@ func TestEditor_Issue875_UTF8BOMDoesNotShiftLines(t *testing.T) {
 	}
 
 	wantLines := strings.Split(issue875EmDash, "\r\n")
-	if got := ev.li.LineCount(); got != len(wantLines) {
+	if got := ev.Li.LineCount(); got != len(wantLines) {
 		t.Fatalf("line count = %d, want %d", got, len(wantLines))
 	}
 	for i, want := range wantLines {
-		start := ev.li.GetLineOffset(i)
-		if start+len(want) > ev.pt.Size() {
-			t.Fatalf("line %d starts at %d and runs past the %d byte buffer", i+1, start, ev.pt.Size())
+		start := ev.Li.GetLineOffset(i)
+		if start+len(want) > ev.Pt.Size() {
+			t.Fatalf("line %d starts at %d and runs past the %d byte buffer", i+1, start, ev.Pt.Size())
 		}
-		got, err := ev.pt.GetRange(start, len(want))
+		got, err := ev.Pt.GetRange(start, len(want))
 		if err != nil {
 			t.Fatalf("line %d: %v", i+1, err)
 		}
@@ -318,7 +319,7 @@ func newIssue875EditorRig(t *testing.T) *issue875EditorRig {
 
 // open runs the editor's own open path, the one an F4 on the panel takes, and
 // returns the editor it created.
-func (rig *issue875EditorRig) open(t *testing.T, path string) *EditorView {
+func (rig *issue875EditorRig) open(t *testing.T, path string) *editor.EditorView {
 	t.Helper()
 	f, err := rig.vfs.Open(context.Background(), path)
 	if err != nil {
@@ -331,7 +332,7 @@ func (rig *issue875EditorRig) open(t *testing.T, path string) *EditorView {
 		t.Fatalf("no editor was opened for %s", path)
 	}
 	deadline := time.Now().Add(2 * time.Second)
-	for ev.indexing && time.Now().Before(deadline) {
+	for ev.Indexing && time.Now().Before(deadline) {
 		select {
 		case task := <-vtui.FrameManager.TaskChan:
 			task()

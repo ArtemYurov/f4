@@ -12,8 +12,8 @@ import (
 
 func TestTempPanelVFSStoresReferencesWithoutCopying(t *testing.T) {
 	root := t.TempDir()
-	filePath := filepath.Join(root, "one.txt")
-	if err := os.WriteFile(filePath, []byte("temporary reference"), 0600); err != nil {
+	FilePath := filepath.Join(root, "one.txt")
+	if err := os.WriteFile(FilePath, []byte("temporary reference"), 0600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -28,8 +28,8 @@ func TestTempPanelVFSStoresReferencesWithoutCopying(t *testing.T) {
 	if len(items) != 1 {
 		t.Fatalf("temporary panel has %d items, want one deduplicated reference", len(items))
 	}
-	if items[0].Name != filePath {
-		t.Fatalf("temporary panel item name = %q, want %q", items[0].Name, filePath)
+	if items[0].Name != FilePath {
+		t.Fatalf("temporary panel item name = %q, want %q", items[0].Name, FilePath)
 	}
 
 	entryPath := tmp.Join(tmp.GetPath(), items[0].Name)
@@ -50,7 +50,7 @@ func TestTempPanelVFSStoresReferencesWithoutCopying(t *testing.T) {
 		t.Fatal("temporary panel consumed the create action used by Shift+F4")
 	}
 	tmp.removePanelReferences([]string{entryPath})
-	if _, err := os.Stat(filePath); err != nil {
+	if _, err := os.Stat(FilePath); err != nil {
 		t.Fatalf("removing a temporary-panel reference touched the source file: %v", err)
 	}
 	if got := len(readTempPanelItems(t, tmp)); got != 0 {
@@ -96,8 +96,8 @@ func TestTempPanelStoreReplacesSearchResultsInSelectedSlot(t *testing.T) {
 
 func TestTempPanelVFSDeleteRemovesReferenceAndRealItem(t *testing.T) {
 	root := t.TempDir()
-	filePath := filepath.Join(root, "delete.txt")
-	if err := os.WriteFile(filePath, []byte("delete me"), 0600); err != nil {
+	FilePath := filepath.Join(root, "delete.txt")
+	if err := os.WriteFile(FilePath, []byte("delete me"), 0600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -116,7 +116,7 @@ func TestTempPanelVFSDeleteRemovesReferenceAndRealItem(t *testing.T) {
 	if err := tmp.Remove(context.Background(), entryPath); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
+	if _, err := os.Stat(FilePath); !os.IsNotExist(err) {
 		t.Fatalf("deleting a temporary-panel item left the real file in place: %v", err)
 	}
 	if got := len(readTempPanelItems(t, tmp)); got != 0 {

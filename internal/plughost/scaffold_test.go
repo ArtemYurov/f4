@@ -36,9 +36,9 @@ func TestScaffoldPluginWritesItsFiles(t *testing.T) {
 		t.Fatalf("created %v, want three files", created)
 	}
 
-	for _, file := range []string{"plugin.lua", "manifest.json", "README.md"} {
-		if _, err := os.Stat(filepath.Join(dir, file)); err != nil {
-			t.Errorf("%s was not written: %v", file, err)
+	for _, File := range []string{"plugin.lua", "manifest.json", "README.md"} {
+		if _, err := os.Stat(filepath.Join(dir, File)); err != nil {
+			t.Errorf("%s was not written: %v", File, err)
 		}
 	}
 
@@ -107,14 +107,14 @@ func TestScaffoldedPluginActuallyRuns(t *testing.T) {
 		t.Fatalf("the drive listed %d files, want the ones the template writes", len(items))
 	}
 
-	file, err := fs.Open(ctx, items[0].Name)
+	File, err := fs.Open(ctx, items[0].Name)
 	if err != nil {
 		t.Fatalf("Open(%q): %v", items[0].Name, err)
 	}
-	defer func() { _ = file.Close() }()
+	defer func() { _ = File.Close() }()
 
-	buf := make([]byte, file.Size())
-	n, err := file.ReadAt(ctx, buf, 0)
+	buf := make([]byte, File.Size())
+	n, err := File.ReadAt(ctx, buf, 0)
 	if err != nil {
 		t.Fatalf("ReadAt: %v", err)
 	}

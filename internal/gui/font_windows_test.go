@@ -6,10 +6,10 @@ import "testing"
 
 func TestMatchWindowsFontFamily(t *testing.T) {
 	entries := []fontEntry{
-		{base: "Consolas", file: "consola.ttf"},
-		{base: "Consolas Bold", file: "consolab.ttf"},
-		{base: "Cascadia Mono Regular", file: "CascadiaMono.ttf"},
-		{base: "FiraCode Nerd Font Mono Reg", file: "FiraCodeNerdFontMono-Regular.ttf"},
+		{base: "Consolas", File: "consola.ttf"},
+		{base: "Consolas Bold", File: "consolab.ttf"},
+		{base: "Cascadia Mono Regular", File: "CascadiaMono.ttf"},
+		{base: "FiraCode Nerd Font Mono Reg", File: "FiraCodeNerdFontMono-Regular.ttf"},
 	}
 	cases := []struct {
 		in   string

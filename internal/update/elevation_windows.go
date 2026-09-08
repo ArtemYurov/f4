@@ -99,7 +99,7 @@ func runElevated(data []byte, archiveKind string) error {
 	if err != nil {
 		return err
 	}
-	file, err := windows.UTF16PtrFromString(exePath)
+	File, err := windows.UTF16PtrFromString(exePath)
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func runElevated(data []byte, archiveKind string) error {
 		fMask:        seeMaskNoCloseProcess | seeMaskFlagNoUI,
 		hwnd:         0,
 		lpVerb:       verb,
-		lpFile:       file,
+		lpFile:       File,
 		lpParameters: params,
 		nShow:        swShow,
 	}

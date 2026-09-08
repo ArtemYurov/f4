@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
@@ -655,8 +656,8 @@ func TestActionExecute_PtyCommandFormatting(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		fileName = "app.sh"
 	}
-	filePath := filepath.Join(tmp, fileName)
-	if err := os.WriteFile(filePath, []byte("#!/bin/sh\nexit 0"), 0600); err != nil {
+	FilePath := filepath.Join(tmp, fileName)
+	if err := os.WriteFile(FilePath, []byte("#!/bin/sh\nexit 0"), 0600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -665,7 +666,7 @@ func TestActionExecute_PtyCommandFormatting(t *testing.T) {
 	// Очищаем буфер terminal.PTY перед тестом
 	pty.written = nil
 
-	actionExecute(pf, v, tmp, fileName, filePath)
+	actionExecute(pf, v, tmp, fileName, FilePath)
 
 	// Прокачиваем задачи FrameManager
 	timeout := time.After(2 * time.Second)
@@ -702,13 +703,13 @@ func TestActionExecute_HistoryQuoting(t *testing.T) {
 
 	tmp := t.TempDir()
 	fileName := "name with spaces.exe"
-	filePath := filepath.Join(tmp, fileName)
-	if err := os.WriteFile(filePath, []byte(""), 0600); err != nil {
+	FilePath := filepath.Join(tmp, fileName)
+	if err := os.WriteFile(FilePath, []byte(""), 0600); err != nil {
 		t.Fatal(err)
 	}
 
 	v := vfs.NewOSVFS(tmp)
-	actionExecute(pf, v, tmp, fileName, filePath)
+	actionExecute(pf, v, tmp, fileName, FilePath)
 
 	timeout := time.After(2 * time.Second)
 	for pf.showPanels {
@@ -1089,7 +1090,7 @@ func TestActionNewFile_AbsoluteExistingPath(t *testing.T) {
 	edit.SetText(path)
 	okButton.OnClick()
 
-	var editor *EditorView
+	var editor *editor.EditorView
 	deadline := time.After(2 * time.Second)
 	for editor == nil {
 		select {
@@ -1102,7 +1103,7 @@ func TestActionNewFile_AbsoluteExistingPath(t *testing.T) {
 	}
 	defer editor.Close()
 
-	got, err := editor.pt.GetRange(0, editor.pt.Size())
+	got, err := editor.Pt.GetRange(0, editor.Pt.Size())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1484,7 +1485,7 @@ func TestSession_DiskPersistence(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	oldConfig := config.App
-	oldEditorSearch, oldFindMask := LastEditorSearch, LastFindFileMask
+	oldEditorSearch, oldFindMask := editor.LastEditorSearch, LastFindFileMask
 	oldLeftPath, oldRightPath := LastLeftPath, LastRightPath
 	oldLeftCursor, oldRightCursor := LastLeftCursor, LastRightCursor
 	oldActivePanel, oldWidePanel := LastActivePanel, LastWidePanel
@@ -1495,7 +1496,7 @@ func TestSession_DiskPersistence(t *testing.T) {
 	oldWorkspaces, oldActiveWorkspace := LastWorkspaceSessions, LastActiveWorkspace
 	t.Cleanup(func() {
 		config.App = oldConfig
-		LastEditorSearch, LastFindFileMask = oldEditorSearch, oldFindMask
+		editor.LastEditorSearch, LastFindFileMask = oldEditorSearch, oldFindMask
 		LastLeftPath, LastRightPath = oldLeftPath, oldRightPath
 		LastLeftCursor, LastRightCursor = oldLeftCursor, oldRightCursor
 		LastActivePanel, LastWidePanel = oldActivePanel, oldWidePanel
@@ -1529,7 +1530,7 @@ func TestSession_DiskPersistence(t *testing.T) {
 	sessionLoaded = true
 	t.Cleanup(func() { sessionLoaded = oldSessionLoaded })
 
-	LastEditorSearch = "disk-test"
+	editor.LastEditorSearch = "disk-test"
 	LastFindFileMask = "*.log"
 	LastLeftPath = "/path/a"
 	LastRightPath = "/path/b"
@@ -1572,9 +1573,9 @@ func TestSession_DiskPersistence(t *testing.T) {
 
 	LoadSession()
 
-	if LastEditorSearch != "disk-test" || LastLeftPath != "/path/a" || LastLeftCursor != "file.a" || LastActivePanel != 0 {
+	if editor.LastEditorSearch != "disk-test" || LastLeftPath != "/path/a" || LastLeftCursor != "file.a" || LastActivePanel != 0 {
 		t.Errorf("Disk persistence failed. Search:%q, LeftPath:%q, LeftCursor:%q, Active:%d",
-			LastEditorSearch, LastLeftPath, LastLeftCursor, LastActivePanel)
+			editor.LastEditorSearch, LastLeftPath, LastLeftCursor, LastActivePanel)
 	}
 	if LastWidePanel != 1 {
 		t.Errorf("Wide panel persistence failed: got %d, want 1", LastWidePanel)
@@ -3056,9 +3057,9 @@ func TestActionSwitchEditorToViewerAndBack(t *testing.T) {
 	theme.SetDefaultF4Palette()
 
 	tmpDir := t.TempDir()
-	filePath := filepath.Join(tmpDir, "switch_test.txt")
+	FilePath := filepath.Join(tmpDir, "switch_test.txt")
 	content := "Line 0\nLine 1\nLine 2\nLine 3\nLine 4\n"
-	if err := os.WriteFile(filePath, []byte(content), 0600); err != nil {
+	if err := os.WriteFile(FilePath, []byte(content), 0600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -3069,7 +3070,7 @@ func TestActionSwitchEditorToViewerAndBack(t *testing.T) {
 	// is on top so Windows can delete it during TempDir cleanup.
 	defer func() {
 		switch top := vtui.FrameManager.GetTopFrame().(type) {
-		case *EditorView:
+		case *editor.EditorView:
 			top.Close()
 		case *viewer.ViewerView:
 			top.Close()
@@ -3077,15 +3078,15 @@ func TestActionSwitchEditorToViewerAndBack(t *testing.T) {
 	}()
 	pf.ResizeConsole(80, 25)
 
-	actionOpenEditor(pf, v, filePath)
+	actionOpenEditor(pf, v, FilePath)
 
 	timeout := time.After(2 * time.Second)
-	var ev *EditorView
+	var ev *editor.EditorView
 	for ev == nil {
 		select {
 		case task := <-vtui.FrameManager.TaskChan:
 			task()
-			if top, ok := vtui.FrameManager.GetTopFrame().(*EditorView); ok {
+			if top, ok := vtui.FrameManager.GetTopFrame().(*editor.EditorView); ok {
 				ev = top
 			}
 		case <-timeout:
@@ -3131,9 +3132,9 @@ func TestActionSwitchEditorToViewerAndBack(t *testing.T) {
 	}
 
 	timeout = time.After(2 * time.Second)
-	var ev2 *EditorView
+	var ev2 *editor.EditorView
 	for ev2 == nil {
-		if top, ok := vtui.FrameManager.GetTopFrame().(*EditorView); ok {
+		if top, ok := vtui.FrameManager.GetTopFrame().(*editor.EditorView); ok {
 			ev2 = top
 			break
 		}
@@ -3160,8 +3161,8 @@ func TestActionSwitchEditorToViewer_ModifiedFilePrompt(t *testing.T) {
 	theme.SetDefaultF4Palette()
 
 	tmpDir := t.TempDir()
-	filePath := filepath.Join(tmpDir, "modified_switch.txt")
-	if err := os.WriteFile(filePath, []byte("Original Content"), 0600); err != nil {
+	FilePath := filepath.Join(tmpDir, "modified_switch.txt")
+	if err := os.WriteFile(FilePath, []byte("Original Content"), 0600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -3172,7 +3173,7 @@ func TestActionSwitchEditorToViewer_ModifiedFilePrompt(t *testing.T) {
 	// is on top so Windows can delete it during TempDir cleanup.
 	defer func() {
 		switch top := vtui.FrameManager.GetTopFrame().(type) {
-		case *EditorView:
+		case *editor.EditorView:
 			top.Close()
 		case *viewer.ViewerView:
 			top.Close()
@@ -3180,15 +3181,15 @@ func TestActionSwitchEditorToViewer_ModifiedFilePrompt(t *testing.T) {
 	}()
 	pf.ResizeConsole(80, 25)
 
-	actionOpenEditor(pf, v, filePath)
+	actionOpenEditor(pf, v, FilePath)
 
 	timeout := time.After(2 * time.Second)
-	var ev *EditorView
+	var ev *editor.EditorView
 	for ev == nil {
 		select {
 		case task := <-vtui.FrameManager.TaskChan:
 			task()
-			if top, ok := vtui.FrameManager.GetTopFrame().(*EditorView); ok {
+			if top, ok := vtui.FrameManager.GetTopFrame().(*editor.EditorView); ok {
 				ev = top
 			}
 		case <-timeout:
@@ -3200,7 +3201,7 @@ func TestActionSwitchEditorToViewer_ModifiedFilePrompt(t *testing.T) {
 
 	// Modify content
 	ev.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: '!'})
-	if !ev.modified {
+	if !ev.Modified {
 		t.Fatal("Editor should be modified")
 	}
 
@@ -3245,8 +3246,8 @@ func TestActionSwitchEditorToViewer_ModifiedFilePrompt(t *testing.T) {
 	}
 	defer vv.Close()
 
-	if vv.Path != filePath {
-		t.Errorf("Viewer opened path %q, want %q", vv.Path, filePath)
+	if vv.Path != FilePath {
+		t.Errorf("Viewer opened path %q, want %q", vv.Path, FilePath)
 	}
 }
 
@@ -3257,8 +3258,8 @@ func TestActionSwitchEditorViewer_HeightPreserved(t *testing.T) {
 	theme.SetDefaultF4Palette()
 
 	tmpDir := t.TempDir()
-	filePath := filepath.Join(tmpDir, "resize_test.txt")
-	if err := os.WriteFile(filePath, []byte("Content\n"), 0600); err != nil {
+	FilePath := filepath.Join(tmpDir, "resize_test.txt")
+	if err := os.WriteFile(FilePath, []byte("Content\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -3269,7 +3270,7 @@ func TestActionSwitchEditorViewer_HeightPreserved(t *testing.T) {
 	// is on top so Windows can delete it during TempDir cleanup.
 	defer func() {
 		switch top := vtui.FrameManager.GetTopFrame().(type) {
-		case *EditorView:
+		case *editor.EditorView:
 			top.Close()
 		case *viewer.ViewerView:
 			top.Close()
@@ -3277,15 +3278,15 @@ func TestActionSwitchEditorViewer_HeightPreserved(t *testing.T) {
 	}()
 	pf.ResizeConsole(80, 25)
 
-	actionOpenEditor(pf, v, filePath)
+	actionOpenEditor(pf, v, FilePath)
 
 	timeout := time.After(2 * time.Second)
-	var ev *EditorView
+	var ev *editor.EditorView
 	for ev == nil {
 		select {
 		case task := <-vtui.FrameManager.TaskChan:
 			task()
-			if top, ok := vtui.FrameManager.GetTopFrame().(*EditorView); ok {
+			if top, ok := vtui.FrameManager.GetTopFrame().(*editor.EditorView); ok {
 				ev = top
 			}
 		case <-timeout:
@@ -3320,10 +3321,10 @@ func TestActionSwitchEditorViewer_HeightPreserved(t *testing.T) {
 		}
 
 		RunAction("Viewer.SwitchToEditor")
-		var evCurrent *EditorView
+		var evCurrent *editor.EditorView
 		timeout = time.After(1 * time.Second)
 		for evCurrent == nil {
-			if top, ok := vtui.FrameManager.GetTopFrame().(*EditorView); ok {
+			if top, ok := vtui.FrameManager.GetTopFrame().(*editor.EditorView); ok {
 				evCurrent = top
 				break
 			}

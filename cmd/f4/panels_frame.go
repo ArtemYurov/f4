@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/unxed/f4/internal/appcmd"
+	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/sysinfo"
@@ -583,39 +585,39 @@ func isAIPanel(panel Panel) bool {
 func (pf *PanelsFrame) leftMenu() vtui.MenuBarItem {
 	if isAIPanel(pf.panels[0]) {
 		return vtui.MenuBarItem{Label: "&" + i18n.Msg("Menu.Left"), SubItems: []vtui.MenuItem{
-			{Text: "&1. " + i18n.Msg("Action.AI.ViewContext"), Command: CmLeftAIContext, Shortcut: "Ctrl+1"},
-			{Text: "&2. " + i18n.Msg("Action.AI.ViewChat"), Command: CmLeftAIChat, Shortcut: "Ctrl+2"},
-			{Text: "&3. " + i18n.Msg("Action.AI.ViewOut"), Command: CmLeftAIOut, Shortcut: "Ctrl+3"},
-			{Text: "&4. " + i18n.Msg("Action.AI.ViewMem"), Command: CmLeftAIMem, Shortcut: "Ctrl+4"},
+			{Text: "&1. " + i18n.Msg("Action.AI.ViewContext"), Command: appcmd.CmLeftAIContext, Shortcut: "Ctrl+1"},
+			{Text: "&2. " + i18n.Msg("Action.AI.ViewChat"), Command: appcmd.CmLeftAIChat, Shortcut: "Ctrl+2"},
+			{Text: "&3. " + i18n.Msg("Action.AI.ViewOut"), Command: appcmd.CmLeftAIOut, Shortcut: "Ctrl+3"},
+			{Text: "&4. " + i18n.Msg("Action.AI.ViewMem"), Command: appcmd.CmLeftAIMem, Shortcut: "Ctrl+4"},
 			{Separator: true},
-			{Text: i18n.Msg("Menu.Left.DriveMenu"), Command: CmLeftDriveMenu, Shortcut: "Alt+F1"},
+			{Text: i18n.Msg("Menu.Left.DriveMenu"), Command: appcmd.CmLeftDriveMenu, Shortcut: "Alt+F1"},
 			{Separator: true},
-			{Text: i18n.Msg("FileOp.BtnBackground"), Command: CmBackground},
-			{Text: i18n.Msg("Action.Workspace.New"), Command: CmWorkspaceNew, Shortcut: "Ctrl+N"},
-			{Text: i18n.Msg("Action.Workspace.NewTerminal"), Command: CmWorkspaceNewTerminal, Shortcut: "Ctrl+Shift+O"},
-			{Text: i18n.Msg("Action.Workspace.Close"), Command: CmWorkspaceClose, Shortcut: "Ctrl+W"},
+			{Text: i18n.Msg("FileOp.BtnBackground"), Command: appcmd.CmBackground},
+			{Text: i18n.Msg("Action.Workspace.New"), Command: appcmd.CmWorkspaceNew, Shortcut: "Ctrl+N"},
+			{Text: i18n.Msg("Action.Workspace.NewTerminal"), Command: appcmd.CmWorkspaceNewTerminal, Shortcut: "Ctrl+Shift+O"},
+			{Text: i18n.Msg("Action.Workspace.Close"), Command: appcmd.CmWorkspaceClose, Shortcut: "Ctrl+W"},
 			{Text: i18n.Msg("Menu.Exit"), Command: vtui.CmQuit},
 		}}
 	}
 	return vtui.MenuBarItem{Label: "&" + i18n.Msg("Menu.Left"), SubItems: []vtui.MenuItem{
-		{Text: "&" + i18n.Msg("Menu.Left.Brief"), Command: CmLeftBrief},
-		{Text: "&" + i18n.Msg("Menu.Left.Medium"), Command: CmLeftMedium},
-		{Text: "&" + i18n.Msg("Menu.Left.Detailed"), Command: CmLeftDetailed},
-		{Text: "&" + i18n.Msg("Menu.Left.Wide"), Command: CmLeftWide},
+		{Text: "&" + i18n.Msg("Menu.Left.Brief"), Command: appcmd.CmLeftBrief},
+		{Text: "&" + i18n.Msg("Menu.Left.Medium"), Command: appcmd.CmLeftMedium},
+		{Text: "&" + i18n.Msg("Menu.Left.Detailed"), Command: appcmd.CmLeftDetailed},
+		{Text: "&" + i18n.Msg("Menu.Left.Wide"), Command: appcmd.CmLeftWide},
 		{Separator: true},
-		{Text: "&" + i18n.Msg("Menu.SortName"), Command: CmLeftSortName},
-		{Text: "&" + i18n.Msg("Menu.SortExt"), Command: CmLeftSortExt},
-		{Text: "&" + i18n.Msg("Menu.SortTime"), Command: CmLeftSortTime},
-		{Text: "&" + i18n.Msg("Menu.SortSize"), Command: CmLeftSortSize},
-		{Text: "&" + i18n.Msg("Menu.SortUnsorted"), Command: CmLeftSortUnsorted},
-		{Text: "&" + i18n.Msg("Menu.SortUseGroups"), Command: CmLeftSortGroups},
+		{Text: "&" + i18n.Msg("Menu.SortName"), Command: appcmd.CmLeftSortName},
+		{Text: "&" + i18n.Msg("Menu.SortExt"), Command: appcmd.CmLeftSortExt},
+		{Text: "&" + i18n.Msg("Menu.SortTime"), Command: appcmd.CmLeftSortTime},
+		{Text: "&" + i18n.Msg("Menu.SortSize"), Command: appcmd.CmLeftSortSize},
+		{Text: "&" + i18n.Msg("Menu.SortUnsorted"), Command: appcmd.CmLeftSortUnsorted},
+		{Text: "&" + i18n.Msg("Menu.SortUseGroups"), Command: appcmd.CmLeftSortGroups},
 		{Separator: true},
-		{Text: i18n.Msg("Menu.Left.DriveMenu"), Command: CmLeftDriveMenu, Shortcut: "Alt+F1"},
+		{Text: i18n.Msg("Menu.Left.DriveMenu"), Command: appcmd.CmLeftDriveMenu, Shortcut: "Alt+F1"},
 		{Separator: true},
-		{Text: i18n.Msg("FileOp.BtnBackground"), Command: CmBackground},
-		{Text: i18n.Msg("Action.Workspace.New"), Command: CmWorkspaceNew, Shortcut: "Ctrl+N"},
-		{Text: i18n.Msg("Action.Workspace.NewTerminal"), Command: CmWorkspaceNewTerminal, Shortcut: "Ctrl+Shift+O"},
-		{Text: i18n.Msg("Action.Workspace.Close"), Command: CmWorkspaceClose, Shortcut: "Ctrl+W"},
+		{Text: i18n.Msg("FileOp.BtnBackground"), Command: appcmd.CmBackground},
+		{Text: i18n.Msg("Action.Workspace.New"), Command: appcmd.CmWorkspaceNew, Shortcut: "Ctrl+N"},
+		{Text: i18n.Msg("Action.Workspace.NewTerminal"), Command: appcmd.CmWorkspaceNewTerminal, Shortcut: "Ctrl+Shift+O"},
+		{Text: i18n.Msg("Action.Workspace.Close"), Command: appcmd.CmWorkspaceClose, Shortcut: "Ctrl+W"},
 		{Text: i18n.Msg("Menu.Exit"), Command: vtui.CmQuit},
 	}}
 }
@@ -624,28 +626,28 @@ func (pf *PanelsFrame) leftMenu() vtui.MenuBarItem {
 func (pf *PanelsFrame) rightMenu() vtui.MenuBarItem {
 	if isAIPanel(pf.panels[1]) {
 		return vtui.MenuBarItem{Label: "&" + i18n.Msg("Menu.Right"), SubItems: []vtui.MenuItem{
-			{Text: "&1. " + i18n.Msg("Action.AI.ViewContext"), Command: CmRightAIContext, Shortcut: "Ctrl+1"},
-			{Text: "&2. " + i18n.Msg("Action.AI.ViewChat"), Command: CmRightAIChat, Shortcut: "Ctrl+2"},
-			{Text: "&3. " + i18n.Msg("Action.AI.ViewOut"), Command: CmRightAIOut, Shortcut: "Ctrl+3"},
-			{Text: "&4. " + i18n.Msg("Action.AI.ViewMem"), Command: CmRightAIMem, Shortcut: "Ctrl+4"},
+			{Text: "&1. " + i18n.Msg("Action.AI.ViewContext"), Command: appcmd.CmRightAIContext, Shortcut: "Ctrl+1"},
+			{Text: "&2. " + i18n.Msg("Action.AI.ViewChat"), Command: appcmd.CmRightAIChat, Shortcut: "Ctrl+2"},
+			{Text: "&3. " + i18n.Msg("Action.AI.ViewOut"), Command: appcmd.CmRightAIOut, Shortcut: "Ctrl+3"},
+			{Text: "&4. " + i18n.Msg("Action.AI.ViewMem"), Command: appcmd.CmRightAIMem, Shortcut: "Ctrl+4"},
 			{Separator: true},
-			{Text: i18n.Msg("Menu.Right.DriveMenu"), Command: CmRightDriveMenu, Shortcut: "Alt+F2"},
+			{Text: i18n.Msg("Menu.Right.DriveMenu"), Command: appcmd.CmRightDriveMenu, Shortcut: "Alt+F2"},
 		}}
 	}
 	return vtui.MenuBarItem{Label: "&" + i18n.Msg("Menu.Right"), SubItems: []vtui.MenuItem{
-		{Text: "&" + i18n.Msg("Menu.Left.Brief"), Command: CmRightBrief},
-		{Text: "&" + i18n.Msg("Menu.Left.Medium"), Command: CmRightMedium},
-		{Text: "&" + i18n.Msg("Menu.Left.Detailed"), Command: CmRightDetailed},
-		{Text: "&" + i18n.Msg("Menu.Left.Wide"), Command: CmRightWide},
+		{Text: "&" + i18n.Msg("Menu.Left.Brief"), Command: appcmd.CmRightBrief},
+		{Text: "&" + i18n.Msg("Menu.Left.Medium"), Command: appcmd.CmRightMedium},
+		{Text: "&" + i18n.Msg("Menu.Left.Detailed"), Command: appcmd.CmRightDetailed},
+		{Text: "&" + i18n.Msg("Menu.Left.Wide"), Command: appcmd.CmRightWide},
 		{Separator: true},
-		{Text: "&" + i18n.Msg("Menu.SortName"), Command: CmRightSortName},
-		{Text: "&" + i18n.Msg("Menu.SortExt"), Command: CmRightSortExt},
-		{Text: "&" + i18n.Msg("Menu.SortTime"), Command: CmRightSortTime},
-		{Text: "&" + i18n.Msg("Menu.SortSize"), Command: CmRightSortSize},
-		{Text: "&" + i18n.Msg("Menu.SortUnsorted"), Command: CmRightSortUnsorted},
-		{Text: "&" + i18n.Msg("Menu.SortUseGroups"), Command: CmRightSortGroups},
+		{Text: "&" + i18n.Msg("Menu.SortName"), Command: appcmd.CmRightSortName},
+		{Text: "&" + i18n.Msg("Menu.SortExt"), Command: appcmd.CmRightSortExt},
+		{Text: "&" + i18n.Msg("Menu.SortTime"), Command: appcmd.CmRightSortTime},
+		{Text: "&" + i18n.Msg("Menu.SortSize"), Command: appcmd.CmRightSortSize},
+		{Text: "&" + i18n.Msg("Menu.SortUnsorted"), Command: appcmd.CmRightSortUnsorted},
+		{Text: "&" + i18n.Msg("Menu.SortUseGroups"), Command: appcmd.CmRightSortGroups},
 		{Separator: true},
-		{Text: i18n.Msg("Menu.Right.DriveMenu"), Command: CmRightDriveMenu, Shortcut: "Alt+F2"},
+		{Text: i18n.Msg("Menu.Right.DriveMenu"), Command: appcmd.CmRightDriveMenu, Shortcut: "Alt+F2"},
 	}}
 }
 
@@ -719,57 +721,57 @@ func getToggleMenuText(on bool, label string) string {
 }
 
 var commandToActionName = map[int]string{
-	CmLeftBrief:             "Panel.Left.ViewBrief",
-	CmLeftMedium:            "Panel.Left.ViewMedium",
-	CmLeftDetailed:          "Panel.Left.ViewDetailed",
-	CmLeftWide:              "Panel.Left.ViewWide",
-	CmRightBrief:            "Panel.Right.ViewBrief",
-	CmRightMedium:           "Panel.Right.ViewMedium",
-	CmRightDetailed:         "Panel.Right.ViewDetailed",
-	CmRightWide:             "Panel.Right.ViewWide",
-	CmLeftSortName:          "Panel.Left.SortByName",
-	CmLeftSortExt:           "Panel.Left.SortByExt",
-	CmLeftSortTime:          "Panel.Left.SortByTime",
-	CmLeftSortSize:          "Panel.Left.SortBySize",
-	CmLeftSortUnsorted:      "Panel.Left.SortUnsorted",
-	CmLeftSortGroups:        "Panel.Left.SortUseGroups",
-	CmRightSortName:         "Panel.Right.SortByName",
-	CmRightSortExt:          "Panel.Right.SortByExt",
-	CmRightSortTime:         "Panel.Right.SortByTime",
-	CmRightSortSize:         "Panel.Right.SortBySize",
-	CmRightSortUnsorted:     "Panel.Right.SortUnsorted",
-	CmRightSortGroups:       "Panel.Right.SortUseGroups",
-	CmLeftAIContext:         "AI.Left.ViewContext",
-	CmLeftAIChat:            "AI.Left.ViewChat",
-	CmLeftAIOut:             "AI.Left.ViewOut",
-	CmLeftAIMem:             "AI.Left.ViewMem",
-	CmRightAIContext:        "AI.Right.ViewContext",
-	CmRightAIChat:           "AI.Right.ViewChat",
-	CmRightAIOut:            "AI.Right.ViewOut",
-	CmRightAIMem:            "AI.Right.ViewMem",
-	CmBackground:            "App.Background",
-	CmWorkspaceNew:          "Workspace.New",
-	CmWorkspaceNewTerminal:  "Workspace.NewTerminal",
-	CmWorkspaceClose:        "Workspace.Close",
-	CmLeftDriveMenu:         "Panel.LeftDriveMenu",
-	CmRightDriveMenu:        "Panel.RightDriveMenu",
-	vtui.CmQuit:             "App.Quit",
-	CmView:                  "File.View",
-	CmEdit:                  "File.Edit",
-	CmCopy:                  "File.Copy",
-	CmMove:                  "File.Move",
-	CmMkDir:                 "File.MakeDir",
-	CmDelete:                "File.Delete",
-	CmFindFile:              "File.Find",
-	CmBookmarks:             "Panel.Bookmarks",
-	CmPanelSettings:         "Settings.Panel",
-	CmEditorSettings:        "Settings.Editor",
-	CmColorerSettings:       "Settings.Colorer",
-	CmAppearanceSettings:    "Settings.Appearance",
-	CmConfirmationsSettings: "Settings.Confirmations",
-	CmLanguage:              "Settings.Language",
-	CmHelpLanguage:          "Settings.HelpLanguage",
-	CmPlugins:               "Settings.Plugins",
+	appcmd.CmLeftBrief:             "Panel.Left.ViewBrief",
+	appcmd.CmLeftMedium:            "Panel.Left.ViewMedium",
+	appcmd.CmLeftDetailed:          "Panel.Left.ViewDetailed",
+	appcmd.CmLeftWide:              "Panel.Left.ViewWide",
+	appcmd.CmRightBrief:            "Panel.Right.ViewBrief",
+	appcmd.CmRightMedium:           "Panel.Right.ViewMedium",
+	appcmd.CmRightDetailed:         "Panel.Right.ViewDetailed",
+	appcmd.CmRightWide:             "Panel.Right.ViewWide",
+	appcmd.CmLeftSortName:          "Panel.Left.SortByName",
+	appcmd.CmLeftSortExt:           "Panel.Left.SortByExt",
+	appcmd.CmLeftSortTime:          "Panel.Left.SortByTime",
+	appcmd.CmLeftSortSize:          "Panel.Left.SortBySize",
+	appcmd.CmLeftSortUnsorted:      "Panel.Left.SortUnsorted",
+	appcmd.CmLeftSortGroups:        "Panel.Left.SortUseGroups",
+	appcmd.CmRightSortName:         "Panel.Right.SortByName",
+	appcmd.CmRightSortExt:          "Panel.Right.SortByExt",
+	appcmd.CmRightSortTime:         "Panel.Right.SortByTime",
+	appcmd.CmRightSortSize:         "Panel.Right.SortBySize",
+	appcmd.CmRightSortUnsorted:     "Panel.Right.SortUnsorted",
+	appcmd.CmRightSortGroups:       "Panel.Right.SortUseGroups",
+	appcmd.CmLeftAIContext:         "AI.Left.ViewContext",
+	appcmd.CmLeftAIChat:            "AI.Left.ViewChat",
+	appcmd.CmLeftAIOut:             "AI.Left.ViewOut",
+	appcmd.CmLeftAIMem:             "AI.Left.ViewMem",
+	appcmd.CmRightAIContext:        "AI.Right.ViewContext",
+	appcmd.CmRightAIChat:           "AI.Right.ViewChat",
+	appcmd.CmRightAIOut:            "AI.Right.ViewOut",
+	appcmd.CmRightAIMem:            "AI.Right.ViewMem",
+	appcmd.CmBackground:            "App.Background",
+	appcmd.CmWorkspaceNew:          "Workspace.New",
+	appcmd.CmWorkspaceNewTerminal:  "Workspace.NewTerminal",
+	appcmd.CmWorkspaceClose:        "Workspace.Close",
+	appcmd.CmLeftDriveMenu:         "Panel.LeftDriveMenu",
+	appcmd.CmRightDriveMenu:        "Panel.RightDriveMenu",
+	vtui.CmQuit:                    "App.Quit",
+	appcmd.CmView:                  "File.View",
+	appcmd.CmEdit:                  "File.Edit",
+	appcmd.CmCopy:                  "File.Copy",
+	appcmd.CmMove:                  "File.Move",
+	appcmd.CmMkDir:                 "File.MakeDir",
+	appcmd.CmDelete:                "File.Delete",
+	appcmd.CmFindFile:              "File.Find",
+	appcmd.CmBookmarks:             "Panel.Bookmarks",
+	appcmd.CmPanelSettings:         "Settings.Panel",
+	appcmd.CmEditorSettings:        "Settings.Editor",
+	appcmd.CmColorerSettings:       "Settings.Colorer",
+	appcmd.CmAppearanceSettings:    "Settings.Appearance",
+	appcmd.CmConfirmationsSettings: "Settings.Confirmations",
+	appcmd.CmLanguage:              "Settings.Language",
+	appcmd.CmHelpLanguage:          "Settings.HelpLanguage",
+	appcmd.CmPlugins:               "Settings.Plugins",
 }
 
 // Fixed-side menu commands intentionally have exact action IDs above so every
@@ -777,26 +779,26 @@ var commandToActionName = map[int]string{
 // however, keeps showing the active-panel bindings used by Ctrl+1..4 and
 // Ctrl+F3..F7; the fixed-side actions themselves do not claim extra keys.
 var commandShortcutActionName = map[int]string{
-	CmLeftBrief:         "Panel.ViewBrief",
-	CmLeftMedium:        "Panel.ViewMedium",
-	CmLeftDetailed:      "Panel.ViewDetailed",
-	CmLeftWide:          "Panel.ViewWide",
-	CmRightBrief:        "Panel.ViewBrief",
-	CmRightMedium:       "Panel.ViewMedium",
-	CmRightDetailed:     "Panel.ViewDetailed",
-	CmRightWide:         "Panel.ViewWide",
-	CmLeftSortName:      "Panel.SortByName",
-	CmLeftSortExt:       "Panel.SortByExt",
-	CmLeftSortTime:      "Panel.SortByTime",
-	CmLeftSortSize:      "Panel.SortBySize",
-	CmLeftSortUnsorted:  "Panel.SortUnsorted",
-	CmLeftSortGroups:    "Panel.SortUseGroups",
-	CmRightSortName:     "Panel.SortByName",
-	CmRightSortExt:      "Panel.SortByExt",
-	CmRightSortTime:     "Panel.SortByTime",
-	CmRightSortSize:     "Panel.SortBySize",
-	CmRightSortUnsorted: "Panel.SortUnsorted",
-	CmRightSortGroups:   "Panel.SortUseGroups",
+	appcmd.CmLeftBrief:         "Panel.ViewBrief",
+	appcmd.CmLeftMedium:        "Panel.ViewMedium",
+	appcmd.CmLeftDetailed:      "Panel.ViewDetailed",
+	appcmd.CmLeftWide:          "Panel.ViewWide",
+	appcmd.CmRightBrief:        "Panel.ViewBrief",
+	appcmd.CmRightMedium:       "Panel.ViewMedium",
+	appcmd.CmRightDetailed:     "Panel.ViewDetailed",
+	appcmd.CmRightWide:         "Panel.ViewWide",
+	appcmd.CmLeftSortName:      "Panel.SortByName",
+	appcmd.CmLeftSortExt:       "Panel.SortByExt",
+	appcmd.CmLeftSortTime:      "Panel.SortByTime",
+	appcmd.CmLeftSortSize:      "Panel.SortBySize",
+	appcmd.CmLeftSortUnsorted:  "Panel.SortUnsorted",
+	appcmd.CmLeftSortGroups:    "Panel.SortUseGroups",
+	appcmd.CmRightSortName:     "Panel.SortByName",
+	appcmd.CmRightSortExt:      "Panel.SortByExt",
+	appcmd.CmRightSortTime:     "Panel.SortByTime",
+	appcmd.CmRightSortSize:     "Panel.SortBySize",
+	appcmd.CmRightSortUnsorted: "Panel.SortUnsorted",
+	appcmd.CmRightSortGroups:   "Panel.SortUseGroups",
 }
 
 func (pf *PanelsFrame) updateMenuCheckmarks() {
@@ -2260,19 +2262,19 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 
 		if e.VirtualKeyCode >= vtinput.VK_0 && e.VirtualKeyCode <= vtinput.VK_9 && (isBookmarkGoto || isBookmarkSave) {
 			slot := int(e.VirtualKeyCode - vtinput.VK_0)
-			file := BookmarksFilePath()
+			File := BookmarksFilePath()
 			// Always read fresh: another f4 or far2l instance may have
 			// rewritten the file since we last looked at it.
-			set, err := LoadBookmarks(file)
+			set, err := LoadBookmarks(File)
 			if err != nil {
-				vtui.DebugLog("BOOKMARKS: load %q failed: %v", file, err)
+				vtui.DebugLog("BOOKMARKS: load %q failed: %v", File, err)
 				return true
 			}
 			if isBookmarkSave {
 				if fsp := pf.getActivePanel(); fsp != nil {
 					set[slot] = Bookmark{Path: fsp.vfs.GetPath()}
-					if err := SaveBookmarks(file, set); err != nil {
-						vtui.DebugLog("BOOKMARKS: save %q failed: %v", file, err)
+					if err := SaveBookmarks(File, set); err != nil {
+						vtui.DebugLog("BOOKMARKS: save %q failed: %v", File, err)
 					}
 				}
 			} else if !set[slot].IsEmpty() {
@@ -2349,11 +2351,11 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 				var cmd int
 				switch key {
 				case 'd':
-					cmd = CmDelete
+					cmd = appcmd.CmDelete
 				case 'c':
-					cmd = CmCopy
+					cmd = appcmd.CmCopy
 				case 'm':
-					cmd = CmMove
+					cmd = appcmd.CmMove
 				}
 				if cmd != 0 {
 					pf.cmdLine.Clear()
@@ -2836,7 +2838,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 	return false
 }
 func (pf *PanelsFrame) HandleBroadcast(cmd int, args any) bool {
-	if cmd == CmFileChanged {
+	if cmd == appcmd.CmFileChanged {
 		pf.RefreshAll()
 		return true
 	}
@@ -3330,7 +3332,7 @@ func (pf *PanelsFrame) GetPaths() (string, string) {
 	return l, r
 }
 
-// HandleCommand intercepts global commands (like CmQuit or CmCopy)
+// HandleCommand intercepts global commands (like CmQuit or appcmd.CmCopy)
 // sent by menus or other views.
 func (pf *PanelsFrame) HandleCommand(cmd int, args any) bool {
 	switch cmd {
@@ -3377,45 +3379,45 @@ func (pf *PanelsFrame) HandleCommand(cmd int, args any) bool {
 		pf.ShowHelp()
 		return true
 
-	case CmNew:
+	case appcmd.CmNew:
 		actionNewFile(pf)
 		return true
 
-	case CmView:
+	case appcmd.CmView:
 		actionViewFile(pf)
 		return true
 
-	case CmEdit:
+	case appcmd.CmEdit:
 		actionEditFile(pf)
 		return true
 
-	case CmCopy, CmMove:
-		actionCopyMove(pf, cmd == CmMove)
+	case appcmd.CmCopy, appcmd.CmMove:
+		actionCopyMove(pf, cmd == appcmd.CmMove)
 		return true
 
-	case CmRename:
+	case appcmd.CmRename:
 		actionRename(pf)
 		return true
 
-	case CmMkDir:
+	case appcmd.CmMkDir:
 		actionMkDir(pf)
 		return true
 
-	case CmDelete:
+	case appcmd.CmDelete:
 		actionDelete(pf)
 		return true
-	case CmFindFile:
+	case appcmd.CmFindFile:
 		actionFindFile(pf)
 		return true
-	case CmSwitchToViewer:
-		if ev, ok := args.(*EditorView); ok {
+	case appcmd.CmSwitchToViewer:
+		if ev, ok := args.(*editor.EditorView); ok {
 			doSwitch := func() {
-				path := ev.filePath
-				v := ev.vfs
+				path := ev.FilePath
+				v := ev.Vfs
 				ev.Close()
 				actionOpenViewer(pf, v, path)
 			}
-			if ev.modified {
+			if ev.Modified {
 				msg := "The file has been modified.\nDo you want to save it before switching?"
 				dlg := vtui.ShowMessage(" Confirm ", msg, []string{"&Save", "&Don't Save", "Cancel"})
 				dlg.OnResult = func(code int) {
@@ -3432,7 +3434,7 @@ func (pf *PanelsFrame) HandleCommand(cmd int, args any) bool {
 			return true
 		}
 		return false
-	case CmSwitchToEditor:
+	case appcmd.CmSwitchToEditor:
 		if vv, ok := args.(*viewer.ViewerView); ok {
 			path := vv.Path
 			v := vv.VFS
@@ -3441,58 +3443,58 @@ func (pf *PanelsFrame) HandleCommand(cmd int, args any) bool {
 			return true
 		}
 		return false
-	case CmBookmarks:
+	case appcmd.CmBookmarks:
 		ShowBookmarksDialog(pf)
 		return true
-	case CmPanelSettings:
+	case appcmd.CmPanelSettings:
 		actionPanelSettings(pf)
 		return true
-	case CmEditorSettings:
+	case appcmd.CmEditorSettings:
 		actionEditorSettings(pf)
 		return true
-	case CmColorerSettings:
+	case appcmd.CmColorerSettings:
 		actionColorerSettings(pf)
 		return true
-	case CmAppearanceSettings:
+	case appcmd.CmAppearanceSettings:
 		actionAppearanceSettings(pf)
 		return true
-	case CmConfirmationsSettings:
+	case appcmd.CmConfirmationsSettings:
 		actionConfirmationsSettings(pf)
 		return true
-	case CmHotkeyConfig:
+	case appcmd.CmHotkeyConfig:
 		actionHotkeyConfig(pf)
 		return true
-	case CmLanguage:
+	case appcmd.CmLanguage:
 		actionLanguage(pf)
 		return true
-	case CmHelpLanguage:
+	case appcmd.CmHelpLanguage:
 		actionHelpLanguage(pf)
 		return true
-	case CmUpdateSettings:
+	case appcmd.CmUpdateSettings:
 		actionUpdateSettings(pf)
 		return true
-	case CmProxySettings:
+	case appcmd.CmProxySettings:
 		dialog.ActionProxySettings()
 		return true
-	case CmPlugins:
+	case appcmd.CmPlugins:
 		actionManagePlugins(pf)
 		return true
 
-	case CmPlugRing:
+	case appcmd.CmPlugRing:
 		actionPlugRing(pf)
 		return true
-	case CmBackground:
+	case appcmd.CmBackground:
 		return actionBackground()
-	case CmWorkspaceNew:
+	case appcmd.CmWorkspaceNew:
 		return actionWorkspaceNew()
-	case CmWorkspaceNewTerminal:
+	case appcmd.CmWorkspaceNewTerminal:
 		return actionWorkspaceNewTerminal()
-	case CmWorkspaceClose:
+	case appcmd.CmWorkspaceClose:
 		return actionWorkspaceClose()
-	case CmLeftDriveMenu:
+	case appcmd.CmLeftDriveMenu:
 		pf.showDriveMenu(0)
 		return true
-	case CmRightDriveMenu:
+	case appcmd.CmRightDriveMenu:
 		pf.showDriveMenu(1)
 		return true
 	case vtui.CmResize: // Used as a hack for 'fork' command from FrameManager
@@ -3501,144 +3503,144 @@ func (pf *PanelsFrame) HandleCommand(cmd int, args any) bool {
 			return true
 		}
 
-	case CmLeftBrief:
+	case appcmd.CmLeftBrief:
 		pf.setPanelViewMode(0, ViewModeBrief)
 		return true
-	case CmLeftMedium:
+	case appcmd.CmLeftMedium:
 		pf.setPanelViewMode(0, ViewModeMedium)
 		return true
-	case CmLeftDetailed:
+	case appcmd.CmLeftDetailed:
 		pf.setPanelViewMode(0, ViewModeDetailed)
 		return true
-	case CmLeftWide:
+	case appcmd.CmLeftWide:
 		pf.setWidePanel(0)
 		return true
-	case CmRightBrief:
+	case appcmd.CmRightBrief:
 		pf.setPanelViewMode(1, ViewModeBrief)
 		return true
-	case CmRightMedium:
+	case appcmd.CmRightMedium:
 		pf.setPanelViewMode(1, ViewModeMedium)
 		return true
-	case CmRightDetailed:
+	case appcmd.CmRightDetailed:
 		pf.setPanelViewMode(1, ViewModeDetailed)
 		return true
-	case CmRightWide:
+	case appcmd.CmRightWide:
 		pf.setWidePanel(1)
 		return true
-	case CmLeftAIContext:
+	case appcmd.CmLeftAIContext:
 		if aiCmd, ok := pf.panels[0].(interface{ AiSetViewMode(string, bool) }); ok {
 			aiCmd.AiSetViewMode("ai://ctx", false)
 		}
 		return true
-	case CmLeftAIChat:
+	case appcmd.CmLeftAIChat:
 		if aiCmd, ok := pf.panels[0].(interface{ AiSetViewMode(string, bool) }); ok {
 			aiCmd.AiSetViewMode("ai://chat", true)
 		}
 		return true
-	case CmLeftAIOut:
+	case appcmd.CmLeftAIOut:
 		if aiCmd, ok := pf.panels[0].(interface{ AiSetViewMode(string, bool) }); ok {
 			aiCmd.AiSetViewMode("ai://out", false)
 		}
 		return true
-	case CmLeftAIMem:
+	case appcmd.CmLeftAIMem:
 		if aiCmd, ok := pf.panels[0].(interface{ AiSetViewMode(string, bool) }); ok {
 			aiCmd.AiSetViewMode("ai://mem", false)
 		}
 		return true
-	case CmRightAIContext:
+	case appcmd.CmRightAIContext:
 		if aiCmd, ok := pf.panels[1].(interface{ AiSetViewMode(string, bool) }); ok {
 			aiCmd.AiSetViewMode("ai://ctx", false)
 		}
 		return true
-	case CmRightAIChat:
+	case appcmd.CmRightAIChat:
 		if aiCmd, ok := pf.panels[1].(interface{ AiSetViewMode(string, bool) }); ok {
 			aiCmd.AiSetViewMode("ai://chat", true)
 		}
 		return true
-	case CmRightAIOut:
+	case appcmd.CmRightAIOut:
 		if aiCmd, ok := pf.panels[1].(interface{ AiSetViewMode(string, bool) }); ok {
 			aiCmd.AiSetViewMode("ai://out", false)
 		}
 		return true
-	case CmRightAIMem:
+	case appcmd.CmRightAIMem:
 		if aiCmd, ok := pf.panels[1].(interface{ AiSetViewMode(string, bool) }); ok {
 			aiCmd.AiSetViewMode("ai://mem", false)
 		}
 		return true
 
-	case CmLeftSortName:
+	case appcmd.CmLeftSortName:
 		if fsp, ok := pf.panels[0].(*FileSystemPanel); ok {
 			fsp.SetSortMode(SortName)
 		}
 		pf.updateMenuCheckmarks()
 		return true
-	case CmLeftSortExt:
+	case appcmd.CmLeftSortExt:
 		if fsp, ok := pf.panels[0].(*FileSystemPanel); ok {
 			fsp.SetSortMode(SortExt)
 		}
 		pf.updateMenuCheckmarks()
 		return true
-	case CmLeftSortTime:
+	case appcmd.CmLeftSortTime:
 		if fsp, ok := pf.panels[0].(*FileSystemPanel); ok {
 			fsp.SetSortMode(SortTime)
 		}
 		pf.updateMenuCheckmarks()
 		return true
-	case CmLeftSortSize:
+	case appcmd.CmLeftSortSize:
 		if fsp, ok := pf.panels[0].(*FileSystemPanel); ok {
 			fsp.SetSortMode(SortSize)
 		}
 		pf.updateMenuCheckmarks()
 		return true
-	case CmLeftSortUnsorted:
+	case appcmd.CmLeftSortUnsorted:
 		if fsp, ok := pf.panels[0].(*FileSystemPanel); ok {
 			fsp.SetSortMode(SortUnsorted)
 		}
 		pf.updateMenuCheckmarks()
 		return true
-	case CmRightSortName:
+	case appcmd.CmRightSortName:
 		if fsp, ok := pf.panels[1].(*FileSystemPanel); ok {
 			fsp.SetSortMode(SortName)
 		}
 		pf.updateMenuCheckmarks()
 		return true
-	case CmRightSortExt:
+	case appcmd.CmRightSortExt:
 		if fsp, ok := pf.panels[1].(*FileSystemPanel); ok {
 			fsp.SetSortMode(SortExt)
 		}
 		pf.updateMenuCheckmarks()
 		return true
-	case CmRightSortTime:
+	case appcmd.CmRightSortTime:
 		if fsp, ok := pf.panels[1].(*FileSystemPanel); ok {
 			fsp.SetSortMode(SortTime)
 		}
 		pf.updateMenuCheckmarks()
 		return true
-	case CmRightSortSize:
+	case appcmd.CmRightSortSize:
 		if fsp, ok := pf.panels[1].(*FileSystemPanel); ok {
 			fsp.SetSortMode(SortSize)
 		}
 		pf.updateMenuCheckmarks()
 		return true
-	case CmRightSortUnsorted:
+	case appcmd.CmRightSortUnsorted:
 		if fsp, ok := pf.panels[1].(*FileSystemPanel); ok {
 			fsp.SetSortMode(SortUnsorted)
 		}
 		pf.updateMenuCheckmarks()
 		return true
-	case CmLeftSortGroups:
+	case appcmd.CmLeftSortGroups:
 		if fsp, ok := pf.panels[0].(*FileSystemPanel); ok {
 			fsp.ToggleSortGroups()
 		}
 		pf.updateMenuCheckmarks()
 		return true
-	case CmRightSortGroups:
+	case appcmd.CmRightSortGroups:
 		if fsp, ok := pf.panels[1].(*FileSystemPanel); ok {
 			fsp.ToggleSortGroups()
 		}
 		pf.updateMenuCheckmarks()
 		return true
-	case CmSwapPanels:
+	case appcmd.CmSwapPanels:
 		pf.panels[0], pf.panels[1] = pf.panels[1], pf.panels[0]
 		pf.activeIdx = 1 - pf.activeIdx
 		if pf.wide {
@@ -3646,37 +3648,37 @@ func (pf *PanelsFrame) HandleCommand(cmd int, args any) bool {
 		}
 		pf.ResizeConsole(pf.lastW, pf.lastH)
 		return true
-	case CmSortName:
+	case appcmd.CmSortName:
 		if fsp := pf.getActivePanel(); fsp != nil {
 			fsp.SetSortMode(SortName)
 		}
 		pf.updateMenuCheckmarks()
 		return true
-	case CmSortExt:
+	case appcmd.CmSortExt:
 		if fsp := pf.getActivePanel(); fsp != nil {
 			fsp.SetSortMode(SortExt)
 		}
 		pf.updateMenuCheckmarks()
 		return true
-	case CmSortTime:
+	case appcmd.CmSortTime:
 		if fsp := pf.getActivePanel(); fsp != nil {
 			fsp.SetSortMode(SortTime)
 		}
 		pf.updateMenuCheckmarks()
 		return true
-	case CmSortSize:
+	case appcmd.CmSortSize:
 		if fsp := pf.getActivePanel(); fsp != nil {
 			fsp.SetSortMode(SortSize)
 		}
 		pf.updateMenuCheckmarks()
 		return true
-	case CmSortUnsorted:
+	case appcmd.CmSortUnsorted:
 		if fsp := pf.getActivePanel(); fsp != nil {
 			fsp.SetSortMode(SortUnsorted)
 		}
 		pf.updateMenuCheckmarks()
 		return true
-	case CmSortGroups:
+	case appcmd.CmSortGroups:
 		if fsp := pf.getActivePanel(); fsp != nil {
 			fsp.ToggleSortGroups()
 		}
@@ -4062,7 +4064,7 @@ func (pf *PanelsFrame) toggleAltPanel(kind string, factory func(src *FileSystemP
 	if !pf.showPanels {
 		return
 	}
-	tryClose := func(a AltPanel) {
+	TryClose := func(a AltPanel) {
 		if c, ok := a.(interface{ Close() }); ok {
 			c.Close()
 		}
@@ -4070,15 +4072,15 @@ func (pf *PanelsFrame) toggleAltPanel(kind string, factory func(src *FileSystemP
 	opp := 1 - pf.activeIdx
 	switch {
 	case pf.altPanels[pf.activeIdx] != nil && pf.altPanels[pf.activeIdx].Kind() == kind:
-		tryClose(pf.altPanels[pf.activeIdx])
+		TryClose(pf.altPanels[pf.activeIdx])
 		pf.altPanels[pf.activeIdx] = nil
 	case pf.altPanels[opp] != nil && pf.altPanels[opp].Kind() == kind:
-		tryClose(pf.altPanels[opp])
+		TryClose(pf.altPanels[opp])
 		pf.altPanels[opp] = nil
 	default:
 		if fsp, ok := pf.panels[pf.activeIdx].(*FileSystemPanel); ok {
 			if pf.altPanels[opp] != nil {
-				tryClose(pf.altPanels[opp])
+				TryClose(pf.altPanels[opp])
 			}
 			pf.altPanels[opp] = factory(fsp)
 			// If the opposite side is currently hidden (Ctrl+F1/F2), un-hide
@@ -5068,7 +5070,7 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 		}
 		menu.AddSeparator()
 		headerRow = menu.GetItemCount()
-		menu.AddItem(vtui.MenuItem{Text: i18n.Msg("Drive.Links"), Command: CmDriveBookmarksHeader})
+		menu.AddItem(vtui.MenuItem{Text: i18n.Msg("Drive.Links"), Command: appcmd.CmDriveBookmarksHeader})
 		for index, bookmark := range driveBookmarks {
 			bookmark := bookmark
 			driveBookmarkRows[menu.GetItemCount()] = index
@@ -5079,7 +5081,7 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 				},
 			})
 		}
-		vtui.FrameManager.DisabledCommands.Disable(CmDriveBookmarksHeader)
+		vtui.FrameManager.DisabledCommands.Disable(appcmd.CmDriveBookmarksHeader)
 	}
 	oldSelectable := menu.IsSelectable
 	menu.IsSelectable = func(index int) bool {
@@ -5229,15 +5231,15 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 // the menu so the row is gone. The table is re-read first: another
 // instance may have rewritten the file since the menu was built.
 func (pf *PanelsFrame) clearBookmarkSlot(slot int, menu *vtui.VMenu, reopen func()) {
-	file := BookmarksFilePath()
-	set, err := LoadBookmarks(file)
+	File := BookmarksFilePath()
+	set, err := LoadBookmarks(File)
 	if err != nil {
-		vtui.DebugLog("BOOKMARKS: load %q failed: %v", file, err)
+		vtui.DebugLog("BOOKMARKS: load %q failed: %v", File, err)
 		return
 	}
 	set.deleteAtSlot(slot)
-	if err := SaveBookmarks(file, set); err != nil {
-		vtui.DebugLog("BOOKMARKS: save %q failed: %v", file, err)
+	if err := SaveBookmarks(File, set); err != nil {
+		vtui.DebugLog("BOOKMARKS: save %q failed: %v", File, err)
 		return
 	}
 	menu.Close()
@@ -5620,7 +5622,7 @@ func (pf *PanelsFrame) moveFolderHistory(fsp *FileSystemPanel, direction int) bo
 	// asynchronous mount succeeds. History must follow the presented/persisted
 	// location; using the source VFS here skips that source entry on Alt+Left.
 	current := fsp.persistentPath()
-	targetPos, _, ok := folderHistoryStep(history, current, pos, direction)
+	TargetPos, _, ok := folderHistoryStep(history, current, pos, direction)
 	if !ok {
 		return false
 	}
@@ -5628,7 +5630,7 @@ func (pf *PanelsFrame) moveFolderHistory(fsp *FileSystemPanel, direction int) bo
 	if direction < 0 {
 		step = 1
 	}
-	return pf.navigateAvailableFolderHistory(fsp, history, targetPos, step)
+	return pf.navigateAvailableFolderHistory(fsp, history, TargetPos, step)
 }
 
 // parseDirChangeCommand recognizes the directory-change commands the command

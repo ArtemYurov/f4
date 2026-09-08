@@ -55,7 +55,7 @@ type TerminalView struct {
 	// --- Бесконечный лог (History & Reflow) ---
 	Pt              *piecetable.PieceTable
 	Li              *piecetable.LineIndex
-	engine          *textlayout.WrapEngine
+	Engine          *textlayout.WrapEngine
 	GridHistory     [][]vtui.CharInfo
 	GridHistoryWrap []bool
 
@@ -116,7 +116,7 @@ type TerminalView struct {
 	// Coordinates are absolute (screen) columns/rows, chosen so the
 	// highlight stays visually anchored while PTY output scrolls the
 	// underlying grid — matches xterm-style selection semantics.
-	selActive  bool
+	SelActive  bool
 	selStartX  int
 	selStartY  int
 	selEndX    int
@@ -202,8 +202,8 @@ func (tv *TerminalView) CloneStateFrom(other *TerminalView) {
 	// 3. Re-initialize indices and engine to point to the NEW pt
 	tv.Li = piecetable.NewLineIndex()
 	tv.Li.Rebuild(tv.Pt)
-	tv.engine = textlayout.NewWrapEngine(tv.Pt, tv.Li)
-	tv.engine.SetWidth(tv.Width)
+	tv.Engine = textlayout.NewWrapEngine(tv.Pt, tv.Li)
+	tv.Engine.SetWidth(tv.Width)
 
 	// 4. Copy terminal state metadata
 	tv.styles = append([]StyleChange(nil), other.styles...)
@@ -222,7 +222,7 @@ func (tv *TerminalView) CloneStateFrom(other *TerminalView) {
 	// Selection coordinates belong to the old viewport and are not part of
 	// the cloned terminal state. Keeping them would paint a stale highlight
 	// over the clone's first screen.
-	tv.selActive = false
+	tv.SelActive = false
 	// The PTY is an ownership handle, not terminal display state. A cloned
 	// PanelsFrame starts its own shell asynchronously; copying this field would
 	// briefly route input from the clone into the source workspace until that
@@ -246,17 +246,17 @@ func (tv *TerminalView) ResetBuffer(w, h int) {
 
 	// RIS replaces both terminal screens, so any screen-coordinate selection
 	// from before the reset is no longer meaningful.
-	tv.selActive = false
+	tv.SelActive = false
 
 	// Инициализация PieceTable (только один раз)
 	if tv.Pt == nil {
 		tv.Pt = piecetable.New([]byte{})
 		tv.Li = piecetable.NewLineIndex()
-		tv.engine = textlayout.NewWrapEngine(tv.Pt, tv.Li)
+		tv.Engine = textlayout.NewWrapEngine(tv.Pt, tv.Li)
 		tv.styles = []StyleChange{{0, DefaultTermAttr}}
 		tv.lastAttr = DefaultTermAttr
 	}
-	tv.engine.SetWidth(w)
+	tv.Engine.SetWidth(w)
 
 	// A reset puts sixel scrolling back on, which is its default state.
 	tv.SixelDisplayMode = false
@@ -372,7 +372,7 @@ func (tv *TerminalView) extrudeGridHistoryRow(idx int) {
 		offset := tv.Pt.Size()
 		tv.Pt.Insert(offset, []byte(text))
 		tv.Li.UpdateAfterInsert(offset, []byte(text))
-		tv.engine.InvalidateFrom(tv.Li.LineCount() - 2)
+		tv.Engine.InvalidateFrom(tv.Li.LineCount() - 2)
 	}
 }
 
@@ -776,7 +776,7 @@ func (tv *TerminalView) EraseDisplay(mode int, attr uint64) {
 	if mode == 2 {
 		// ED 2 replaces the visible screen. Do not keep painting the old
 		// screen-coordinate selection over the newly cleared contents.
-		tv.selActive = false
+		tv.SelActive = false
 	}
 
 	if (mode == 2 || mode == 3) && !tv.UseAltScreen && !tv.suppressEraseHistory {
@@ -874,7 +874,7 @@ func (tv *TerminalView) SetAltScreen(enable bool) {
 	}
 	// The alternate and primary screens have independent contents and can
 	// have different geometry, so a selection cannot safely cross the switch.
-	tv.selActive = false
+	tv.SelActive = false
 	if enable {
 		tv.savedX, tv.savedY = tv.CursorX, tv.CursorY
 		tv.CursorX, tv.CursorY = 0, 0
@@ -991,7 +991,7 @@ func (tv *TerminalView) Show(scr *vtui.ScreenBuf) {
 
 	tv.kittyDrawPlacements(scr, offset)
 
-	if tv.selActive {
+	if tv.SelActive {
 		tv.paintSelectionHighlight(scr)
 	}
 
@@ -1017,7 +1017,7 @@ func (tv *TerminalView) SetPosition(x1, y1, x2, y2 int) {
 	tv.mu.Lock()
 	defer tv.mu.Unlock()
 	if tv.X1 != x1 || tv.Y1 != y1 || tv.X2 != x2 || tv.Y2 != y2 {
-		tv.selActive = false
+		tv.SelActive = false
 	}
 	tv.ScreenObject.SetPosition(x1, y1, x2, y2)
 }
@@ -1026,7 +1026,7 @@ func (tv *TerminalView) SetPosition(x1, y1, x2, y2 int) {
 // rectangle currently painted as selection, clamped to the terminal's
 // visible area. Ok is false when there's no active selection.
 func (tv *TerminalView) selectionScreenRect() (x1, y1, x2, y2 int, ok bool) {
-	if !tv.selActive {
+	if !tv.SelActive {
 		return 0, 0, 0, 0, false
 	}
 	x1, x2 = tv.selStartX, tv.selEndX
@@ -1126,7 +1126,7 @@ func normalizedStart(sx, sy, ex, ey int, returnStart bool) int {
 func (tv *TerminalView) HasSelection() bool {
 	tv.mu.Lock()
 	defer tv.mu.Unlock()
-	return tv.selActive
+	return tv.SelActive
 }
 
 // StartSelection begins a new selection anchored at the given
@@ -1134,7 +1134,7 @@ func (tv *TerminalView) HasSelection() bool {
 func (tv *TerminalView) StartSelection(x, y int, block bool) {
 	tv.mu.Lock()
 	defer tv.mu.Unlock()
-	tv.selActive = true
+	tv.SelActive = true
 	tv.SelBlock = block
 	tv.selStartX, tv.selStartY = x, y
 	tv.selEndX, tv.selEndY = x, y
@@ -1144,7 +1144,7 @@ func (tv *TerminalView) StartSelection(x, y int, block bool) {
 func (tv *TerminalView) ExtendSelection(x, y int) {
 	tv.mu.Lock()
 	defer tv.mu.Unlock()
-	if !tv.selActive {
+	if !tv.SelActive {
 		return
 	}
 	tv.selEndX, tv.selEndY = x, y
@@ -1154,7 +1154,7 @@ func (tv *TerminalView) ExtendSelection(x, y int) {
 func (tv *TerminalView) ClearSelection() {
 	tv.mu.Lock()
 	defer tv.mu.Unlock()
-	tv.selActive = false
+	tv.SelActive = false
 }
 
 // SelectionIsEmpty reports whether the current selection covers a
@@ -1162,7 +1162,7 @@ func (tv *TerminalView) ClearSelection() {
 func (tv *TerminalView) SelectionIsEmpty() bool {
 	tv.mu.Lock()
 	defer tv.mu.Unlock()
-	return !tv.selActive || (tv.selStartX == tv.selEndX && tv.selStartY == tv.selEndY)
+	return !tv.SelActive || (tv.selStartX == tv.selEndX && tv.selStartY == tv.selEndY)
 }
 
 // gridRowForScreenY maps a screen-absolute Y to the index into
@@ -1188,7 +1188,7 @@ func (tv *TerminalView) gridRowForScreenY(y int) int {
 func (tv *TerminalView) ExtractSelection() string {
 	tv.mu.Lock()
 	defer tv.mu.Unlock()
-	if !tv.selActive {
+	if !tv.SelActive {
 		return ""
 	}
 	x1, y1, x2, y2, ok := tv.selectionScreenRect()
@@ -1289,7 +1289,7 @@ func (tv *TerminalView) SelectWordAt(x, y int) {
 	for right < len(row)-1 && isWord(row[right+1].Char) {
 		right++
 	}
-	tv.selActive = true
+	tv.SelActive = true
 	tv.SelBlock = false
 	tv.selStartX, tv.selStartY = tv.X1+left, y
 	tv.selEndX, tv.selEndY = tv.X1+right, y
@@ -1302,7 +1302,7 @@ func (tv *TerminalView) SelectLineAt(y int) {
 	if tv.gridRowForScreenY(y) < 0 {
 		return
 	}
-	tv.selActive = true
+	tv.SelActive = true
 	tv.SelBlock = false
 	tv.selStartX, tv.selStartY = tv.X1, y
 	tv.selEndX, tv.selEndY = tv.X1+tv.Width-1, y
@@ -1418,9 +1418,9 @@ func (tv *TerminalView) Resize(w, h int) {
 
 	// Resizing changes the mapping between screen coordinates and grid cells;
 	// retaining the old selection is what lets it spill into a new layout.
-	tv.selActive = false
+	tv.SelActive = false
 
-	tv.engine.SetWidth(w)
+	tv.Engine.SetWidth(w)
 
 	// A width change re-wraps the primary screen. A height-only change does
 	// not: the rows keep their contents, and the existing path below moves

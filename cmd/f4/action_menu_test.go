@@ -28,22 +28,22 @@ func TestBuildMenuBarItems_Editor(t *testing.T) {
 	}
 
 	// File menu: Save first, with the default F2 shortcut shown.
-	file := items[0].SubItems
-	if len(file) == 0 {
+	File := items[0].SubItems
+	if len(File) == 0 {
 		t.Fatal("File menu is empty")
 	}
-	if file[0].Text != "&Save" {
-		t.Errorf("Expected first File item to be '&Save', got %q", file[0].Text)
+	if File[0].Text != "&Save" {
+		t.Errorf("Expected first File item to be '&Save', got %q", File[0].Text)
 	}
-	if file[0].Shortcut != "F2" {
-		t.Errorf("Expected Save shortcut 'F2', got %q", file[0].Shortcut)
+	if File[0].Shortcut != "F2" {
+		t.Errorf("Expected Save shortcut 'F2', got %q", File[0].Shortcut)
 	}
 
 	// A user override must be reflected in the shortcut column.
 	GlobalHotkeysMgr.Bind("Editor", "CtrlS", "Editor.Save")
-	file = BuildMenuBarItems("Editor")[0].SubItems
-	if file[0].Shortcut != "F2" && file[0].Shortcut != "Ctrl+S" {
-		t.Errorf("Override not reflected: got %q", file[0].Shortcut)
+	File = BuildMenuBarItems("Editor")[0].SubItems
+	if File[0].Shortcut != "F2" && File[0].Shortcut != "Ctrl+S" {
+		t.Errorf("Override not reflected: got %q", File[0].Shortcut)
 	}
 }
 
@@ -65,8 +65,8 @@ func TestBuildMenuBarItems_Viewer(t *testing.T) {
 	}
 
 	// Common actions (Screen Grab) are appended after the area's own.
-	file := items[0].SubItems
-	last := file[len(file)-1]
+	File := items[0].SubItems
+	last := File[len(File)-1]
 	if last.Text != "Screen &grab" {
 		t.Errorf("Expected last File item to be 'Screen &grab', got %q", last.Text)
 	}
@@ -193,9 +193,9 @@ func TestBuildMenuBarItems_Terminal(t *testing.T) {
 	if len(items) != 1 || items[0].Label != "&File" {
 		t.Fatalf("Expected a single '&File' menu, got %+v", items)
 	}
-	file := items[0].SubItems
-	if len(file) == 0 || file[0].Text != "&View terminal log" {
-		t.Errorf("Expected first File item to be '&View terminal log', got %+v", file)
+	File := items[0].SubItems
+	if len(File) == 0 || File[0].Text != "&View terminal log" {
+		t.Errorf("Expected first File item to be '&View terminal log', got %+v", File)
 	}
 }
 

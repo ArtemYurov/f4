@@ -15,6 +15,7 @@ import (
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/dialog"
+	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/f4/internal/gui"
@@ -808,6 +809,23 @@ func SetupUI() {
 	// The registry is a leaf and cannot reach the message catalogue; the root
 	// hands it the lookup. Moves to internal/i18n's i18n.Msg when that package exists.
 	action.Localize = i18n.Msg
+	// internal/editor declares what it needs from above; this is the root
+	// filling it in. Each is one call site inside the editor.
+	editor.RunAction = RunAction
+	editor.LookupHotkey = func(e *vtinput.InputEvent) bool { return macroLookupHotkey(macro.MacroMgr, e) }
+	editor.MenuBarItems = BuildMenuBarItems
+	editor.CrossAttrs = EditorCrossAttrs
+	editor.KeyBarLabels = KeyBarLabelsForArea
+	editor.HotkeyAction = func(area, key string) string {
+		if GlobalHotkeysMgr == nil {
+			return ""
+		}
+		return GlobalHotkeysMgr.GetAction(area, key)
+	}
+	editor.RememberEdited = func(v vfs.VFS, path string) { rememberViewerEditorHistory(v, path, historyModeEdit) }
+	editor.SaveSession = SaveSession
+	editor.HandleWorkspaceFork = handleWorkspaceForkCommand
+	editor.SwitchToViewer = actionSwitchEditorToViewer
 	vtinput.Logger = vtui.DebugLog // Pipe vtinput logs to vtui's debug logger
 	vtui.GlobalClipboardAccessManager = terminal.NewF4ClipboardAuth()
 	// sysinfo.RegisterDrive("Null VFS", func() vfs.VFS { return vfs.NewNullVFS(50 * 1024 * 1024) }) // 50 MB/s
@@ -1038,12 +1056,12 @@ func LoadSession() {
 	}
 	ini := ini.Load(path)
 
-	LastEditorSearch = ini.GetString("EditorSearch", "Pattern", "")
-	LastEditorReplace = ini.GetString("EditorSearch", "Replace", "")
-	LastEditorSearchCase = ini.GetString("EditorSearch", "CaseSensitive", "0") == "1"
-	LastEditorSearchReverse = ini.GetString("EditorSearch", "Reverse", "0") == "1"
-	LastEditorSearchRegexp = ini.GetString("EditorSearch", "Regexp", "0") == "1"
-	LastEditorSearchWholeWord = ini.GetString("EditorSearch", "WholeWord", "0") == "1"
+	editor.LastEditorSearch = ini.GetString("EditorSearch", "Pattern", "")
+	editor.LastEditorReplace = ini.GetString("EditorSearch", "Replace", "")
+	editor.LastEditorSearchCase = ini.GetString("EditorSearch", "CaseSensitive", "0") == "1"
+	editor.LastEditorSearchReverse = ini.GetString("EditorSearch", "Reverse", "0") == "1"
+	editor.LastEditorSearchRegexp = ini.GetString("EditorSearch", "Regexp", "0") == "1"
+	editor.LastEditorSearchWholeWord = ini.GetString("EditorSearch", "WholeWord", "0") == "1"
 
 	LastFindFileMask = ini.GetString("FindFile", "Mask", "*")
 	LastFindFileText = ini.GetString("FindFile", "Text", "")
@@ -1225,12 +1243,12 @@ func saveSessionFileWithOptions(path string, savePanelSettings, saveCurrentPanel
 
 	var sb strings.Builder
 	sb.WriteString("[EditorSearch]\n")
-	fmt.Fprintf(&sb, "Pattern = %s\n", LastEditorSearch)
-	fmt.Fprintf(&sb, "Replace = %s\n", LastEditorReplace)
-	fmt.Fprintf(&sb, "CaseSensitive = %d\n", map[bool]int{true: 1, false: 0}[LastEditorSearchCase])
-	fmt.Fprintf(&sb, "Reverse = %d\n", map[bool]int{true: 1, false: 0}[LastEditorSearchReverse])
-	fmt.Fprintf(&sb, "Regexp = %d\n", map[bool]int{true: 1, false: 0}[LastEditorSearchRegexp])
-	fmt.Fprintf(&sb, "WholeWord = %d\n", map[bool]int{true: 1, false: 0}[LastEditorSearchWholeWord])
+	fmt.Fprintf(&sb, "Pattern = %s\n", editor.LastEditorSearch)
+	fmt.Fprintf(&sb, "Replace = %s\n", editor.LastEditorReplace)
+	fmt.Fprintf(&sb, "CaseSensitive = %d\n", map[bool]int{true: 1, false: 0}[editor.LastEditorSearchCase])
+	fmt.Fprintf(&sb, "Reverse = %d\n", map[bool]int{true: 1, false: 0}[editor.LastEditorSearchReverse])
+	fmt.Fprintf(&sb, "Regexp = %d\n", map[bool]int{true: 1, false: 0}[editor.LastEditorSearchRegexp])
+	fmt.Fprintf(&sb, "WholeWord = %d\n", map[bool]int{true: 1, false: 0}[editor.LastEditorSearchWholeWord])
 
 	sb.WriteString("\n[FindFile]\n")
 	fmt.Fprintf(&sb, "Mask = %s\n", LastFindFileMask)

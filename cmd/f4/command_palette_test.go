@@ -399,15 +399,15 @@ func TestFastFindDoesNotVetoModifiedPrintablePaletteKey(t *testing.T) {
 
 	panel := &FileSystemPanel{fastFindMode: true}
 	frame := &PanelsFrame{showPanels: true, panels: [2]Panel{panel, nil}}
-	modified := &vtinput.InputEvent{
+	Modified := &vtinput.InputEvent{
 		Type: vtinput.KeyEventType, KeyDown: true,
 		VirtualKeyCode: vtinput.VK_P, Char: 'P',
 		ControlKeyState: vtinput.LeftCtrlPressed | vtinput.ShiftPressed,
 	}
-	if frame.VetoActionKey(modified) {
+	if frame.VetoActionKey(Modified) {
 		t.Fatal("Fast Find vetoed Ctrl+Shift+P carrying Char='P'")
 	}
-	plain := *modified
+	plain := *Modified
 	plain.ControlKeyState = 0
 	plain.Char = 'p'
 	if !frame.VetoActionKey(&plain) {

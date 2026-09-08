@@ -48,20 +48,20 @@ func TestShowEditor_UTF8BOMIsNotDisplayedOrLostOnSave(t *testing.T) {
 				t.Fatal("editor was not opened")
 			}
 			defer ev.Close()
-			if !ev.utf8BOM {
+			if !ev.Utf8BOM {
 				t.Fatal("editor did not remember the UTF-8 BOM")
 			}
 			if ev.HexMode {
 				t.Fatal("BOM-marked UTF-8 text opened in hex mode")
 			}
-			if memoryMap && ev.mapped == nil {
+			if memoryMap && ev.Mapped == nil {
 				t.Fatal("mapped editor fell back to async buffer")
 			}
-			if !memoryMap && ev.asyncBuf == nil {
+			if !memoryMap && ev.AsyncBuf == nil {
 				t.Fatal("async editor did not create a chunk buffer")
 			}
 
-			got, err := ev.pt.GetRange(0, ev.pt.Size())
+			got, err := ev.Pt.GetRange(0, ev.Pt.Size())
 			if err != nil {
 				t.Fatalf("read logical editor text: %v", err)
 			}
@@ -72,15 +72,15 @@ func TestShowEditor_UTF8BOMIsNotDisplayedOrLostOnSave(t *testing.T) {
 			// SaveToFile replaces the buffers that the background indexer reads.
 			// Stop and join that worker first so the regression test also remains
 			// race-clean when the race shard schedules it during indexing.
-			ev.cancelIndexing()
-			ev.indexWG.Wait()
+			ev.CancelIndexing()
+			ev.WaitForIndexing()
 			testutil.DrainPendingTasks()
 
-			ev.modified = true
+			ev.Modified = true
 			ev.SaveToFile(nil)
 			waitEditorSave(t, ev)
 			testutil.DrainPendingTasks()
-			if ev.modified {
+			if ev.Modified {
 				t.Fatal("editor remained modified after saving BOM-marked text")
 			}
 			got, err = os.ReadFile(path)

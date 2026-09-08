@@ -12,7 +12,7 @@ import (
 
 // ViewerBackend provides async random access to a file using small cache window.
 type ViewerBackend struct {
-	file       vfs.ReadAtCloser
+	File       vfs.ReadAtCloser
 	size       int64
 	codepage   int
 	DataOffset int64 // bytes skipped from the on-disk file (the UTF-8 BOM)
@@ -46,7 +46,7 @@ func NewViewerBackend(ctx context.Context, v vfs.VFS, path string) (*ViewerBacke
 
 	bCtx, bCancel := context.WithCancel(context.Background())
 	b := &ViewerBackend{
-		file:         f,
+		File:         f,
 		size:         f.Size(),
 		path:         path,
 		owner:        v,
@@ -68,7 +68,7 @@ func (b *ViewerBackend) Close() error {
 	b.mu.Lock()
 	b.cacheData = nil
 	b.mu.Unlock()
-	return b.file.Close()
+	return b.File.Close()
 }
 
 func (b *ViewerBackend) Size() int64 {
@@ -76,8 +76,8 @@ func (b *ViewerBackend) Size() int64 {
 	// not, so a viewer drawing on the UI goroutine raced a background task
 	// refreshing the size -- jumpToEnd runs Size through RunAsync while Show
 	// is calling it too. Both go through the mutex now.
-	if b.file != nil {
-		newSize := b.file.Size() - b.DataOffset
+	if b.File != nil {
+		newSize := b.File.Size() - b.DataOffset
 		if newSize < 0 {
 			newSize = 0
 		}
@@ -116,10 +116,10 @@ func (b *ViewerBackend) DropCache() {
 // cached as a short read that stopped at the old end, and serving that window
 // again would hide exactly the bytes the caller is refreshing for.
 func (b *ViewerBackend) Refresh(ctx context.Context) bool {
-	if b.file == nil {
+	if b.File == nil {
 		return false
 	}
-	refresher, ok := b.file.(vfs.SizeRefresher)
+	refresher, ok := b.File.(vfs.SizeRefresher)
 	if !ok {
 		return false
 	}
@@ -177,7 +177,7 @@ func (b *ViewerBackend) ReadAt(offset int64, length int) ([]byte, error) {
 		frames := vtui.FrameManager
 		go func() {
 			buf := make([]byte, fetchLen)
-			n, err := b.file.ReadAt(b.ctx, buf, b.DataOffset+fetchOff)
+			n, err := b.File.ReadAt(b.ctx, buf, b.DataOffset+fetchOff)
 
 			var cached []byte
 			if n > 0 {
@@ -294,7 +294,7 @@ func (b *ViewerBackend) LineStart(ctx context.Context, line int64) (int64, bool)
 		if ctx.Err() != nil {
 			return 0, false
 		}
-		n, err := b.file.ReadAt(ctx, buf, b.DataOffset+off)
+		n, err := b.File.ReadAt(ctx, buf, b.DataOffset+off)
 		for i := 0; i < n; i++ {
 			if buf[i] != '\n' {
 				continue

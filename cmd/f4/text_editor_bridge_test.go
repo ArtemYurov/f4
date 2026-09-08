@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -47,27 +48,27 @@ func TestOpenTextEditorCreatesUnsavedVFSBuffer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	editor, ok := vtui.FrameManager.GetTopFrame().(*EditorView)
+	editor, ok := vtui.FrameManager.GetTopFrame().(*editor.EditorView)
 	if !ok {
 		t.Fatalf("top frame = %T", vtui.FrameManager.GetTopFrame())
 	}
-	if editor.filePath != target || !editor.modified {
-		t.Fatalf("editor target/modified = %q/%t", editor.filePath, editor.modified)
+	if editor.FilePath != target || !editor.Modified {
+		t.Fatalf("editor target/modified = %q/%t", editor.FilePath, editor.Modified)
 	}
 	if editor.UseEditorConfig {
 		t.Fatal("generated report unexpectedly enabled .editorconfig lookup")
 	}
-	got, err := editor.pt.GetRange(0, editor.pt.Size())
+	got, err := editor.Pt.GetRange(0, editor.Pt.Size())
 	if err != nil || string(got) != string(content) {
 		t.Fatalf("editor content = %q, %v", got, err)
 	}
 	if _, err := os.Stat(target); !os.IsNotExist(err) {
 		t.Fatalf("create-new target unexpectedly exists: %v", err)
 	}
-	editor.saveUndo(opOther)
-	editor.pt.Insert(editor.pt.Size(), []byte("edited"))
+	editor.Checkpoint()
+	editor.Pt.Insert(editor.Pt.Size(), []byte("edited"))
 	editor.Undo()
-	if !editor.modified {
+	if !editor.Modified {
 		t.Fatal("edit + Undo cleared the unsaved create-new report state")
 	}
 	editor.Close()
@@ -83,8 +84,8 @@ func TestOpenTextEditorTemporaryFileIsRemovedOnClose(t *testing.T) {
 	if err := pf.OpenTextEditor(vfs.TextEditorRequest{Temporary: true, Content: []byte("temporary")}); err != nil {
 		t.Fatal(err)
 	}
-	editor := vtui.FrameManager.GetTopFrame().(*EditorView)
-	temporaryPath := editor.filePath
+	editor := vtui.FrameManager.GetTopFrame().(*editor.EditorView)
+	temporaryPath := editor.FilePath
 	if _, err := os.Stat(temporaryPath); err != nil {
 		t.Fatalf("temporary file missing while editor is open: %v", err)
 	}
@@ -153,6 +154,6 @@ func TestOpenTextEditorSkipsRedundantCheckedTargetStat(t *testing.T) {
 		t.Fatal("host repeated the caller's off-UI target Stat")
 	default:
 	}
-	vtui.FrameManager.GetTopFrame().(*EditorView).Close()
+	vtui.FrameManager.GetTopFrame().(*editor.EditorView).Close()
 	close(release)
 }

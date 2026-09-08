@@ -21,7 +21,7 @@ import "github.com/unxed/vtui"
 
 // folderPins is the bookmark table as the folder-history dialog sees it.
 type folderPins struct {
-	file string
+	File string
 	set  BookmarkSet
 }
 
@@ -29,13 +29,13 @@ type folderPins struct {
 // cannot be read: pinning then degrades to the plain mark it used to be,
 // rather than risking a rewrite of a file we failed to parse.
 func loadFolderPins() *folderPins {
-	file := BookmarksFilePath()
-	set, err := LoadBookmarks(file)
+	File := BookmarksFilePath()
+	set, err := LoadBookmarks(File)
 	if err != nil {
-		vtui.DebugLog("PINS: load %q failed: %v", file, err)
+		vtui.DebugLog("PINS: load %q failed: %v", File, err)
 		return nil
 	}
-	return &folderPins{file: file, set: set}
+	return &folderPins{File: File, set: set}
 }
 
 // slotAt returns the directory a slot points at, expanded the same way
@@ -82,8 +82,8 @@ func (p *folderPins) save() {
 	if p == nil {
 		return
 	}
-	if err := SaveBookmarks(p.file, p.set); err != nil {
-		vtui.DebugLog("PINS: save %q failed: %v", p.file, err)
+	if err := SaveBookmarks(p.File, p.set); err != nil {
+		vtui.DebugLog("PINS: save %q failed: %v", p.File, err)
 	}
 }
 

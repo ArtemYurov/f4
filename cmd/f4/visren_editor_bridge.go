@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/unxed/f4/internal/editor"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/plugins/visren"
 	"github.com/unxed/f4/vfs"
@@ -30,7 +31,7 @@ func (pf *PanelsFrame) OpenVisRenEditor(req visren.EditorRequest) error {
 	}
 
 	local := vfs.NewOSVFS(filepath.Dir(path))
-	editor := NewEditorView(piecetable.New(req.Content), local, path)
+	editor := editor.NewEditorView(piecetable.New(req.Content), local, path)
 	editor.DisplayTitle = req.Title
 	if req.CursorLine >= 0 {
 		editor.CursorLine = req.CursorLine

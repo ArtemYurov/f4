@@ -165,17 +165,17 @@ func TestLuaPluginMountsADrive(t *testing.T) {
 		t.Errorf("second item = %+v", items[1])
 	}
 
-	file, err := fs.Open(ctx, "readme.txt")
+	File, err := fs.Open(ctx, "readme.txt")
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
-	defer func() { _ = file.Close() }()
+	defer func() { _ = File.Close() }()
 
-	if file.Size() != 5 {
-		t.Errorf("Size = %d, want 5", file.Size())
+	if File.Size() != 5 {
+		t.Errorf("Size = %d, want 5", File.Size())
 	}
 	buf := make([]byte, 5)
-	n, err := file.ReadAt(ctx, buf, 0)
+	n, err := File.ReadAt(ctx, buf, 0)
 	if err != nil {
 		t.Fatalf("ReadAt: %v", err)
 	}

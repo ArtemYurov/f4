@@ -25,13 +25,13 @@ func windowsFontEntries() []fontEntry {
 		names, err := key.ReadValueNames(-1)
 		if err == nil {
 			for _, name := range names {
-				file, _, err := key.GetStringValue(name)
-				if err != nil || !isFontFile(file) {
+				File, _, err := key.GetStringValue(name)
+				if err != nil || !isFontFile(File) {
 					continue
 				}
 				base := strings.TrimSpace(strings.TrimSuffix(name, " (TrueType)"))
 				base = strings.TrimSpace(strings.TrimSuffix(base, " (OpenType)"))
-				entries = append(entries, fontEntry{base: base, file: file})
+				entries = append(entries, fontEntry{base: base, File: File})
 			}
 		}
 		key.Close()
@@ -44,7 +44,7 @@ func platformGuiFontFiles(language string) []string {
 	paths := make([]string, 0, len(entries))
 	seen := make(map[string]struct{})
 	for _, entry := range entries {
-		path := fontFilePath(entry.file)
+		path := fontFilePath(entry.File)
 		if _, ok := seen[path]; ok {
 			continue
 		}
@@ -74,7 +74,7 @@ func windowsGuiFontDisplayChoices(language, current string) []string {
 	pathToName := make(map[string]string)
 	nameNormToName := make(map[string]string)
 	for _, e := range entries {
-		pathToName[strings.ToLower(fontFilePath(e.file))] = e.base
+		pathToName[strings.ToLower(fontFilePath(e.File))] = e.base
 		nameNormToName[normalizeFontName(e.base)] = e.base
 	}
 
@@ -124,7 +124,7 @@ func windowsGuiFontDisplayName(value string) string {
 	}
 	entries := windowsFontEntries()
 	for _, e := range entries {
-		if strings.EqualFold(fontFilePath(e.file), fontFilePath(value)) {
+		if strings.EqualFold(fontFilePath(e.File), fontFilePath(value)) {
 			return e.base
 		}
 		if normalizeFontName(e.base) == normalizeFontName(value) {
@@ -137,7 +137,7 @@ func windowsGuiFontDisplayName(value string) string {
 func windowsGuiFontDisplayNameFromInstalled(value string, installed []string) string {
 	entries := windowsFontEntries()
 	for _, e := range entries {
-		if strings.EqualFold(fontFilePath(e.file), fontFilePath(value)) {
+		if strings.EqualFold(fontFilePath(e.File), fontFilePath(value)) {
 			return e.base
 		}
 		if normalizeFontName(e.base) == normalizeFontName(value) {

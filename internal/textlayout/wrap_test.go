@@ -12,11 +12,11 @@ import (
 )
 
 func TestWrapEngine_SimpleWrap(t *testing.T) {
-	pt := piecetable.New([]byte("The quick brown fox jumps over the lazy dog"))
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
+	Pt := piecetable.New([]byte("The quick brown fox jumps over the lazy dog"))
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
 
-	we := NewWrapEngine(pt, li)
+	we := NewWrapEngine(Pt, Li)
 	we.SetWidth(10)
 
 	frags := we.GetFragments(0)
@@ -28,7 +28,7 @@ func TestWrapEngine_SimpleWrap(t *testing.T) {
 	}
 
 	for i, frag := range frags {
-		data, _ := pt.GetRange(frag.ByteOffsetStart, frag.ByteOffsetEnd-frag.ByteOffsetStart)
+		data, _ := Pt.GetRange(frag.ByteOffsetStart, frag.ByteOffsetEnd-frag.ByteOffsetStart)
 		text := string(data)
 		if text != expectedTexts[i] {
 			t.Errorf("Frag %d: expected %q, got %q", i, expectedTexts[i], text)
@@ -42,10 +42,10 @@ func TestWrapEngine_BidiCaretUsesVisualClusterOrder(t *testing.T) {
 	defer func() { vtui.DefaultBidiMode = oldMode }()
 
 	text := "שלום"
-	pt := piecetable.New([]byte(text))
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
-	we := NewWrapEngine(pt, li)
+	Pt := piecetable.New([]byte(text))
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
+	we := NewWrapEngine(Pt, Li)
 	we.ToggleWrap(false)
 
 	if _, col := we.LogicalToVisual(0); col != 4 {
@@ -60,11 +60,11 @@ func TestWrapEngine_BidiCaretUsesVisualClusterOrder(t *testing.T) {
 }
 
 func TestWrapEngine_NoWrap(t *testing.T) {
-	pt := piecetable.New([]byte("This is a very long line that should not be wrapped."))
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
+	Pt := piecetable.New([]byte("This is a very long line that should not be wrapped."))
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
 
-	we := NewWrapEngine(pt, li)
+	we := NewWrapEngine(Pt, Li)
 	we.SetWidth(20)
 	we.ToggleWrap(false)
 
@@ -73,7 +73,7 @@ func TestWrapEngine_NoWrap(t *testing.T) {
 		t.Fatalf("Expected 1 fragment when word wrap is off, got %d", len(frags))
 	}
 
-	data, _ := pt.GetRange(frags[0].ByteOffsetStart, frags[0].ByteOffsetEnd-frags[0].ByteOffsetStart)
+	data, _ := Pt.GetRange(frags[0].ByteOffsetStart, frags[0].ByteOffsetEnd-frags[0].ByteOffsetStart)
 	text := string(data)
 	if text != "This is a very long line that should not be wrapped." {
 		t.Errorf("Fragment text mismatch: got %q", text)
@@ -82,11 +82,11 @@ func TestWrapEngine_NoWrap(t *testing.T) {
 
 func TestWrapEngine_UnicodeWrap(t *testing.T) {
 	text := "A世B世C D"
-	pt := piecetable.New([]byte(text))
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
+	Pt := piecetable.New([]byte(text))
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
 
-	we := NewWrapEngine(pt, li)
+	we := NewWrapEngine(Pt, Li)
 	we.SetWidth(4)
 
 	frags := we.GetFragments(0)
@@ -100,7 +100,7 @@ func TestWrapEngine_UnicodeWrap(t *testing.T) {
 	}
 
 	for i, frag := range frags {
-		data, _ := pt.GetRange(frag.ByteOffsetStart, frag.ByteOffsetEnd-frag.ByteOffsetStart)
+		data, _ := Pt.GetRange(frag.ByteOffsetStart, frag.ByteOffsetEnd-frag.ByteOffsetStart)
 		text := string(data)
 		if text != expectedTexts[i] {
 			t.Errorf("Frag %d: expected %q, got %q", i, expectedTexts[i], text)
@@ -109,10 +109,10 @@ func TestWrapEngine_UnicodeWrap(t *testing.T) {
 }
 
 func TestWrapEngine_LongWord(t *testing.T) {
-	pt := piecetable.New([]byte("supercalifragilisticexpialidocious"))
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
-	we := NewWrapEngine(pt, li)
+	Pt := piecetable.New([]byte("supercalifragilisticexpialidocious"))
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
+	we := NewWrapEngine(Pt, Li)
 	we.SetWidth(10)
 
 	frags := we.GetFragments(0)
@@ -123,7 +123,7 @@ func TestWrapEngine_LongWord(t *testing.T) {
 	}
 
 	for i, frag := range frags {
-		data, _ := pt.GetRange(frag.ByteOffsetStart, frag.ByteOffsetEnd-frag.ByteOffsetStart)
+		data, _ := Pt.GetRange(frag.ByteOffsetStart, frag.ByteOffsetEnd-frag.ByteOffsetStart)
 		text := string(data)
 		if !reflect.DeepEqual(text, expectedTexts[i]) {
 			t.Errorf("Frag %d: expected %q, got %q", i, expectedTexts[i], text)
@@ -134,10 +134,10 @@ func TestWrapEngine_LongWord(t *testing.T) {
 func TestWrapEngine_Navigation(t *testing.T) {
 	// Строка: "01234 67890", ширина 5.
 	// Фрагменты: "01234 ", "67890"
-	pt := piecetable.New([]byte("01234 67890"))
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
-	we := NewWrapEngine(pt, li)
+	Pt := piecetable.New([]byte("01234 67890"))
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
+	we := NewWrapEngine(Pt, Li)
 	we.SetWidth(5)
 
 	// 1. Тест LogicalToVisual
@@ -159,10 +159,10 @@ func TestWrapEngine_TabsVariableWidth(t *testing.T) {
 	// TabSize = 4.
 	// "1\t" -> '1' (col 0), '\t' starts at col 1. Width should be 4 - (1%4) = 3. Total width 4.
 	// "\t"  -> starts at col 0. Width 4.
-	pt := piecetable.New([]byte("1\t\t"))
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
-	we := NewWrapEngine(pt, li)
+	Pt := piecetable.New([]byte("1\t\t"))
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
+	we := NewWrapEngine(Pt, Li)
 	we.SetTabSize(4)
 	we.ToggleWrap(false)
 
@@ -183,10 +183,10 @@ func TestWrapEngine_TabsVariableWidth(t *testing.T) {
 }
 
 func TestWrapEngine_SetTabSize(t *testing.T) {
-	pt := piecetable.New([]byte("\t"))
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
-	we := NewWrapEngine(pt, li)
+	Pt := piecetable.New([]byte("\t"))
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
+	we := NewWrapEngine(Pt, Li)
 	we.ToggleWrap(false)
 
 	we.SetTabSize(4)
@@ -228,10 +228,10 @@ func TestWrapEngine_WrappedTabAlignment(t *testing.T) {
 	// Frag 1: "12" (Width 2)
 	// Frag 2: "3\t" -> '3' is at visual col 2. Tab starts at col 3.
 	// Tab width should be 4 - (3%4) = 1.
-	pt := piecetable.New([]byte("123\t"))
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
-	we := NewWrapEngine(pt, li)
+	Pt := piecetable.New([]byte("123\t"))
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
+	we := NewWrapEngine(Pt, Li)
 	we.SetTabSize(4)
 	we.SetWidth(2)
 
@@ -256,10 +256,10 @@ func TestWrapEngine_Performance10MB(t *testing.T) {
 		data = append(data, chunk...)
 	}
 
-	pt := piecetable.New(data)
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
-	we := NewWrapEngine(pt, li)
+	Pt := piecetable.New(data)
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
+	we := NewWrapEngine(Pt, Li)
 	we.SetWidth(80)
 
 	// Тест 1: С пробелами (Word Wrap)
@@ -274,8 +274,8 @@ func TestWrapEngine_Performance10MB(t *testing.T) {
 
 	// Тест 2: Без пробелов (Hard Wrap)
 	we.InvalidateCache()
-	we.pt = piecetable.New(bytes.Repeat([]byte("A"), 10*1024*1024))
-	we.li.Rebuild(we.pt)
+	we.Pt = piecetable.New(bytes.Repeat([]byte("A"), 10*1024*1024))
+	we.Li.Rebuild(we.Pt)
 
 	start = time.Now()
 	frags = we.GetFragments(0)
@@ -288,10 +288,10 @@ func TestWrapEngine_Performance10MB(t *testing.T) {
 }
 func TestWrapEngine_ExtremeCorners(t *testing.T) {
 	// 1. Окно шириной 1, символ шириной 2
-	pt := piecetable.New([]byte("世"))
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
-	we := NewWrapEngine(pt, li)
+	Pt := piecetable.New([]byte("世"))
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
+	we := NewWrapEngine(Pt, Li)
 	we.SetWidth(1) // Меньше ширины символа
 
 	frags := we.GetFragments(0)
@@ -303,8 +303,8 @@ func TestWrapEngine_ExtremeCorners(t *testing.T) {
 	pt2 := piecetable.New([]byte("1234567890"))
 	li2 := piecetable.NewLineIndex()
 	li2.Rebuild(pt2)
-	we.pt = pt2
-	we.li = li2
+	we.Pt = pt2
+	we.Li = li2
 	we.SetWidth(3)
 
 	frags2 := we.GetFragments(0)
@@ -317,8 +317,8 @@ func TestWrapEngine_ExtremeCorners(t *testing.T) {
 	pt3 := piecetable.New([]byte("    Line with indentation"))
 	li3 := piecetable.NewLineIndex()
 	li3.Rebuild(pt3)
-	we.pt = pt3
-	we.li = li3
+	we.Pt = pt3
+	we.Li = li3
 	we.SetWidth(10)
 
 	frags3 := we.GetFragments(0)
@@ -331,10 +331,10 @@ func TestWrapEngine_ExtremeCorners(t *testing.T) {
 }
 
 func TestWrapEngine_MultipleSpaces(t *testing.T) {
-	pt := piecetable.New([]byte("word1    word2"))
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
-	we := NewWrapEngine(pt, li)
+	Pt := piecetable.New([]byte("word1    word2"))
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
+	we := NewWrapEngine(Pt, Li)
 	we.SetWidth(10)
 
 	frags := we.GetFragments(0)
@@ -343,8 +343,8 @@ func TestWrapEngine_MultipleSpaces(t *testing.T) {
 	if len(frags) != 2 {
 		t.Fatalf("Expected 2 fragments for multiple spaces, got %d", len(frags))
 	}
-	d1, _ := pt.GetRange(frags[0].ByteOffsetStart, frags[0].ByteOffsetEnd-frags[0].ByteOffsetStart)
-	d2, _ := pt.GetRange(frags[1].ByteOffsetStart, frags[1].ByteOffsetEnd-frags[1].ByteOffsetStart)
+	d1, _ := Pt.GetRange(frags[0].ByteOffsetStart, frags[0].ByteOffsetEnd-frags[0].ByteOffsetStart)
+	d2, _ := Pt.GetRange(frags[1].ByteOffsetStart, frags[1].ByteOffsetEnd-frags[1].ByteOffsetStart)
 	text1 := string(d1)
 	text2 := string(d2)
 	if text1 != "word1    " || text2 != "word2" {
@@ -352,10 +352,10 @@ func TestWrapEngine_MultipleSpaces(t *testing.T) {
 	}
 }
 func TestWrapEngine_EndOfLineCursor(t *testing.T) {
-	pt := piecetable.New([]byte("abc"))
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
-	we := NewWrapEngine(pt, li)
+	Pt := piecetable.New([]byte("abc"))
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
+	we := NewWrapEngine(Pt, Li)
 	we.SetWidth(10)
 
 	// The cursor is often placed at offset == length(text) to type at the end.
@@ -373,12 +373,12 @@ func (l *loadingBuffer) Size() int                               { return 100 }
 func (l *loadingBuffer) Read(offset, length int) ([]byte, error) { return nil, piecetable.ErrLoading }
 
 func TestWrapEngine_ErrLoading(t *testing.T) {
-	pt := piecetable.NewWithBuffer(&loadingBuffer{})
-	li := piecetable.NewLineIndex()
+	Pt := piecetable.NewWithBuffer(&loadingBuffer{})
+	Li := piecetable.NewLineIndex()
 	// Rebuild will finish instantly with 1 line because of ErrLoading
-	li.Rebuild(pt)
+	Li.Rebuild(Pt)
 
-	we := NewWrapEngine(pt, li)
+	we := NewWrapEngine(Pt, Li)
 	we.SetWidth(20)
 
 	frags := we.GetFragments(0)
@@ -391,11 +391,11 @@ func TestWrapEngine_ErrLoading(t *testing.T) {
 	}
 }
 func TestWrapEngine_InvalidateFrom(t *testing.T) {
-	pt := piecetable.New([]byte("Line 0\nLine 1\nLine 2\nLine 3\nLine 4"))
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
+	Pt := piecetable.New([]byte("Line 0\nLine 1\nLine 2\nLine 3\nLine 4"))
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
 
-	we := NewWrapEngine(pt, li)
+	we := NewWrapEngine(Pt, Li)
 	we.SetWidth(20)
 
 	// 1. Force full cache calculation
@@ -434,11 +434,11 @@ func TestWrapEngine_InvalidateFrom(t *testing.T) {
 func TestWrapEngine_LazyCache_LargeJump(t *testing.T) {
 	// Create 1000 lines, each wrapping into 2 visual rows
 	line := "Word1 Word2 Word3 Word4 Word5\n"
-	pt := piecetable.New(bytes.Repeat([]byte(line), 1000))
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
+	Pt := piecetable.New(bytes.Repeat([]byte(line), 1000))
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
 
-	we := NewWrapEngine(pt, li)
+	we := NewWrapEngine(Pt, Li)
 	// Set width small enough to force 2 rows per line
 	we.SetWidth(10)
 
@@ -471,10 +471,10 @@ func TestWrapEngine_CJKBoundaryWrap(t *testing.T) {
 	// Test that a CJK character (width 2) is moved to the next line
 	// entirely if it doesn't fit at the end of the current one.
 	// "ABC" (3) + "世" (2) = 5. Width = 4.
-	pt := piecetable.New([]byte("ABC世"))
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
-	we := NewWrapEngine(pt, li)
+	Pt := piecetable.New([]byte("ABC世"))
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
+	we := NewWrapEngine(Pt, Li)
 	we.SetWidth(4)
 
 	frags := we.GetFragments(0)
@@ -492,10 +492,10 @@ func TestWrapEngine_CJKBoundaryWrap(t *testing.T) {
 
 func TestWrapEngine_CacheResilience(t *testing.T) {
 	// Tests if the engine handles a shortened LineIndex while having a high validUntil.
-	pt := piecetable.New([]byte("L1\nL2\nL3\nL4\nL5"))
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
-	we := NewWrapEngine(pt, li)
+	Pt := piecetable.New([]byte("L1\nL2\nL3\nL4\nL5"))
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
+	we := NewWrapEngine(Pt, Li)
 	we.SetWidth(80)
 
 	// Fill cache
@@ -505,8 +505,8 @@ func TestWrapEngine_CacheResilience(t *testing.T) {
 	}
 
 	// Shorten the document and index
-	pt.Delete(0, 10) // Delete almost everything
-	li.Rebuild(pt)   // Index now has fewer lines
+	Pt.Delete(0, 10) // Delete almost everything
+	Li.Rebuild(Pt)   // Index now has fewer lines
 
 	// This should not panic even though validUntil > li.LineCount()
 	total := we.GetTotalVisualRows()
@@ -517,11 +517,11 @@ func TestWrapEngine_CacheResilience(t *testing.T) {
 
 func TestWrapEngine_IndicVisualClusters(t *testing.T) {
 	text := "संस्कृतम्"
-	pt := piecetable.New([]byte(text))
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
+	Pt := piecetable.New([]byte(text))
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
 
-	we := NewWrapEngine(pt, li)
+	we := NewWrapEngine(Pt, Li)
 	we.ToggleWrap(false)
 
 	var offsets []int
@@ -556,10 +556,10 @@ func TestWrapEngine_IndicVisualClusters(t *testing.T) {
 }
 
 func TestWrapEngine_BoundarySafety(t *testing.T) {
-	pt := piecetable.New([]byte("line1\nline2"))
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
-	we := NewWrapEngine(pt, li)
+	Pt := piecetable.New([]byte("line1\nline2"))
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
+	we := NewWrapEngine(Pt, Li)
 	we.SetWidth(80)
 
 	t.Run("Negative offset mapping", func(t *testing.T) {
@@ -682,10 +682,10 @@ func TestWrapEngine_LogicalToVisual_CappedLine(t *testing.T) {
 		data[i] = 'a'
 	}
 
-	pt := piecetable.New(data)
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
-	we := NewWrapEngine(pt, li)
+	Pt := piecetable.New(data)
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
+	we := NewWrapEngine(Pt, Li)
 	we.SetWidth(80)
 
 	// LogicalToVisual for an offset far beyond the 64KB cap.
@@ -703,10 +703,10 @@ func BenchmarkWrapEngine_GetFragments_ASCII(b *testing.B) {
 	for i := 0; i < 1000; i++ {
 		buf.Write(line)
 	}
-	pt := piecetable.New(buf.Bytes())
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
-	we := NewWrapEngine(pt, li)
+	Pt := piecetable.New(buf.Bytes())
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
+	we := NewWrapEngine(Pt, Li)
 	we.SetWidth(80)
 
 	b.ResetTimer()
@@ -723,10 +723,10 @@ func BenchmarkWrapEngine_GetFragments_NoWrap(b *testing.B) {
 	for i := 0; i < 1000; i++ {
 		buf.Write(line)
 	}
-	pt := piecetable.New(buf.Bytes())
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
-	we := NewWrapEngine(pt, li)
+	Pt := piecetable.New(buf.Bytes())
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
+	we := NewWrapEngine(Pt, Li)
 	we.SetWidth(80)
 	we.ToggleWrap(false)
 
@@ -746,14 +746,14 @@ func TestWrapEngine_NoWrapCacheStaysBounded(t *testing.T) {
 		buf.WriteString(strings.Repeat("a", 79))
 		buf.WriteByte('\n')
 	}
-	pt := piecetable.New(buf.Bytes())
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
-	we := NewWrapEngine(pt, li)
+	Pt := piecetable.New(buf.Bytes())
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
+	we := NewWrapEngine(Pt, Li)
 	we.SetWidth(80)
 	we.ToggleWrap(false)
 
-	for i := 0; i < li.LineCount(); i++ {
+	for i := 0; i < Li.LineCount(); i++ {
 		we.GetFragments(i)
 	}
 
@@ -774,10 +774,10 @@ func TestWrapEngine_NoWrapCacheStaysBounded(t *testing.T) {
 // TestWrapEngine_NoWrapCacheInvalidatedOnEdit guards the counter that backs the
 // budget: a stale count would either leak or evict on every single lookup.
 func TestWrapEngine_NoWrapCacheInvalidatedOnEdit(t *testing.T) {
-	pt := piecetable.New([]byte("hello world\nsecond line\n"))
-	li := piecetable.NewLineIndex()
-	li.Rebuild(pt)
-	we := NewWrapEngine(pt, li)
+	Pt := piecetable.New([]byte("hello world\nsecond line\n"))
+	Li := piecetable.NewLineIndex()
+	Li.Rebuild(Pt)
+	we := NewWrapEngine(Pt, Li)
 	we.SetWidth(80)
 	we.ToggleWrap(false)
 
@@ -786,8 +786,8 @@ func TestWrapEngine_NoWrapCacheInvalidatedOnEdit(t *testing.T) {
 	cachedBefore := we.noWrapCached
 
 	insert := []byte("XX")
-	pt.Insert(0, insert)
-	li.UpdateAfterInsert(0, insert)
+	Pt.Insert(0, insert)
+	Li.UpdateAfterInsert(0, insert)
 	we.InvalidateFrom(0)
 
 	if we.noWrapCached != 0 {

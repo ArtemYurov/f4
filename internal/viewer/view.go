@@ -1052,7 +1052,7 @@ func newViewerBackend(ctx context.Context, owner vfs.VFS, path string, f vfs.Rea
 		_ = f.Close()
 		bCtx, bCancel := context.WithCancel(context.Background())
 		return &ViewerBackend{
-			file:         &vfs.MemoryReadAtCloser{Data: decoded},
+			File:         &vfs.MemoryReadAtCloser{Data: decoded},
 			size:         int64(len(decoded)),
 			path:         path,
 			totalLines:   -1,
@@ -1068,7 +1068,7 @@ func newViewerBackend(ctx context.Context, owner vfs.VFS, path string, f vfs.Rea
 	}
 	bCtx, bCancel := context.WithCancel(context.Background())
 	backend := &ViewerBackend{
-		file:         f,
+		File:         f,
 		size:         logicalSize,
 		path:         path,
 		owner:        owner,

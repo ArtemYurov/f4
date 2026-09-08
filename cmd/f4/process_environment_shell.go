@@ -809,16 +809,16 @@ func writePrivateProcessEnvironmentFile(pattern string, data []byte) (string, er
 	if err := os.MkdirAll(processEnvironmentRuntimeDir, 0o700); err != nil {
 		return "", err
 	}
-	file, err := os.CreateTemp(processEnvironmentRuntimeDir, pattern)
+	File, err := os.CreateTemp(processEnvironmentRuntimeDir, pattern)
 	if err != nil {
 		return "", err
 	}
-	path := file.Name()
-	_ = file.Chmod(0o600)
-	if _, err = writeProcessEnvironmentPayload(file, data); err == nil {
-		err = file.Close()
+	path := File.Name()
+	_ = File.Chmod(0o600)
+	if _, err = writeProcessEnvironmentPayload(File, data); err == nil {
+		err = File.Close()
 	} else {
-		_ = file.Close()
+		_ = File.Close()
 	}
 	if err != nil {
 		_ = os.Remove(path)

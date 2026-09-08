@@ -55,14 +55,14 @@ func NewF4FileStateProvider() *F4FileStateProvider {
 func (fs *F4FileStateProvider) load() {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
-	file, err := os.ReadFile(fs.Path)
+	File, err := os.ReadFile(fs.Path)
 	if err == nil {
 		type DiskFormat struct {
 			Order []string
 			Data  map[string]*FileState
 		}
 		var df DiskFormat
-		if json.Unmarshal(file, &df) == nil {
+		if json.Unmarshal(File, &df) == nil {
 			fs.Order = df.Order
 			fs.Data = df.Data
 		}
@@ -93,9 +93,9 @@ func (fs *F4FileStateProvider) save() {
 	fs.mu.Unlock()
 
 	os.MkdirAll(filepath.Dir(statePath), 0755)
-	file, err := json.MarshalIndent(df, "", "  ")
+	File, err := json.MarshalIndent(df, "", "  ")
 	if err == nil {
-		os.WriteFile(statePath, file, 0644)
+		os.WriteFile(statePath, File, 0644)
 	}
 }
 

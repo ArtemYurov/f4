@@ -351,7 +351,7 @@ func compareContents(ctx context.Context, leftFS vfs.VFS, left CompareItem, righ
 // compareStream reads a file in chunks and hands out the filtered bytes.
 type compareStream struct {
 	ctx  context.Context
-	file vfs.ReadAtCloser
+	File vfs.ReadAtCloser
 	// off is tracked here rather than relying on the sequential Read:
 	// ReadAt is the call every VFS implements for the viewer, so it is
 	// the one that can be relied on.
@@ -367,8 +367,8 @@ type compareStream struct {
 	eof       bool
 }
 
-func newCompareStream(ctx context.Context, file vfs.ReadAtCloser, skip int) *compareStream {
-	return &compareStream{ctx: ctx, file: file, skip: skip, raw: make([]byte, compareChunkSize)}
+func newCompareStream(ctx context.Context, File vfs.ReadAtCloser, skip int) *compareStream {
+	return &compareStream{ctx: ctx, File: File, skip: skip, raw: make([]byte, compareChunkSize)}
 }
 
 // fill makes sure buf holds at least one byte, unless the file is over.
@@ -377,7 +377,7 @@ func (s *compareStream) fill() error {
 		if err := s.ctx.Err(); err != nil {
 			return err
 		}
-		n, err := s.file.ReadAt(s.ctx, s.raw, s.off)
+		n, err := s.File.ReadAt(s.ctx, s.raw, s.off)
 		if n > 0 {
 			s.off += int64(n)
 			s.buf = s.normalize(s.raw[:n])

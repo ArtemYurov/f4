@@ -153,16 +153,16 @@ var visRenHelpSections = []string{
 // FlattenVisRenHelp keeps the linked detail topics for quick navigation while
 // also appending their complete contents to the main topic. This lets readers
 // browse all of VisRen's help continuously with PgDn.
-func FlattenVisRenHelp(engine *vtui.HelpEngine) {
-	if engine == nil {
+func FlattenVisRenHelp(Engine *vtui.HelpEngine) {
+	if Engine == nil {
 		return
 	}
-	index := engine.GetTopic("VisRen")
+	index := Engine.GetTopic("VisRen")
 	if index == nil {
 		return
 	}
 	for _, name := range visRenHelpSections {
-		section := engine.GetTopic(name)
+		section := Engine.GetTopic(name)
 		if section == nil || len(section.Lines) == 0 {
 			continue
 		}

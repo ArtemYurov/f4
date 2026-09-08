@@ -12,7 +12,7 @@ import (
 // table. Run this with -race; without the lock it reports a write to pt.pieces
 // racing with the reads below.
 func TestPieceTable_ReadsWhileEditing(t *testing.T) {
-	pt := New([]byte(strings.Repeat("a line of text\n", 2000)))
+	Pt := New([]byte(strings.Repeat("a line of text\n", 2000)))
 
 	var wg sync.WaitGroup
 	done := make(chan struct{})
@@ -27,27 +27,27 @@ func TestPieceTable_ReadsWhileEditing(t *testing.T) {
 					return
 				default:
 				}
-				size := pt.Size()
+				size := Pt.Size()
 				if size > 32 {
-					_, _ = pt.GetRange(size/2, 16)
-					_, _ = pt.View(size/2, 16)
+					_, _ = Pt.GetRange(size/2, 16)
+					_, _ = Pt.View(size/2, 16)
 				}
-				_ = pt.GetState()
-				_ = pt.ForEachRange(func([]byte) error { return nil })
+				_ = Pt.GetState()
+				_ = Pt.ForEachRange(func([]byte) error { return nil })
 			}
 		}()
 	}
 
 	for i := 0; i < 300; i++ {
-		pt.Insert(10, []byte("edit "))
-		if pt.Size() > 100 {
-			pt.Delete(20, 5)
+		Pt.Insert(10, []byte("edit "))
+		if Pt.Size() > 100 {
+			Pt.Delete(20, 5)
 		}
 	}
 	close(done)
 	wg.Wait()
 
-	if pt.Size() <= 0 {
-		t.Fatalf("size = %d after the edits", pt.Size())
+	if Pt.Size() <= 0 {
+		t.Fatalf("size = %d after the edits", Pt.Size())
 	}
 }

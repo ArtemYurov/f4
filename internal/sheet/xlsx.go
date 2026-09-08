@@ -24,15 +24,15 @@ const (
 
 // SaveXLSX writes the sheet as an Office Open XML workbook.
 func (s *Sheet) SaveXLSX(path string) error {
-	file, err := os.Create(path)
+	File, err := os.Create(path)
 	if err != nil {
 		return err
 	}
-	if err := s.WriteXLSX(file); err != nil {
-		_ = file.Close()
+	if err := s.WriteXLSX(File); err != nil {
+		_ = File.Close()
 		return err
 	}
-	return file.Close()
+	return File.Close()
 }
 
 // WriteXLSX streams a workbook containing a single worksheet.
@@ -204,16 +204,16 @@ func escapeXML(text string) string {
 
 // LoadXLSX reads the first worksheet of a workbook into a new sheet.
 func LoadXLSX(name string) (*Sheet, error) {
-	file, err := os.Open(name)
+	File, err := os.Open(name)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = file.Close() }()
-	info, err := file.Stat()
+	defer func() { _ = File.Close() }()
+	info, err := File.Stat()
 	if err != nil {
 		return nil, err
 	}
-	return ReadXLSX(file, info.Size())
+	return ReadXLSX(File, info.Size())
 }
 
 // ReadXLSX parses a workbook from any random access reader.
@@ -223,8 +223,8 @@ func ReadXLSX(r io.ReaderAt, size int64) (*Sheet, error) {
 		return nil, err
 	}
 	files := make(map[string]*zip.File, len(archive.File))
-	for _, file := range archive.File {
-		files[path.Clean(file.Name)] = file
+	for _, File := range archive.File {
+		files[path.Clean(File.Name)] = File
 	}
 
 	sharedStrings, err := readSharedStrings(files["xl/sharedStrings.xml"])
@@ -309,11 +309,11 @@ func firstWorksheetPath(files map[string]*zip.File) (string, string, error) {
 	return path.Clean(path.Join("xl", target)), sheetName, nil
 }
 
-func resolveRelationship(file *zip.File, id string) (string, error) {
-	if file == nil {
+func resolveRelationship(File *zip.File, id string) (string, error) {
+	if File == nil {
 		return "", nil
 	}
-	reader, err := file.Open()
+	reader, err := File.Open()
 	if err != nil {
 		return "", err
 	}
@@ -347,11 +347,11 @@ func resolveRelationship(file *zip.File, id string) (string, error) {
 	}
 }
 
-func readSharedStrings(file *zip.File) ([]string, error) {
-	if file == nil {
+func readSharedStrings(File *zip.File) ([]string, error) {
+	if File == nil {
 		return nil, nil
 	}
-	reader, err := file.Open()
+	reader, err := File.Open()
 	if err != nil {
 		return nil, err
 	}
@@ -398,8 +398,8 @@ func readSharedStrings(file *zip.File) ([]string, error) {
 	return strs, nil
 }
 
-func readWorksheet(file *zip.File, sharedStrings []string, target *Sheet) error {
-	reader, err := file.Open()
+func readWorksheet(File *zip.File, sharedStrings []string, target *Sheet) error {
+	reader, err := File.Open()
 	if err != nil {
 		return err
 	}

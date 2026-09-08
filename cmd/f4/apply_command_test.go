@@ -413,7 +413,7 @@ func TestApplyTranscriptCanBeForwardedToEditor(t *testing.T) {
 	model.transcript.Add("first line")
 	model.transcript.Add("second line")
 	editor := newApplyTranscriptEditor(model, 80, 25)
-	if got := editor.pt.String(); got != "first line\nsecond line\n" {
+	if got := editor.Pt.String(); got != "first line\nsecond line\n" {
 		t.Fatalf("editor transcript = %q", got)
 	}
 	if editor.DisplayTitle != i18n.Msg("ApplyCommand.OutputEditorTitle") {
