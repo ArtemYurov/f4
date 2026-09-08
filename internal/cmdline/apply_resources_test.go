@@ -472,7 +472,11 @@ func TestRemoteApplyCommandMaterializationHonorsCancellation(t *testing.T) {
 		}
 		time.Sleep(time.Millisecond)
 	}
-	if !cleanupAllApplyCommandResourcesWithin(time.Second) {
+	// The negative assertions above are the ones that measure something: a
+	// cleanup that returns before the work is unblocked has lost it. This
+	// one only says "eventually", and its budget covers a goroutine drain
+	// plus a temporary-directory removal on whatever disk CI gives us.
+	if !cleanupAllApplyCommandResourcesWithin(10 * time.Second) {
 		t.Fatal("remote materialization remained registered after it drained")
 	}
 }
@@ -512,7 +516,11 @@ func TestRemoteApplyCommandMaterializationShieldsSameInstanceClone(t *testing.T)
 		t.Fatal("shutdown cleanup lost same-instance remote work")
 	}
 	close(target.unblock)
-	if !cleanupAllApplyCommandResourcesWithin(time.Second) {
+	// The negative assertions above are the ones that measure something: a
+	// cleanup that returns before the work is unblocked has lost it. This
+	// one only says "eventually", and its budget covers a goroutine drain
+	// plus a temporary-directory removal on whatever disk CI gives us.
+	if !cleanupAllApplyCommandResourcesWithin(10 * time.Second) {
 		t.Fatal("same-instance remote work did not drain")
 	}
 	entries, err := os.ReadDir(dir)

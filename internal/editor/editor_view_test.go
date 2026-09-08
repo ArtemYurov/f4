@@ -5109,14 +5109,6 @@ func TestDeleteLinePreservesVisualColumn(t *testing.T) {
 	}
 }
 
-type desktopWindowWrapper struct {
-	*EditorView
-}
-
-func (d desktopWindowWrapper) GetType() vtui.FrameType {
-	return vtui.TypeUser
-}
-
 func TestEditorView_Replace(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	Pt := piecetable.New([]byte("abc 123 abc"))
