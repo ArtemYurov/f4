@@ -2729,22 +2729,26 @@ func (fp *FileSystemPanel) Show(scr *vtui.ScreenBuf) {
 				sizeStr = formatIntWithSpaces(e.Size)
 			}
 
+			nameStr := e.Name
+			if e.IsSymlink && fp.vfs != nil {
+				if target, err := vfs.Readlink(context.Background(), fp.vfs, fp.vfs.Join(fp.vfs.GetPath(), e.Name)); err == nil && target != "" {
+					if fp.vfs.GetPath() == "net://" {
+						nameStr = e.Name + " -> " + target
+					} else {
+						sizeStr = "→ " + target
+					}
+				}
+			}
+
 			rightStr := fmt.Sprintf("%s  %s", sizeStr, dateStr)
 			if _, isLocal := fp.vfs.(*vfs.OSVFS); isLocal {
 				if info, ok := fsInfo(fp.vfs.GetPath()); ok {
 					rightStr = fmt.Sprintf("(%d/%d) %s  %s", totFiles, totDirs, formatBytes(info.Free), rightStr)
 				}
 			}
-			nameStr := e.Name
 
 			if fp.vfs != nil && fp.vfs.GetPath() == "net://" {
 				rightStr = ""
-			}
-
-			if e.IsSymlink && fp.vfs != nil {
-				if target, err := vfs.Readlink(context.Background(), fp.vfs, fp.vfs.Join(fp.vfs.GetPath(), e.Name)); err == nil && target != "" {
-					nameStr = e.Name + " -> " + target
-				}
 			}
 
 			availW := (fp.X2 - 1) - (fp.X1 + 1) + 1
