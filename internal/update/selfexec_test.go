@@ -37,7 +37,7 @@ func TestLinkerArgvWithoutArguments(t *testing.T) {
 	}
 }
 
-// ManageSessions() reads the daemon's arguments by position, so the shift the
+// term.ManageSessions() reads the daemon's arguments by position, so the shift the
 // loader introduces has to land "--server" on os.Args[1] and the socket on
 // os.Args[2]; otherwise a daemon comes up as an ordinary client.
 func TestLinkerArgvKeepsServerArgumentPositions(t *testing.T) {

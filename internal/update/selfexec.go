@@ -79,7 +79,7 @@ func loaderArgv(libc, image string, args []string) []string {
 // loader, which takes the image path as its first argument and hands the rest
 // to the image. argv0 stays in front because the loader consumes one entry, so
 // the image still finds its own arguments from argv[1] on -- the positions
-// ManageSessions() indexes for "--server".
+// term.ManageSessions() indexes for "--server".
 func linkerArgv(argv0, image string, args []string) []string {
 	argv := make([]string, 0, len(args)+2)
 	argv = append(argv, argv0, image)
