@@ -11,6 +11,11 @@ import (
 func withMacKeys(t *testing.T, commandIsDistinct bool) {
 	t.Helper()
 
+	// applyMacKeys deliberately respects the same handover guard as the live
+	// key path. Give every test a neutral manager so a shuffled predecessor
+	// cannot leave a hidden PanelsFrame that suppresses the test's mapping.
+	t.Cleanup(swapFrameManager(t))
+
 	previousMode := AppConfig.MacKeyboard
 	AppConfig.MacKeyboard = MacKeysOn
 	t.Cleanup(func() { AppConfig.MacKeyboard = previousMode })
