@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtui"
 )
 
@@ -11,7 +12,7 @@ func newFastFindPanelsFrame(t *testing.T) (*PanelsFrame, *FileSystemPanel) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(100, 30)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	pf := NewPanelsFrame()
 	pf.ResizeConsole(100, 30)
 	vtui.FrameManager.Push(pf)

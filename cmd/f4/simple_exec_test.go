@@ -10,6 +10,7 @@ import (
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -19,7 +20,7 @@ func TestSimpleInline_CommandExecution(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := setupMockPanelsFrame(t)
 	defer pf.Close()
@@ -48,7 +49,7 @@ func TestSimpleCaptured_CommandExecution(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -94,7 +95,7 @@ func TestSimpleInline_ToggleAndAnyKeyReturn(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	oldCfg := config.App
 	t.Cleanup(func() { config.App = oldCfg })
@@ -134,7 +135,7 @@ func TestSimpleInline_CtrlOKeyUpDoesNotRestorePanels(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	oldCfg := config.App
 	t.Cleanup(func() { config.App = oldCfg })
@@ -179,7 +180,7 @@ func TestSimpleCaptured_ToggleShowsToast(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -227,7 +228,7 @@ func TestSimpleInline_FarStyleKeepsConsoleAndTypes(t *testing.T) {
 	scr.Writer = &out
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	oldCfg := config.App
 	t.Cleanup(func() { config.App = oldCfg })

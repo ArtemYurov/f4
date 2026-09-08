@@ -3,13 +3,14 @@ package main
 import (
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtui"
 	"testing"
 )
 
 func TestTopBar_Show(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(40, 5)
@@ -24,7 +25,7 @@ func TestTopBar_Show(t *testing.T) {
 	tb.Show(scr)
 
 	// Verify that the background is filled and text is written
-	attr := vtui.Palette[ColViewerStatus]
+	attr := vtui.Palette[theme.ColViewerStatus]
 	for x := 0; x < 40; x++ {
 		cell := scr.GetCell(x, 0)
 		if cell.Attributes != attr {
@@ -44,7 +45,7 @@ func TestTopBar_Show(t *testing.T) {
 
 func TestTopBar_AttributeCallback(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(40, 5)
@@ -62,14 +63,14 @@ func TestTopBar_AttributeCallback(t *testing.T) {
 	// A callback with nothing to say leaves the palette in charge.
 	tb.GetAttr = func() uint64 { return 0 }
 	tb.Show(scr)
-	if got, want := scr.GetCell(0, 0).Attributes, vtui.Palette[ColViewerStatus]; got != want {
+	if got, want := scr.GetCell(0, 0).Attributes, vtui.Palette[theme.ColViewerStatus]; got != want {
 		t.Errorf("expected the palette colour %016X, got %016X", want, got)
 	}
 }
 
 func TestTopBar_NilCallbackAndInvisible(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(40, 5)
@@ -92,7 +93,7 @@ func TestTopBar_NilCallbackAndInvisible(t *testing.T) {
 }
 func TestTopBar_LeftRightAlignment(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(40, 5)
@@ -128,7 +129,7 @@ func TestTopBar_LeftRightAlignment(t *testing.T) {
 
 func TestTopBar_Truncation(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(20, 5) // Narrow screen

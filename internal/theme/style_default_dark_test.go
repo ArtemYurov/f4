@@ -1,4 +1,4 @@
-package main
+package theme
 
 import (
 	"testing"
@@ -15,7 +15,7 @@ func TestDefaultDarkStyle(t *testing.T) {
 	}
 }
 
-// Colours the earlier attempt got wrong, spot-checked against the far2l theme.
+// Colours the earlier attempt got wrong, spot-checked against the far2l
 // Contrast correction is off here so the palette is compared as authored.
 func TestDefaultDarkStyle_PanelColors(t *testing.T) {
 	oldCfg := config.App

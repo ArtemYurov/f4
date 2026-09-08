@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -244,8 +245,8 @@ func pathHintItemsWithOptions(v vfs.VFS, word string, from, to int, allowBare bo
 			name += sep
 		}
 		marker := ""
-		if config.App.ShowHighlightMarks && GlobalFileHighlighter != nil {
-			if m := GlobalFileHighlighter.GetMarker(&c.item); m != "" {
+		if config.App.ShowHighlightMarks && theme.GlobalFileHighlighter != nil {
+			if m := theme.GlobalFileHighlighter.GetMarker(&c.item); m != "" {
 				marker = m + " "
 			}
 		}
@@ -268,9 +269,9 @@ func pathHintItemsWithOptions(v vfs.VFS, word string, from, to int, allowBare bo
 			acItem.MatchStart = matchOffset + c.start
 			acItem.MatchEnd = matchOffset + c.end
 		}
-		if GlobalFileHighlighter != nil {
+		if theme.GlobalFileHighlighter != nil {
 			item := c.item
-			acItem.Attr = GlobalFileHighlighter.GetColor(&item, base, false, false)
+			acItem.Attr = theme.GlobalFileHighlighter.GetColor(&item, base, false, false)
 		}
 		items = append(items, acItem)
 	}

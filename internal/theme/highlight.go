@@ -1,4 +1,4 @@
-package main
+package theme
 
 import (
 	"fmt"
@@ -108,7 +108,7 @@ type ruleSection struct {
 }
 
 func parseHighlightRules(ini *ini.File) []HighlightRule {
-	sections := parseRuleSections(ini, "highlight_")
+	sections := ParseRuleSections(ini, "highlight_")
 	rules := make([]HighlightRule, 0, len(sections))
 	for _, section := range sections {
 		rules = append(rules, section.Rule)
@@ -116,11 +116,11 @@ func parseHighlightRules(ini *ini.File) []HighlightRule {
 	return rules
 }
 
-// parseRuleSections reads every "<prefix>N" section into a HighlightRule,
+// ParseRuleSections reads every "<prefix>N" section into a HighlightRule,
 // ordered by the numeric suffix. Highlighting and sort groups share this
 // parser so both accept the same mask, attribute, size and date keys; the
 // colour keys are simply left empty for rules that do not use them.
-func parseRuleSections(ini *ini.File, prefix string) []ruleSection {
+func ParseRuleSections(ini *ini.File, prefix string) []ruleSection {
 	var rules []ruleSection
 	var sections []string
 	for secName := range ini.Sections() {

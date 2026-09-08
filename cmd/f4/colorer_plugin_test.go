@@ -17,6 +17,7 @@ import (
 	"github.com/unxed/f4/internal/piecetable"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtui"
 )
 
@@ -104,7 +105,7 @@ func TestColorer_RegionOffsetsAreRuneIndices(t *testing.T) {
 
 func TestColorer_AttributesLandOnTheCellsAfterAnEmoji(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	// Runes: 'a', the emoji, 'b', 'c'.
 	// Cells: 'a', the emoji, its filler, 'b', 'c'.
@@ -228,7 +229,7 @@ func TestColorerQueueLineBatchRespectsTheByteBudget(t *testing.T) {
 // position after the failure is unknown, so the next job must re-anchor.
 func TestColorerPartialResultKeepsAttrsAndForcesReanchor(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pt := piecetable.New([]byte("a\nb\nc\n"))
 	ev := NewEditorView(pt, nil, "test.txt")
@@ -379,7 +380,7 @@ func TestColorer_StoreAttrsPreservesTopLines(t *testing.T) {
 
 func TestColorer_DownloadColorerSchemas(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)

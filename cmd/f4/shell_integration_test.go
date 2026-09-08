@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -13,7 +14,7 @@ import (
 
 func TestPanelsFrame_CtrlEnter_Escaping(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	pf := NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)

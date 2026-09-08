@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -193,7 +194,7 @@ func TestQueuedTrashCapturesOriginalDirectory(t *testing.T) {
 
 func TestDeleteActionsExposeDistinctDispositions(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	oldCfg := config.App
 	defer func() { config.App = oldCfg }()
 	config.App.ConfirmDelete = true

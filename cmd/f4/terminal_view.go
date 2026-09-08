@@ -12,6 +12,7 @@ import (
 
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/textlayout"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -288,17 +289,17 @@ func (tv *TerminalView) ResetBuffer(w, h int) {
 
 	// Палитра по умолчанию (ANSI order)
 	copy(tv.Palette[:], vtui.XTerm256Palette[:])
-	tv.Palette[0] = far2lPalette[0] // Black
-	tv.Palette[1] = far2lPalette[4] // Red
-	tv.Palette[2] = far2lPalette[2] // Green
-	tv.Palette[3] = far2lPalette[6] // Yellow
-	tv.Palette[4] = far2lPalette[1] // Blue
-	tv.Palette[5] = far2lPalette[5] // Magenta
-	tv.Palette[6] = far2lPalette[3] // Cyan
-	tv.Palette[7] = far2lPalette[7] // White
+	tv.Palette[0] = theme.Far2lPalette[0] // Black
+	tv.Palette[1] = theme.Far2lPalette[4] // Red
+	tv.Palette[2] = theme.Far2lPalette[2] // Green
+	tv.Palette[3] = theme.Far2lPalette[6] // Yellow
+	tv.Palette[4] = theme.Far2lPalette[1] // Blue
+	tv.Palette[5] = theme.Far2lPalette[5] // Magenta
+	tv.Palette[6] = theme.Far2lPalette[3] // Cyan
+	tv.Palette[7] = theme.Far2lPalette[7] // White
 	for i := 0; i < 8; i++ {
 		winIdx := []int{0, 4, 2, 6, 1, 5, 3, 7}[i]
-		tv.Palette[i+8] = far2lPalette[winIdx+8]
+		tv.Palette[i+8] = theme.Far2lPalette[winIdx+8]
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -200,7 +201,7 @@ func TestTerminalSelection_HighlightInvertsCells(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(20, 6)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	tv.SetVisible(true)
 	tv.StartSelection(2, 0, false)
@@ -255,7 +256,7 @@ func panelsFrameWithMouseSelect(t *testing.T) (*PanelsFrame, *fakePTY) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	pf := NewPanelsFrame()
 	pf.ResizeConsole(80, 25)
 	waitForLoad(t, pf.panels[0].(*FileSystemPanel))

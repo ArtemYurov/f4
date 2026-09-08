@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -33,7 +34,7 @@ func TestFileInputBoxFollowsWindowResize(t *testing.T) {
 	screen := vtui.NewSilentScreenBuf()
 	screen.AllocBuf(120, 30)
 	vtui.FrameManager.Init(screen)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	dlg := fileInputBox("Rename", "Rename 'a.txt' to:", "a.txt", nil)
 	if dlg == nil {
@@ -62,7 +63,7 @@ func TestCopyDialogFollowsWindowResize(t *testing.T) {
 	screen := vtui.NewSilentScreenBuf()
 	screen.AllocBuf(80, 25)
 	vtui.FrameManager.Init(screen)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()

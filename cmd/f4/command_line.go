@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -30,9 +31,9 @@ func NewCommandLine(prompt string) *CommandLine {
 	// Leaving vtui's own trigger on would open the menu from inside
 	// Edit.ProcessKey, one call before any of that is consulted.
 	cl.Edit.NoAutoComplete = true
-	cl.Edit.ColorTextIdx = ColCommandLineText
-	cl.Edit.ColorUnchangedIdx = ColCommandLineText
-	cl.Edit.ColorSelectedIdx = ColCommandLineSelectedText
+	cl.Edit.ColorTextIdx = theme.ColCommandLineText
+	cl.Edit.ColorUnchangedIdx = theme.ColCommandLineText
+	cl.Edit.ColorSelectedIdx = theme.ColCommandLineSelectedText
 	cl.Edit.SetCanFocus(true)
 	cl.SetFocus(true)   // Ensure cursor is active from the start
 	cl.SetVisible(true) // Set visible by default so it can process keys in tests before the first render!
@@ -88,7 +89,7 @@ func (cl *CommandLine) DisplayObject(scr *vtui.ScreenBuf) {
 	if len(cl.RichPrompt) > 0 {
 		scr.Write(cl.X1, cl.Y1, cl.RichPrompt)
 	} else if cl.Prompt != "" {
-		scr.Write(cl.X1, cl.Y1, vtui.StringToCharInfo(cl.Prompt, vtui.Palette[ColCommandLinePrompt]))
+		scr.Write(cl.X1, cl.Y1, vtui.StringToCharInfo(cl.Prompt, vtui.Palette[theme.ColCommandLinePrompt]))
 	}
 
 	// 2. Draw Edit (input field)

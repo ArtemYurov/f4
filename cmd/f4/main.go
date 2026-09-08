@@ -18,6 +18,7 @@ import (
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -759,7 +760,7 @@ func SetupUI() {
 	vtui.ConfigDiskLogging(os.Getenv("VTUI_DEBUG") != "")
 	vtui.DebugLog("=== F4 STARTUP [%s] PID:%d ===", getFormattedVersionInfo(), os.Getpid())
 
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	config.LoadConfig()
 	config.ApplyWheelSettings()
 	vtui.PathHintProvider = pathHintProvider
@@ -772,10 +773,10 @@ func SetupUI() {
 	vtui.FrameManager.ConfigureWorkspaceTabOverlay(config.App.WorkspaceTabsOverlay)
 	vtui.FrameManager.ConfigureWorkspaceAltNumberSwitch(config.App.AltNumberSwitchesTabs)
 	initLang()
-	if err := ApplyColorStyle(config.App.ColorStyle); err != nil {
+	if err := theme.ApplyColorStyle(config.App.ColorStyle); err != nil {
 		vtui.DebugLog("COLORS: %v; falling back to Modern", err)
 		config.App.ColorStyle = "Modern"
-		_ = ApplyColorStyle(config.App.ColorStyle)
+		_ = theme.ApplyColorStyle(config.App.ColorStyle)
 	}
 	vtui.GlobalHistoryProvider = history.NewF4HistoryProvider(config.GetF4ConfigDir())
 	history.SamePath = sameFolderHistoryPath
@@ -797,7 +798,7 @@ func SetupUI() {
 	}
 	if _, err := os.Stat(highlightPath); err == nil {
 		highlightIni := ini.Load(highlightPath)
-		GlobalFileHighlighter.LoadFromIni(highlightIni)
+		theme.GlobalFileHighlighter.LoadFromIni(highlightIni)
 		// Sort groups share the file (and the rule syntax) with highlighting,
 		// the way far keeps both in one dialog. Themes may not define them.
 		GlobalSortGroups.LoadFromIni(highlightIni)

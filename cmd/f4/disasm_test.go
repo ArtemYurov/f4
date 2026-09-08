@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/piecetable"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -187,7 +188,7 @@ func TestEditorView_DecodeStepSeesTheLastBytes(t *testing.T) {
 func TestViewerView_DisasmMode_PageDownWalksTheSelectedMode(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	tmpDir := t.TempDir()
 	tmp := filepath.Join(tmpDir, "code.bin")
 	// The zero tail is what makes the file binary to the viewer; text goes

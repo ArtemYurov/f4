@@ -8,6 +8,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ini"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -195,7 +196,7 @@ func TestPathHintItems_HighlightMarker(t *testing.T) {
 	config.App.ShowHighlightMarks = true
 
 	ini := ini.Parse(strings.NewReader("[Highlight_0]\nMask = *.exe\nMark = !\n"))
-	GlobalFileHighlighter.LoadFromIni(ini)
+	theme.GlobalFileHighlighter.LoadFromIni(ini)
 
 	dirPart := dir + string(filepath.Separator)
 	items := pathHintItems(v, dirPart+"bet", 0, 0)
@@ -222,7 +223,7 @@ func TestPathHintItems_HighlightMarker(t *testing.T) {
 
 func TestPathHintProvider_BothPanels(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	dirA := t.TempDir() // active panel
 	dirB := t.TempDir() // passive panel
@@ -285,7 +286,7 @@ func TestPathHintProvider_BothPanels(t *testing.T) {
 
 func TestPathHintProvider_DisabledWhenCommandLineAutoCompleteOff(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	dir := t.TempDir()
 	if err := os.Mkdir(filepath.Join(dir, "sub"), 0700); err != nil {

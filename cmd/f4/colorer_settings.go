@@ -5,6 +5,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtui"
 )
 
@@ -76,7 +77,7 @@ func EditorCrossAttrs() (horz, vert bool, horzAttr, vertAttr uint64) {
 	if !horz && !vert {
 		return false, false, 0, 0
 	}
-	base := vtui.Palette[ColEditorCrosshair]
+	base := vtui.Palette[theme.ColEditorCrosshair]
 	return horz, vert,
 		colorerCrossAttr(colorerHorzCrossRegion, base),
 		colorerCrossAttr(colorerVertCrossRegion, base)

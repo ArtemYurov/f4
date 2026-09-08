@@ -35,6 +35,13 @@ var architectureLayers = map[string]int{
 	// Checked conversions, shared by seven packages. Zero imports of ours.
 	"internal/numeric": 0,
 
+	// Colours, colour space maths, the styles/ that ship with f4, and the rules
+	// that colour a file by its name. It reads internal/config the way any
+	// package may — 0 to 0 is not an upward import — because eight settings
+	// steer it and threading eight parameters through a colour table buys
+	// nothing.
+	"internal/theme": 0,
+
 	// The string table and the language packs, with lang/ embedded beside them.
 	// It takes the two configured languages and the profile directory as
 	// arguments rather than importing internal/config: netfox's own test

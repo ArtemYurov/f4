@@ -5,6 +5,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/piecetable"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtui"
 )
 
@@ -13,7 +14,7 @@ import (
 func occurrenceEditor(t *testing.T, text string) (*EditorView, *vtui.ScreenBuf) {
 	t.Helper()
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	ev := NewEditorView(piecetable.New([]byte(text)), nil, "test.txt")
 	t.Cleanup(ev.Close)
 	ev.SetPosition(0, 0, 80, 12)
@@ -43,7 +44,7 @@ func TestEditor_OccurrenceHighlight_MarksOtherMatches(t *testing.T) {
 	selectRange(ev, 0, 3)
 	ev.Show(scr)
 
-	occAttr := vtui.Palette[ColEditorOccurrence]
+	occAttr := vtui.Palette[theme.ColEditorOccurrence]
 	occBG := vtui.GetRGBBack(occAttr)
 
 	for x := 0; x < 3; x++ {
@@ -81,7 +82,7 @@ func TestEditor_OccurrenceHighlight_ClearsWithSelection(t *testing.T) {
 	selectRange(ev, 0, 3)
 	ev.Show(scr)
 
-	occBG := vtui.GetRGBBack(vtui.Palette[ColEditorOccurrence])
+	occBG := vtui.GetRGBBack(vtui.Palette[theme.ColEditorOccurrence])
 	if got := vtui.GetRGBBack(scr.GetCell(0, 2).Attributes); got != occBG {
 		t.Fatalf("second line was not marked while selected: %06X", got)
 	}
@@ -102,7 +103,7 @@ func TestEditor_OccurrenceHighlight_RespectsSetting(t *testing.T) {
 	selectRange(ev, 0, 3)
 	ev.Show(scr)
 
-	occBG := vtui.GetRGBBack(vtui.Palette[ColEditorOccurrence])
+	occBG := vtui.GetRGBBack(vtui.Palette[theme.ColEditorOccurrence])
 	if got := vtui.GetRGBBack(scr.GetCell(0, 2).Attributes); got == occBG {
 		t.Error("occurrences were marked while the setting was off")
 	}
@@ -204,16 +205,16 @@ func TestEditor_OccurrenceSpans_AcrossWrappedRows(t *testing.T) {
 }
 
 func TestEditor_OccurrenceHighlight_HasDedicatedPaletteSlot(t *testing.T) {
-	SetDefaultF4Palette()
-	if vtui.Palette[ColEditorOccurrence] == vtui.Palette[ColEditorText] {
+	theme.SetDefaultF4Palette()
+	if vtui.Palette[theme.ColEditorOccurrence] == vtui.Palette[theme.ColEditorText] {
 		t.Error("occurrence colour is indistinguishable from ordinary editor text")
 	}
-	if vtui.Palette[ColEditorOccurrence] == vtui.Palette[vtui.ColDialogEditSelected] {
+	if vtui.Palette[theme.ColEditorOccurrence] == vtui.Palette[vtui.ColDialogEditSelected] {
 		t.Error("occurrence colour is indistinguishable from the selection")
 	}
 	found := false
-	for _, slot := range ColorSlots {
-		if slot.Index == ColEditorOccurrence {
+	for _, slot := range theme.ColorSlots {
+		if slot.Index == theme.ColEditorOccurrence {
 			found = true
 			if slot.Canonical != "Editor.Occurrence" {
 				t.Errorf("occurrence colour slot is named %q", slot.Canonical)

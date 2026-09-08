@@ -15,6 +15,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/plugins/cloudfox"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -59,7 +60,7 @@ func TestRealSavedCloudLargeF5RoundTrip(t *testing.T) {
 	}
 
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	originalConfig := config.App
 	t.Cleanup(func() { config.App = originalConfig })
 	config.App.ConfirmCopy = false

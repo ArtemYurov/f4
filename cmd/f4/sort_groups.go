@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/ini"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
 )
 
@@ -21,7 +22,7 @@ const defaultSortGroupOrder = 10000
 type SortGroupRule struct {
 	Name   string
 	Order  int
-	Filter HighlightRule
+	Filter theme.HighlightRule
 }
 
 // SortGroupSet holds the configured groups in the order they must appear on
@@ -72,7 +73,7 @@ func (s *SortGroupSet) GroupOf(item *vfs.VFSItem) int {
 // the default order, so the plain case — SortGroup_1, SortGroup_2, … — needs no
 // Group key at all.
 func parseSortGroups(ini *ini.File) []SortGroupRule {
-	sections := parseRuleSections(ini, "sortgroup_")
+	sections := theme.ParseRuleSections(ini, "sortgroup_")
 	groups := make([]SortGroupRule, 0, len(sections))
 	for i, section := range sections {
 		group := SortGroupRule{

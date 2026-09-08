@@ -29,6 +29,7 @@ import (
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/textlayout"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -508,7 +509,7 @@ func newEditorView(pt *piecetable.PieceTable, v vfs.VFS, path string, useEditorC
 	}
 	vtui.DebugLog("EDITOR_INIT: Path=%q, Highlighter=%T", path, ev.highlighter)
 	ev.scrollBar = vtui.NewScrollBar(0, 0, 0)
-	ev.scrollBar.ColorIdx = ColEditorScrollbar
+	ev.scrollBar.ColorIdx = theme.ColEditorScrollbar
 	ev.scrollBar.SetOwner(ev)
 	ev.scrollBar.OnScroll = func(v int) {
 		if ev.HexMode || ev.DecodeMode {
@@ -551,7 +552,7 @@ func newEditorView(pt *piecetable.PieceTable, v vfs.VFS, path string, useEditorC
 		},
 		func() string { return ev.editorStatusText() },
 	)
-	ev.topBar.ColorIdx = ColEditorStatus
+	ev.topBar.ColorIdx = theme.ColEditorStatus
 	ev.topBar.SetVisible(true)
 	ev.SetCanFocus(true)
 	ev.SetFocus(true)
@@ -937,7 +938,7 @@ func (ev *EditorView) startHighlighting() {
 			})
 		}()
 
-		bgAttr := ColorerEditorBaseAttr(vtui.Palette[ColEditorText])
+		bgAttr := ColorerEditorBaseAttr(vtui.Palette[theme.ColEditorText])
 
 		startedAt := time.Now()
 		walked := 0
@@ -1038,8 +1039,8 @@ func (ev *EditorView) updateDesiredVisualCol() {
 	ev.DesiredVisualCol = vCol + ev.CursorVirtualSpaces
 }
 func (ev *EditorView) renderHex(scr *vtui.ScreenBuf, width, contentHeight int) {
-	bgAttr := ColorerEditorBaseAttr(vtui.Palette[ColEditorText])
-	offAttr := vtui.Palette[ColEditorStatus]
+	bgAttr := ColorerEditorBaseAttr(vtui.Palette[theme.ColEditorText])
+	offAttr := vtui.Palette[theme.ColEditorStatus]
 	currOffset := ev.HexTopOffset
 	absPos := ev.li.GetLineOffset(ev.CursorLine) + ev.CursorPos
 
@@ -1119,8 +1120,8 @@ func (ev *EditorView) renderHex(scr *vtui.ScreenBuf, width, contentHeight int) {
 	}
 }
 func (ev *EditorView) renderDecode(scr *vtui.ScreenBuf, width, contentHeight int) {
-	bgAttr := ColorerEditorBaseAttr(vtui.Palette[ColEditorText])
-	offAttr := vtui.Palette[ColEditorStatus]
+	bgAttr := ColorerEditorBaseAttr(vtui.Palette[theme.ColEditorText])
+	offAttr := vtui.Palette[theme.ColEditorStatus]
 	currOffset := ev.HexTopOffset
 	absPos := int(ev.li.GetLineOffset(ev.CursorLine) + ev.CursorPos)
 
@@ -1484,7 +1485,7 @@ func (ev *EditorView) DisplayObject(scr *vtui.ScreenBuf) {
 		width--
 	}
 
-	bgAttr := ColorerEditorBaseAttr(vtui.Palette[ColEditorText])
+	bgAttr := ColorerEditorBaseAttr(vtui.Palette[theme.ColEditorText])
 	selAttr := vtui.Palette[vtui.ColDialogEditSelected]
 
 	if ev.saving {
@@ -1809,7 +1810,7 @@ DoneRendering:
 			// Draw if visible
 			if drawY >= ev.Y1+1 && drawY <= ev.Y2 {
 				// We use DimColor of the standard text to make it look like a ghost suggestion
-				ghostAttr := vtui.DimColor(vtui.Palette[ColCommandLineUserScreen])
+				ghostAttr := vtui.DimColor(vtui.Palette[theme.ColCommandLineUserScreen])
 				// Ensure it doesn't leak out of the editor frame
 				maxLen := ev.X2 - drawX
 				if ev.scrollBar != nil {
@@ -2737,7 +2738,7 @@ func (ev *EditorView) fillCellsWithLinks(target []vtui.CharInfo, data []byte, de
 	// grown to the f4 slots.
 	var occAttr uint64
 	if len(ev.occSpans) > 0 {
-		occAttr = vtui.Palette[ColEditorOccurrence]
+		occAttr = vtui.Palette[theme.ColEditorOccurrence]
 	}
 
 	for _, cluster := range clusters {

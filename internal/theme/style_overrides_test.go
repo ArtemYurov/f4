@@ -1,4 +1,4 @@
-package main
+package theme
 
 import (
 	"os"
@@ -17,9 +17,9 @@ func withOverrides(t *testing.T, body string) {
 			t.Fatalf("write overrides: %v", err)
 		}
 	}
-	old := userColorOverridesPath
-	userColorOverridesPath = func() string { return filepath.Join(dir, "farcolors.ini") }
-	t.Cleanup(func() { userColorOverridesPath = old })
+	old := UserColorOverridesPath
+	UserColorOverridesPath = func() string { return filepath.Join(dir, "farcolors.ini") }
+	t.Cleanup(func() { UserColorOverridesPath = old })
 
 	oldCfg := config.App
 	config.App.EnforceColorCorrection = false

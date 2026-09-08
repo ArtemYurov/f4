@@ -9,6 +9,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/internal/vtvibe"
 	"github.com/unxed/vtinput"
@@ -48,10 +49,10 @@ func NewAIChatPanel(src *FileSystemPanel) *AIChatPanel {
 		input:          vtui.NewMultiLineEdit(0, 0, 10, 3, ""),
 		focusedLinkIdx: -1,
 	}
-	cp.frame.ColorBoxIdx = ColPanelBox
-	cp.frame.ColorTitleIdx = ColPanelTitle
-	cp.frame.ColorBackgroundIdx = ColPanelText
-	cp.input.ColorTextIdx = ColPanelText
+	cp.frame.ColorBoxIdx = theme.ColPanelBox
+	cp.frame.ColorTitleIdx = theme.ColPanelTitle
+	cp.frame.ColorBackgroundIdx = theme.ColPanelText
+	cp.input.ColorTextIdx = theme.ColPanelText
 	cp.SetPosition(x1, y1, x2, y2)
 	return cp
 }
@@ -109,9 +110,9 @@ func (cp *AIChatPanel) IsFocused() bool          { return cp.focused }
 func (cp *AIChatPanel) SetFocus(f bool) {
 	cp.focused = f
 	if f {
-		cp.frame.ColorTitleIdx = ColPanelSelectedTitle
+		cp.frame.ColorTitleIdx = theme.ColPanelSelectedTitle
 	} else {
-		cp.frame.ColorTitleIdx = ColPanelTitle
+		cp.frame.ColorTitleIdx = theme.ColPanelTitle
 	}
 	if f && cp.focusedLinkIdx == -1 {
 		cp.input.SetFocus(true)
@@ -442,13 +443,13 @@ func (cp *AIChatPanel) updateLines() {
 	}
 	turns := session.Turns()
 
-	attr := vtui.Palette[ColPanelText]
-	headerAttr := vtui.Palette[ColPanelTitle]
+	attr := vtui.Palette[theme.ColPanelText]
+	headerAttr := vtui.Palette[theme.ColPanelTitle]
 	linkAttr := vtui.Palette[vtui.ColMenuHighlight]
 
 	highlighter := vtui.GetHighlighter("chat.md", "")
 	var hlState any
-	bgAttr := vtui.Palette[ColPanelText]
+	bgAttr := vtui.Palette[theme.ColPanelText]
 
 	appendWrapped := func(runes []rune, attrs []uint64, targets []string) {
 		col := 0
@@ -575,7 +576,7 @@ func (cp *AIChatPanel) updateLines() {
 				if i < len(fullSyntax) {
 					curAttr = fullSyntax[i]
 					// If Colorer applied default bg, ensure it blends with panel text bg
-					if curAttr&vtui.IsBgRGB == 0 && vtui.GetIndexBack(curAttr) == vtui.GetIndexBack(vtui.Palette[ColEditorText]) {
+					if curAttr&vtui.IsBgRGB == 0 && vtui.GetIndexBack(curAttr) == vtui.GetIndexBack(vtui.Palette[theme.ColEditorText]) {
 						curAttr = vtui.SetIndexBack(curAttr, vtui.GetIndexBack(attr))
 					}
 				}
@@ -632,7 +633,7 @@ func (cp *AIChatPanel) Show(scr *vtui.ScreenBuf) {
 	x1, y1 := cp.X1+1, cp.Y1+1
 	x2 := cp.X2 - 1
 
-	attrBox := vtui.Palette[ColPanelBox]
+	attrBox := vtui.Palette[theme.ColPanelBox]
 	vtui.NewPainter(scr).DrawLine(cp.X1+1, cp.input.Y1-1, cp.X2-1, cp.input.Y1-1, '─', attrBox, false, false)
 	scr.Write(cp.X1, cp.input.Y1-1, vtui.StringToCharInfo("├", attrBox))
 	scr.Write(cp.X2, cp.input.Y1-1, vtui.StringToCharInfo("┤", attrBox))
@@ -647,9 +648,9 @@ func (cp *AIChatPanel) Show(scr *vtui.ScreenBuf) {
 		label = formatApplyPatchLabel(session.LastPatch(), availW)
 	}
 	if label != "" {
-		attr := vtui.Palette[ColPanelHighlightText]
+		attr := vtui.Palette[theme.ColPanelHighlightText]
 		if cp.focused && cp.focusedLinkIdx == -2 {
-			attr = vtui.Palette[ColPanelCursor]
+			attr = vtui.Palette[theme.ColPanelCursor]
 		}
 		vtui.NewPainter(scr).DrawString(cp.X1+2, cp.input.Y1-1, label, attr)
 	}
@@ -672,7 +673,7 @@ func (cp *AIChatPanel) Show(scr *vtui.ScreenBuf) {
 			}
 			line := cp.lines[idx]
 
-			vtui.NewPainter(scr).Fill(x1, y1+i, x2, y1+i, ' ', vtui.Palette[ColPanelText])
+			vtui.NewPainter(scr).Fill(x1, y1+i, x2, y1+i, ' ', vtui.Palette[theme.ColPanelText])
 
 			col := 0
 			for j := 0; j < len(line.cells); j++ {
@@ -682,7 +683,7 @@ func (cp *AIChatPanel) Show(scr *vtui.ScreenBuf) {
 					startCol := col
 					for j < len(line.cells) && line.targets[j] == target {
 						if cp.focused && cp.focusedLinkIdx == len(cp.visibleLinks) {
-							line.cells[j].Attributes = vtui.SetIndexBack(line.cells[j].Attributes, vtui.GetIndexBack(vtui.Palette[ColPanelCursor]))
+							line.cells[j].Attributes = vtui.SetIndexBack(line.cells[j].Attributes, vtui.GetIndexBack(vtui.Palette[theme.ColPanelCursor]))
 						}
 						j++
 						col++

@@ -5,6 +5,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 	"github.com/rivo/uniseg"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtui"
 )
 
@@ -23,7 +24,7 @@ type TopBar struct {
 }
 
 func NewTopBar(getLeft, getRight func() string) *TopBar {
-	return &TopBar{GetLeft: getLeft, GetRight: getRight, ColorIdx: ColViewerStatus}
+	return &TopBar{GetLeft: getLeft, GetRight: getRight, ColorIdx: theme.ColViewerStatus}
 }
 
 func (tb *TopBar) Show(scr *vtui.ScreenBuf) {

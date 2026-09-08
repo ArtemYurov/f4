@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -94,7 +95,7 @@ func TestTerminalURLHoverUnderlinesVisibleLink(t *testing.T) {
 	}
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(40, 3)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	tv.Show(scr)
 	if scr.GetCell(4, 0).Attributes&vtui.CommonLvbUnderscore == 0 {
 		t.Fatal("hovered terminal URL was not underlined")

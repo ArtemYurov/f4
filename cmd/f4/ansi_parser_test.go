@@ -11,12 +11,13 @@ import (
 
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtui"
 )
 
 func init() {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 }
 
 // mockPty captures writes to the PTY for testing parser responses

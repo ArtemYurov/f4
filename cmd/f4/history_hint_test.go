@@ -11,6 +11,7 @@ import (
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -186,7 +187,7 @@ func (s stubHistoryProvider) SaveHistory(name string, h []string) {
 // clipboard. Same VMenu key path also handles Ctrl+C.
 func TestActionCommandHistory_CtrlIns_CopiesToClipboard(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	pf := NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
@@ -218,7 +219,7 @@ func TestActionCommandHistory_CtrlIns_CopiesToClipboard(t *testing.T) {
 // shortcut: prompt, then wipe the whole history and close the menu.
 func TestActionCommandHistory_Del_ClearsAllAfterConfirm(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	pf := NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
@@ -258,7 +259,7 @@ func TestActionCommandHistory_Del_ClearsAllAfterConfirm(t *testing.T) {
 // path silently wiping the history when the user says Cancel.
 func TestActionCommandHistory_Del_CancelKeepsHistory(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	pf := NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
@@ -295,7 +296,7 @@ func initHistoryTestScreen(_ *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(120, 40)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 }
 
 // TestActionCommandHistory_HelpTopic pins the F1 help topic name so
@@ -585,7 +586,7 @@ func TestHistorySearch_KeepsPainterAcrossModalOverlay(t *testing.T) {
 // paths that still exist on disk.
 func TestActionFoldersHistory_CtrlR_DropsMissingPaths(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	pf := NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)

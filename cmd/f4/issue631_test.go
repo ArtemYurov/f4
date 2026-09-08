@@ -5,6 +5,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtui"
 )
 
@@ -13,7 +14,7 @@ func TestIssue631TrashSettingIsInPanelSettings(t *testing.T) {
 	defer func() { config.App = oldConfig }()
 
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	config.App.UseTrash = true
 	pf := NewPanelsFrame()

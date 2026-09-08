@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -33,7 +34,7 @@ func TestHostConsole_Transitions(t *testing.T) {
 	scr.Writer = &out
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -129,7 +130,7 @@ func TestHostConsole_PanelToggleAction(t *testing.T) {
 	scr.Writer = &out
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()

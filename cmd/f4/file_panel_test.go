@@ -9,6 +9,7 @@ import (
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -67,10 +68,10 @@ func TestFileEntry_GetCellText(t *testing.T) {
 
 func TestFileEntry_HighlightDir(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
-	oldRules := GlobalFileHighlighter.Rules
-	defer func() { GlobalFileHighlighter.Rules = oldRules }()
+	oldRules := theme.GlobalFileHighlighter.Rules
+	defer func() { theme.GlobalFileHighlighter.Rules = oldRules }()
 
 	// Load default rules
 	iniData := `[Highlight_0]
@@ -80,7 +81,7 @@ Mark = /
 NormalColor = foreground:#FFFFFF
 `
 	ini := ini.Parse(strings.NewReader(iniData))
-	GlobalFileHighlighter.LoadFromIni(ini)
+	theme.GlobalFileHighlighter.LoadFromIni(ini)
 
 	dir := &fileEntry{VFSItem: vfs.VFSItem{Name: "work", IsDir: true}}
 
@@ -100,7 +101,7 @@ NormalColor = foreground:#FFFFFF
 		t.Errorf("Expected dir name with '/' prefix, got %q, want %q", got, want)
 	}
 
-	// Color should match ColPanelText (since foreground:#FFFFFF resolves to truecolor or index, but we just want a non-zero attribute)
+	// Color should match theme.ColPanelText (since foreground:#FFFFFF resolves to truecolor or index, but we just want a non-zero attribute)
 	if attr := dir.GetCellAttr(0, 0); attr == 0 {
 		t.Error("Expected highlighted attribute for directory")
 	}
@@ -679,7 +680,7 @@ func TestFileSystemPanel_SelectedInfo(t *testing.T) {
 	config.App.ShowPanelFileInfo = true
 
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
@@ -705,11 +706,11 @@ func TestFileSystemPanel_SelectedInfo(t *testing.T) {
 	// separator above it (#394) while the panel total keeps the bottom
 	// border, so the two never overlap.
 	cell := scr.GetCell(40, 21)
-	if cell.Attributes != vtui.Palette[ColPanelSelectedInfo] {
-		t.Errorf("Expected Selected Info color %X, got %X", vtui.Palette[ColPanelSelectedInfo], cell.Attributes)
+	if cell.Attributes != vtui.Palette[theme.ColPanelSelectedInfo] {
+		t.Errorf("Expected Selected Info color %X, got %X", vtui.Palette[theme.ColPanelSelectedInfo], cell.Attributes)
 	}
-	if cell = scr.GetCell(40, 23); cell.Attributes != vtui.Palette[ColPanelTotalInfo] {
-		t.Errorf("Expected Total Info color %X on the bottom border, got %X", vtui.Palette[ColPanelTotalInfo], cell.Attributes)
+	if cell = scr.GetCell(40, 23); cell.Attributes != vtui.Palette[theme.ColPanelTotalInfo] {
+		t.Errorf("Expected Total Info color %X on the bottom border, got %X", vtui.Palette[theme.ColPanelTotalInfo], cell.Attributes)
 	}
 
 	var sb strings.Builder
@@ -761,14 +762,14 @@ func TestFileSystemPanel_SelectedInfo(t *testing.T) {
 	config.App.ShowPanelFileInfo = false
 	fp.SetPosition(0, 0, 79, 23)
 	fp.Show(scr)
-	if cell = scr.GetCell(40, 23); cell.Attributes != vtui.Palette[ColPanelSelectedInfo] {
+	if cell = scr.GetCell(40, 23); cell.Attributes != vtui.Palette[theme.ColPanelSelectedInfo] {
 		t.Errorf("selected summary disappeared with file info hidden: got color %X", cell.Attributes)
 	}
 	if cell = scr.GetCell(0, 21); cell.Char == '├' {
 		t.Error("file-information separator remained visible when the option was disabled")
 	}
 
-	// Clear selection to check ColPanelTotalInfo
+	// Clear selection to check theme.ColPanelTotalInfo
 	for _, e := range fp.entries {
 		e.Selected = false
 	}
@@ -777,22 +778,22 @@ func TestFileSystemPanel_SelectedInfo(t *testing.T) {
 	fp.Show(scr)
 
 	cell = scr.GetCell(40, 23)
-	if cell.Attributes != vtui.Palette[ColPanelTotalInfo] {
-		t.Errorf("Expected Total Info color %X, got %X", vtui.Palette[ColPanelTotalInfo], cell.Attributes)
+	if cell.Attributes != vtui.Palette[theme.ColPanelTotalInfo] {
+		t.Errorf("Expected Total Info color %X, got %X", vtui.Palette[theme.ColPanelTotalInfo], cell.Attributes)
 	}
 }
 
 func TestFileSystemPanel_HiddenInfoShowsCursorFileSizeOnMulticolumnBorder(t *testing.T) {
 	oldCfg := config.App
-	oldColor := vtui.Palette[ColPanelText]
+	oldColor := vtui.Palette[theme.ColPanelText]
 	defer func() {
 		config.App = oldCfg
-		vtui.Palette[ColPanelText] = oldColor
+		vtui.Palette[theme.ColPanelText] = oldColor
 	}()
 	config.App.ShowPanelFileInfo = false
 
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 12)
 	vtui.FrameManager.Init(scr)
@@ -825,7 +826,7 @@ func TestFileSystemPanel_HiddenInfoShowsCursorFileSizeOnMulticolumnBorder(t *tes
 	}
 
 	const themedAttr uint64 = 0x123456789ABCDEF0
-	vtui.Palette[ColPanelText] = themedAttr
+	vtui.Palette[theme.ColPanelText] = themedAttr
 	fp.Show(scr)
 
 	if got := rowText(1, fp.Y2, 13); got != " ▸ 1 234 567 " {
@@ -1628,7 +1629,7 @@ func TestPanelFileNameMatchSpans_Anywhere(t *testing.T) {
 
 func TestFileSystemPanel_DrawFastFindMatches(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	oldCfg := config.App
 	defer func() { config.App = oldCfg }()
 	config.App.SeparateFileExtensions = false
@@ -1655,7 +1656,7 @@ func TestFileSystemPanel_DrawFastFindMatches(t *testing.T) {
 	beforeNonMatch := scr.GetCell(fp.table.X1, y+1).Attributes
 
 	fp.drawFastFindMatches(scr)
-	matchColor := vtui.GetRGBFore(vtui.Palette[ColPanelHighlightText])
+	matchColor := vtui.GetRGBFore(vtui.Palette[theme.ColPanelHighlightText])
 	for _, row := range []int{0, 2} {
 		for x := 0; x < 3; x++ {
 			cell := scr.GetCell(fp.table.X1+x, y+row)
@@ -1675,7 +1676,7 @@ func TestFileSystemPanel_DrawFastFindMatches(t *testing.T) {
 
 func TestFileSystemPanel_DrawFastFindMatchesInEveryGridColumn(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	oldCfg := config.App
 	defer func() { config.App = oldCfg }()
 	config.App.SeparateFileExtensions = false
@@ -1702,7 +1703,7 @@ func TestFileSystemPanel_DrawFastFindMatchesInEveryGridColumn(t *testing.T) {
 		scr.AllocBuf(60, 12)
 		fp.table.Show(scr)
 		fp.drawFastFindMatches(scr)
-		wantForeground := vtui.GetRGBFore(vtui.Palette[ColPanelHighlightText])
+		wantForeground := vtui.GetRGBFore(vtui.Palette[theme.ColPanelHighlightText])
 		x := fp.table.X1
 		y := fp.table.Y1 + fp.table.MarginTop
 		for column, tableColumn := range fp.table.Columns {
@@ -1835,7 +1836,7 @@ func TestFileSystemPanel_ScrollBarMetricsAllViewModes(t *testing.T) {
 
 func TestFileSystemPanel_ScrollBarDrawAndMouse(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	oldCfg := config.App
 	defer func() { config.App = oldCfg }()
 	config.App.PanelScrollbarMode = config.PanelScrollbarFull
@@ -1852,8 +1853,8 @@ func TestFileSystemPanel_ScrollBarDrawAndMouse(t *testing.T) {
 	fp.drawScrollBar(scr)
 	if got := scr.GetCell(fp.X2, fp.scrollBar.Y1); got.Char != vtui.ScrollUpArrow {
 		t.Fatalf("scrollbar top cell = %q, want %q", testutil.Rune(got.Char), testutil.Rune(vtui.ScrollUpArrow))
-	} else if got.Attributes != vtui.Palette[ColPanelScrollbar] {
-		t.Fatalf("scrollbar attr = %#x, want Panel.Scrollbar %#x", got.Attributes, vtui.Palette[ColPanelScrollbar])
+	} else if got.Attributes != vtui.Palette[theme.ColPanelScrollbar] {
+		t.Fatalf("scrollbar attr = %#x, want Panel.Scrollbar %#x", got.Attributes, vtui.Palette[theme.ColPanelScrollbar])
 	}
 
 	// The down arrow scrolls one item while keeping the cursor on the same
@@ -1969,7 +1970,7 @@ func TestMinimalPanelScrollThumbUsesWholeHeight(t *testing.T) {
 
 func TestFileSystemPanel_MinimalScrollBarDrawAndMouse(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	oldCfg := config.App
 	defer func() { config.App = oldCfg }()
 	config.App.PanelScrollbarMode = config.PanelScrollbarMinimal
@@ -1988,7 +1989,7 @@ func TestFileSystemPanel_MinimalScrollBarDrawAndMouse(t *testing.T) {
 		cell := scr.GetCell(fp.scrollBar.X1, fp.scrollBar.Y1+offset)
 		inHandle := offset >= caretPos && offset < caretPos+caretLength
 		if inHandle {
-			if cell.Char != '│' || cell.Attributes != vtui.Palette[ColPanelMinimalScrollbar] {
+			if cell.Char != '│' || cell.Attributes != vtui.Palette[theme.ColPanelMinimalScrollbar] {
 				t.Fatalf("minimal handle cell %d = %q/%#x, want bright border", offset, testutil.Rune(cell.Char), cell.Attributes)
 			}
 		} else if cell.Char != 0 {
@@ -2058,7 +2059,7 @@ func TestFileSystemPanel_SingleRowColumnsFillPanelWidth(t *testing.T) {
 
 func TestFileSystemPanel_CursorColorsColumnSeparators(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	for _, tc := range []struct {
 		name    string
@@ -2078,12 +2079,12 @@ func TestFileSystemPanel_CursorColorsColumnSeparators(t *testing.T) {
 			fp := newPanelScrollTestFixture(tc.mode, 1)
 			fp.entries[0].Selected = true
 			fp.table.Columns = tc.columns
-			fp.table.ColorTextIdx = ColPanelText
-			fp.table.ColorSelectedTextIdx = ColPanelCursor
-			fp.table.ColorItemSelectTextIdx = ColPanelSelectedText
-			fp.table.ColorItemSelectCursorIdx = ColPanelSelectedCursor
-			fp.table.ColorTitleIdx = ColPanelColumnTitle
-			fp.table.ColorBoxIdx = ColPanelBox
+			fp.table.ColorTextIdx = theme.ColPanelText
+			fp.table.ColorSelectedTextIdx = theme.ColPanelCursor
+			fp.table.ColorItemSelectTextIdx = theme.ColPanelSelectedText
+			fp.table.ColorItemSelectCursorIdx = theme.ColPanelSelectedCursor
+			fp.table.ColorTitleIdx = theme.ColPanelColumnTitle
+			fp.table.ColorBoxIdx = theme.ColPanelBox
 			fp.Refresh()
 			fp.table.SetFocus(true)
 
@@ -2100,8 +2101,8 @@ func TestFileSystemPanel_CursorColorsColumnSeparators(t *testing.T) {
 				if cell.Char != '│' {
 					t.Fatalf("separator %d char = %q, want │", column, testutil.Rune(cell.Char))
 				}
-				boxAttr := vtui.Palette[ColPanelBox]
-				cursorAttr := vtui.Palette[ColPanelSelectedCursor]
+				boxAttr := vtui.Palette[theme.ColPanelBox]
+				cursorAttr := vtui.Palette[theme.ColPanelSelectedCursor]
 				if cell.Attributes&vtui.IsFgRGB != boxAttr&vtui.IsFgRGB ||
 					vtui.GetRGBFore(cell.Attributes) != vtui.GetRGBFore(boxAttr) {
 					t.Fatalf("separator %d foreground = %#x, want Panel.Box foreground %#x",
@@ -2753,7 +2754,7 @@ func TestFileSystemPanel_FastFind(t *testing.T) {
 }
 func TestFileSystemPanel_FastFind_Rendering(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
@@ -2815,7 +2816,7 @@ func TestFileSystemPanel_FastFind_Rendering(t *testing.T) {
 	fp.fastFindStr = "missing"
 	fp.Show(scr)
 	missingAttr := scr.GetCell(inputX, inputY).Attributes
-	if got, want := vtui.GetRGBFore(missingAttr), vtui.GetRGBFore(vtui.Palette[ColPanelFastFindNoMatch]); got != want {
+	if got, want := vtui.GetRGBFore(missingAttr), vtui.GetRGBFore(vtui.Palette[theme.ColPanelFastFindNoMatch]); got != want {
 		t.Fatalf("missing query foreground = %#06x, want %#06x", got, want)
 	}
 	if got, want := vtui.GetRGBBack(missingAttr), vtui.GetRGBBack(vtui.Palette[vtui.ColDialogText]); got != want {
@@ -3232,25 +3233,25 @@ func TestFileSystemPanel_CurrentTitleKeepsTheSameColorWhenFocused(t *testing.T) 
 
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
-	oldTitle := vtui.Palette[ColPanelTitle]
-	oldSelectedTitle := vtui.Palette[ColPanelSelectedTitle]
+	oldTitle := vtui.Palette[theme.ColPanelTitle]
+	oldSelectedTitle := vtui.Palette[theme.ColPanelSelectedTitle]
 	defer func() {
-		vtui.Palette[ColPanelTitle] = oldTitle
-		vtui.Palette[ColPanelSelectedTitle] = oldSelectedTitle
+		vtui.Palette[theme.ColPanelTitle] = oldTitle
+		vtui.Palette[theme.ColPanelSelectedTitle] = oldSelectedTitle
 	}()
-	vtui.Palette[ColPanelTitle] = 0x1111
-	vtui.Palette[ColPanelSelectedTitle] = 0x2222
+	vtui.Palette[theme.ColPanelTitle] = 0x1111
+	vtui.Palette[theme.ColPanelSelectedTitle] = 0x2222
 
 	fp.SetFocus(false)
 	fp.Show(scr)
-	if got := scr.GetCell(3, 0).Attributes; got != vtui.Palette[ColPanelTitle] {
-		t.Fatalf("inactive title attributes = %#x; want %#x", got, vtui.Palette[ColPanelTitle])
+	if got := scr.GetCell(3, 0).Attributes; got != vtui.Palette[theme.ColPanelTitle] {
+		t.Fatalf("inactive title attributes = %#x; want %#x", got, vtui.Palette[theme.ColPanelTitle])
 	}
 
 	fp.SetFocus(true)
 	fp.Show(scr)
-	if got := scr.GetCell(3, 0).Attributes; got != vtui.Palette[ColPanelTitle] {
-		t.Fatalf("active title attributes = %#x; want %#x", got, vtui.Palette[ColPanelTitle])
+	if got := scr.GetCell(3, 0).Attributes; got != vtui.Palette[theme.ColPanelTitle] {
+		t.Fatalf("active title attributes = %#x; want %#x", got, vtui.Palette[theme.ColPanelTitle])
 	}
 
 	// Search-first keeps the current panel visually active while the command
@@ -3258,8 +3259,8 @@ func TestFileSystemPanel_CurrentTitleKeepsTheSameColorWhenFocused(t *testing.T) 
 	fp.SetFocus(false)
 	fp.showInactiveCursor = true
 	fp.Show(scr)
-	if got := scr.GetCell(3, 0).Attributes; got != vtui.Palette[ColPanelTitle] {
-		t.Fatalf("current title with command-line focus attributes = %#x; want %#x", got, vtui.Palette[ColPanelTitle])
+	if got := scr.GetCell(3, 0).Attributes; got != vtui.Palette[theme.ColPanelTitle] {
+		t.Fatalf("current title with command-line focus attributes = %#x; want %#x", got, vtui.Palette[theme.ColPanelTitle])
 	}
 }
 
@@ -4813,10 +4814,10 @@ func TestFileSystemPanel_PendingSelectionPriority(t *testing.T) {
 }
 func TestFileEntry_HighlightMarks(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
-	oldRules := GlobalFileHighlighter.Rules
-	defer func() { GlobalFileHighlighter.Rules = oldRules }()
+	oldRules := theme.GlobalFileHighlighter.Rules
+	defer func() { theme.GlobalFileHighlighter.Rules = oldRules }()
 
 	iniData := `[Highlight_0]
 Name = TestGo
@@ -4825,7 +4826,7 @@ Mark = •
 NormalColor = foreground:#00FF00
 `
 	ini := ini.Parse(strings.NewReader(iniData))
-	GlobalFileHighlighter.LoadFromIni(ini)
+	theme.GlobalFileHighlighter.LoadFromIni(ini)
 
 	entry := &fileEntry{
 		VFSItem: vfs.VFSItem{Name: "main.go", IsDir: false},
@@ -4848,7 +4849,7 @@ NormalColor = foreground:#00FF00
 }
 func TestFileEntry_SymlinkDisplayNameAndStatus(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	entryFile := &fileEntry{VFSItem: vfs.VFSItem{Name: "link_file", IsSymlink: true}}
 	entryDir := &fileEntry{VFSItem: vfs.VFSItem{Name: "link_dir", IsDir: true, IsSymlink: true}}
@@ -4867,7 +4868,7 @@ func TestFileSystemPanel_SymlinkTargetReplacesStatusSize(t *testing.T) {
 	config.App.ShowPanelFileInfo = true
 
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(100, 25)
 	vtui.FrameManager.Init(scr)
@@ -4964,10 +4965,10 @@ func TestFileSystemPanel_BottomFrameShowsCursorEntry(t *testing.T) {
 // every theme whenever the view mode wasn't single-column.
 func TestFileSystemPanel_SelectionColorInMultiColumnViewMode(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	if err := ApplyColorStyle("Classic"); err != nil {
-		t.Fatalf("ApplyColorStyle: %v", err)
+	if err := theme.ApplyColorStyle("Classic"); err != nil {
+		t.Fatalf("theme.ApplyColorStyle: %v", err)
 	}
 
 	tmp := t.TempDir()

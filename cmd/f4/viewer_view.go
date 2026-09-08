@@ -13,6 +13,7 @@ import (
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/piecetable"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -115,7 +116,7 @@ func NewViewerView(ctx context.Context, v vfs.VFS, path string) (*ViewerView, er
 		Codepage:   cpID,
 	}
 	vv.scrollBar = vtui.NewScrollBar(0, 0, 0)
-	vv.scrollBar.ColorIdx = ColViewerScrollbar
+	vv.scrollBar.ColorIdx = theme.ColViewerScrollbar
 	vv.scrollBar.SetOwner(vv)
 	vv.scrollBar.OnScroll = func(v int) {
 		newOff := int64(v)
@@ -382,7 +383,7 @@ func (vv *ViewerView) DisplayObject(scr *vtui.ScreenBuf) {
 	height := vv.Y2 - vv.Y1 + 1
 	contentHeight := height - 1
 
-	bgAttr := vtui.Palette[ColViewerText]
+	bgAttr := vtui.Palette[theme.ColViewerText]
 
 	// 1. Draw Background
 	scr.FillRect(vv.X1, vv.Y1+1, vv.X2, vv.Y2, ' ', bgAttr)
@@ -420,8 +421,8 @@ func (vv *ViewerView) DisplayObject(scr *vtui.ScreenBuf) {
 }
 
 func (vv *ViewerView) renderHex(scr *vtui.ScreenBuf, width, contentHeight int) {
-	attr := vtui.Palette[ColViewerText]
-	offAttr := vtui.Palette[ColViewerArrows]
+	attr := vtui.Palette[theme.ColViewerText]
+	offAttr := vtui.Palette[theme.ColViewerArrows]
 
 	currOffset := vv.TopOffset &^ 0xF // Align to 16 bytes
 	//lastRowWasEOF := false
@@ -475,8 +476,8 @@ func (vv *ViewerView) renderHex(scr *vtui.ScreenBuf, width, contentHeight int) {
 	vv.eofVisible = (currOffset >= vv.backend.Size())
 }
 func (vv *ViewerView) renderDecode(scr *vtui.ScreenBuf, width, contentHeight int) {
-	attr := vtui.Palette[ColViewerText]
-	offAttr := vtui.Palette[ColViewerArrows]
+	attr := vtui.Palette[theme.ColViewerText]
+	offAttr := vtui.Palette[theme.ColViewerArrows]
 	currOffset := vv.TopOffset
 
 	for y := 0; y < contentHeight; y++ {
@@ -539,7 +540,7 @@ func (vv *ViewerView) decodeStep(off int64) int64 {
 
 func (vv *ViewerView) renderText(scr *vtui.ScreenBuf, width, contentHeight int) {
 
-	attr := vtui.Palette[ColViewerText]
+	attr := vtui.Palette[theme.ColViewerText]
 	currOffset := vv.TopOffset
 	vv.lineOffsets = vv.lineOffsets[:0]
 	vv.visibleURLRows = vv.visibleURLRows[:0]
@@ -598,7 +599,7 @@ func (vv *ViewerView) renderText(scr *vtui.ScreenBuf, width, contentHeight int) 
 					cellByteOffsets,
 					int(matchStart-rowStart),
 					int(matchEnd-rowStart),
-					vtui.Palette[ColViewerSelectedText],
+					vtui.Palette[theme.ColViewerSelectedText],
 				)
 			}
 		}

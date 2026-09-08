@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/theme"
 	archiveplugin "github.com/unxed/f4/plugins/archive"
 	"github.com/unxed/f4/plugins/cloudfox"
 	"github.com/unxed/f4/vfs"
@@ -73,7 +74,7 @@ func TestRealSavedCloudArchives(t *testing.T) {
 	validateRealCloudFoxLocalArchive(t, &fixture)
 
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	originalConfig := config.App
 	t.Cleanup(func() { config.App = originalConfig })
 	config.App.ViewerAutodetectCodePage = false

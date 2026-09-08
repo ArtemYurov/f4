@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/theme"
 )
 
 // iniResolvers lists per-INI path functions and the fragment they append to
@@ -22,7 +23,7 @@ var iniResolvers = []struct {
 	{"MainMenuFilePath", MainMenuFilePath, "settings/user_menu.ini"},
 	{"getSessionIniPath", getSessionIniPath, "session.ini"},
 	{"vtvibeIniPath", vtvibeIniPath, "vtvibe.ini"},
-	{"userColorOverridesPath", userColorOverridesPath, "farcolors.ini"},
+	{"theme.UserColorOverridesPath", theme.UserColorOverridesPath, "farcolors.ini"},
 }
 
 // setupPortableIni points config.Executable at a mock f4 binary accompanied by an

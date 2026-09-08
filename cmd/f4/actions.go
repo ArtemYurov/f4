@@ -18,6 +18,7 @@ import (
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/piecetable"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -4499,7 +4500,7 @@ func actionAppearanceSettings(pf *PanelsFrame) {
 	// alone would wipe those.
 	originalPalette := append([]uint64(nil), vtui.Palette...)
 
-	styles := AvailableColorStyles()
+	styles := theme.AvailableColorStyles()
 	names := make([]string, len(styles))
 	selected := 0
 	for i, style := range styles {
@@ -4521,7 +4522,7 @@ func actionAppearanceSettings(pf *PanelsFrame) {
 	comboStyle.Menu.OnAction = func(idx int) {
 		defaultMenuAction(idx)
 		if idx >= 0 && idx < len(names) {
-			if err := ApplyColorStyle(names[idx]); err == nil {
+			if err := theme.ApplyColorStyle(names[idx]); err == nil {
 				vtui.FrameManager.Redraw()
 			}
 		}
@@ -4707,20 +4708,20 @@ func actionAppearanceSettings(pf *PanelsFrame) {
 	}
 	btnExport.OnClick = func() {
 		colorsPath := filepath.Join(config.GetF4ConfigDir(), "farcolors.ini")
-		err := ExportColors(colorsPath)
+		err := theme.ExportColors(colorsPath)
 		if err != nil {
 			vtui.ShowMessageOn(dlg, " Error ", fmt.Sprintf("Failed to export colors:\n%v", err), []string{"&Ok"})
 		} else {
 			customIdx := -1
 			for i, item := range comboStyle.Menu.Items {
-				if strings.EqualFold(item.Text, customColorStyleName) {
+				if strings.EqualFold(item.Text, theme.CustomColorStyleName) {
 					customIdx = i
 					break
 				}
 			}
 			if customIdx < 0 {
-				names = append(names, customColorStyleName)
-				comboStyle.Menu.AddItem(vtui.MenuItem{Text: customColorStyleName})
+				names = append(names, theme.CustomColorStyleName)
+				comboStyle.Menu.AddItem(vtui.MenuItem{Text: theme.CustomColorStyleName})
 				customIdx = len(names) - 1
 			}
 			comboStyle.Menu.SetSelectPos(customIdx)

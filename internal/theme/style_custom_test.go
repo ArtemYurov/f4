@@ -1,4 +1,4 @@
-package main
+package theme
 
 import (
 	"path/filepath"
@@ -10,9 +10,9 @@ import (
 
 func TestApplyColorStyle_ExportedSchemeIsCustom(t *testing.T) {
 	dir := t.TempDir()
-	oldOverrides := userColorOverridesPath
-	userColorOverridesPath = func() string { return filepath.Join(dir, "farcolors.ini") }
-	t.Cleanup(func() { userColorOverridesPath = oldOverrides })
+	oldOverrides := UserColorOverridesPath
+	UserColorOverridesPath = func() string { return filepath.Join(dir, "farcolors.ini") }
+	t.Cleanup(func() { UserColorOverridesPath = oldOverrides })
 
 	oldStyles := getUserStylesDir
 	getUserStylesDir = func() string { return filepath.Join(dir, "styles") }
@@ -28,12 +28,12 @@ func TestApplyColorStyle_ExportedSchemeIsCustom(t *testing.T) {
 	}
 	wantCustom := vtui.SetRGBBoth(0, 0x123456, 0x654321)
 	vtui.Palette[ColPanelText] = wantCustom
-	if err := ExportColors(userColorOverridesPath()); err != nil {
+	if err := ExportColors(UserColorOverridesPath()); err != nil {
 		t.Fatalf("ExportColors: %v", err)
 	}
 
 	styles := AvailableColorStyles()
-	custom, found := findColorStyle(styles, customColorStyleName)
+	custom, found := findColorStyle(styles, CustomColorStyleName)
 	if !found || !custom.custom {
 		t.Fatalf("AvailableColorStyles() = %v, want a Custom style", styleNames(styles))
 	}
@@ -51,7 +51,7 @@ func TestApplyColorStyle_ExportedSchemeIsCustom(t *testing.T) {
 		t.Fatalf("Classic panel background = %06X, want 0000A0", got)
 	}
 
-	if err := ApplyColorStyle(customColorStyleName); err != nil {
+	if err := ApplyColorStyle(CustomColorStyleName); err != nil {
 		t.Fatalf("ApplyColorStyle(Custom): %v", err)
 	}
 	if got := vtui.Palette[ColPanelText]; got != wantCustom {

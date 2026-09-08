@@ -1,4 +1,4 @@
-package main
+package theme
 
 import (
 	"fmt"
@@ -367,7 +367,7 @@ func FormatFarColor(attr uint64) string {
 func ExportColors(path string) error {
 	var sb strings.Builder
 	sb.WriteString("[style]\nName = Custom\n")
-	if base := strings.TrimSpace(config.App.ColorStyle); base != "" && !strings.EqualFold(base, customColorStyleName) {
+	if base := strings.TrimSpace(config.App.ColorStyle); base != "" && !strings.EqualFold(base, CustomColorStyleName) {
 		fmt.Fprintf(&sb, "Base = %s\n", base)
 	}
 	sb.WriteString("\n[farcolors]\n")

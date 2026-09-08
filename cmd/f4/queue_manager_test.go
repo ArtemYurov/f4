@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -348,7 +349,7 @@ func TestQueueFrame_GetTitle(t *testing.T) {
 
 func TestQueueFrameUsesDialogThemeColors(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
 	qf := NewQueueFrame()

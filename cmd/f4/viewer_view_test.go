@@ -13,6 +13,7 @@ import (
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -74,14 +75,14 @@ func TestViewer_UsesDedicatedScrollbarPaletteSlot(t *testing.T) {
 	if vv.scrollBar == nil {
 		t.Fatal("viewer scrollbar was not initialized")
 	}
-	if vv.scrollBar.ColorIdx != ColViewerScrollbar {
-		t.Fatalf("viewer scrollbar color index = %d, want %d", vv.scrollBar.ColorIdx, ColViewerScrollbar)
+	if vv.scrollBar.ColorIdx != theme.ColViewerScrollbar {
+		t.Fatalf("viewer scrollbar color index = %d, want %d", vv.scrollBar.ColorIdx, theme.ColViewerScrollbar)
 	}
 }
 
 func TestViewerRenderHighlightsCurrentSearchResult(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	data := []byte("needle before needle after")
 	backend := &ViewerBackend{
@@ -106,14 +107,14 @@ func TestViewerRenderHighlightsCurrentSearchResult(t *testing.T) {
 	vv.DisplayObject(scr)
 
 	for x := 0; x < len("needle"); x++ {
-		if got := scr.GetCell(x, 1).Attributes; got != vtui.Palette[ColViewerSelectedText] {
-			t.Fatalf("matched cell %d has attributes %016x, want %016x", x, got, vtui.Palette[ColViewerSelectedText])
+		if got := scr.GetCell(x, 1).Attributes; got != vtui.Palette[theme.ColViewerSelectedText] {
+			t.Fatalf("matched cell %d has attributes %016x, want %016x", x, got, vtui.Palette[theme.ColViewerSelectedText])
 		}
 	}
 	second := strings.LastIndex(string(data), "needle")
 	for x := second; x < second+len("needle"); x++ {
-		if got := scr.GetCell(x, 1).Attributes; got != vtui.Palette[ColViewerText] {
-			t.Fatalf("unselected match cell %d has attributes %016x, want base %016x", x, got, vtui.Palette[ColViewerText])
+		if got := scr.GetCell(x, 1).Attributes; got != vtui.Palette[theme.ColViewerText] {
+			t.Fatalf("unselected match cell %d has attributes %016x, want base %016x", x, got, vtui.Palette[theme.ColViewerText])
 		}
 	}
 }
@@ -503,7 +504,7 @@ func TestViewerView_MouseScrollbar(t *testing.T) {
 
 func TestViewerBar_Content(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	tmpDir := t.TempDir()
 	tmp := filepath.Join(tmpDir, "bar_test.txt")
 	if err := os.WriteFile(tmp, []byte("Some content"), 0600); err != nil {
@@ -916,7 +917,7 @@ func TestViewerView_ScrollbarEOFAlignment(t *testing.T) {
 func TestViewerView_ScrollbarStability(t *testing.T) {
 	fm := vtui.FrameManager
 	fm.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	tmpDir := t.TempDir()
 	tmp := filepath.Join(tmpDir, "stability_test.txt")

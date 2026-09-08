@@ -23,6 +23,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs/hostmode"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -940,10 +941,10 @@ func (pf *PanelsFrame) buildPrompt() []vtui.CharInfo {
 
 	if pf.searchFirstMode() && pf.showPanels && !pf.commandLineFocused {
 		plainPrompt := userHostStr + sepStr + displayPath + suffixStr
-		return vtui.StringToCharInfo(plainPrompt, vtui.Palette[ColCommandLineInactivePrompt])
+		return vtui.StringToCharInfo(plainPrompt, vtui.Palette[theme.ColCommandLineInactivePrompt])
 	}
 
-	baseAttr := vtui.Palette[ColCommandLinePrompt]
+	baseAttr := vtui.Palette[theme.ColCommandLinePrompt]
 	// Only the user@host part gets a colour of its own, the way bash shows it.
 	// Everything else stays on CommandLine.Prefix so the prompt follows the
 	// active theme instead of a hardcoded blue and white.

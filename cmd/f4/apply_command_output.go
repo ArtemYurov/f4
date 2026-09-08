@@ -8,6 +8,7 @@ import (
 
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/piecetable"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -247,12 +248,12 @@ func showApplyOutputDialog(anchor vtui.Frame, model *applyBatchViewModel, cancel
 	progress := vtui.NewProgressBar(0, 0, width-4)
 	output := vtui.NewListBox(0, 0, width-4, height-9, nil)
 	output.ShowScrollBar = true
-	output.ColorTextIdx = ColViewerText
-	output.ColorSelectedTextIdx = ColViewerStatus
-	output.ColorItemSelectTextIdx = ColViewerText
-	output.ColorItemSelectCursorIdx = ColViewerStatus
+	output.ColorTextIdx = theme.ColViewerText
+	output.ColorSelectedTextIdx = theme.ColViewerStatus
+	output.ColorItemSelectTextIdx = theme.ColViewerText
+	output.ColorItemSelectCursorIdx = theme.ColViewerStatus
 	if output.ScrollBar != nil {
-		output.ScrollBar.ColorIdx = ColViewerScrollbar
+		output.ScrollBar.ColorIdx = theme.ColViewerScrollbar
 	}
 	btnCancel := vtui.NewButton(0, 0, i18n.Msg("ApplyCommand.CancelTask"))
 	btnEditor := vtui.NewButton(0, 0, i18n.Msg("ApplyCommand.SendToEditor"))

@@ -8,6 +8,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -369,7 +370,7 @@ func TestSearchFirstHistoryAndPromptFocusColors(t *testing.T) {
 		t.Fatal("inactive prompt is empty")
 	}
 	for _, cell := range inactivePrompt {
-		if cell.Char != vtui.WideCharFiller && cell.Attributes != vtui.Palette[ColCommandLineInactivePrompt] {
+		if cell.Char != vtui.WideCharFiller && cell.Attributes != vtui.Palette[theme.ColCommandLineInactivePrompt] {
 			t.Fatal("panel-focused prompt contains an active color")
 		}
 	}
@@ -378,7 +379,7 @@ func TestSearchFirstHistoryAndPromptFocusColors(t *testing.T) {
 	activePrompt := pf.buildPrompt()
 	allInactive := true
 	for _, cell := range activePrompt {
-		if cell.Char != vtui.WideCharFiller && cell.Attributes != vtui.Palette[ColCommandLineInactivePrompt] {
+		if cell.Char != vtui.WideCharFiller && cell.Attributes != vtui.Palette[theme.ColCommandLineInactivePrompt] {
 			allInactive = false
 			break
 		}
@@ -400,7 +401,7 @@ func TestSearchFirstMouseFocusAndInactiveCursor(t *testing.T) {
 	defer func() { config.App = oldCfg }()
 	config.App.NavigationMode = config.NavigationSearchFirst
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf, left, _ := newSearchFirstTestFrame(t)
 	pf.ProcessMouse(&vtinput.InputEvent{Type: vtinput.MouseEventType, KeyDown: true, MouseX: 2, MouseY: 23, ButtonState: vtinput.FromLeft1stButtonPressed})
@@ -420,7 +421,7 @@ func TestSearchFirstMouseFocusAndInactiveCursor(t *testing.T) {
 	for y := left.Y1; y <= left.Y2; y++ {
 		for x := left.X1; x <= left.X2; x++ {
 			cell := scr.GetCell(x, y)
-			if cell.Char == 'a' && vtui.GetRGBBack(cell.Attributes) == vtui.GetRGBBack(vtui.Palette[ColPanelInactiveCursor]) {
+			if cell.Char == 'a' && vtui.GetRGBBack(cell.Attributes) == vtui.GetRGBBack(vtui.Palette[theme.ColPanelInactiveCursor]) {
 				found = true
 			}
 		}

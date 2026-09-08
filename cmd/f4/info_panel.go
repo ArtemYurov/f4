@@ -12,6 +12,7 @@ import (
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/sysinfo"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -123,12 +124,12 @@ func NewInfoPanel(src *FileSystemPanel) *InfoPanel {
 	ip := &InfoPanel{src: src, cursor: -1, selection: map[string]bool{}}
 	ip.SetVisible(true)
 	ip.frame = vtui.NewBorderedFrame(x1, y1, x2, y2, vtui.SingleBox, i18n.Msg("InfoPanel.Title"))
-	ip.frame.ColorBoxIdx = ColPanelBox
-	ip.frame.ColorTitleIdx = ColPanelTitle
+	ip.frame.ColorBoxIdx = theme.ColPanelBox
+	ip.frame.ColorTitleIdx = theme.ColPanelTitle
 	// Fill the interior with the same attribute we render text in, so
 	// character cells and the empty space around them share one bg —
 	// no highlight strip behind text lines.
-	ip.frame.ColorBackgroundIdx = ColPanelInfoText
+	ip.frame.ColorBackgroundIdx = theme.ColPanelInfoText
 	ip.SetPosition(x1, y1, x2, y2)
 	return ip
 }
@@ -160,9 +161,9 @@ func (ip *InfoPanel) SetFocus(f bool) {
 	ip.focused = f
 	if ip.frame != nil {
 		if f {
-			ip.frame.ColorTitleIdx = ColPanelSelectedTitle
+			ip.frame.ColorTitleIdx = theme.ColPanelSelectedTitle
 		} else {
-			ip.frame.ColorTitleIdx = ColPanelTitle
+			ip.frame.ColorTitleIdx = theme.ColPanelTitle
 		}
 	}
 }
@@ -561,7 +562,7 @@ func (ip *InfoPanel) Show(scr *vtui.ScreenBuf) {
 	if ip.frame != nil && ip.Y2 > ip.Y1+1 {
 		hint := i18n.Msg("InfoPanel.UnitsHint")
 		if runewidth.StringWidth(hint) < ip.X2-ip.X1-1 {
-			attrBox := vtui.Palette[ColPanelBox]
+			attrBox := vtui.Palette[theme.ColPanelBox]
 			scr.Write(ip.X1+2, ip.Y2, vtui.StringToCharInfo(hint, attrBox))
 		}
 	}
@@ -569,7 +570,7 @@ func (ip *InfoPanel) Show(scr *vtui.ScreenBuf) {
 	if innerW < 1 {
 		return
 	}
-	attr := vtui.Palette[ColPanelInfoText]
+	attr := vtui.Palette[theme.ColPanelInfoText]
 	previousCursorKey := ""
 	previousCursorIndex := -1
 	previousCursorOffset := -1
@@ -983,7 +984,7 @@ func (ip *InfoPanel) Show(scr *vtui.ScreenBuf) {
 	// Colour picks in order of increasing "attention":
 	//   plain → selected → cursor → cursor-on-selected
 	// so a selected row you're standing on gets the highest-contrast
-	// treatment (matches ColPanelSelectedCursor in the file panel).
+	// treatment (matches theme.ColPanelSelectedCursor in the file panel).
 	for i := range ip.rows {
 		ip.rows[i].y = -1
 	}
@@ -997,11 +998,11 @@ func (ip *InfoPanel) Show(scr *vtui.ScreenBuf) {
 		isCursor := ip.focused && i == ip.cursor && r.copyable
 		switch {
 		case isCursor && r.selected:
-			lineAttr = vtui.Palette[ColPanelSelectedCursor]
+			lineAttr = vtui.Palette[theme.ColPanelSelectedCursor]
 		case isCursor:
-			lineAttr = vtui.Palette[ColPanelCursor]
+			lineAttr = vtui.Palette[theme.ColPanelCursor]
 		case r.selected:
-			lineAttr = vtui.Palette[ColPanelSelectedText]
+			lineAttr = vtui.Palette[theme.ColPanelSelectedText]
 		}
 		screenY := ip.Y1 + 1 + i - ip.scrollTop
 		ip.rows[i].y = screenY

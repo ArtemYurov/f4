@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -17,7 +18,7 @@ import (
 
 func init() {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 }
 
 func TestTerminalView_SaveRestoreCursor(t *testing.T) {

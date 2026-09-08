@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -204,7 +205,7 @@ func TestFindMenuItemByUserData(t *testing.T) {
 
 func TestUserMenu_ExecuteCommands(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := setupMockPanelsFrame(t)
 	defer pf.Close()
@@ -250,7 +251,7 @@ func TestUserMenu_ExecuteCommands(t *testing.T) {
 }
 func TestUserMenu_ExecuteMultipleCommands(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := setupMockPanelsFrame(t)
 	defer pf.Close()
@@ -319,7 +320,7 @@ func TestUserMenu_ScriptCommandUsesInterpreterAndQuotedBody(t *testing.T) {
 
 func TestUserMenu_InteractiveEdit(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := setupMockPanelsFrame(t)
 	defer pf.Close()
@@ -373,7 +374,7 @@ func TestUserMenu_InteractiveEdit(t *testing.T) {
 // preserves them one-per-line on save and lets the user append more.
 func TestUserMenu_EditItemMultilineCommand(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := setupMockPanelsFrame(t)
 	defer pf.Close()
@@ -438,7 +439,7 @@ func TestUserMenu_EditItemMultilineCommand(t *testing.T) {
 // (visual grouping inside a shell script).
 func TestUserMenu_EditItemStripsBlankLines(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := setupMockPanelsFrame(t)
 	defer pf.Close()
@@ -517,7 +518,7 @@ func TestSplitMenuCommandSteps(t *testing.T) {
 // panel, and it must do so only after the shell lines before it finished.
 func TestUserMenu_TrailingCdFollowsPanelAfterShellCommands(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := setupMockPanelsFrame(t)
 	defer pf.Close()
@@ -577,7 +578,7 @@ func TestUserMenu_TrailingCdFollowsPanelAfterShellCommands(t *testing.T) {
 // directory, like far2l does when it feeds every line to the command line.
 func TestUserMenu_MiddleCdRunsRemainingCommandsInNewDir(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := setupMockPanelsFrame(t)
 	defer pf.Close()

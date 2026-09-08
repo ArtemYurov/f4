@@ -12,6 +12,7 @@ import (
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/theme"
 	id3 "github.com/unxed/id3-go"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -104,9 +105,9 @@ func NewPlayerPanel(src *FileSystemPanel) *PlayerPanel {
 	}
 	pp.SetVisible(true)
 	pp.frame = vtui.NewBorderedFrame(x1, y1, x2, y2, vtui.SingleBox, i18n.Msg("Player.Title"))
-	pp.frame.ColorBoxIdx = ColPanelBox
-	pp.frame.ColorTitleIdx = ColPanelTitle
-	pp.frame.ColorBackgroundIdx = ColPanelText
+	pp.frame.ColorBoxIdx = theme.ColPanelBox
+	pp.frame.ColorTitleIdx = theme.ColPanelTitle
+	pp.frame.ColorBackgroundIdx = theme.ColPanelText
 	pp.SetPosition(x1, y1, x2, y2)
 	pp.loadPlaylist()
 	go pp.tick()
@@ -811,9 +812,9 @@ func (pp *PlayerPanel) Show(scr *vtui.ScreenBuf) {
 	if w < 8 || pp.Y2-pp.Y1 < 3 {
 		return
 	}
-	text := vtui.Palette[ColPanelText]
-	hi := vtui.Palette[ColPanelSelectedText]
-	box := vtui.Palette[ColPanelBox]
+	text := vtui.Palette[theme.ColPanelText]
+	hi := vtui.Palette[theme.ColPanelSelectedText]
+	box := vtui.Palette[theme.ColPanelBox]
 	x := pp.X1 + 1
 	y := pp.Y1 + 1
 	put := func(y int, s string, attr uint64) {

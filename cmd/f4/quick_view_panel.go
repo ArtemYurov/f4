@@ -16,6 +16,7 @@ import (
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/sysinfo"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -121,9 +122,9 @@ func NewQuickViewPanel(src *FileSystemPanel) *QuickViewPanel {
 	q := &QuickViewPanel{src: src, wrap: true, lastSearchSource: -1, codepages: make(map[quickViewSelectionKey]int)}
 	q.SetVisible(true)
 	q.frame = vtui.NewBorderedFrame(x1, y1, x2, y2, vtui.SingleBox, i18n.Msg("QuickView.Title"))
-	q.frame.ColorBoxIdx = ColPanelBox
-	q.frame.ColorTitleIdx = ColPanelTitle
-	q.frame.ColorBackgroundIdx = ColPanelInfoText
+	q.frame.ColorBoxIdx = theme.ColPanelBox
+	q.frame.ColorTitleIdx = theme.ColPanelTitle
+	q.frame.ColorBackgroundIdx = theme.ColPanelInfoText
 	q.gfxKey = fmt.Sprintf("f4.quickview:%p", q)
 	q.SetPosition(x1, y1, x2, y2)
 	return q
@@ -145,9 +146,9 @@ func (q *QuickViewPanel) SetFocus(f bool) {
 	q.focused = f
 	if q.frame != nil {
 		if f {
-			q.frame.ColorTitleIdx = ColPanelSelectedTitle
+			q.frame.ColorTitleIdx = theme.ColPanelSelectedTitle
 		} else {
-			q.frame.ColorTitleIdx = ColPanelTitle
+			q.frame.ColorTitleIdx = theme.ColPanelTitle
 		}
 	}
 }
@@ -524,7 +525,7 @@ func (q *QuickViewPanel) Show(scr *vtui.ScreenBuf) {
 	if q.frame != nil && q.Y2 > q.Y1+1 {
 		hint := i18n.Msg("InfoPanel.UnitsHint")
 		if runewidth.StringWidth(hint) < q.X2-q.X1-1 {
-			attrBox := vtui.Palette[ColPanelBox]
+			attrBox := vtui.Palette[theme.ColPanelBox]
 			scr.Write(q.X1+2, q.Y2, vtui.StringToCharInfo(hint, attrBox))
 		}
 	}
@@ -532,7 +533,7 @@ func (q *QuickViewPanel) Show(scr *vtui.ScreenBuf) {
 	if innerW < 1 || q.src == nil {
 		return
 	}
-	attr := vtui.Palette[ColPanelInfoText]
+	attr := vtui.Palette[theme.ColPanelInfoText]
 	y := q.Y1 + 1
 	maxY := q.Y2 - 1
 
@@ -606,7 +607,7 @@ func (q *QuickViewPanel) Show(scr *vtui.ScreenBuf) {
 	// content fits entirely (DrawScrollBar returns false).
 	if q.Y2 > q.Y1+1 && len(q.displayLines) > 0 {
 		vtui.DrawScrollBar(scr, q.X2, q.Y1+1, q.Y2-q.Y1-1,
-			q.scrollY, len(q.displayLines), vtui.Palette[ColPanelScrollbar])
+			q.scrollY, len(q.displayLines), vtui.Palette[theme.ColPanelScrollbar])
 	}
 }
 

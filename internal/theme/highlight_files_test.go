@@ -1,4 +1,4 @@
-package main
+package theme
 
 import (
 	"runtime"
@@ -83,6 +83,7 @@ func TestHighlightRule_MatchAttributes(t *testing.T) {
 		}
 	}
 }
+
 func TestHighlightRule_MatchSymlinkAttribute(t *testing.T) {
 	ruleSym := HighlightRule{
 		AttrSet: AttrSymlink,
@@ -448,44 +449,6 @@ func TestHighlightRule_PlatformAttributes(t *testing.T) {
 	}
 }
 
-func TestFileEntry_HighlightIntegration(t *testing.T) {
-	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
-
-	oldConfig := config.App
-	defer func() { config.App = oldConfig }()
-	config.App.ShowHighlightMarks = true
-
-	// Загружаем тестовые правила в глобальный объект подсветки
-	iniData := `[Highlight_0]
-Name = TestGo
-Mask = *.go
-Mark = •
-NormalColor = foreground:#00FF00
-`
-	ini := ini.Parse(strings.NewReader(iniData))
-	GlobalFileHighlighter.LoadFromIni(ini)
-
-	// Создаем тестовую структуру файла панели
-	entry := &fileEntry{
-		VFSItem: vfs.VFSItem{Name: "main.go", IsDir: false},
-	}
-
-	// 1. Проверяем интеграцию вывода имени файла с маркером
-	text := entry.GetCellText(0)
-	expectedText := "• main.go"
-	if text != expectedText {
-		t.Errorf("Marker integration in GetCellText failed: got %q, want %q", text, expectedText)
-	}
-
-	// 2. Проверяем интеграцию получения цвета
-	attr := entry.GetCellAttr(0, 0)
-	fg := vtui.GetRGBFore(attr)
-	if fg != 0x00FF00 {
-		t.Errorf("Color integration in GetCellAttr failed: got %06X, want 0x00FF00", fg)
-	}
-}
-
 func TestFileHighlighter_ParentDirSkipped(t *testing.T) {
 	iniData := `[Highlight_0]
 Mask = *
@@ -570,6 +533,7 @@ NormalColor = foreground:#111111 | background:#000000
 		t.Errorf("highlighter left deltaE2000 at %.2f, want the ~30 far2l aims for", dE)
 	}
 }
+
 func TestFileHighlighter_CursorSemantics(t *testing.T) {
 	vtui.SetDefaultPalette()
 	SetDefaultF4Palette()

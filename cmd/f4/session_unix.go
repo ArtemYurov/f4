@@ -17,6 +17,7 @@ import (
 
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/numeric"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -761,7 +762,7 @@ func runSessionPicker(sessions []SessionInfo) *SessionInfo {
 	scr := vtui.NewScreenBuf()
 	scr.AllocBuf(screenWidth, screenHeight)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	const dialogHeight = 15
 	dialogWidth := sessionPickerDialogWidth(screenWidth)

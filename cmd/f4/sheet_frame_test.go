@@ -6,6 +6,7 @@ import (
 
 	"github.com/unxed/f4/internal/sheet"
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -15,7 +16,7 @@ func newSheetFrameForTest(t *testing.T) *SheetFrame {
 	t.Helper()
 	t.Cleanup(swapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	sf := NewSheetFrame()
 	if sf == nil {
 		t.Fatal("the spreadsheet frame was not created")

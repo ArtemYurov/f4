@@ -7,6 +7,7 @@ import (
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/piecetable"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtui"
 )
 
@@ -107,7 +108,7 @@ func TestCommitHistory_MovesRepeatToFront(t *testing.T) {
 
 func TestEditorSearchDialog_RemembersPattern(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	store := useStubHistory(t)
 	store["SearchText"] = []string{"from history"}
 
@@ -134,7 +135,7 @@ func TestEditorSearchDialog_RemembersPattern(t *testing.T) {
 
 func TestEditorReplaceDialog_UsesSeparateBuckets(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	store := useStubHistory(t)
 	store["ReplaceText"] = []string{"stale replacement"}
 
@@ -163,7 +164,7 @@ func TestEditorReplaceDialog_UsesSeparateBuckets(t *testing.T) {
 
 func TestFindFileDialog_SharesSearchTextBucket(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	store := useStubHistory(t)
 	store["SearchText"] = []string{"typed in the editor"}
 	store["Masks"] = []string{"*.go"}
@@ -192,7 +193,7 @@ func TestFindFileDialog_SharesSearchTextBucket(t *testing.T) {
 
 func TestViewerSearchDialog_AttachesHistory(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	store := useStubHistory(t)
 	store["SearchText"] = []string{"previous search"}
 
@@ -212,7 +213,7 @@ func TestViewerSearchDialog_AttachesHistory(t *testing.T) {
 
 func TestViewerSearchDialog_OffersEditorSearchOptions(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	useStubHistory(t)
 
 	actionViewerSearchDirection(&ViewerView{}, false)
@@ -241,7 +242,7 @@ func TestViewerSearchDialog_OffersEditorSearchOptions(t *testing.T) {
 
 func TestSelectGroupDialog_UsesMaskHistory(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	store := useStubHistory(t)
 	store["Masks"] = []string{"*.go"}
 
@@ -287,7 +288,7 @@ func TestAssocEditor_SharesMaskHistory(t *testing.T) {
 
 func TestMkDirDialog_PreFillsFromNewFolderHistory(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	store := useStubHistory(t)
 	store["NewFolder"] = []string{"build"}
 

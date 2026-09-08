@@ -1,4 +1,4 @@
-package main
+package theme
 
 import (
 	"strconv"
@@ -15,7 +15,7 @@ var namedColors = map[string]uint64{
 }
 
 // far2l default 16-color palette (tweaked from standard windows console)
-var far2lPalette = []uint32{
+var Far2lPalette = []uint32{
 	0x000000, 0x0028A0, 0x00A000, 0x00A0A0, 0xA00000, 0xA000A0, 0xA0A000, 0xC0C0C0,
 	0x808080, 0x0055FF, 0x00FF00, 0x00FFFF, 0xFF0000, 0xFF00FF, 0xFFFF00, 0xFFFFFF,
 }
@@ -60,10 +60,10 @@ func ParseFarColor(expr string, defaultAttr uint64) uint64 {
 			}
 		} else if c, ok := namedColors[p]; ok {
 			if strings.HasPrefix(p, "F_") {
-				fg = far2lPalette[c]
+				fg = Far2lPalette[c]
 				hasFg = true
 			} else if strings.HasPrefix(p, "B_") {
-				bg = far2lPalette[c>>4]
+				bg = Far2lPalette[c>>4]
 				hasBg = true
 			}
 		} else if slotIdx, ok := colorMap[p]; ok {

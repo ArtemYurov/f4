@@ -9,6 +9,7 @@ import (
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -37,8 +38,8 @@ func TestEditor_UsesDedicatedScrollbarPaletteSlot(t *testing.T) {
 	if ev.scrollBar == nil {
 		t.Fatal("editor scrollbar was not initialized")
 	}
-	if ev.scrollBar.ColorIdx != ColEditorScrollbar {
-		t.Fatalf("editor scrollbar color index = %d, want %d", ev.scrollBar.ColorIdx, ColEditorScrollbar)
+	if ev.scrollBar.ColorIdx != theme.ColEditorScrollbar {
+		t.Fatalf("editor scrollbar color index = %d, want %d", ev.scrollBar.ColorIdx, theme.ColEditorScrollbar)
 	}
 }
 
@@ -1195,7 +1196,7 @@ func TestEditorView_DefaultsAndToggles(t *testing.T) {
 }
 
 func TestEditorView_WhitespaceRendering(t *testing.T) {
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	pt := piecetable.New([]byte("a b\tc")) // space and tab
 	ev := NewEditorView(pt, nil, "")
 	defer ev.Close()
@@ -1378,7 +1379,7 @@ func TestEditorView_WordNavigation(t *testing.T) {
 }
 func TestEditorBar_Content(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	pt := piecetable.New([]byte("abc\ndef"))
 	ev := NewEditorView(pt, nil, "test.go")
 	defer ev.Close()
@@ -1401,7 +1402,7 @@ func TestEditorBar_Content(t *testing.T) {
 
 func TestEditorBar_PositionFieldKeepsItsWidth(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	ev := NewEditorView(piecetable.New([]byte("a\nb\nc\nd\ne\nf\ng\nh\ni\nj\n")), nil, "test.go")
 	defer ev.Close()
 
@@ -4847,7 +4848,7 @@ func TestEditorView_CharacterWidthConsistency(t *testing.T) {
 
 func TestEditorView_CrosshairStateAndNoLeak(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	oldCrosshair := config.App.EditorCrosshair
 	config.App.EditorCrosshair = true
@@ -4867,7 +4868,7 @@ func TestEditorView_CrosshairStateAndNoLeak(t *testing.T) {
 
 	ev.Show(scr)
 
-	crossAttr := vtui.Palette[ColEditorCrosshair]
+	crossAttr := vtui.Palette[theme.ColEditorCrosshair]
 	crossBG := vtui.GetRGBBack(crossAttr)
 
 	activeRowCell := scr.GetCell(5, 2)
@@ -5891,7 +5892,7 @@ func TestDeleteLinePreservesVisualColumn(t *testing.T) {
 func TestEditorViewInsertOverwriteCursorShape(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)

@@ -17,6 +17,7 @@ import (
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -26,7 +27,7 @@ import (
 func TestActionUpdateSettings_ManualCheckDoesNotBlockMouseDispatch(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	oldCfg := config.App
 	oldAPIURL := update.APIURL
@@ -180,7 +181,7 @@ Loop:
 
 func TestActionMkDir_Flow(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -244,7 +245,7 @@ func TestActionDelete_BulkErrorAccumulation(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	fm.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -402,7 +403,7 @@ func TestActionDelete_RetrySuccess(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	fm.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	mv := &mockRetryDeleteVFS{
 		VFS:      vfs.NewOSVFS(t.TempDir()),
@@ -469,7 +470,7 @@ func TestActionDelete_Abort(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	fm.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	mv := &mockDeletionFailingVFS{
 		VFS:         vfs.NewOSVFS(t.TempDir()),
@@ -541,7 +542,7 @@ func TestActionDelete_SkipAll(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	fm.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	// Два файла, оба упадут
 	mv := &mockDeletionFailingVFS{
@@ -802,7 +803,7 @@ func TestActionDelete_SuccessorLogic(t *testing.T) {
 }
 func TestActionCopyMove_TrailingSlash(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -861,7 +862,7 @@ func TestActionCopyMove_ModeMenuDoesNotCoverButtons(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -965,7 +966,7 @@ func assertDialogTabOrderMatchesVisualOrder(t *testing.T, dlg dialogFocusContain
 
 func TestActionCopy_ShiftF5_Prefill(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -1028,7 +1029,7 @@ func TestActionCopy_ShiftF5_Prefill(t *testing.T) {
 
 func TestActionNewFile_Flow(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -1045,7 +1046,7 @@ func TestActionNewFile_Flow(t *testing.T) {
 
 func TestActionNewFile_AbsoluteExistingPath(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	root := t.TempDir()
 	path := filepath.Join(root, "existing.txt")
@@ -1108,7 +1109,7 @@ func TestActionNewFile_AbsoluteExistingPath(t *testing.T) {
 func TestDelete_FocusCustomization(t *testing.T) {
 	fm := vtui.FrameManager
 	fm.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -1168,7 +1169,7 @@ func TestDelete_FocusCustomization(t *testing.T) {
 func TestActionDelete_UsesWarnPalette_Issue379(t *testing.T) {
 	fm := vtui.FrameManager
 	fm.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	oldCfg := config.App
 	defer func() { config.App = oldCfg }()
 
@@ -1223,7 +1224,7 @@ func TestActionDelete_UsesWarnPalette_Issue379(t *testing.T) {
 
 func TestActionOpenEditor_AlreadyOpened(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "test.txt")
@@ -1299,7 +1300,7 @@ Loop:
 
 func TestActionOpenViewer_AlreadyOpened(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "test_view.txt")
@@ -1381,7 +1382,7 @@ func (m *mockLockedVFS) Open(ctx context.Context, path string) (vfs.ReadAtCloser
 
 func TestActionOpenEditor_LockedFile(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "locked.txt")
@@ -1452,7 +1453,7 @@ func TestActionViewerSearch_EmptyFile(t *testing.T) {
 }
 func TestActionFindFile_Persistence(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	pf := NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
@@ -1607,7 +1608,7 @@ func TestSession_OldFileDefaultsWideOff(t *testing.T) {
 
 func TestActionPanelSettings_Flow(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -1656,7 +1657,7 @@ func TestActionPanelSettings_Flow(t *testing.T) {
 
 func TestActionPanelSettings_FitsSmallTerminal(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -1686,7 +1687,7 @@ func TestActionPanelSettings_FitsSmallTerminal(t *testing.T) {
 
 func TestActionPanelSettings_ConsoleModes(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	oldCfg := config.App
 	defer func() { config.App = oldCfg }()
@@ -1763,7 +1764,7 @@ func TestActionPanelSettings_ConsoleModes(t *testing.T) {
 
 func TestActionPanelAdditionalSettings_SearchExactOnHit(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	oldCfg := config.App
 	defer func() { config.App = oldCfg }()
@@ -1803,7 +1804,7 @@ func TestActionPanelAdditionalSettings_SearchExactOnHit(t *testing.T) {
 
 func TestActionLanguage_Flow(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -1848,7 +1849,7 @@ func TestActionLanguage_Flow(t *testing.T) {
 }
 func TestActionManagePlugins_Flow(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	pf := NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
@@ -1911,7 +1912,7 @@ func TestActionManagePlugins_Flow(t *testing.T) {
 func TestActionRename_CacheAndSelection(t *testing.T) {
 	fm := vtui.FrameManager
 	fm.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "old.txt")
@@ -2213,7 +2214,7 @@ func TestActionOpenViewer_PromptStaysAboveDelayedProgressDialog(t *testing.T) {
 
 func TestActionCommandHistory_Flow(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -2245,7 +2246,7 @@ func TestActionCommandHistory_Flow(t *testing.T) {
 
 func TestActionCommandHistory_Deletion(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -2285,7 +2286,7 @@ func TestActionCommandHistory_Deletion(t *testing.T) {
 }
 func TestActionAppearanceSettings_SaveCursor(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -2336,7 +2337,7 @@ func TestActionAppearanceSettings_SaveCursor(t *testing.T) {
 
 func TestActionAppearanceSettingsSavesSystemMonospace(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	oldConfig := config.App
 	oldPath := config.GetUserConfigIniPath
@@ -2378,7 +2379,7 @@ func TestActionAppearanceSettingsSavesSystemMonospace(t *testing.T) {
 
 func TestActionAppearanceSettingsSavesFullPathInTitle(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	oldConfig := config.App
 	oldPath := config.GetUserConfigIniPath
@@ -2420,7 +2421,7 @@ func TestActionAppearanceSettingsSavesFullPathInTitle(t *testing.T) {
 
 func TestActionAppearanceSettingsSavesWorkspaceTabRestoration(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	oldConfig := config.App
 	oldPath := config.GetUserConfigIniPath
@@ -2462,7 +2463,7 @@ func TestActionAppearanceSettingsSavesWorkspaceTabRestoration(t *testing.T) {
 
 func TestActionAppearanceSettingsSavesWorkspaceTabOverlay(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	oldConfig := config.App
 	oldPath := config.GetUserConfigIniPath
@@ -2506,7 +2507,7 @@ func TestActionAppearanceSettingsSavesWorkspaceTabOverlay(t *testing.T) {
 
 func TestActionAppearanceSettingsSavesWorkspaceTabNumbering(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	oldConfig := config.App
 	oldPath := config.GetUserConfigIniPath
@@ -2546,14 +2547,14 @@ func TestActionAppearanceSettingsSavesWorkspaceTabNumbering(t *testing.T) {
 // TestActionAppearanceSettings_CancelPreservesPalette locks in the
 // fix: farcolors.ini overrides applied at startup were wiped when
 // the user opened Appearance settings and pressed Cancel, because
-// the dialog restored via ApplyColorStyle(originalStyle) — a clean
+// the dialog restored via theme.ApplyColorStyle(originalStyle) — a clean
 // re-apply of the named base style with no room for runtime
 // overrides. Snapshot-and-copy the whole palette instead, so
 // Cancel returns exactly what was on screen before the dialog
 // opened, regardless of where the tweak came from.
 func TestActionAppearanceSettings_CancelPreservesPalette(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -2566,15 +2567,15 @@ func TestActionAppearanceSettings_CancelPreservesPalette(t *testing.T) {
 	// restores by name it clobbers this back to the style default;
 	// if it restores by palette snapshot the sentinel survives.
 	const sentinel uint64 = 0xDEADBEEFCAFE0001
-	origAtIdx := vtui.Palette[ColPanelText]
-	vtui.Palette[ColPanelText] = sentinel
-	defer func() { vtui.Palette[ColPanelText] = origAtIdx }()
+	origAtIdx := vtui.Palette[theme.ColPanelText]
+	vtui.Palette[theme.ColPanelText] = sentinel
+	defer func() { vtui.Palette[theme.ColPanelText] = origAtIdx }()
 
 	actionAppearanceSettings(pf)
 	top := vtui.FrameManager.GetTopFrame().(vtui.Container)
 
 	// Trigger live preview: pick a style different from the current
-	// one so ApplyColorStyle actually runs and overwrites the
+	// one so theme.ApplyColorStyle actually runs and overwrites the
 	// sentinel. Any built-in style other than the current one works.
 	var combo *vtui.ComboBox
 	for _, itm := range top.GetChildren() {
@@ -2593,14 +2594,14 @@ func TestActionAppearanceSettings_CancelPreservesPalette(t *testing.T) {
 		target = len(combo.Menu.Items) - 1
 	}
 	combo.Menu.OnAction(target)
-	if vtui.Palette[ColPanelText] == sentinel {
+	if vtui.Palette[theme.ColPanelText] == sentinel {
 		t.Fatal("test setup: live preview didn't overwrite the sentinel — need a different palette slot or style pair")
 	}
 
 	clickDialogButton(t, top, "Cancel")
 
-	if got := vtui.Palette[ColPanelText]; got != sentinel {
-		t.Errorf("Cancel dropped the override: palette[ColPanelText]=%016x, want sentinel %016x", got, sentinel)
+	if got := vtui.Palette[theme.ColPanelText]; got != sentinel {
+		t.Errorf("Cancel dropped the override: palette[theme.ColPanelText]=%016x, want sentinel %016x", got, sentinel)
 	}
 }
 
@@ -2608,7 +2609,7 @@ func TestActionAppearanceSettings_LivePreviewRecolorsExistingLabels(t *testing.T
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -2663,7 +2664,7 @@ func TestActionAppearanceSettings_LivePreviewRecolorsExistingLabels(t *testing.T
 func TestPanelsFrame_RunAdvancedProgressTask(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -2752,7 +2753,7 @@ func (m *mockExtractionVFS) ParentVFS() vfs.VFS { return m.parent }
 
 func TestExecuteFileOp_ContextualTitles(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	srcDir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(srcDir, "data.txt"), []byte("data"), 0600); err != nil {
@@ -2824,7 +2825,7 @@ func (m *mockInvalidVFS) Stat(ctx context.Context, p string) (vfs.VFSItem, error
 
 func TestActionOpenEditor_SpecialFileRejection(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	v := &mockInvalidVFS{VFS: vfs.NewOSVFS(t.TempDir())}
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -2854,7 +2855,7 @@ Loop:
 
 func TestActionOpenViewer_SpecialFileRejection(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	v := &mockInvalidVFS{VFS: vfs.NewOSVFS(t.TempDir())}
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -2883,7 +2884,7 @@ Loop:
 }
 func TestActionEditFile_DirectoryRedirectsToAttributes(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	tmpDir := t.TempDir()
 	subDirName := "sub_folder"
@@ -2932,7 +2933,7 @@ func TestActionEditFile_DirectoryRedirectsToAttributes(t *testing.T) {
 func TestActionCreateLink_Flow(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	t.Cleanup(pf.Close)
@@ -3037,7 +3038,7 @@ func TestActionSwitchEditorToViewerAndBack(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	tmpDir := t.TempDir()
 	filePath := filepath.Join(tmpDir, "switch_test.txt")
@@ -3141,7 +3142,7 @@ func TestActionSwitchEditorToViewer_ModifiedFilePrompt(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	tmpDir := t.TempDir()
 	filePath := filepath.Join(tmpDir, "modified_switch.txt")
@@ -3238,7 +3239,7 @@ func TestActionSwitchEditorViewer_HeightPreserved(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	tmpDir := t.TempDir()
 	filePath := filepath.Join(tmpDir, "resize_test.txt")

@@ -1,4 +1,4 @@
-package main
+package theme
 
 import (
 	"github.com/unxed/f4/internal/ini"
@@ -11,7 +11,7 @@ import (
 // modern.ini (or another dark-first theme) forgot to override it, so
 // the built-in classic default (bright cyan/yellow on blue) leaked
 // through and painted a single field in classic colours over an
-// otherwise-dark theme.
+// otherwise-dark
 //
 // For every non-classic built-in theme, every entry in the Panel group
 // must be defined by the theme — either under its canonical name or

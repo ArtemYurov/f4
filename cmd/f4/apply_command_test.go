@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -391,12 +392,12 @@ func TestApplyOutputDialogExpandsTranscript(t *testing.T) {
 	if view.output.ItemCount <= view.output.ViewHeight {
 		t.Fatalf("test transcript does not overflow: items=%d height=%d", view.output.ItemCount, view.output.ViewHeight)
 	}
-	if view.output.ColorTextIdx != ColViewerText || view.output.ColorSelectedTextIdx != ColViewerStatus {
+	if view.output.ColorTextIdx != theme.ColViewerText || view.output.ColorSelectedTextIdx != theme.ColViewerStatus {
 		t.Fatalf("transcript colors = %d/%d, want themed Viewer colors %d/%d",
-			view.output.ColorTextIdx, view.output.ColorSelectedTextIdx, ColViewerText, ColViewerStatus)
+			view.output.ColorTextIdx, view.output.ColorSelectedTextIdx, theme.ColViewerText, theme.ColViewerStatus)
 	}
-	if view.output.ScrollBar.ColorIdx != ColViewerScrollbar {
-		t.Fatalf("transcript scrollbar color = %d, want themed Viewer scrollbar %d", view.output.ScrollBar.ColorIdx, ColViewerScrollbar)
+	if view.output.ScrollBar.ColorIdx != theme.ColViewerScrollbar {
+		t.Fatalf("transcript scrollbar color = %d, want themed Viewer scrollbar %d", view.output.ScrollBar.ColorIdx, theme.ColViewerScrollbar)
 	}
 	_, _, oldX2, oldY2 := view.output.GetPosition()
 	dx1, dy1, dx2, dy2 := dlg.GetPosition()

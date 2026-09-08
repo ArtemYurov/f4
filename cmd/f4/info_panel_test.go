@@ -13,6 +13,7 @@ import (
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -775,7 +776,7 @@ func TestInfoPanel_RendersUsageAsTwoLineMeter(t *testing.T) {
 			}
 
 			percentStart := strings.Index(first.text, "50%")
-			filledAttr, unfilledAttr := panelInfoUsageAttrs(vtui.Palette[ColPanelCursor])
+			filledAttr, unfilledAttr := panelInfoUsageAttrs(vtui.Palette[theme.ColPanelCursor])
 			for offset := 0; offset < len("50%"); offset++ {
 				insideOffset := percentStart + offset - first.usageBarStart
 				wantAttr := unfilledAttr
@@ -789,7 +790,7 @@ func TestInfoPanel_RendersUsageAsTwoLineMeter(t *testing.T) {
 				}
 			}
 			unfilledCell := scr.GetCell(ip.X1+1+first.usageBarStart+first.usageBarWidth-1, first.y)
-			_, baseBackground := panelInfoAttrColors(vtui.Palette[ColPanelCursor])
+			_, baseBackground := panelInfoAttrColors(vtui.Palette[theme.ColPanelCursor])
 			if got := vtui.GetRGBBack(unfilledCell.Attributes); got == baseBackground {
 				t.Fatalf("unfilled bar background %#x is indistinguishable from panel background", got)
 			}

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -27,7 +28,7 @@ func TestIssue95_HostConsoleTabCompletesBareDirectory(t *testing.T) {
 	vtui.AutoCompleteEnabled = true
 
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	pf := setupMockPanelsFrame(t)
 	defer pf.Close()
 	pf.shellMode = ShellModeHost

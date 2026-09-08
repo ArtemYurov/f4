@@ -1,4 +1,4 @@
-package main
+package theme
 
 import (
 	"embed"
@@ -24,7 +24,7 @@ type ColorStyle struct {
 	baseName string
 }
 
-const customColorStyleName = "Custom"
+const CustomColorStyleName = "Custom"
 
 var getUserStylesDir = func() string {
 	return filepath.Join(config.GetF4ConfigDir(), "styles")
@@ -40,14 +40,14 @@ func styleFromIni(fallbackName string, ini *ini.File) ColorStyle {
 
 func customStyleFromIni(ini *ini.File) ColorStyle {
 	baseName := strings.TrimSpace(ini.GetString("style", "Base", ""))
-	if baseName == "" || strings.EqualFold(baseName, customColorStyleName) {
+	if baseName == "" || strings.EqualFold(baseName, CustomColorStyleName) {
 		baseName = strings.TrimSpace(config.App.ColorStyle)
 	}
-	if baseName == "" || strings.EqualFold(baseName, customColorStyleName) {
+	if baseName == "" || strings.EqualFold(baseName, CustomColorStyleName) {
 		baseName = "Modern"
 	}
 	return ColorStyle{
-		Name:     customColorStyleName,
+		Name:     CustomColorStyleName,
 		ini:      ini,
 		custom:   true,
 		baseName: baseName,
@@ -94,8 +94,8 @@ func AvailableColorStyles() []ColorStyle {
 	// file would otherwise overwrite every colour as soon as a built-in style
 	// is selected, making the selector appear broken. Partial files retain the
 	// historical overlay behavior below in ApplyColorStyle.
-	if path := userColorOverridesPath(); fileExists(path) {
-		byName[strings.ToLower(customColorStyleName)] = customStyleFromIni(ini.Load(path))
+	if path := UserColorOverridesPath(); fileExists(path) {
+		byName[strings.ToLower(CustomColorStyleName)] = customStyleFromIni(ini.Load(path))
 	}
 
 	styles := make([]ColorStyle, 0, len(byName))
@@ -161,7 +161,7 @@ func isCompleteColorIni(ini *ini.File) bool {
 
 func isStandaloneCustomColorIni(ini *ini.File) bool {
 	if ini != nil {
-		if section, ok := ini.Sections()["style"]; ok && strings.EqualFold(strings.TrimSpace(section["Name"]), customColorStyleName) {
+		if section, ok := ini.Sections()["style"]; ok && strings.EqualFold(strings.TrimSpace(section["Name"]), CustomColorStyleName) {
 			return true
 		}
 	}
@@ -170,11 +170,11 @@ func isStandaloneCustomColorIni(ini *ini.File) bool {
 	return isCompleteColorIni(ini)
 }
 
-// userColorOverridesPath points at the personal farcolors.ini. A partial file
+// UserColorOverridesPath points at the personal farcolors.ini. A partial file
 // sits on top of whichever style is active; a complete exported file is also
 // available as the standalone Custom style. It is a variable for the same
 // reason getUserStylesDir is: tests need to point it somewhere harmless.
-var userColorOverridesPath = func() string {
+var UserColorOverridesPath = func() string {
 	return filepath.Join(config.GetF4ConfigDir(), "farcolors.ini")
 }
 
@@ -207,7 +207,7 @@ func ApplyColorStyle(name string) error {
 		ApplyColorIni(style.ini)
 	} else {
 		ApplyColorIni(style.ini)
-		if path := userColorOverridesPath(); fileExists(path) {
+		if path := UserColorOverridesPath(); fileExists(path) {
 			userIni := ini.Load(path)
 			if !isStandaloneCustomColorIni(userIni) {
 				ApplyColorIni(userIni)

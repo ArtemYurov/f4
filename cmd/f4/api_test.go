@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"github.com/unxed/f4/internal/sysinfo"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -60,7 +61,7 @@ func TestCoreAPI_Log(t *testing.T) {
 
 func TestCoreAPI_Message(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	api := &coreAPI{}
 	api.Message("api test message")

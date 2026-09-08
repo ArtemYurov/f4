@@ -8,6 +8,7 @@ import (
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/plugins/archive"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -279,7 +280,7 @@ func TestPanelsFrame_MiddleHeldWheelRoutesToPanel(t *testing.T) {
 
 func TestPanelsFrame_Layout(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	pf := NewPanelsFrame()
 	defer pf.Close()
 
@@ -1241,7 +1242,7 @@ func TestPanelsFrame_CtrlF12SortMenu(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -1298,7 +1299,7 @@ func TestPanelsFrame_RightClickHeaderOpensPanelCenteredSortMenu(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -1355,7 +1356,7 @@ func TestPanelsFrame_RightClickPanelPathOpensDriveMenuForThatPanel(t *testing.T)
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -1407,7 +1408,7 @@ func TestPanelsFrame_CtrlShiftArrowsOpenDriveMenuForPanelSide(t *testing.T) {
 			scr := vtui.NewSilentScreenBuf()
 			scr.AllocBuf(80, 25)
 			vtui.FrameManager.Init(scr)
-			SetDefaultF4Palette()
+			theme.SetDefaultF4Palette()
 
 			pf := NewPanelsFrame()
 			defer pf.Close()
@@ -1510,7 +1511,7 @@ func TestPanelsFrame_Clone(t *testing.T) {
 
 func TestPanelsFrame_CtrlBrackets_Insertion(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	pf := NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
@@ -1568,7 +1569,7 @@ func TestCtrlBracketsInsertPanelPathsIntoFocusedEdit(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -1621,7 +1622,7 @@ func TestCtrlBracketsIgnoreDialogsWithoutFocusedEdit(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -1646,7 +1647,7 @@ func TestCtrlBracketsIgnoreDialogsWithoutFocusedEdit(t *testing.T) {
 // nor die silently — it runs whatever plain Ctrl+A is bound to.
 func TestPanelsFrame_AIHotkeyCanBeUnbound(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	preserveActionRegistry(t)
 
 	oldHotkeys := GlobalHotkeysMgr
@@ -1704,7 +1705,7 @@ func TestPanelsFrame_AIHotkeyCanBeUnbound(t *testing.T) {
 
 func TestPanelsFrame_CtrlArrows_CommandLineNavigation(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	pf := NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
@@ -1763,7 +1764,7 @@ func TestPanelsFrame_CtrlArrows_CommandLineNavigation(t *testing.T) {
 }
 func TestPanelsFrame_AlwaysShowMenuBar(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	pf := NewPanelsFrame()
 	defer pf.Close()
 
@@ -2094,7 +2095,7 @@ func TestPanelsFrame_ResizingIntegration(t *testing.T) {
 	t.Cleanup(func() { config.App.WidthDecrement = oldWidthDecrement })
 
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	pf := NewPanelsFrame()
 	defer pf.Close()
 
@@ -2338,7 +2339,7 @@ func TestPanelsFrame_WideFollowsSwapAndClone(t *testing.T) {
 }
 func TestPanelsFrame_Clone_SelectionPreservation(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	tmp := t.TempDir()
 	if err := os.WriteFile(filepath.Join(tmp, "selected.txt"), []byte("data"), 0600); err != nil {
@@ -2732,7 +2733,7 @@ func TestTerminalRedrawSchedulerCoalescesBurst(t *testing.T) {
 }
 func TestPanelsFrame_Clone_Comprehensive(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	pf := NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
@@ -3732,7 +3733,7 @@ func TestLayout_F4InternalDialogs_Validity(t *testing.T) {
 }
 func TestPanelsFrame_CopyShortcuts(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	pf := NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
@@ -3918,7 +3919,7 @@ func TestLayout_F4ActionDialogs_Validity(t *testing.T) {
 
 func TestPanelsFrame_DriveMenu_OtherPanel(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -3987,7 +3988,7 @@ func TestPanelsFrame_DriveMenu_TerminalBusy(t *testing.T) {
 
 func TestPanelsFrame_TerminalTabAutoComplete(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -4114,7 +4115,7 @@ func TestDriveMenu_PhysicalKeys(t *testing.T) {
 }
 func TestPanelsFrame_ShiftInsert_Fallthrough(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	pf := NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
@@ -4162,7 +4163,7 @@ func TestPanelsFrame_ShiftInsert_Fallthrough(t *testing.T) {
 }
 func TestPanelsFrame_PromptTruncation(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	pf := NewPanelsFrame()
 	defer pf.Close()
 
@@ -4718,7 +4719,7 @@ func TestArchiveBulkExtract_ProgressTracking(t *testing.T) {
 }
 func TestPanelsFrame_ShiftF5_KeyInterception(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -5302,7 +5303,7 @@ func TestPanelsFrame_ShiftEnter_ExplorerLaunch(t *testing.T) {
 		t.Skipf("system file manager is unsupported on %s", runtime.GOOS)
 	}
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -5903,7 +5904,7 @@ func TestPanelsFrame_CtrlShiftArrows_AsymmetricHeight(t *testing.T) {
 
 func TestPanelsFrame_ProcessMouse_HoverWheel(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -5978,7 +5979,7 @@ func TestPanelsFrame_ProcessMouse_HoverWheel(t *testing.T) {
 
 func TestPanelsFrame_ProcessMouse_HoverWheel_AltPanel(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -6024,7 +6025,7 @@ func TestPanelsFrame_ProcessMouse_HoverWheel_AltPanel(t *testing.T) {
 }
 func TestPanelsFrame_ProcessMouse_HoverWheel_Medium_Boundaries(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -6096,7 +6097,7 @@ func TestPanelsFrame_ProcessMouse_HoverWheel_Medium_Boundaries(t *testing.T) {
 
 func TestPanelsFrame_ProcessMouse_HoverWheel_Detailed_Boundaries(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
@@ -6166,7 +6167,7 @@ func TestPanelsFrame_ProcessMouse_HoverWheel_Detailed_Boundaries(t *testing.T) {
 
 func TestFilePanel_WheelScrollSpeed(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	oldCfg := config.App
 	defer func() { config.App = oldCfg }()

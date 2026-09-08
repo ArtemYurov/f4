@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtui"
 )
 
@@ -152,7 +153,7 @@ func TestAppearanceSettingsFontComboRemainsEditable(t *testing.T) {
 	t.Cleanup(func() { discoverInstalledGuiFonts = previous })
 
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	oldConfig := config.App
 	oldPath := config.GetUserConfigIniPath
 	config.App.GuiFont = "/custom/font.otf"

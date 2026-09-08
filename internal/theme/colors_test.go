@@ -1,4 +1,4 @@
-package main
+package theme
 
 import (
 	"fmt"
@@ -96,82 +96,6 @@ Editor.Text = foreground:#A0A0A0 | background:#232323
 	}
 	if got := vtui.GetRGBBack(vtui.Palette[ColEditorText]); got != 0x232323 {
 		t.Errorf("Expected editor background #232323, got %06X", got)
-	}
-}
-
-func TestColors_HelpBoxOverrideReachesHelpViewFrame(t *testing.T) {
-	oldPalette := append([]uint64(nil), vtui.Palette...)
-	oldTheme := vtui.ThemePalette
-	oldCfg := config.App
-	t.Cleanup(func() {
-		vtui.Palette = oldPalette
-		vtui.ThemePalette = oldTheme
-		config.App = oldCfg
-	})
-
-	config.App.EnforceColorCorrection = false
-	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
-	InitColors(ini.Parse(strings.NewReader(`[farcolors]
-Help.Box = foreground:#102030 | background:#405060
-`)))
-
-	engine := vtui.NewHelpEngine(&memoryHelpVFS{files: map[string]string{}})
-	engine.AddTopic(&vtui.HelpTopic{Name: "Test", Lines: []string{"text"}})
-	view := vtui.NewHelpView(engine, "Test")
-	view.SetPosition(0, 0, 30, 5)
-	scr := vtui.NewSilentScreenBuf()
-	scr.AllocBuf(32, 7)
-	view.Show(scr)
-
-	if got, want := scr.GetCell(0, 0).Attributes, vtui.Palette[vtui.ColHelpBox]; got != want {
-		t.Fatalf("Help.Box frame attribute = %#x, want %#x", got, want)
-	}
-}
-
-// Help draws its scrollbar inside its own window, so it must not follow the
-// shared Scrollbar key that is tuned for lists sitting on the dialog
-// background (issue #261).
-func TestColors_HelpScrollbarOverrideReachesHelpViewScrollbar(t *testing.T) {
-	oldPalette := append([]uint64(nil), vtui.Palette...)
-	oldTheme := vtui.ThemePalette
-	oldCfg := config.App
-	t.Cleanup(func() {
-		vtui.Palette = oldPalette
-		vtui.ThemePalette = oldTheme
-		config.App = oldCfg
-	})
-
-	config.App.EnforceColorCorrection = false
-	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
-	InitColors(ini.Parse(strings.NewReader(`[farcolors]
-Scrollbar = foreground:#C0C0C0 | background:#0000A0
-Help.Scrollbar = foreground:#102030 | background:#405060
-`)))
-
-	engine := vtui.NewHelpEngine(&memoryHelpVFS{files: map[string]string{}})
-	lines := make([]string, 40)
-	for i := range lines {
-		lines[i] = "help line"
-	}
-	engine.AddTopic(&vtui.HelpTopic{Name: "Long", Lines: lines})
-	view := vtui.NewHelpView(engine, "Long")
-	view.SetPosition(0, 0, 30, 8)
-	scr := vtui.NewSilentScreenBuf()
-	scr.AllocBuf(32, 10)
-	view.Show(scr)
-
-	// The scrollbar runs down the right padding column of the help window.
-	cell := scr.GetCell(28, 1)
-	if cell.Char != vtui.ScrollUpArrow {
-		t.Fatalf("no scrollbar drawn at the right padding column: got %q", rune(cell.Char))
-	}
-	if got, want := cell.Attributes, vtui.Palette[vtui.ColHelpScrollbar]; got != want {
-		t.Fatalf("help scrollbar attribute = %#x, want %#x", got, want)
-	}
-	if cell.Attributes == vtui.Palette[vtui.ColScrollBar] {
-		t.Fatal("help scrollbar still follows the shared Scrollbar color")
 	}
 }
 

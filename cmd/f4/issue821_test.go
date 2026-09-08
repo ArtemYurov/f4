@@ -6,6 +6,7 @@ import (
 
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -13,7 +14,7 @@ import (
 func TestIssue821CommandHistoryEnterPastesSelectedEntry(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	previousHistory := vtui.GlobalHistoryProvider
 	vtui.GlobalHistoryProvider = stubHistoryProvider{}
@@ -51,7 +52,7 @@ func TestIssue821CommandHistoryKeepsLongEntryInsideDialog(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(screenWidth, screenHeight)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	menu := vtui.NewVMenu("History")
 	search := newHistorySearch(menu, []history.HistoryRecord{{Name: strings.Repeat("x", 200)}}, "")

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -38,7 +39,7 @@ func setupGrabberScreen(t *testing.T) *vtui.ScreenBuf {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(testGrabberW, testGrabberH)
 	vtui.FrameManager.Init(scr)
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	attr := vtui.SetRGBBoth(0, 0xFFFFFF, 0x000000)
 	scr.FillRect(0, 0, testGrabberW-1, testGrabberH-1, ' ', attr)
 	scr.Write(0, 0, vtui.StringToCharInfo("hello world", attr))

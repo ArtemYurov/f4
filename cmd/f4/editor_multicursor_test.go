@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/piecetable"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -31,7 +32,7 @@ func setExtraCaretsForTest(ev *EditorView, offsets ...int) {
 func multiCursorEditor(t *testing.T, text string) *EditorView {
 	t.Helper()
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	ev := NewEditorView(piecetable.New([]byte(text)), nil, "test.txt")
 	t.Cleanup(ev.Close)
 	ev.SetPosition(0, 0, 80, 12)

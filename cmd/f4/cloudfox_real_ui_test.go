@@ -18,6 +18,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/piecetable"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/plugins/cloudfox"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -78,7 +79,7 @@ func TestRealSavedCloudConnectionsUI(t *testing.T) {
 	// root package TestMain also suppresses external/native helpers, but this
 	// test does not rely on any of those routes in the first place.
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	originalConfig := config.App
 	t.Cleanup(func() { config.App = originalConfig })
 	config.App.EditorHighlighter = "None"
@@ -781,7 +782,7 @@ func readRealCloudFoxUIFile(t *testing.T, filesystem vfs.VFS, path string) []byt
 
 func realCloudFoxUIResetScreen() {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 }
 
 func realCloudFoxUIBarePanels(t *testing.T) *PanelsFrame {

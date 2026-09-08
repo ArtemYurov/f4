@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 	"testing"
@@ -9,7 +10,7 @@ import (
 
 func TestCommandLine_Input(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	cl := NewCommandLine("> ")
 	cl.SetPosition(0, 0, 10, 0)
 
@@ -48,7 +49,7 @@ func TestCommandLine_InitialFocus(t *testing.T) {
 
 func TestCommandLine_History(t *testing.T) {
 	vtui.SetDefaultPalette()
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 	cl := NewCommandLine("> ")
 
 	// 1. Test adding history
@@ -131,7 +132,7 @@ func TestCommandLine_HistoryBoundaries(t *testing.T) {
 
 func TestCommandLine_AutoCompleteDisabled(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	cl := NewCommandLine("> ")
 	cl.SetPosition(0, 0, 10, 0)
@@ -158,7 +159,7 @@ func TestCommandLine_AutoCompleteDisabled(t *testing.T) {
 
 func TestCommandLine_NoAutoCompleteMenuWhenDisabled(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	oldCfg := config.App
 	config.App.CommandLineAutoComplete = false
@@ -188,7 +189,7 @@ func TestCommandLine_NoAutoCompleteMenuWhenDisabled(t *testing.T) {
 
 func TestCommandLine_AutoCompleteSuppressed(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	cl := NewCommandLine("> ")
 	cl.SetPosition(0, 0, 10, 0)
@@ -226,7 +227,7 @@ func TestCommandLine_OptsOutOfWidgetAutoComplete(t *testing.T) {
 
 func TestCommandLine_AutoCompleteStillOpensWhenAllowed(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	SetDefaultF4Palette()
+	theme.SetDefaultF4Palette()
 
 	oldCfg := config.App
 	config.App.CommandLineAutoComplete = true

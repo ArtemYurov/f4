@@ -1,4 +1,4 @@
-package main
+package theme
 
 // Port of the contrast machinery from far2l's utils/src/colorspace.cpp.
 //
