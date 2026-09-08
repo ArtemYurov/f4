@@ -607,7 +607,29 @@ context a maintainer needs to judge a 300-file change he did not plan.
     it once. `ARCHITECTURE.md` and `rules/base.md` are that something, and they
     are in this PR.
 
-11. **What was deliberately not done**: no behaviour change inside a move commit,
+11. **The function-typed package variables, and why their defaults are hostile.**
+    A reader meeting `var Executable = func() (string, error) { return "", errNotWired }`
+    in a diff will read it as an accident unless the body says otherwise. Four
+    sentences: the dependency rules forbid a layer-0 package importing a layer
+    above it, so where a lower package needs a function that moved upward, it
+    declares a variable of the right signature and the composition root assigns
+    the implementation — `internal/config` never learns that `internal/update`
+    exists, and who implements what is known in one file, `main.go`. It is the
+    "lower layer defines the interface" rule from `ARCHITECTURE.md` with a
+    variable instead of an interface, because one function does not need one. The
+    defaults refuse rather than work because a default that works turns forgotten
+    wiring into silently wrong behaviour: `os.Executable` on a universal build
+    returns the loader's path *successfully*, and f4 would read its ini next to
+    `ld.so` and look to the user like "settings are not saved" rather than like a
+    failure. A refusing default turns that into a loud one at startup.
+
+    Keep the running list here so the body does not have to be reconstructed:
+    - `history.SamePath` and the history config directory (Task 20)
+    - `action.Localize` (Task 21, wired to `i18n.Msg` in Task 24)
+    - `config.Executable` (Task 24)
+    - the seven `TestMain` seams (Task 9)
+
+12. **What was deliberately not done**: no behaviour change inside a move commit,
     no renamed Far-derived type, no further splitting of packages — that is
     proposed as follow-up with evidence rather than smuggled in.
 

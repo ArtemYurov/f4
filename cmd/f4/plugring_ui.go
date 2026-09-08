@@ -14,7 +14,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/netproxy"
-	"github.com/unxed/f4/internal/update"
+	"github.com/unxed/f4/internal/unpack"
 	"github.com/unxed/vtui"
 )
 
@@ -336,9 +336,9 @@ func actionInstallPlugRingItem(pf *PanelsFrame, parent *vtui.Window, item PlugRi
 		if isArchive {
 			var err error
 			if isTarGz {
-				err = update.ExtractTarGz(archiveBytes, pluginDir)
+				err = unpack.TarGz(archiveBytes, pluginDir)
 			} else {
-				err = update.ExtractZip(archiveBytes, pluginDir)
+				err = unpack.Zip(archiveBytes, pluginDir)
 			}
 			if err != nil {
 				os.RemoveAll(pluginDir)

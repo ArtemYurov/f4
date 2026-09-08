@@ -93,6 +93,11 @@ f4/
 │   ├── media/        (extract)    # image, audio, video decode and preview
 │   ├── sysinfo/      (extract)    # cpu / mem / fs / gpu info, drives
 │   ├── update/       (extract)    # self-update, elevation, helper args
+│   ├── unpack/       (extract)    # zip / tar.gz / 7z over a directory, and the
+│   │                              # path guard its three callers share
+│   ├── inifile/      (extract)    # the ini parser the four leaves below share;
+│   │                              # its own package because none of them may
+│   │                              # import another of ours
 │   ├── config/       (extract)    # F4Config, ini parsing, config overlay
 │   ├── i18n/         (extract)    # language packs + embedded lang/
 │   ├── theme/        (extract)    # colours, colour space, styles + embedded styles/
@@ -284,7 +289,8 @@ is the only place where everything is assembled. Layers, bottom up:
 **Layer 0 — kernel, no intra-module dependencies:** `vfs`, `sdk`,
 `internal/piecetable`, `internal/sheet`, `internal/wincon`, `internal/ttyx`,
 `internal/netproxy`, `internal/hideconsole`, `internal/config`, `internal/i18n`,
-`internal/theme`, `internal/keymap`, `internal/sysinfo`.
+`internal/theme`, `internal/keymap`, `internal/sysinfo`, `internal/numeric`,
+`internal/inifile`, `internal/unpack`.
 
 **Layer 1 — subsystems over the kernel:** `internal/textlayout` →
 `internal/piecetable`; `internal/fusefs` → `vfs`; `internal/vtvibe` → `vfs`;
@@ -309,8 +315,10 @@ Rules:
   plugin back: they are leaves, wired in through `internal/plughost`.
 - ✅ Any module → `internal/config`, `internal/i18n`, `internal/theme`,
   `internal/keymap`, `internal/sysinfo`, `vfs`. These are leaves: they import no
-  other `internal/*` package, which is what lets `config.App` stay a package-level
-  global without creating a cycle.
+  other `internal/*` package **except one that imports nothing itself** —
+  `internal/numeric`, `internal/inifile`, `internal/unpack` — which is what lets
+  `config.App` stay a package-level global without creating a cycle. A package
+  with no imports of ours cannot be in one.
 - ✅ Higher-layer modules talk to lower ones by calling exported constructors and
   methods; lower ones call back through interfaces they define themselves.
 - ❌ `vfs` / `sdk` → any `internal/*` package. They are the public contract: an

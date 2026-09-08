@@ -314,8 +314,13 @@ table places it at layer 1 rather than 3.
      the alternative is an upward import.
    - `sanitizeExtractPath` has a consumer in `colorer_downloader.go` and the two
      zip/tar extractors have one in `plugring_ui.go`, neither of them updater
-     code. They are exported as `SanitizePath`, `ExtractZip` and `ExtractTarGz`;
-     both consumers land above layer 1, so the edge is legal.
+     code. They went to **`internal/unpack`** rather than staying exported from
+     here: three places unpack an archive f4 did not create — a release from
+     GitHub, a plugin from a third-party catalogue, a colour scheme from
+     somebody's host — and `SanitizePath` is the zip-slip guard all three need.
+     A guard that lives inside the updater is a guard the fourth caller will not
+     find. `internal/update` becomes one consumer of three; the package imports
+     `vfs` and nothing else of ours, so any layer may call it.
 2. `AppConfig` fields `UpdateChannel`, `UpdateInterval`, `LastUpdateCheck` and
    `LastUpdateVersion` are read here. `internal/config` does not exist yet
    (Task 24), so this wave must not read `AppConfig` directly. Pass the four values

@@ -387,6 +387,26 @@ titles, not the ordering.
 Things measured and not yet settled. Each names the evidence and the next step,
 so that whoever picks this up does not re-derive it.
 
+### Two packages the plan did not name
+
+Both were forced by the dependency rules rather than chosen, and both import
+nothing of ours, which is what makes them shareable by the layer-0 leaves.
+
+- **`internal/inifile`** (Task 24 groundwork). `config`, `i18n`, `theme` and
+  `keymap` all parse ini files and none of them may import another of ours, so
+  the parser cannot live in `internal/config` as the task text says. The package
+  name is `inifile` and not `ini` because nine files call a local variable `ini`,
+  and a package a local shadows is the mistake that compiles.
+- **`internal/unpack`** (Task 23 follow-up). Archive extraction has three
+  callers — the updater, the plugin catalogue, the colorer downloader — and
+  `SanitizePath` is the zip-slip guard for all three.
+
+`ARCHITECTURE.md`'s tree, layer list and leaf rule now name both. The leaf rule
+reads "no other `internal/*` **except one that imports nothing itself**", which
+is the invariant the original wording was reaching for: a package with no
+imports of ours cannot be in a cycle. `internal/keymap` → `internal/numeric`,
+which the plan already sanctioned, is the same exception.
+
 ### `internal/config` needs an `Executable` seam in Task 24
 
 `self_exec*.go` went to `internal/update` in Task 23, as the roster says, and

@@ -54,6 +54,11 @@ var architectureLayers = map[string]int{
 	// ours, which is what lets any layer call it.
 	"internal/sysinfo": 0,
 
+	// Archive extraction over a directory on disk, and the path guard that
+	// keeps an archive member inside it. Three callers, none of which is a
+	// dependency of the other two.
+	"internal/unpack": 0,
+
 	// Self-update: check, download, install, elevate, and the self-exec rules
 	// the install has to know. A leaf over the network, not an interactive
 	// subsystem, which is why it is layer 1 and not layer 3.

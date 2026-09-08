@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/netproxy"
-	"github.com/unxed/f4/internal/update"
+	"github.com/unxed/f4/internal/unpack"
 	"github.com/unxed/vtui"
 	"github.com/unxed/zip"
 )
@@ -117,7 +117,7 @@ func installColorerSchemas(data []byte, destDir string, ctx context.Context) err
 		if relPath == "" {
 			continue
 		}
-		if _, err := update.SanitizePath(relPath, destDir); err != nil {
+		if _, err := unpack.SanitizePath(relPath, destDir); err != nil {
 			return fmt.Errorf("invalid Colorer archive member %q: %w", f.Name, err)
 		}
 		if f.Mode()&os.ModeSymlink != 0 {
@@ -159,7 +159,7 @@ func installColorerSchemas(data []byte, destDir string, ctx context.Context) err
 		if relPath == "" {
 			continue
 		}
-		targetPath, err := update.SanitizePath(relPath, stage)
+		targetPath, err := unpack.SanitizePath(relPath, stage)
 		if err != nil {
 			return err
 		}
