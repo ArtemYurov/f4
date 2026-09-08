@@ -76,9 +76,9 @@ map and, for an audited symbol, one line to
 | `cmd/f4/macro.go` | 6 | resolve |
 | `cmd/f4/macro_host.go`, `macro_lua_api.go` | 2 each | resolve |
 | `cmd/f4/macro_lua.go`, `macro_plugin_calls.go` | 1 each | resolve |
-| `.github/workflows/build.yml:178,406,580,812` | `cp -r cmd/f4/lang cmd/f4/help build/` | the **`help` half** belongs to Task 25 |
-| `.github/workflows/build.yml:1187` | `-skip '^TestAllDialogs_LayoutValidation$'` applied globally | see Task 25 step 5 |
-| `.github/workflows/build.yml:1193-1194` | isolated re-run keyed on `./...` or `cmd/f4` | see Task 25 step 5 |
+| `.github/workflows/build.yml:198,426,600,832` | `cp -r cmd/f4/lang cmd/f4/help build/` | the **`help` half** belongs to Task 25 |
+| `.github/workflows/build.yml:1235` | `-skip '^TestAllDialogs_LayoutValidation$'` applied globally | see Task 25 step 5 |
+| `.github/workflows/build.yml:1239-1242` | isolated re-run keyed on `./...` or `cmd/f4` | see Task 25 step 5 |
 | `.github/workflows/build.yml:93,95-97,191,195,304,418,422` | icon generation and packaging | Task 27 |
 | `tools/icons/main.go:37,38` | `iconDir`, `outDir` | Task 27 |
 | `tools/icons/main.go:160` | `cmd.Dir = filepath.Join(root, "cmd", "f4")` | **stays** — `.syso` links only from the built package's dir |
@@ -137,10 +137,10 @@ This wave also collects the eight dialog helpers stranded in `actions.go`
    directive at `help.go:18` is relative to its own directory and needs no edit
    once both move together.
 5. **The two CI edits that belong only to this commit:**
-   - `build.yml:178`, `:406`, `:580`, `:812` — the `help` half of
+   - `build.yml:198`, `:426`, `:600`, `:832` — the `help` half of
      `cp -r cmd/f4/lang cmd/f4/help build/` becomes
      `internal/dialog/help`. (Phase 5 edited the `lang` half of the same lines.)
-   - `build.yml:1193-1194`. `dialog_layouts_test.go` holds
+   - `build.yml:1239-1242`. `dialog_layouts_test.go` holds
      `TestAllDialogs_LayoutValidation` and moves in this commit. Line 1187 skips
      that test **globally** (`-skip '^TestAllDialogs_LayoutValidation$'`) and lines
      1193-1194 re-run it single-threaded only when the target list contains
@@ -358,7 +358,7 @@ is term, and anything drawing *a window* is gui.
      `cmd/f4/rsrc_windows_amd64.syso`, `cmd/f4/rsrc_windows_arm64.syso`. The icon
      directory moves; **the two `.syso` paths stay**, because the toolchain links
      `.syso` only from the directory of the package being built.
-   - `build.yml:191`, `:195`, `:418`, `:422`, `:304` — packaging copies of the
+   - `build.yml:209`, `:211`, `:215`, and the packaging copies beside them — packaging copies of the
      generated PNGs, the SVG and `f4.icns`.
    - `tools/icons/main.go` has three path constructions and **only two move**:
      `iconDir` (`:37`) and `outDir` (`:38`) become

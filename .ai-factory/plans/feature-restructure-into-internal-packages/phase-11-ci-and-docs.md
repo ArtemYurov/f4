@@ -24,7 +24,7 @@ plan it describes a fact.
 | `build.yml:1262-1268` | comment: "cmd/f4's suite alone takes as long under the detector as every other package combined" | the stated reason for the split |
 | `build.yml:1271-1273` | `cmd/f4 A` / `B-L` / `rest`, `run: '^TestA'` etc. | three race shards splitting one package by test-name letter |
 | `build.yml:1318`, `:1326` | `github.com/unxed/f4/cmd/f4` guard and `go test -race … ./cmd/f4` | the shards' bodies |
-| `build.yml:1332` | `go list ./... \| grep -Ev '^github.com/unxed/f4/cmd/f4$'` | the `packages` scope, which absorbed every migrated package automatically |
+| `build.yml:1395` | `go list ./... \| grep -Ev '^github.com/unxed/f4/cmd/f4$'` | the `packages` scope, which absorbed every migrated package automatically |
 | `.golangci.yml`, `.golangci-strict.yml` | contain no paths | need no edit |
 | incremental lint | `--new-from-rev=origin/main` | rename detection across a `package` clause change |
 | `AGENTS.md` | 6 `cmd/f4` mentions; "687 files in one flat package main" (`:23`) | structural map, now wrong |
@@ -53,7 +53,7 @@ plan it describes a fact.
 The lint and race shards are named after `cmd/f4` because one package held 345
 files and 96 495 lines of tests. That package now holds `main.go`. The shards
 stayed *correct* throughout the migration — files migrated between them on their
-own, and `build.yml:1332` computed the `packages` scope by exclusion — but they
+own, and `build.yml:1395` computed the `packages` scope by exclusion — but they
 are now badly imbalanced: three race runners split a package with almost no tests
 while one runner carries fifteen packages.
 
@@ -72,10 +72,10 @@ This is done **once, here**, not fourteen times during the waves.
    to its shard".
 4. Replace the race matrix at `build.yml:1271-1273`. Drop the `cmd/f4 A` /
    `B-L` / `rest` letter split and its `run:` filters, and drop the `packages`
-   scope's exclusion at `build.yml:1332` — with no giant package there is nothing
+   scope's exclusion at `build.yml:1395` — with no giant package there is nothing
    to exclude. Shard by package the same way as the lint job.
 5. Keep the two behaviours that are not about sharding:
-   - the global `-skip '^TestAllDialogs_LayoutValidation$'` at `build.yml:1187`
+   - the global `-skip '^TestAllDialogs_LayoutValidation$'` at `build.yml:1235`
      and its single-threaded re-run. Confirm which package it points at — Task 25
      step 5 leaves it at `./internal/dialog`, `./cmd/f4` or `./internal/panel`
      depending on how `dialog_layouts_test.go` was split — and require an explicit
@@ -600,7 +600,14 @@ context a maintainer needs to judge a 300-file change he did not plan.
    the three pre-existing failures recorded in the baseline (Task 42); the
    structural review outcome and any follow-up proposals (Task 44).
 
-10. **What was deliberately not done**: no behaviour change inside a move commit,
+10. **One line on why the rule matters more than the tidying.** `CI.md` appeared
+    in the repository root while this branch was clearing it. That is not a
+    complaint about the file or its author — it is the argument: a root stays
+    tidy because something says where a file goes, not because somebody tidied
+    it once. `ARCHITECTURE.md` and `rules/base.md` are that something, and they
+    are in this PR.
+
+11. **What was deliberately not done**: no behaviour change inside a move commit,
     no renamed Far-derived type, no further splitting of packages — that is
     proposed as follow-up with evidence rather than smuggled in.
 

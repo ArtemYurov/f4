@@ -82,7 +82,7 @@ each wave phase file so a task can be implemented from one file.
    invisible to it and are touched by Task 13 (plugring) and Task 27 (icons).
    A cross-compile loop that includes freebsd or netbsd passes
    `-gcflags=github.com/go-webgpu/goffi/internal/fakecgo=-std` for those two
-   targets — the flag the matrix itself passes (`build.yml:880`). Without it the
+   targets — the flag the matrix itself passes (`build.yml:160,411`). Without it the
    build stops on `//go:cgo_export_dynamic … only allowed in cgo-generated code`,
    which looks like a breakage this plan caused and is not one. Every loop in
    Phases 3-8 carries the `case` that adds it.
@@ -111,7 +111,7 @@ each wave phase file so a task can be implemented from one file.
 | `cmd/f4/cpu_info*.go`, `mem_info*.go`, `fs_info*.go`, `gpu_info*.go` | 19 files, views 0, `Msg` 0 after Task 7 | move whole |
 | `cmd/f4/drives_unix.go`, `drives_windows.go`, `drive_registry.go` | `DriveEntry` only, after Task 6 | move whole |
 | `.github/workflows/build.yml:87` | `go run ./tools/langfmt -check cmd/f4/lang/*.lng` | moves with `lang/` |
-| `.github/workflows/build.yml:178,406,580,812` | `cp -r cmd/f4/lang cmd/f4/help build/` | **`lang` half here, `help` half in Task 25** |
+| `.github/workflows/build.yml:198,426,600,832` | `cp -r cmd/f4/lang cmd/f4/help build/` | **`lang` half here, `help` half in Task 25** |
 | `tools/langfmt/main.go:47` | default `-source cmd/f4/lang/en.lng` | moves with `lang/` |
 | `cmd/f4/lang/README.md:5-6,24` | three command examples | move with the directory |
 | `plugins/netfox/lang_test.go:22` | `const hostStringsPath = "../../cmd/f4/lang/en.lng"` | read at test runtime |
@@ -409,7 +409,7 @@ design — the package imports no other `internal/*`, so it cannot create a cycl
 5. **Infrastructure, in this same commit:**
    - `build.yml:87` — `go run ./tools/langfmt -check cmd/f4/lang/*.lng` →
      `internal/i18n/lang/*.lng`
-   - `build.yml:178`, `:406`, `:580`, `:812` — `cp -r cmd/f4/lang cmd/f4/help build/`
+   - `build.yml:198`, `:426`, `:600`, `:832` — `cp -r cmd/f4/lang cmd/f4/help build/`
      → change the **`lang` half only**; the `help` half moves in Task 25. Each of
      the four lines is edited twice across the two commits, which is expected.
    - `tools/langfmt/main.go:47` — default `-source` value.

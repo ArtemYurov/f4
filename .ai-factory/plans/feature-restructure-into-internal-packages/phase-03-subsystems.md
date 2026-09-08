@@ -159,7 +159,7 @@ Lua transport.
 - `internal/fusefs` → `vfs` and `internal/vtvibe` → `vfs` stay. `vfs` remains a
   root-level public package; nothing about it changes in this task.
 - `internal/luaplug` keeps its FFI arrangement untouched. The race workflow's
-  comment at `build.yml:1330` notes that luaplug can now run its FFI tests under
+  comment at `build.yml:1395` notes that luaplug can now run its FFI tests under
   the detector — that stays true, and the `packages` scope picks up the new path
   automatically.
 

@@ -117,10 +117,10 @@ commit. Phase 4 carries the full table.
 
 **CI does not need per-commit resharding, but it does hide one silent failure.**
 The lint shards split `./cmd/f4/...` against everything else and the race
-`packages` scope is `go list ./... | grep -Ev '…/cmd/f4$'` (`build.yml:1332`), so
+`packages` scope is `go list ./... | grep -Ev '…/cmd/f4$'` (`build.yml:1395`), so
 files migrate between shards on their own and both halves stay correct — only
 progressively imbalanced. Rebalance once, in Task 38. The trap is elsewhere:
-`build.yml:1187` skips `TestAllDialogs_LayoutValidation` globally and re-runs it
+`build.yml:1235` skips `TestAllDialogs_LayoutValidation` globally and re-runs it
 single-threaded only for `./...` or `cmd/f4` (`:1193-1194`). When
 `dialog_layouts_test.go` moves in Task 25, the test is skipped everywhere and
 re-run nowhere — a green build with a missing test.
@@ -162,22 +162,22 @@ and `TestMain` — the waves would otherwise strand.
     catches exactly the mistake this plan is most likely to make: a file selected
     by its name instead of its `//go:build` line.
     **freebsd and netbsd need `-gcflags=github.com/go-webgpu/goffi/internal/fakecgo=-std`**
-    (the flag the matrix itself passes, `build.yml:880`). Without it the build
+    (the flag the matrix itself passes, `build.yml:160,411`). Without it the build
     fails on `//go:cgo_export_dynamic … only allowed in cgo-generated code`, which
     looks exactly like a breakage we caused and is not one. Verified on the
     current tree: all six sampled targets build clean, freebsd only with the flag.
   - *After every phase, in CI.* `gh workflow run build.yml --ref <branch>`.
     It must be `workflow_dispatch`, **not** a pull request: `build-batch`, which
     holds every exotic target, is gated on
-    `github.event_name != 'pull_request'` (`build.yml:324`), and so is the
-    cross-libc smoke test (`build.yml:231`). A PR therefore builds only the six
+    `github.event_name != 'pull_request'` (`build.yml:344`), and so is the
+    cross-libc smoke test (`build.yml:251`). A PR therefore builds only the six
     desktop cells and would report green while the targets most at risk went
     unbuilt. Note also that a commit touching only `.md` and `docs/` skips CI
     entirely on a PR (`paths-ignore`), which is why the documentation phases
     cannot be checked this way at all.
   - *Not after every commit in CI.* One run is ~30 jobs against 20 free-tier
     runners, and `concurrency` cancels the in-flight run on the same ref
-    (`build.yml:28-30`), so consecutive pushes would queue up and kill each
+    (`build.yml:29-31`), so consecutive pushes would queue up and kill each
     other. Eleven phase runs give the same coverage as twenty-seven commit runs.
 - **Lint what you touched, before you commit.**
   `golangci-lint run --new-from-rev=origin/main <the packages you changed>`, at the
@@ -191,6 +191,13 @@ and `TestMain` — the waves would otherwise strand.
   Note what "new" means here: the base is `origin/main`, the fork's own main, not
   `upstream/main`. Whatever the fork is behind by is reported as yours. Task 39
   levels them before it measures anything.
+
+- **Line numbers in `.github/workflows/build.yml` are a moving target.** The file
+  grew from about 1350 lines to 1601 during this work and every upstream merge
+  shifts it again. Every citation of it in this bundle is a convenience, not an
+  address: locate the line by grepping its content — `cp -r cmd/f4/lang`,
+  `TestAllDialogs_LayoutValidation`, `new-from-rev`, `fakecgo=-std` — and treat a
+  mismatch as drift in the number rather than a change in the workflow.
 
 - **Move by `//go:build` line, never by filename.** `pty_unix.go` is
   `//go:build linux`; `solaris_pty.go` is `//go:build !windows` and holds no PTY
