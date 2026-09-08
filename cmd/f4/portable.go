@@ -285,6 +285,19 @@ type portableSettingsDialog struct {
 	resizeStartWidth int
 }
 
+// ResizeConsole keeps a width chosen by the user when the terminal or main
+// window is resized. vtui.Window.ResizeConsole uses the content width from
+// dialog creation, which would discard a later horizontal resize.
+func (d *portableSettingsDialog) ResizeConsole(screenW, screenH int) {
+	width := d.X2 - d.X1 + 1
+	height := d.Y2 - d.Y1 + 1
+	if width <= screenW && height <= screenH {
+		d.Center(screenW, screenH)
+		return
+	}
+	d.Window.ResizeConsole(screenW, screenH)
+}
+
 func (d *portableSettingsDialog) ProcessMouse(e *vtinput.InputEvent) bool {
 	if d.resizing {
 		if e.ButtonState == 0 {
