@@ -13,6 +13,19 @@
 - Types: `PascalCase`; Far-derived structures keep the names of their C++ originals
   even when Go style would suggest otherwise
 - Packages: single lowercase word (`vfs`, `wincon`, `ttyx`, `cloudfox`, `envman`)
+- **`config` vs `Settings`** — the two are not synonyms here, and keeping them
+  apart is what stops one from swallowing the other:
+  - `config` names the application's configuration: the package
+    `internal/config`, the type `F4Config`, the global `config.App`, the file it
+    loads. There is exactly one, so the word is taken — do not add a second
+    package or a global under a name that means the same thing.
+  - `Settings` names the parameters of a single subsystem, as a type inside that
+    subsystem's own package: `netproxy.Settings`, `update.Settings`,
+    `mediainfo.Settings`. Never a package of its own, never a global.
+  - `settings` inside a filename is about the settings *dialog*, not storage —
+    `proxy_settings_ui.go`, `settings_save.go`. The comment atop `settings_save.go`
+    draws the line itself: the window geometry comes from the GUI backend, the
+    settings file from `internal/config`.
 
 ## Module Structure
 
