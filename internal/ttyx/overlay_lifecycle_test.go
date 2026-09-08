@@ -9,8 +9,8 @@ func TestOverlayLifecycleWithoutDisplay(t *testing.T) {
 	}
 
 	ov := &Overlay{
-		s:   s,
-		win: 17,
+		s:    s,
+		win:  17,
 		rect: Rect{X: 10, Y: 20, W: 30, H: 40},
 	}
 
