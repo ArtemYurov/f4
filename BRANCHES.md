@@ -64,6 +64,12 @@
 | `codex/fix-manual-update-ci` | локальная ветка и рабочее дерево `/tmp/f4-fix-manual-update-ci`, prunable |
 | `codex/conpty-idea-c` | устаревший remote-tracking ref, активного PR не найдено |
 
+## Ветка текущей работы
+
+| Ветка | Назначение |
+| --- | --- |
+| `codex/lunobot2-378-status` | status-документ по #378; PR ещё не создан |
+
 ## Правило обновления
 
 После каждого коммита в `main` этот список проверяется вместе с `CI.md`.
