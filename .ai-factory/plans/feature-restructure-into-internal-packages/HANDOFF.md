@@ -12,20 +12,22 @@ the live bug the first of them fixed.
 
 ## Where the work stands
 
-Tasks 26-32 and 46 are done and committed; phases 6 and 7 are closed and phase
-8 is half done. `cmd/f4` is down from 596 files to 378. The checkboxes in
-`index.md` match the tree.
+Tasks 26-33 and 46 are done and committed; phases 6, 7 and 8 are closed.
+`cmd/f4` is down from 596 files to 328. The checkboxes in `index.md` match the
+tree.
 
-Next is **Task 33, `internal/editor`**. One thing is known about it before it
-starts: `findPanelsFrameAnyScreen` is declared in `editor_view.go:5562` and
-reads `pf.closed`, a private field of `PanelsFrame`, so Go requires it in the
-panel's package. It cannot travel with the file; Task 33 has to lift it out.
-`index.md` line 446 calls it composition-root code, which is also wrong.
+Next is **Task 34, `internal/panel`** — the largest wave left, and the one most
+likely to reorder the menu: it takes `fuse_mount_action.go` and
+`fuse_mount_list.go`, and with them the last three action registrations in
+`cmd/f4`. `TestActionOrderIsStable` is the check that says so.
 
-Task 34 after that is the wave most likely to reorder the menu: it takes
-`fuse_mount_action.go` and `fuse_mount_list.go`, and with them the last three
-action registrations left in `cmd/f4`. `TestActionOrderIsStable` is the check
-that says so.
+Three things wait for it. `text_editor_bridge.go` and `visren_editor_bridge.go`
+are named for the editor and belong here, by the assertion at
+`text_editor_bridge.go:16`. `panel_lookup.go` is the four panel lookups Task 33
+lifted out of `editor_view.go`; they read `pf.closed` and `pf.getActivePanel`.
+And `semantic_fields.go` now exists twice, in `internal/viewer` and
+`internal/editor`, both marked `ponytail:` — Task 34 owns the split of
+`cmd/f4/semantic.go` and gives those three readers one layer-0 home.
 
 ## Deviations from the plan, and where each is recorded
 
@@ -48,19 +50,18 @@ session can check the record rather than rediscover it.
 
 ## Open tails
 
-1. **The upstream merge above.** First thing.
-2. **`attributes_dialog.go` scores `PanelsFrame` ×8.** Its name asks for
-   `internal/dialog`; both dialog and fileops are layer 3, so the gate will not
-   settle it. Measure on the Task 32 wave. Recorded in `phase-08`.
-3. **`commands.go`.** Positional `vtui.CmApp + iota` constants that
-   `panels_frame.go` names, planned for `internal/cmdline` — the one import
-   Task 35 forbids the panel from having. Task 34 or 35 must settle it; the
-   destination has to be reachable by panel, editor, viewer and the dialogs.
-4. **`internal/viewer/semantic_fields.go`** carries a `ponytail:` marker: three
-   generic readers copied from `semantic.go` rather than hoisted, because Task
-   34 owns that file's split across five packages. Give them one home when the
-   last slice leaves.
-5. **The darwin mackeys flake and the two CI-only failures** in `index.md`'s
+1. **`semantic_fields.go` exists twice**, in `internal/viewer` and
+   `internal/editor`, both carrying a `ponytail:` marker. Three generic readers
+   copied rather than hoisted, because Task 34 owns `cmd/f4/semantic.go`'s split
+   across five packages. Two copies is where copying stops paying: Task 34 gives
+   them one layer-0 home and deletes both files.
+2. **`panel_lookup.go`** holds the four panel lookups Task 33 lifted out of
+   `editor_view.go`. They read `pf.closed` and `pf.getActivePanel`, so Task 34
+   takes them.
+3. **`internal/editor/view.go`'s `saveUndo` op classes stay private.** The one
+   external caller gets `Checkpoint()` instead. If a second appears, the enum is
+   the thing to export, not another method.
+4. **The darwin mackeys flake and the two CI-only failures** in `index.md`'s
    Open Findings are untouched by this session.
 
 ## Plan-versus-tree discrepancies seen and not acted on
@@ -101,7 +102,7 @@ so filter on the first letter instead; and struct fields are not in the model at
 all — `fsp.vfs` does not appear — so the query names candidates and grep
 confirms them.
 
-## Two mechanical traps, both hit once
+## Three mechanical traps, each hit once
 
 **`git commit --only $(git diff --cached --name-only)` builds a commit that does
 not compile.** With rename detection, `--name-only` prints only the new path;

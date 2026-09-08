@@ -378,6 +378,41 @@ package.
 9. Add `"internal/editor": 3` to the auditor's layer map, and `editor` to the
    palette auditor's file→target-package map.
 
+### What the wave actually found
+
+**Four functions in `editor_view.go` were not the editor's**, and the file
+never called one of them: `findPanelsFrameAnyScreen` (23 callers elsewhere) and
+the three resolvers that ask it for the left path, the right path and the
+selected name. All four read private members of the panel types, so Go requires
+them in the panels' package. They are `cmd/f4/panel_lookup.go` now and travel to
+`internal/panel` in Task 34. Lifted in their own commit, before the move.
+
+**`commands.go` became `internal/appcmd`.** Open tail 3 left the destination to
+Task 34 or 35; this wave reached it first, because the editor names four of the
+constants and cannot import `cmd/f4`. See `index.md`.
+
+**`async_buffer.go` came here**, against Task 43's roster, which assigned it to
+`app` by its test. It is a field of `EditorView` and by nature what
+`mapped_file.go` is — the piece table's lazy buffer. Sixth name-versus-graph
+case.
+
+**The editor's host boundary is ten seams**, each measured at one or two call
+sites: `RunAction`, `LookupHotkey`, `MenuBarItems`, `CrossAttrs`,
+`KeyBarLabels`, `HotkeyAction`, `RememberEdited`, `SaveSession`,
+`HandleWorkspaceFork`, `SwitchToViewer`. `internal/editor/host.go` declares
+them; `main.go` and `TestMain` fill them in. Every default is inert rather than
+approximate — an unwired editor declines the key and draws no crosshair.
+
+`DownloadColorerSchemas` needed no seam: it wanted `pf.RunProgressTask`, and
+`vfs.App` already declares that, so it takes the interface.
+
+**Twenty-four tests moved back to `cmd/f4`.** Nineteen press a key and expect an
+action to run: the registry behind the seam is filled by `action_table.go`'s
+`init` in `cmd/f4`, so in `internal/editor` they would have passed by finding
+nothing to do. That is the shape to watch for in Task 34 — a test whose subject
+is a *binding* belongs with the table, not with the widget. The other five need
+the hotkey manager, the panels frame, or a mock this package declares.
+
 ### Required Interfaces and Contracts
 
 - `internal/editor` may import `internal/piecetable`, `internal/textlayout`,

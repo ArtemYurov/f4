@@ -392,7 +392,7 @@ upstream merge that must happen first, the open tails and the tool hazards.
 ### Phase 8: File Operations and the Editor
 - [x] Task 46: Audit the message keys — every literal `Msg`/`HelpMsg` key exists in `en.lng` ([details](phase-08-fileops-and-editor.md#task-46)) — runs before Task 32, outside the phase order
 - [x] Task 32: Extract `internal/fileops` ([details](phase-08-fileops-and-editor.md#task-32-extract-internalfileops)) (depends on 5, 30, 31)
-- [ ] Task 33: Extract `internal/editor` ([details](phase-08-fileops-and-editor.md#task-33-extract-internaleditor)) (depends on 14, 29, 32)
+- [x] Task 33: Extract `internal/editor` ([details](phase-08-fileops-and-editor.md#task-33-extract-internaleditor)) (depends on 14, 29, 32)
 
 ### Phase 9: Panels and the Command Line
 - [ ] Task 34: Extract `internal/panel`, finish `semantic.go`, fill `internal/paneltest` ([details](phase-09-panel-and-cmdline.md#task-34-extract-internalpanel)) (depends on 26, 33)
@@ -604,6 +604,29 @@ only is either the change you meant or damage.
 ```
 git diff --cached -M -- cmd/f4 internal | grep -E '^[+-]' | grep '"'
 ```
+
+### A third package the plan did not name: `internal/appcmd`
+
+`commands.go`'s 72 `vtui.CmApp + iota` constants are the protocol every frame
+speaks — a panel raises `CmEdit`, the editor answers it — and open tail 3 left
+their home to Task 34 or 35. Task 33 reached the question first: the editor
+names four of them, and a package cannot import `cmd/f4`.
+
+`internal/appcmd` is layer 0 and imports only `vtui`, which is what lets the
+panels, the editor, the viewer and the command line all name the same numbers
+without importing one another. The values are positional, so a line inserted in
+the middle renumbers everything below it; the file says so.
+
+### `internal/editor` imports `internal/viewer`, and that is correct
+
+Task 33's contract ruled the edge out, and its reason was a cycle. The cycle is
+gone: Task 29 moved `top_bar.go`, `file_title.go` and `url_links.go` into the
+viewer, and the editor reads 22 symbols from them — `UrlLink` ×8, the
+disassembly helpers, the word-category helpers, `TopBar`. `internal/viewer`
+imports nothing back.
+
+Same layer, one direction, no cycle. `architecture_test.go` — which checks the
+edge rather than the sentence — passes. The contract line is the stale half.
 
 ### Two packages the plan did not name
 
