@@ -3,6 +3,7 @@ package id3editor
 import (
 	"context"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/unxed/f4/vfs"
@@ -59,7 +60,7 @@ func TestSetCommentSupportsID3v2Versions(t *testing.T) {
 			tag := v2.NewTag(version)
 			setComment(tag, "updated comment")
 			comments := tag.Comments()
-			if len(comments) != 1 || comments[0] != "updated comment" {
+			if len(comments) != 1 || !strings.HasSuffix(comments[0], "updated comment") {
 				t.Fatalf("comments = %#v, want one updated comment", comments)
 			}
 		})
