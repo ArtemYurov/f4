@@ -62,14 +62,12 @@ func TestConfig_PortableProfile(t *testing.T) {
 
 	// Имитируем путь исполняемого файла в тестовой директории
 	origExeFunc := osExecutable
-	origConfigDir := GetF4ConfigDir()
-	origPortable := cachedF4Portable
 	t.Cleanup(func() {
 		osExecutable = origExeFunc
+		// Do not restore cachedF4ConfigDir by hand: the preceding test may
+		// have left configDirOnce completed with an empty cache.  A fresh
+		// detection is the only valid state after changing osExecutable.
 		resetConfigDirForTest()
-		cachedF4ConfigDir = origConfigDir
-		cachedF4Portable = origPortable
-		configDirOnce.Do(func() {})
 	})
 	mockExe := filepath.Join(tmpDir, "f4.exe")
 	if err := os.WriteFile(mockExe, []byte(""), 0600); err != nil {
