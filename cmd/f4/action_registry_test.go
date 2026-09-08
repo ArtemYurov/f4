@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtui"
 )
 
@@ -142,7 +143,7 @@ func TestActionPanelToggleTargetsActiveWorkspace(t *testing.T) {
 
 	first := &PanelsFrame{showPanels: true, showLeftPanel: true, showRightPanel: true}
 	active := &PanelsFrame{showPanels: true, showLeftPanel: true, showRightPanel: true}
-	t.Cleanup(setFrameManagerScreensForTest(t, []*vtui.AppScreen{
+	t.Cleanup(testutil.SetFrameManagerScreens(t, []*vtui.AppScreen{
 		{Number: 1, Frames: []vtui.Frame{first}},
 		{Number: 2, Frames: []vtui.Frame{active}},
 	}, 1))

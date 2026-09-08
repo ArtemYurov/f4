@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/piecetable"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -98,7 +99,7 @@ func viewerText(t *testing.T, vv *ViewerView) string {
 // file without a byte-order mark as a binary.
 func TestViewer_Issue875_OpensEverySample(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	oldState, oldAuto, oldDefault := GlobalFileState, AppConfig.ViewerAutodetectCodePage, AppConfig.ViewerDefaultCodePage
 	defer func() {
@@ -155,7 +156,7 @@ func TestViewer_Issue875_OpensEverySample(t *testing.T) {
 // picks next overrules it. A hex view the user asked for is not, and survives.
 func TestViewer_Issue875_ManualCodepageLeavesGuessedHex(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	oldState, oldAuto, oldDefault := GlobalFileState, AppConfig.ViewerAutodetectCodePage, AppConfig.ViewerDefaultCodePage
 	defer func() {
@@ -294,7 +295,7 @@ type issue875EditorRig struct {
 func newIssue875EditorRig(t *testing.T) *issue875EditorRig {
 	t.Helper()
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	oldState := GlobalFileState
 	oldAuto, oldDefault := AppConfig.EditorAutodetectCodePage, AppConfig.EditorDefaultCodePage

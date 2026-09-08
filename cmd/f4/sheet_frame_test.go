@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/sheet"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -172,7 +173,7 @@ func TestSheetFrameRendersGrid(t *testing.T) {
 
 	var header strings.Builder
 	for x := 0; x < 40; x++ {
-		header.WriteRune(testRune(scr.GetCell(x, sf.headerY()).Char))
+		header.WriteRune(testutil.Rune(scr.GetCell(x, sf.headerY()).Char))
 	}
 	if !strings.Contains(header.String(), "A") || !strings.Contains(header.String(), "B") {
 		t.Errorf("column header row = %q, want the column letters", header.String())
@@ -180,7 +181,7 @@ func TestSheetFrameRendersGrid(t *testing.T) {
 
 	var firstRow strings.Builder
 	for x := 0; x < 20; x++ {
-		firstRow.WriteRune(testRune(scr.GetCell(x, sf.gridTopY()).Char))
+		firstRow.WriteRune(testutil.Rune(scr.GetCell(x, sf.gridTopY()).Char))
 	}
 	if !strings.Contains(firstRow.String(), "1") || !strings.Contains(firstRow.String(), "42") {
 		t.Errorf("first grid row = %q, want the row number and the value", firstRow.String())

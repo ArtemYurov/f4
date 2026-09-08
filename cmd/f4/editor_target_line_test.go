@@ -9,24 +9,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/piecetable"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
 
-// drainPendingTasks empties the frame manager queue without running anything.
+// testutil.DrainPendingTasks empties the frame manager queue without running anything.
 // Tests in this package share one global queue, so a test that counts what it
 // posted has to start from an empty one.
-func drainPendingTasks() {
-	for {
-		select {
-		case <-vtui.FrameManager.TaskChan:
-		default:
-			return
-		}
-	}
-}
-
 // collectQueuedTasks receives everything handed to the UI thread without
 // running any of it, until nothing new has arrived for idle. Taking a task off
 // the channel is what releases the goroutine that posted it, so a background
@@ -56,7 +47,7 @@ func collectQueuedTasks(idle time.Duration) []func() {
 func TestEditorView_IndexerRestoresTargetLineAfterLateDrain(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	// 16384 lines of 8 bytes each: two 64 KB indexer reads, so the saved line
 	// can sit in the second batch and be invisible to the first.
@@ -108,7 +99,7 @@ func TestEditorView_IndexerRestoresTargetLineAfterLateDrain(t *testing.T) {
 			t.Fatal("the first chunk never arrived")
 		}
 	}
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	ev.targetLine = targetLine
 	ev.targetPos = 0
@@ -141,7 +132,7 @@ func TestEditorView_IndexerRestoresTargetLineAfterLateDrain(t *testing.T) {
 // at its last line.
 func TestEditorView_IndexerAppliesTargetLineWhenFileShrank(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	content := "one\ntwo\nthree\n"
 	dir := t.TempDir()

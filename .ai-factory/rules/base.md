@@ -29,6 +29,10 @@ adding a package or a file.
 - `plugins/<name>/` — one package per plugin
 - `internal/` — module-private code: platform helpers today, the application
   core as extraction proceeds
+- `internal/testutil/`, `internal/paneltest/` — test scaffolding shared across
+  packages. Go will not let one package import another's tests, so these are
+  ordinary packages; import them from `_test.go` files only. A helper only one
+  package uses stays in that package
 - `luaplug/` — Lua plugin engine (moves under `internal/`)
 - `piecetable/`, `textlayout/`, `sheet/`, `fusefs/`, `vtvibe/` — self-contained
   subsystems consumed by `cmd/f4` (move under `internal/`)

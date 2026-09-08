@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/binary"
 	"testing"
+
+	"github.com/unxed/f4/internal/testutil"
 )
 
 // qoiFile builds the stream by hand, one chunk of each kind that matters.
@@ -61,11 +63,11 @@ func bmpFile(width, height, bits int, palette [][3]byte, rows [][]byte) []byte {
 	info := make([]byte, bmpInfoHeaderSize)
 	le := binary.LittleEndian
 	le.PutUint32(info[0:4], bmpInfoHeaderSize)
-	le.PutUint32(info[4:8], testUint32Int32Bits(width))
-	le.PutUint32(info[8:12], testUint32Int32Bits(height))
+	le.PutUint32(info[4:8], testutil.Uint32Int32Bits(width))
+	le.PutUint32(info[8:12], testutil.Uint32Int32Bits(height))
 	le.PutUint16(info[12:14], 1)
-	le.PutUint16(info[14:16], testUint16(bits))
-	le.PutUint32(info[32:36], testUint32(len(palette)))
+	le.PutUint16(info[14:16], testutil.Uint16(bits))
+	le.PutUint32(info[32:36], testutil.Uint32(len(palette)))
 
 	var pal []byte
 	for _, c := range palette {
@@ -79,9 +81,9 @@ func bmpFile(width, height, bits int, palette [][3]byte, rows [][]byte) []byte {
 	}
 
 	out := []byte{'B', 'M'}
-	out = le.AppendUint32(out, testUint32(offset+len(pixels)))
+	out = le.AppendUint32(out, testutil.Uint32(offset+len(pixels)))
 	out = le.AppendUint32(out, 0)
-	out = le.AppendUint32(out, testUint32(offset))
+	out = le.AppendUint32(out, testutil.Uint32(offset))
 	out = append(out, info...)
 	out = append(out, pal...)
 	return append(out, pixels...)

@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/unxed/f4/internal/testutil"
 )
 
 // germanLeftovers are German key names and verb stems that have no business
@@ -36,7 +38,7 @@ var germanLeftovers = []string{
 }
 
 func TestTranslationsAreFreeOfGermanLeftovers(t *testing.T) {
-	skipIfNoRelevantChanges(t, "lang_contamination_german",
+	testutil.SkipIfNoRelevantChanges(t, "lang_contamination_german",
 		"lang/*.lng",
 		"help/*.hlf",
 		"lang_contamination_test.go",
@@ -79,7 +81,7 @@ func TestTranslationsAreFreeOfGermanLeftovers(t *testing.T) {
 	}
 }
 func TestTranslationsAreFreeOfAIGarbage(t *testing.T) {
-	skipIfNoRelevantChanges(t, "lang_contamination_garbage",
+	testutil.SkipIfNoRelevantChanges(t, "lang_contamination_garbage",
 		"lang/*.lng",
 		"help/*.hlf",
 		"lang_contamination_test.go",

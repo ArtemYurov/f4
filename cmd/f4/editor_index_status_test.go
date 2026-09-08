@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/piecetable"
 	"github.com/unxed/vtui"
 )
@@ -30,7 +31,7 @@ func pumpUntil(t *testing.T, what string, cond func() bool) {
 // resolve, or Loading stays on screen until a key press aborts it.
 func TestIndexRestore_ResolvesForFullyReadFile(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	pt := piecetable.New([]byte("line one\nline two\nline three\nline four\nline five\n"))
 	ev := newEditorView(pt, nil, "", false, true)
@@ -54,7 +55,7 @@ func TestIndexRestore_ResolvesForFullyReadFile(t *testing.T) {
 // telling subscribers about every phase it passes through.
 func TestIndexStatus_ReachesCompleteAndNotifies(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	content, _, _ := bigSearchCorpus()
 	pt, buf := lazyEditorBuffer(t, content)
@@ -98,7 +99,7 @@ func TestIndexStatus_ReachesCompleteAndNotifies(t *testing.T) {
 // line it had reached rather than staying short for the rest of the session.
 func TestIndexStatus_ResumesAfterAnEdit(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	content, _, _ := bigSearchCorpus()
 	pt, buf := lazyEditorBuffer(t, content)
@@ -131,7 +132,7 @@ func TestIndexStatus_ResumesAfterAnEdit(t *testing.T) {
 // column counted from there.
 func TestEnsureIndexedTo_ResolvesAMatchPastTheScan(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	const lines = 4000
 	var sb strings.Builder
@@ -176,7 +177,7 @@ func TestEnsureIndexedTo_ResolvesAMatchPastTheScan(t *testing.T) {
 // nothing would ever go back for the rest.
 func TestIndexRebuilt_ShortRebuildIsNotCalledComplete(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	content, _, _ := bigSearchCorpus()
 	pt, buf := lazyEditorBuffer(t, content)
@@ -211,7 +212,7 @@ func TestIndexRebuilt_ShortRebuildIsNotCalledComplete(t *testing.T) {
 // measured in gigabytes. The scan places it instead, when it reads past.
 func TestAwaitOffset_ScanPlacesThePositionItCouldNotResolve(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	content, _, _ := bigSearchCorpus()
 	pt, buf := lazyEditorBuffer(t, content)

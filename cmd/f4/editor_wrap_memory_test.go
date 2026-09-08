@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/piecetable"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -51,7 +52,7 @@ func TestF4FileStateProvider_SaveEditorWrapKeepsPosition(t *testing.T) {
 // editor still open when f4 exits never reaches Close.
 func TestEditorView_WordWrapToggleIsRemembered(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	fs := newWrapMemoryStore(t)
 	t.Cleanup(func() { fs.Flush() })
@@ -93,7 +94,7 @@ func TestEditorView_WordWrapToggleIsRemembered(t *testing.T) {
 // setting the user chose belongs to the file, not to today's contents of it.
 func TestEditorView_UnsafeWordWrapKeepsRememberedChoice(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	fs := newWrapMemoryStore(t)
 
@@ -123,7 +124,7 @@ func TestEditorView_UnsafeWordWrapKeepsRememberedChoice(t *testing.T) {
 // more than a partial index.
 func TestEditorView_GrowingIndexIsNotAnUnsafeLine(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	content := strings.Repeat("x", maxWordWrapLineBytes+1)
 	ev := NewEditorViewIndexedLater(piecetable.New([]byte(content)), nil, "")

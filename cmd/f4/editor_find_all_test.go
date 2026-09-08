@@ -12,6 +12,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/piecetable"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -665,7 +666,7 @@ func TestEditorFindAll_LargeListOpensWithoutMaterializing(t *testing.T) {
 	// the instrumentation, not the lazy open. The assertions below prove the
 	// same property structurally: nothing is materialized, yet the count is
 	// right.
-	if !raceEnabled && elapsed > 200*time.Millisecond {
+	if !testutil.RaceEnabled && elapsed > 200*time.Millisecond {
 		t.Errorf("opening a %d-occurrence list took %v; it should not scale with the list", n, elapsed)
 	}
 	if len(frame.Items) != 0 {
@@ -709,8 +710,8 @@ func TestEditorFindAll_MouseClickJumps(t *testing.T) {
 		Type:        vtinput.MouseEventType,
 		KeyDown:     true,
 		ButtonState: vtinput.FromLeft1stButtonPressed,
-		MouseX:      testInt16(x1 + 2),
-		MouseY:      testInt16(y1 + 2), // second row
+		MouseX:      testutil.Int16(x1 + 2),
+		MouseY:      testutil.Int16(y1 + 2), // second row
 	}
 	if !frame.ProcessMouse(click) {
 		t.Fatal("click on an occurrence was not handled")
@@ -763,7 +764,7 @@ func openMappedFindAllEditor(t *testing.T, content string) *EditorView {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "occurrences.txt")
@@ -1025,7 +1026,7 @@ func TestLineHead_CutsOnACharacterBoundary(t *testing.T) {
 // now ask the file for windows, as the line index does.
 func TestCollectMatchSpans_ReadsTheFileNotTheMapping(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "occurrences.txt")

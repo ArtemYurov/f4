@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -122,7 +123,7 @@ func TestImageViewGalleryDrawsATileForEachPicture(t *testing.T) {
 	}
 
 	// Every tile is captioned, whether its thumbnail has arrived or not.
-	row := ScreenRow(scr, imageTileRows, 0, 79)
+	row := testutil.ScreenRow(scr, imageTileRows, 0, 79)
 	for _, name := range []string{"a.png", "b.png", "c.png"} {
 		if !strings.Contains(row, name) {
 			t.Errorf("the caption row is %q, without %s", row, name)

@@ -15,6 +15,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtui"
 )
 
@@ -464,7 +465,7 @@ func commandPaletteParseProductionGo(t *testing.T) []commandPaletteParsedGo {
 	t.Helper()
 	// The inventory spans the whole module (main package and plugins alike),
 	// so walk from the module root, not this package's directory.
-	root := moduleRootDir(t)
+	root := testutil.ModuleRootDir(t)
 	var paths []string
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {

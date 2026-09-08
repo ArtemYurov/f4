@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/tools/hardcode"
 )
 
@@ -18,7 +19,7 @@ const hardcodedUpdateHint = "Regenerate it with:\n" +
 // S0. Captions that already existed when the localization audit started are
 // frozen in tools/hardcoded_baseline.txt; that list may only shrink.
 func TestNoNewHardcodedUIStrings(t *testing.T) {
-	root := moduleRootDir(t)
+	root := testutil.ModuleRootDir(t)
 	baselinePath := filepath.Join(root, hardcodedBaselinePath)
 	findings, err := hardcode.Scan(root)
 	if err != nil {

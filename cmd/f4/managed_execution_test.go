@@ -5,12 +5,12 @@ import (
 	"runtime"
 	"strings"
 	"testing"
-	"time"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtui"
 )
 
-// drainUITasks runs everything the frame manager has queued ahead of this
+// testutil.DrainUITasks runs everything the frame manager has queued ahead of this
 // point, the way FrameManager.Run would.
 //
 // The queue is process-wide and outlives FrameManager.Init, so it also carries
@@ -22,27 +22,11 @@ import (
 // The queue is FIFO, so a sentinel posted behind the work cannot be reached
 // until the work has run. Draining until the sentinel arrives is therefore
 // exact no matter how long the backlog is, and needs no guess about timing.
-func drainUITasks() {
-	done := make(chan struct{})
-	vtui.FrameManager.PostTask(func() { close(done) })
-	deadline := time.After(30 * time.Second)
-	for {
-		select {
-		case <-done:
-			return
-		case task := <-vtui.FrameManager.TaskChan:
-			task()
-		case <-deadline:
-			return
-		}
-	}
-}
-
 // runBusyChange delivers an OSC 133 C/D transition and settles the UI tasks
 // it posts.
 func runBusyChange(pf *PanelsFrame, busy bool) {
 	pf.termView.OnBusyChange(busy)
-	drainUITasks()
+	testutil.DrainUITasks()
 }
 
 func newExecutionTestFrame(t *testing.T) *PanelsFrame {

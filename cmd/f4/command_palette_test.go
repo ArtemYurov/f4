@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -165,7 +166,7 @@ func TestCommandPaletteIncludesBothPluginLocationsAndReResolves(t *testing.T) {
 		// active screen.
 		restoreFrameManager := swapFrameManager(t)
 		defer restoreFrameManager()
-		defer setFrameManagerScreensForTest(t, []*vtui.AppScreen{{Number: 1, Frames: []vtui.Frame{pf}}}, 0)()
+		defer testutil.SetFrameManagerScreens(t, []*vtui.AppScreen{{Number: 1, Frames: []vtui.Frame{pf}}}, 0)()
 
 		if !executeCommandPaletteEntry(panel) || runs != 1 {
 			t.Fatalf("live plugin command ran %d times", runs)

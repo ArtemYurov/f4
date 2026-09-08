@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -16,7 +17,7 @@ func seedRow(tv *TerminalView, row int, text string) {
 		if i >= tv.Width {
 			return
 		}
-		tv.Lines[row][i] = vtui.CharInfo{Char: testUint64Rune(r), Attributes: attr}
+		tv.Lines[row][i] = vtui.CharInfo{Char: testutil.Uint64Rune(r), Attributes: attr}
 	}
 }
 

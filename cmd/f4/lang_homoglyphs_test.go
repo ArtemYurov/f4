@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"unicode"
+
+	"github.com/unxed/f4/internal/testutil"
 )
 
 // homoglyphScripts are the alphabetic scripts we are able to tell apart.
@@ -124,7 +126,7 @@ func loadHomoglyphBaseline(t *testing.T) map[string]bool {
 }
 
 func TestTranslationsAreFreeOfHomoglyphs(t *testing.T) {
-	skipIfNoRelevantChanges(t, "lang_homoglyphs",
+	testutil.SkipIfNoRelevantChanges(t, "lang_homoglyphs",
 		"lang/*.lng",
 		"lang/*.txt",
 		"help/*.hlf",

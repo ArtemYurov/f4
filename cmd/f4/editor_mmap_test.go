@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/piecetable"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -47,7 +48,7 @@ func openMappedEditor(t *testing.T, dir, path string) *EditorView {
 // buffer copies the file.
 func TestMappedEditor_SearchAllocatesNothing(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "big.txt")
@@ -97,7 +98,7 @@ func TestMappedEditor_SearchAllocatesNothing(t *testing.T) {
 // read from, which would have left a mapped file with no line index at all.
 func TestMappedEditor_IndexesWithoutAnAsyncBuffer(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "lines.txt")
@@ -134,7 +135,7 @@ func TestMappedEditor_IndexesWithoutAnAsyncBuffer(t *testing.T) {
 // unchanged pieces back through the mapping.
 func TestMappedEditor_EditsAndSaves(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "edit.txt")
@@ -150,7 +151,7 @@ func TestMappedEditor_EditsAndSaves(t *testing.T) {
 
 	ev.SaveToFile(nil)
 	waitEditorSave(t, ev)
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	if ev.modified {
 		t.Error("editor still marked modified: the save reported failure")
@@ -199,7 +200,7 @@ func (c *countingReadAtCloser) counted() (int, int64) {
 // megabytes at a time instead of faulting the mapping in a page at a time.
 func TestMappedEditor_IndexReadsTheFile(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "lines.txt")
@@ -244,7 +245,7 @@ func TestMappedEditor_IndexReadsTheFile(t *testing.T) {
 // the buffer, and the scan has to go back to reading the piece table for them.
 func TestMappedEditor_EditedTextIsScannedFromTheBuffer(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "edited.txt")
@@ -313,7 +314,7 @@ func TestNewEditorViewIndexedLater_LeavesTheIndexToTheScan(t *testing.T) {
 // had gone wrong.
 func TestMappedEditor_SwappedBufferIsNotReadFromTheFile(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "reload.txt")

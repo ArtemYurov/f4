@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -262,8 +263,8 @@ func TestTerminalView_ProcessFar2lInteract_Notification(t *testing.T) {
 
 	tv.ProcessFar2lInteract(stk)
 
-	pumpUntilToastActive(t)
-	waitForToastExpiry(t, 4*time.Second)
+	testutil.PumpUntilToastActive(t)
+	testutil.WaitForToastExpiry(t, 4*time.Second)
 }
 
 func TestTerminalView_ProcessFar2lInteract_FKeys(t *testing.T) {
@@ -414,7 +415,7 @@ func TestTerminalView_WideCharAlignment(t *testing.T) {
 	// Write 'A' after '世'
 	tv.PutChar('A', DefaultTermAttr)
 	if tv.Lines[0][2].Char != 'A' {
-		t.Errorf("Character after wide char misaligned: expected 'A' at index 2, got %c", testRune(tv.Lines[0][2].Char))
+		t.Errorf("Character after wide char misaligned: expected 'A' at index 2, got %c", testutil.Rune(tv.Lines[0][2].Char))
 	}
 }
 func TestTerminalView_AutoWrap_Behavior(t *testing.T) {
@@ -452,7 +453,7 @@ func TestTerminalView_AutoWrap_Behavior(t *testing.T) {
 		t.Errorf("AutoWrap OFF: expected CursorX=10, got %d", tv.CursorX)
 	}
 	if tv.Lines[0][9].Char != 'B' {
-		t.Errorf("AutoWrap OFF: expected 'B' at (9,0), got '%c'", testRune(tv.Lines[0][9].Char))
+		t.Errorf("AutoWrap OFF: expected 'B' at (9,0), got '%c'", testutil.Rune(tv.Lines[0][9].Char))
 	}
 }
 func TestTerminalView_VTEMirror_PromptOverwrite(t *testing.T) {
@@ -1086,7 +1087,7 @@ func TestIssue117_F4Host_ClipboardProtocolTypes(t *testing.T) {
 	stkSet := vtinput.Far2lStack{}
 	testData := []byte("secret")
 	stkSet.PushBytes(testData)
-	stkSet.PushU32(testUint32(len(testData)))
+	stkSet.PushU32(testutil.Uint32(len(testData)))
 	stkSet.PushU32(1) // CF_TEXT
 	stkSet.PushU8('s')
 	stkSet.PushU8('c')

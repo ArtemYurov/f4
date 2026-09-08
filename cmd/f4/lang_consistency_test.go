@@ -14,6 +14,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/abadojack/whatlanggo"
+	"github.com/unxed/f4/internal/testutil"
 )
 
 func hasHotkey(s string) bool {
@@ -72,7 +73,7 @@ func writeLangCoverageBaseline(path string, coverage map[string]int) error {
 }
 
 func TestLangConsistency(t *testing.T) {
-	skipIfNoRelevantChanges(t, "lang_consistency",
+	testutil.SkipIfNoRelevantChanges(t, "lang_consistency",
 		"lang/*.lng",
 		"lang/*.txt",
 		"lang_consistency_test.go",

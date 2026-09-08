@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/piecetable"
 	"github.com/unxed/vtui"
 )
@@ -254,7 +255,7 @@ func TestAnsiParser_REP_ECH(t *testing.T) {
 	line := tv.Lines[tv.CursorY]
 	for i := 0; i < 6; i++ {
 		if line[i].Char != 'A' {
-			t.Errorf("REP failed at pos %d: expected 'A', got %c", i, testRune(line[i].Char))
+			t.Errorf("REP failed at pos %d: expected 'A', got %c", i, testutil.Rune(line[i].Char))
 		}
 	}
 
@@ -263,7 +264,7 @@ func TestAnsiParser_REP_ECH(t *testing.T) {
 	p.Process([]byte("\x1b[3X"))
 	for i := 0; i < 3; i++ {
 		if line[i].Char != ' ' {
-			t.Errorf("ECH failed at pos %d: expected space, got %c", i, testRune(line[i].Char))
+			t.Errorf("ECH failed at pos %d: expected space, got %c", i, testutil.Rune(line[i].Char))
 		}
 	}
 }
@@ -280,7 +281,7 @@ func TestAnsiParser_SplitUTF8(t *testing.T) {
 
 	p.Process([]byte{0x9F})
 	if tv.Lines[tv.CursorY][0].Char != 'П' {
-		t.Errorf("Parser failed to assemble split UTF-8: expected 'П', got %c", testRune(tv.Lines[tv.CursorY][0].Char))
+		t.Errorf("Parser failed to assemble split UTF-8: expected 'П', got %c", testutil.Rune(tv.Lines[tv.CursorY][0].Char))
 	}
 }
 func TestAnsiParser_MovementAndErase(t *testing.T) {
@@ -373,7 +374,7 @@ func TestAnsiParser_AdvancedCSI(t *testing.T) {
 	p.Process([]byte("\x1b[2P")) // Delete 2 characters ('2' and '3')
 	// Result should be "145" at index 0, 1, 2 of line 0
 	if tv.Lines[0][1].Char != '4' || tv.Lines[0][2].Char != '5' {
-		t.Errorf("Delete characters failed. Found %c (U+%04X) at [0][1]", testRune(tv.Lines[0][1].Char), tv.Lines[0][1].Char)
+		t.Errorf("Delete characters failed. Found %c (U+%04X) at [0][1]", testutil.Rune(tv.Lines[0][1].Char), tv.Lines[0][1].Char)
 	}
 
 	// Test Insert Blank Characters (@)
@@ -381,7 +382,7 @@ func TestAnsiParser_AdvancedCSI(t *testing.T) {
 	p.Process([]byte("\x1b[2@")) // Insert 2 blanks at pos 1
 	// Result should be "1  45"
 	if tv.Lines[0][1].Char != ' ' || tv.Lines[0][2].Char != ' ' || tv.Lines[0][3].Char != '4' {
-		t.Errorf("Insert blank characters failed. Found %c at [0][3]", testRune(tv.Lines[0][3].Char))
+		t.Errorf("Insert blank characters failed. Found %c at [0][3]", testutil.Rune(tv.Lines[0][3].Char))
 	}
 }
 
@@ -912,7 +913,7 @@ func TestAnsiParser_Excision_UTF8_Safety(t *testing.T) {
 	// Completing the sequence: sending 0x9F (second byte of 'П')
 	p.Process([]byte{0x9F})
 	if tv.Lines[tv.CursorY][0].Char != 'П' {
-		t.Errorf("UTF-8 sequence was not correctly assembled after excision. Got: %c", testRune(tv.Lines[tv.CursorY][0].Char))
+		t.Errorf("UTF-8 sequence was not correctly assembled after excision. Got: %c", testutil.Rune(tv.Lines[tv.CursorY][0].Char))
 	}
 }
 

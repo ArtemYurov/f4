@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtui"
 )
 
@@ -99,7 +100,7 @@ func (s *cmdShellSim) feed(data string) { s.pf.parser.Process([]byte(data)) }
 func (s *cmdShellSim) wait(d time.Duration) {
 	deadline := time.Now().Add(d)
 	for time.Now().Before(deadline) {
-		drainUITasks()
+		testutil.DrainUITasks()
 		time.Sleep(5 * time.Millisecond)
 	}
 }
@@ -403,7 +404,7 @@ func TestCmdSessionFlickeringPromptIsReleased(t *testing.T) {
 		for i := 0; i < cmdPromptMaxAttempts; i++ {
 			sim.pf.cmdSession.retryOrRelease(seq)
 		}
-		drainUITasks()
+		testutil.DrainUITasks()
 		sim.expectExecuting(false, "after a prompt that never settled was released")
 	})
 }

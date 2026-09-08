@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"strings"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -208,7 +209,7 @@ Loop:
 			t.Fatalf("Timeout waiting for toast %q, last seen %q", want, toast)
 		}
 	}
-	waitForToastExpiry(t, 4*time.Second)
+	testutil.WaitForToastExpiry(t, 4*time.Second)
 	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
 	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
 }

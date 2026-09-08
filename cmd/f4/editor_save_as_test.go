@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtui"
 )
 
@@ -72,7 +73,7 @@ func pumpEditorUntil(t *testing.T, cond func() bool) {
 // the chosen line breaks, and the editor now edits that file.
 func TestEditorSaveAs_NewPathCodepageAndLineBreaks(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "src.txt")
@@ -85,7 +86,7 @@ func TestEditorSaveAs_NewPathCodepageAndLineBreaks(t *testing.T) {
 	target := filepath.Join(dir, "copy.txt")
 	ev.saveAs(target, 1251, false, saveAsEOLDos)
 	pumpEditorUntil(t, func() bool { return ev.filePath == target && !ev.saving && !ev.modified })
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	got, err := os.ReadFile(target)
 	if err != nil {
@@ -119,7 +120,7 @@ func TestEditorSaveAs_NewPathCodepageAndLineBreaks(t *testing.T) {
 // for the two codepage families that treat it differently.
 func TestEditorSaveAs_UTF8BOMAndUTF16WithoutBOM(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "src.txt")
@@ -148,14 +149,14 @@ func TestEditorSaveAs_UTF8BOMAndUTF16WithoutBOM(t *testing.T) {
 	if text, err := ev.pt.Bytes(); err != nil || string(text) != "ab\n" {
 		t.Errorf("reopened text = %q, %v", text, err)
 	}
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 }
 
 // TestEditorSaveAs_ExistingTargetAsksBeforeOverwriting: a name that is
 // already taken is never replaced silently.
 func TestEditorSaveAs_ExistingTargetAsksBeforeOverwriting(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "src.txt")
@@ -187,7 +188,7 @@ func TestEditorSaveAs_ExistingTargetAsksBeforeOverwriting(t *testing.T) {
 	if got, _ := os.ReadFile(target); string(got) != "new\n" {
 		t.Errorf("target after confirmed overwrite = %q", got)
 	}
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 }
 
 func TestEditorSaveAs_ResolvesRelativeNameNextToFile(t *testing.T) {

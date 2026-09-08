@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -212,7 +213,7 @@ func TestBuildMenuBarItems_OnClickRunsAction(t *testing.T) {
 }
 
 func TestBuildMenuBarItems_IncludesPluginPanelCommandsInDeclaredMenu(t *testing.T) {
-	t.Cleanup(setFrameManagerScreensForTest(t, []*vtui.AppScreen{{Frames: []vtui.Frame{&PanelsFrame{}}}}, 0))
+	t.Cleanup(testutil.SetFrameManagerScreens(t, []*vtui.AppScreen{{Frames: []vtui.Frame{&PanelsFrame{}}}}, 0))
 
 	api := &coreAPI{}
 	run := 0
@@ -260,7 +261,7 @@ func TestBuildMenuBarItems_IncludesPluginPanelCommandsInDeclaredMenu(t *testing.
 }
 
 func TestBuildMenuBarItemsSkipsPluginVisibilityBeforePanelsFrameRegistration(t *testing.T) {
-	t.Cleanup(setFrameManagerScreensForTest(t, nil, 0))
+	t.Cleanup(testutil.SetFrameManagerScreens(t, nil, 0))
 
 	api := &coreAPI{}
 	registration, err := api.RegisterPluginCommand(vfs.PluginCommand{
@@ -308,7 +309,7 @@ func TestBuildMenuBarItemsGroupsShellMenus(t *testing.T) {
 }
 
 func TestBuildMenuBarItemsSeparatesPluginCommandsFromBuiltIns(t *testing.T) {
-	t.Cleanup(setFrameManagerScreensForTest(t, []*vtui.AppScreen{{Frames: []vtui.Frame{&PanelsFrame{}}}}, 0))
+	t.Cleanup(testutil.SetFrameManagerScreens(t, []*vtui.AppScreen{{Frames: []vtui.Frame{&PanelsFrame{}}}}, 0))
 
 	api := &coreAPI{}
 	first, err := api.RegisterPluginCommand(vfs.PluginCommand{

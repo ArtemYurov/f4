@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -917,7 +918,7 @@ func TestQueueCancelFinalizesOnTheFrameManagerItStartedWith(t *testing.T) {
 	replacement := vtui.NewFrameManager()
 	vtui.FrameManager = replacement
 	t.Cleanup(func() {
-		closeFrameManagerFrames(replacement)
+		testutil.CloseFrameManagerFrames(replacement)
 		replacement.Shutdown()
 		vtui.FrameManager = starting
 	})

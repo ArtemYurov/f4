@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -51,7 +52,7 @@ func TestCaptureWorkspaceSessionsUsesTabOrderAndActiveIndex(t *testing.T) {
 	}
 	first := newPanels(t.TempDir(), t.TempDir())
 	second := newPanels(t.TempDir(), t.TempDir())
-	t.Cleanup(setFrameManagerScreensForTest(t, []*vtui.AppScreen{
+	t.Cleanup(testutil.SetFrameManagerScreens(t, []*vtui.AppScreen{
 		{Number: 8, Frames: []vtui.Frame{first}},
 		{Number: 3, Frames: []vtui.Frame{second}},
 	}, 1))
@@ -151,7 +152,7 @@ func TestWorkspaceSessionsForRestore(t *testing.T) {
 func TestRenumberWorkspaceScreensFollowsCurrentOrder(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	t.Cleanup(setFrameManagerScreensForTest(t, []*vtui.AppScreen{
+	t.Cleanup(testutil.SetFrameManagerScreens(t, []*vtui.AppScreen{
 		{Number: 7},
 		{Number: 2},
 		{Number: 11},

@@ -42,6 +42,8 @@ internal/        # module-private platform helpers
   wincon/        #   Windows console
   ttyx/          #   tty extensions
   netproxy/      #   network proxy
+  testutil/      #   test scaffolding shared across packages; _test.go use only
+  paneltest/     #   the same, for helpers that need a panels frame
   hideconsole/   #   console hiding on Windows
 tools/           # developer tooling, incl. the ttytest terminal harness
 docs/            # 48 subsystem documents — read the relevant one before editing

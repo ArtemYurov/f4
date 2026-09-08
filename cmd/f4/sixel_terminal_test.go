@@ -3,6 +3,8 @@ package main
 import (
 	"strings"
 	"testing"
+
+	"github.com/unxed/f4/internal/testutil"
 )
 
 // sixelEnv wires a terminal view to a parser and a fake pty, the way the
@@ -51,7 +53,7 @@ func sixelBody(w, h int) string {
 func sixelLineText(tv *TerminalView, row int) string {
 	var sb strings.Builder
 	for _, c := range tv.Lines[row] {
-		sb.WriteRune(testRune(c.Char))
+		sb.WriteRune(testutil.Rune(c.Char))
 	}
 	return sb.String()
 }

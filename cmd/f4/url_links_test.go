@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -86,7 +87,7 @@ func TestTerminalURLHoverUnderlinesVisibleLink(t *testing.T) {
 	tv.SetPosition(0, 0, 39, 2)
 	tv.SetVisible(true)
 	for i, r := range "https://example.org" {
-		tv.Lines[0][i] = vtui.CharInfo{Char: testUint64Rune(r), Attributes: DefaultTermAttr}
+		tv.Lines[0][i] = vtui.CharInfo{Char: testutil.Uint64Rune(r), Attributes: DefaultTermAttr}
 	}
 	if !tv.UpdateURLHover(4, 0) {
 		t.Fatal("hover state did not change")

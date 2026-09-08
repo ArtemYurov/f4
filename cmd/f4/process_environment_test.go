@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -474,7 +475,7 @@ func TestProcessEnvironmentBroadcastReachesEveryLocalWorkspace(t *testing.T) {
 	secondPTY := &processEnvironmentPTY{}
 	first := &PanelsFrame{pty: firstPTY, termView: NewTerminalView(80, 24)}
 	second := &PanelsFrame{pty: secondPTY, termView: NewTerminalView(80, 24)}
-	t.Cleanup(setFrameManagerScreensForTest(t, []*vtui.AppScreen{
+	t.Cleanup(testutil.SetFrameManagerScreens(t, []*vtui.AppScreen{
 		{Number: 1, Frames: []vtui.Frame{first}},
 		{Number: 2, Frames: []vtui.Frame{second}},
 	}, 0))
@@ -607,15 +608,15 @@ func waitForProcessEnvironmentFailureToast(t *testing.T) {
 	// The first sentinel runs the outer failure-report task. ShowToast and the
 	// coalescer each post one nested task behind it, so a second sentinel joins
 	// those as well.
-	drainUITasks()
-	drainUITasks()
+	testutil.DrainUITasks()
+	testutil.DrainUITasks()
 	if vtui.FrameManager.GetActiveToast() == "" {
 		t.Fatal("environment failure toast did not start")
 	}
 	processEnvironmentFailureToast.Lock()
 	done := processEnvironmentFailureToast.done
 	processEnvironmentFailureToast.Unlock()
-	waitForToastExpiry(t, 6*time.Second)
+	testutil.WaitForToastExpiry(t, 6*time.Second)
 	select {
 	case <-done:
 	case <-time.After(time.Second):

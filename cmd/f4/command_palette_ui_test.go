@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -167,7 +168,7 @@ func TestCommandPaletteMouseScrollRefreshesDescriptionAndHeaderClickIsConsumed(t
 		t.Fatalf("initial description = %q", got)
 	}
 	if !dialog.ProcessMouse(&vtinput.InputEvent{
-		Type: vtinput.MouseEventType, MouseX: testInt16(dialog.table.X1), MouseY: testInt16(dialog.table.Y1 + 1),
+		Type: vtinput.MouseEventType, MouseX: testutil.Int16(dialog.table.X1), MouseY: testutil.Int16(dialog.table.Y1 + 1),
 		WheelDirection: -1,
 	}) {
 		t.Fatal("mouse wheel inside the result table was not consumed")
@@ -179,14 +180,14 @@ func TestCommandPaletteMouseScrollRefreshesDescriptionAndHeaderClickIsConsumed(t
 	originalX, originalY := dialog.X1, dialog.Y1
 	if !dialog.ProcessMouse(&vtinput.InputEvent{
 		Type: vtinput.MouseEventType, KeyDown: true,
-		MouseX: testInt16(dialog.table.X1), MouseY: testInt16(dialog.table.Y1),
+		MouseX: testutil.Int16(dialog.table.X1), MouseY: testutil.Int16(dialog.table.Y1),
 		ButtonState: vtinput.FromLeft1stButtonPressed,
 	}) {
 		t.Fatal("table header click was not consumed")
 	}
 	dialog.ProcessMouse(&vtinput.InputEvent{
 		Type: vtinput.MouseEventType, KeyDown: true,
-		MouseX: testInt16(dialog.table.X1 + 5), MouseY: testInt16(dialog.table.Y1 + 2),
+		MouseX: testutil.Int16(dialog.table.X1 + 5), MouseY: testutil.Int16(dialog.table.Y1 + 2),
 		ButtonState: vtinput.FromLeft1stButtonPressed, MouseEventFlags: vtinput.MouseMoved,
 	})
 	if dialog.X1 != originalX || dialog.Y1 != originalY {

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -781,7 +782,7 @@ func TestInfoPanel_RendersUsageAsTwoLineMeter(t *testing.T) {
 				cell := scr.GetCell(ip.X1+1+percentStart+offset, first.y)
 				if cell.Attributes != wantAttr {
 					t.Fatalf("percentage cell %q at bar offset %d: attr=%#x, want %#x",
-						testRune(cell.Char), insideOffset, cell.Attributes, wantAttr)
+						testutil.Rune(cell.Char), insideOffset, cell.Attributes, wantAttr)
 				}
 			}
 			unfilledCell := scr.GetCell(ip.X1+1+first.usageBarStart+first.usageBarWidth-1, first.y)
@@ -1164,8 +1165,8 @@ func TestInfoPanel_CopyCopiesValue(t *testing.T) {
 	if got := vtui.GetClipboard(); got != wantValue {
 		t.Errorf("SetClipboard got %q, want %q", got, wantValue)
 	}
-	pumpUntilToastActive(t)
-	waitForToastExpiry(t, 3*time.Second)
+	testutil.PumpUntilToastActive(t)
+	testutil.WaitForToastExpiry(t, 3*time.Second)
 }
 
 // TestInfoPanel_ProcessKey_UnfocusedIgnoresC verifies the C copy
@@ -1257,8 +1258,8 @@ func TestInfoPanel_ShiftUpDownSelectsAndCCopiesLabelValue(t *testing.T) {
 	if got := vtui.GetClipboard(); got != want {
 		t.Errorf("clipboard = %q, want %q", got, want)
 	}
-	pumpUntilToastActive(t)
-	waitForToastExpiry(t, 3*time.Second)
+	testutil.PumpUntilToastActive(t)
+	testutil.WaitForToastExpiry(t, 3*time.Second)
 
 	// Selection persists across a rebuild — the highlight must
 	// survive the next Show, which walks the row list from scratch.

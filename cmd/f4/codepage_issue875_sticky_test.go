@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -18,7 +19,7 @@ import (
 // the settings are left alone -- so the next file is still detected.
 func TestViewer_Issue875_MenuChoiceDoesNotStickToNextFile(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	oldState, oldAuto, oldDefault := GlobalFileState, AppConfig.ViewerAutodetectCodePage, AppConfig.ViewerDefaultCodePage
 	defer func() {
@@ -99,7 +100,7 @@ func TestViewer_Issue875_MenuChoiceDoesNotStickToNextFile(t *testing.T) {
 // off: the user asked for this file to be detected.
 func TestViewer_Issue875_MenuAutoDetectDetectsRegardlessOfGlobalSwitch(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	oldState, oldAuto, oldDefault := GlobalFileState, AppConfig.ViewerAutodetectCodePage, AppConfig.ViewerDefaultCodePage
 	defer func() {

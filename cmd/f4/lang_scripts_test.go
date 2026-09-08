@@ -6,10 +6,12 @@ import (
 	"strings"
 	"testing"
 	"unicode"
+
+	"github.com/unxed/f4/internal/testutil"
 )
 
 func TestLanguageAlphabetsContamination(t *testing.T) {
-	skipIfNoRelevantChanges(t, "lang_scripts",
+	testutil.SkipIfNoRelevantChanges(t, "lang_scripts",
 		"lang/*.lng",
 		"help/*.hlf",
 		"lang_scripts_test.go",

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/f4/vtvibe"
 	"github.com/unxed/vtinput"
@@ -168,7 +169,7 @@ func TestAIChatPanel_ContextFilesRenderingAndLinkNavigation(t *testing.T) {
 	// Check that app.go is rendered on screen
 	foundAttached := false
 	for y := 0; y < 25; y++ {
-		str := ScreenRow(scr, y, 0, 79)
+		str := testutil.ScreenRow(scr, y, 0, 79)
 		if strings.Contains(str, "app.go") {
 			foundAttached = true
 			break

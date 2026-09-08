@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtui"
 )
 
@@ -984,7 +985,7 @@ func TestRequestSaveConfigPostsToTheFrameManagerItWasArmedWith(t *testing.T) {
 	replacement := vtui.NewFrameManager()
 	vtui.FrameManager = replacement
 	t.Cleanup(func() {
-		closeFrameManagerFrames(replacement)
+		testutil.CloseFrameManagerFrames(replacement)
 		replacement.Shutdown()
 		vtui.FrameManager = arming
 	})

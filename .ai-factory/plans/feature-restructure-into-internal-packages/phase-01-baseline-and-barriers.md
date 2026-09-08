@@ -909,9 +909,26 @@ of call shape.
    `bytes`, `strings`, `github.com/unxed/vtui` and
    `github.com/unxed/vtui/vreactive`. If it needs an `internal/*` import,
    something was moved that should have stayed a drain.
-4. Update all 63 `swapFrameManager` call sites to
-   `testutil.SwapFrameManager(t, waitForAsyncClipboard, waitForDirectoryLoads)`
-   — or the subset each test needs. Keep `waitForDirectoryLoads` in
+4. Bind the drains once, in a package-level wrapper, and leave the 159
+   `swapFrameManager` call sites alone:
+
+   ```go
+   func swapFrameManager(t *testing.T) func() {
+       return testutil.SwapFrameManager(t, drainAsyncClipboard, waitForDirectoryLoads)
+   }
+   ```
+
+   The drains belong to the package, not to the individual test — that is what
+   "a caller passes the waits for whichever background workers its own package
+   leaves running" means, and a wrapper is where a package states it once.
+   Spelling the same two drains out 159 times would also bury the extraction in
+   a diff no reviewer can read as a move. Every later wave does the same: its
+   own wrapper, its own drains. `pressKey` gets the same treatment for the same
+   reason — it needs `MacroMgr.Filter`, which `internal/testutil` cannot reach,
+   so `testutil.PressKey` takes the filter and `cmd/f4` supplies it in a wrapper
+   over its 178 call sites.
+
+   Keep `waitForDirectoryLoads` in
    `cmd/f4/frame_manager_test_helpers_test.go` for now; it travels to
    `internal/panel`'s test files in Task 34. Two files mention `swapFrameManager`
    in prose only (`config.go:1204`, `queue_manager.go:138`); update the comments,
@@ -961,12 +978,16 @@ itself. It moves with the helpers, into `internal/testutil`.
 - `internal/testutil` imports no `internal/*` package.
 - `grep -rn 'func swapFrameManager\|func setFrameManagerScreensForTest\|func appendFrameManagerScreenForTest\|func taskPumpGoroutineProfile' cmd/f4/`
   returns nothing.
-- `cmd/f4/frame_manager_test_helpers_test.go` declares exactly one function,
-  `waitForDirectoryLoads`.
+- `cmd/f4/frame_manager_test_helpers_test.go` declares only what binds this
+  package to the shared harness: `waitForDirectoryLoads`, the
+  `drainAsyncClipboard` adapter, and the `swapFrameManager` wrapper. No
+  mechanism remains — every line of it is now in `internal/testutil`.
 - `ls cmd/f4/numeric_conversions_test.go cmd/f4/test_cache_helper_test.go cmd/f4/module_root_test.go cmd/f4/race_enabled_test.go cmd/f4/race_disabled_test.go`
   all fail; `cmd/f4/test_main_test.go` declares `TestMain` (a wrapper around
-  `testutil.Main`) and `preserveActionRegistry`, which waits for Task 21, and
-  nothing else.
+  `testutil.Main`), the `before`/`after` pair it hands to it, the `pressKey`
+  wrapper that supplies `MacroMgr.Filter`, and `preserveActionRegistry`, which
+  waits for Task 21. Nothing else: everything there is this package's own seams,
+  which is exactly what `testutil.Main` takes as arguments rather than knowing.
 - `internal/paneltest` exists with `doc.go` and no other file.
 - The full suite matches the Task 1 baseline.
 

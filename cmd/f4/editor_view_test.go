@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/piecetable"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -4931,13 +4932,13 @@ func TestEditorView_ZeroAndDoubleWidthConsistency(t *testing.T) {
 		t.Errorf("Expected cells[0] to be the combining cluster, got %q", got)
 	}
 	if cells[1].Char != '世' {
-		t.Errorf("Expected cells[1] to be '世', got %c", testRune(cells[1].Char))
+		t.Errorf("Expected cells[1] to be '世', got %c", testutil.Rune(cells[1].Char))
 	}
 	if cells[2].Char != uint64(vtui.WideCharFiller) {
 		t.Errorf("Expected cells[2] to be WideCharFiller, got %d", cells[2].Char)
 	}
 	if cells[3].Char != 'b' {
-		t.Errorf("Expected cells[3] to be 'b', got %c", testRune(cells[3].Char))
+		t.Errorf("Expected cells[3] to be 'b', got %c", testutil.Rune(cells[3].Char))
 	}
 }
 

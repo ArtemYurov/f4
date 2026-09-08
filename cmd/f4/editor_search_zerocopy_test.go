@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/piecetable"
 	"github.com/unxed/vtui"
 )
@@ -86,7 +87,7 @@ func TestSearchBuffer_ScansMemoryBufferInPlace(t *testing.T) {
 
 func TestSearchBuffer_ReusesSnapshotUntilTheTextChanges(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	// A lazily loaded buffer cannot be scanned in place, so this is the path
 	// that assembles a snapshot — and used to reassemble it for every pass.

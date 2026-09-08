@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/piecetable"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -121,7 +122,7 @@ func bigSearchCorpus() (content, needle string, needleOff int) {
 // first unfetched chunk and the editor reported "Failed to read file buffer".
 func TestReadSearchSnapshot_WaitsForLazilyLoadedChunks(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	content, needle, needleOff := bigSearchCorpus()
 	pt, _ := lazyEditorBuffer(t, content)
@@ -162,7 +163,7 @@ func TestReadSearchSnapshot_WaitsForLazilyLoadedChunks(t *testing.T) {
 // beyond the prewarmed chunk instead of erroring out.
 func TestFindAllMatchSpans_OverLazyBuffer(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	content, needle, needleOff := bigSearchCorpus()
 	pt, _ := lazyEditorBuffer(t, content)
@@ -205,7 +206,7 @@ func TestFindAllMatchSpans_OverLazyBuffer(t *testing.T) {
 // huge file.
 func TestReadSearchSnapshot_StopsOnCancel(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	content, _, _ := bigSearchCorpus()
 	pt, _ := stalledEditorBuffer(t, content)

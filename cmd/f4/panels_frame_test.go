@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/plugins/archive"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -1306,7 +1307,7 @@ func TestPanelsFrame_RightClickHeaderOpensPanelCenteredSortMenu(t *testing.T) {
 
 	if !pf.ProcessMouse(&vtinput.InputEvent{
 		Type: vtinput.MouseEventType, KeyDown: true,
-		MouseX: testInt16(left.table.X1), MouseY: testInt16(left.table.Y1),
+		MouseX: testutil.Int16(left.table.X1), MouseY: testutil.Int16(left.table.Y1),
 		ButtonState: vtinput.RightmostButtonPressed,
 	}) {
 		t.Fatal("right click on column header was not handled")
@@ -1370,7 +1371,7 @@ func TestPanelsFrame_RightClickPanelPathOpensDriveMenuForThatPanel(t *testing.T)
 
 	if !pf.ProcessMouse(&vtinput.InputEvent{
 		Type: vtinput.MouseEventType, KeyDown: true,
-		MouseX: testInt16(right.X1 + 3), MouseY: testInt16(right.Y1),
+		MouseX: testutil.Int16(right.X1 + 3), MouseY: testutil.Int16(right.Y1),
 		ButtonState: vtinput.RightmostButtonPressed,
 	}) {
 		t.Fatal("right click on the panel path was not handled")
@@ -2427,7 +2428,7 @@ func TestPanelsFrame_Prompt_WithProvider(t *testing.T) {
 	promptStr := ""
 	for _, c := range prompt {
 		if c.Char != vtui.WideCharFiller {
-			promptStr += string(testRune(c.Char))
+			promptStr += string(testutil.Rune(c.Char))
 		}
 	}
 
@@ -4190,7 +4191,7 @@ func TestPanelsFrame_PromptTruncation(t *testing.T) {
 		promptStr := ""
 		for _, c := range prompt {
 			if c.Char != vtui.WideCharFiller {
-				promptStr += string(testRune(c.Char))
+				promptStr += string(testutil.Rune(c.Char))
 			}
 		}
 		if strings.Contains(promptStr, "home") {
@@ -4220,7 +4221,7 @@ func TestPanelsFrame_PromptTruncation(t *testing.T) {
 		for _, c := range prompt {
 			if c.Char != vtui.WideCharFiller {
 				visibleLen++
-				promptStr += string(testRune(c.Char))
+				promptStr += string(testutil.Rune(c.Char))
 			}
 		}
 		if visibleLen > 45 {
@@ -4242,7 +4243,7 @@ func TestPanelsFrame_PromptTruncation(t *testing.T) {
 		for _, c := range prompt {
 			if c.Char != vtui.WideCharFiller {
 				visibleLen++
-				promptStr += string(testRune(c.Char))
+				promptStr += string(testutil.Rune(c.Char))
 			}
 		}
 
@@ -4944,8 +4945,8 @@ func TestPanelsFrame_ShiftF9_SaveSettings(t *testing.T) {
 
 	// ShowToast posts its setup and owns a timer goroutine. Join it before this
 	// test lets another test reuse the manager.
-	pumpUntilToastActive(t)
-	waitForToastExpiry(t, 3*time.Second)
+	testutil.PumpUntilToastActive(t)
+	testutil.WaitForToastExpiry(t, 3*time.Second)
 
 	// Проверяем, что файл настроек действительно был записан на диск
 	info, err := os.Stat(tmp.Name())
@@ -4990,8 +4991,8 @@ func TestPanelsFrame_MiddleClick_LaunchesFile(t *testing.T) {
 	// Симулируем клик колесом мыши по первой строке
 	ev := &vtinput.InputEvent{
 		Type:        vtinput.MouseEventType,
-		MouseX:      testInt16(fsp.X1 + 5),
-		MouseY:      testInt16(fsp.Y1 + 1), // Клик по первой строке
+		MouseX:      testutil.Int16(fsp.X1 + 5),
+		MouseY:      testutil.Int16(fsp.Y1 + 1), // Клик по первой строке
 		ButtonState: vtinput.FromLeft2ndButtonPressed,
 		KeyDown:     true,
 	}
@@ -5288,8 +5289,8 @@ func TestPanelsFrame_CaptureCommands(t *testing.T) {
 	if !found {
 		t.Error("Output was not copied to clipboard")
 	}
-	pumpUntilToastActive(t)
-	waitForToastExpiry(t, 4*time.Second)
+	testutil.PumpUntilToastActive(t)
+	testutil.WaitForToastExpiry(t, 4*time.Second)
 	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
 	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
 }
@@ -5946,8 +5947,8 @@ func TestPanelsFrame_ProcessMouse_HoverWheel(t *testing.T) {
 
 	ev := &vtinput.InputEvent{
 		Type:           vtinput.MouseEventType,
-		MouseX:         testInt16(lx1 + 2),
-		MouseY:         testInt16(ly1 + 2),
+		MouseX:         testutil.Int16(lx1 + 2),
+		MouseY:         testutil.Int16(ly1 + 2),
 		WheelDirection: -1, // Down scroll -> should move cursor down
 	}
 
@@ -6008,8 +6009,8 @@ func TestPanelsFrame_ProcessMouse_HoverWheel_AltPanel(t *testing.T) {
 	// Simulate wheel over the left slot (where QuickView is)
 	ev := &vtinput.InputEvent{
 		Type:           vtinput.MouseEventType,
-		MouseX:         testInt16(lx1 + 2),
-		MouseY:         testInt16(ly1 + 2),
+		MouseX:         testutil.Int16(lx1 + 2),
+		MouseY:         testutil.Int16(ly1 + 2),
 		WheelDirection: -1, // Down scroll
 	}
 
@@ -6073,8 +6074,8 @@ func TestPanelsFrame_ProcessMouse_HoverWheel_Medium_Boundaries(t *testing.T) {
 	lx1, ly1, _, _ := lp.GetPosition()
 	ev := &vtinput.InputEvent{
 		Type:           vtinput.MouseEventType,
-		MouseX:         testInt16(lx1 + 2),
-		MouseY:         testInt16(ly1 + 2),
+		MouseX:         testutil.Int16(lx1 + 2),
+		MouseY:         testutil.Int16(ly1 + 2),
 		WheelDirection: 1, // Up scroll
 	}
 
@@ -6144,8 +6145,8 @@ func TestPanelsFrame_ProcessMouse_HoverWheel_Detailed_Boundaries(t *testing.T) {
 	lx1, ly1, _, _ := lp.GetPosition()
 	ev := &vtinput.InputEvent{
 		Type:           vtinput.MouseEventType,
-		MouseX:         testInt16(lx1 + 2),
-		MouseY:         testInt16(ly1 + 2),
+		MouseX:         testutil.Int16(lx1 + 2),
+		MouseY:         testutil.Int16(ly1 + 2),
 		WheelDirection: -1, // Down scroll
 	}
 
@@ -6189,8 +6190,8 @@ func TestFilePanel_WheelScrollSpeed(t *testing.T) {
 	wheel := func(dir int) {
 		ev := &vtinput.InputEvent{
 			Type:           vtinput.MouseEventType,
-			MouseX:         testInt16(x1 + 2),
-			MouseY:         testInt16(y1 + 2),
+			MouseX:         testutil.Int16(x1 + 2),
+			MouseY:         testutil.Int16(y1 + 2),
 			WheelDirection: dir,
 		}
 		if !p.ProcessMouse(ev) {

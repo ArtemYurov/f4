@@ -10,13 +10,14 @@ import (
 	"time"
 
 	"github.com/unxed/f4/fusefs"
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
 
 func TestAllDialogs_LayoutValidation(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
-	skipIfNoRelevantChanges(t, "layouts",
+	testutil.SkipIfNoRelevantChanges(t, "layouts",
 		"lang/*.lng",
 		"lang/*.txt",
 		"file_ops.go",
@@ -268,7 +269,7 @@ func (rig *dialogLayoutRig) validateAction(t *testing.T, act Action, name, srcFi
 	waitForLoad(t, rig.panels.panels[0].(*FileSystemPanel))
 	waitForLoad(t, rig.panels.panels[1].(*FileSystemPanel))
 	if rig.manager.GetActiveToast() != "" {
-		waitForToastExpiry(t, 6*time.Second)
+		testutil.WaitForToastExpiry(t, 6*time.Second)
 	}
 
 	frames := rig.manager.Screens[rig.manager.ActiveIdx].Frames
@@ -315,7 +316,7 @@ func (rig *dialogLayoutRig) reset(t *testing.T) {
 				continue
 			}
 			rig.manager.SwitchScreen(i)
-			closeFrameManagerScreens([]*vtui.AppScreen{screen})
+			testutil.CloseFrameManagerScreens([]*vtui.AppScreen{screen})
 			break
 		}
 		for i, candidate := range rig.manager.Screens {
@@ -372,7 +373,7 @@ func (rig *dialogLayoutRig) close(t *testing.T) {
 	t.Helper()
 	waitForAsyncClipboard()
 	waitForDirectoryLoads(t)
-	closeFrameManagerFrames(rig.manager)
+	testutil.CloseFrameManagerFrames(rig.manager)
 }
 
 // These handlers change the reusable PanelsFrame itself (or stop/close its

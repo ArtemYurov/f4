@@ -3,6 +3,8 @@ package main
 import (
 	"strings"
 	"testing"
+
+	"github.com/unxed/f4/internal/testutil"
 )
 
 // syncEnv is a terminal with a parser and a fake pty, with the cursor on the
@@ -20,7 +22,7 @@ func syncEnv(t *testing.T) (*TerminalView, *AnsiParser, *mockPty) {
 func syncRow(tv *TerminalView, row int) string {
 	var sb strings.Builder
 	for _, c := range tv.Lines[row] {
-		sb.WriteRune(testRune(c.Char))
+		sb.WriteRune(testutil.Rune(c.Char))
 	}
 	return strings.TrimRight(sb.String(), " ")
 }

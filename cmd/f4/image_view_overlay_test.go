@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -118,10 +119,10 @@ func TestImageViewOverlayGoesOverThePicture(t *testing.T) {
 	iv.Show(scr)
 	scr.Graphics().EndFrame()
 
-	if row := ScreenRow(scr, 1, 0, 20); !strings.Contains(row, "photo.png") {
+	if row := testutil.ScreenRow(scr, 1, 0, 20); !strings.Contains(row, "photo.png") {
 		t.Errorf("the first line of the panel is %q", row)
 	}
-	if row := ScreenRow(scr, 2, 0, 20); !strings.Contains(row, "100x100") {
+	if row := testutil.ScreenRow(scr, 2, 0, 20); !strings.Contains(row, "100x100") {
 		t.Errorf("the second line of the panel is %q", row)
 	}
 

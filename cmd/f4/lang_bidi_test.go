@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/unxed/f4/internal/testutil"
 )
 
 // bidiControls are the invisible characters that steer bidirectional text.
@@ -48,7 +50,7 @@ var bidiControls = map[rune]string{
 }
 
 func TestTranslationsHaveNoBidiControls(t *testing.T) {
-	skipIfNoRelevantChanges(t, "lang_bidi",
+	testutil.SkipIfNoRelevantChanges(t, "lang_bidi",
 		"lang/*.lng",
 		"help/*.hlf",
 		"lang_bidi_test.go",

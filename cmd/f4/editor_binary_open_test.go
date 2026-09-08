@@ -8,6 +8,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/piecetable"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -64,7 +65,7 @@ func TestEditorHeaderIsBinary(t *testing.T) {
 // line-based restore is meaningless there.
 func TestStartIndexingSkipsHexAndDecodeModes(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	pt := piecetable.New([]byte("line one\nline two\n"))
 	for _, tc := range []struct {
@@ -87,7 +88,7 @@ func TestStartIndexingSkipsHexAndDecodeModes(t *testing.T) {
 
 func TestEditorHexRenderSkipsTextLayout(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	buffer := &editorRenderTrackingBuffer{data: make([]byte, 128*1024)}
 	ev := NewEditorViewIndexedLater(piecetable.NewWithBuffer(buffer), nil, "sample.bin")
@@ -198,7 +199,7 @@ func TestEditorEscapeCancelsColorer(t *testing.T) {
 func TestShowEditorBinaryOpensInHex(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "sample.bin")

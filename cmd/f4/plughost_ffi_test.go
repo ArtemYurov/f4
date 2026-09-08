@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/sdk/f4rpc"
 	"github.com/unxed/ffibridge"
 	"github.com/vmihailenco/msgpack/v5"
@@ -97,9 +98,9 @@ func ffiNumber(t *testing.T, value any) int64 {
 	case uint32:
 		return int64(n)
 	case uint64:
-		return testInt64Uint64(n)
+		return testutil.Int64Uint64(n)
 	case uint:
-		return testInt64Uint(n)
+		return testutil.Int64Uint(n)
 	case float64:
 		return int64(n)
 	}
@@ -190,7 +191,7 @@ func TestFFIPointerResultSurvivesTheWire(t *testing.T) {
 		t.Fatalf("memcpy: %v", err)
 	}
 	// A uintptr has no MessagePack representation; it must arrive as a number.
-	if got := ffiNumber(t, copied.Value); got != testInt64Uint64(dst.Addr) {
+	if got := ffiNumber(t, copied.Value); got != testutil.Int64Uint64(dst.Addr) {
 		t.Fatalf("memcpy returned %#v, want the destination address", copied.Value)
 	}
 

@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/unxed/f4/internal/testutil"
 )
 
 // The module boundary auditor. Four of the dependency rules in
@@ -28,6 +30,12 @@ var architectureLayers = map[string]int{
 	"internal/netproxy": 0,
 	"internal/ttyx":     0,
 	"internal/wincon":   0,
+
+	// Test scaffolding, placed by what it may import: testutil imports no
+	// package of ours, paneltest sits above the three it builds a frame from.
+	// Neither may be imported from production code.
+	"internal/testutil":  0,
+	"internal/paneltest": 4,
 }
 
 // architectureGOOS is the set of platforms the graph is collected for. One
@@ -121,7 +129,7 @@ func architectureImportGraph(t *testing.T) map[string][]string {
 	graph := make(map[string][]string)
 	for _, goos := range architectureGOOS {
 		command := exec.Command("go", "list", "-f", "{{.ImportPath}} {{join .Imports \" \"}}", "./...")
-		command.Dir = moduleRootDir(t)
+		command.Dir = testutil.ModuleRootDir(t)
 		if goos != "" {
 			command.Env = append(command.Environ(), "GOOS="+goos, "CGO_ENABLED=0")
 		}

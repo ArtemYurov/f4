@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -240,7 +241,7 @@ func TestPluginChordHotkeyStaysGlobal(t *testing.T) {
 	defer restoreManager()
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	pf := &PanelsFrame{showPanels: true}
-	defer setFrameManagerScreensForTest(t, []*vtui.AppScreen{{Frames: []vtui.Frame{pf}}}, 0)()
+	defer testutil.SetFrameManagerScreens(t, []*vtui.AppScreen{{Frames: []vtui.Frame{pf}}}, 0)()
 
 	chord := &vtinput.InputEvent{
 		Type:            vtinput.KeyEventType,
@@ -307,7 +308,7 @@ func TestPanelsFrameDoesNotConsumePluginMenuShortcut(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
 	pf := &PanelsFrame{showPanels: true}
-	defer setFrameManagerScreensForTest(t, []*vtui.AppScreen{{Frames: []vtui.Frame{pf}}}, 0)()
+	defer testutil.SetFrameManagerScreens(t, []*vtui.AppScreen{{Frames: []vtui.Frame{pf}}}, 0)()
 	e := &vtinput.InputEvent{
 		Type:           vtinput.KeyEventType,
 		KeyDown:        true,
@@ -384,7 +385,7 @@ func TestPluginCommandHotkeyUsesConfiguredShortcutAndRunsCommand(t *testing.T) {
 	defer restoreManager()
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	pf := &PanelsFrame{}
-	defer setFrameManagerScreensForTest(t, []*vtui.AppScreen{{Frames: []vtui.Frame{pf}}}, 0)()
+	defer testutil.SetFrameManagerScreens(t, []*vtui.AppScreen{{Frames: []vtui.Frame{pf}}}, 0)()
 	if !RunAction(action.Name) {
 		t.Fatal("configured plugin action was not dispatched")
 	}

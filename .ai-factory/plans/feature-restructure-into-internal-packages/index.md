@@ -255,7 +255,7 @@ titles, not the ordering.
 - [x] Task 6: Lift the drive registry out of `panels_frame.go` ([details](phase-01-baseline-and-barriers.md#task-6-lift-the-drive-registry-out-of-panels_framego))
 - [x] Task 7: Remove sysinfo's last localization call (`gpu_info_linux.go:113`) ([details](phase-01-baseline-and-barriers.md#task-7-remove-sysinfos-last-localization-call))
 - [x] Task 8: Add the module boundary auditor `cmd/f4/architecture_test.go` ([details](phase-01-baseline-and-barriers.md#task-8-add-the-module-boundary-auditor))
-- [ ] Task 9: Split the shared frame harness into `internal/testutil` + `internal/paneltest` ([details](phase-01-baseline-and-barriers.md#task-9-give-the-shared-frame-harness-a-home))
+- [x] Task 9: Split the shared frame harness into `internal/testutil` + `internal/paneltest` ([details](phase-01-baseline-and-barriers.md#task-9-give-the-shared-frame-harness-a-home))
 - [ ] Task 43: Assign every `cmd/f4` file to a wave — 23 stray sources, 154 subject-less tests, 61 multi-package tests, 48 shared helpers ([details](phase-01-baseline-and-barriers.md#task-43-assign-every-cmdf4-file-to-a-wave)) (depends on 8)
 
 ### Phase 2: Clear the Repository Root
@@ -310,6 +310,7 @@ titles, not the ordering.
 - [ ] Task 40: `/aif-docs` checkpoint; rewrite `AGENTS.md` and `rules/base.md` ([details](phase-11-ci-and-docs.md#task-40-aif-docs-checkpoint)) (depends on 37)
 - [ ] Task 41: Rewrite `ARCHITECTURE.md` from target to fact ([details](phase-11-ci-and-docs.md#task-41-rewrite-architecturemd-from-target-to-fact)) (depends on 40)
 - [ ] Task 42: Drop the migration baseline ([details](phase-11-ci-and-docs.md#task-42-drop-the-migration-baseline)) (depends on 41)
+- [ ] Task 44: Review the finished tree before calling it done ([details](phase-11-ci-and-docs.md#task-44-review-the-finished-tree-before-calling-it-done)) (depends on 42)
 
 ## Commit Plan
 

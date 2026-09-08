@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -71,7 +72,7 @@ func issue863RunCommand(t *testing.T, chunks ...string) (*PanelsFrame, []string,
 		pf.consumeLocalOutput(pty, []byte(chunk))
 	}
 	pf.consumeLocalOutput(pty, []byte("\x1b]133;D\x07"+prompt))
-	drainUITasks()
+	testutil.DrainUITasks()
 
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
@@ -156,7 +157,7 @@ func TestIssue863OwnTerminalFinalNewlineKeepsSinglePrompt(t *testing.T) {
 	pf.consumeLocalOutput(pty, []byte("1\r\n"))
 	pf.consumeLocalOutput(pty, []byte("2\r\n"))
 	pf.consumeLocalOutput(pty, []byte("\x1b]133;D\x07"+prompt))
-	drainUITasks()
+	testutil.DrainUITasks()
 
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)

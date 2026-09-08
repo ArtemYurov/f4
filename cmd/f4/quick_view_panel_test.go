@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -776,7 +777,7 @@ func TestQuickView_ImageGraphicsNotSupported(t *testing.T) {
 		for x := q.X1; x <= q.X2; x++ {
 			ci := scr.GetCell(x, y)
 			if ci.Char != 0 {
-				line = append(line, testRune(ci.Char))
+				line = append(line, testutil.Rune(ci.Char))
 			}
 		}
 		if strings.Contains(string(line), "not supported") {

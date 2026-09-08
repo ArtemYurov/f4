@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -38,7 +39,7 @@ func TestLuaPluginIntegration(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
 	// 3. Initialize the real RPC plugin pointing to the dummy script
-	pluginPath := filepath.Join(moduleRootDir(t), "plugins", "dummy_lua", "plugin.lua")
+	pluginPath := filepath.Join(testutil.ModuleRootDir(t), "plugins", "dummy_lua", "plugin.lua")
 	p := NewRPCPlugin(pluginPath)
 	host := &mockHostAPI{}
 

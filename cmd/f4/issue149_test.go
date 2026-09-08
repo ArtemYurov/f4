@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/plugins/archive"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/zip"
@@ -614,7 +615,7 @@ func TestIssue149_7z_MultiBlock_Solid_Integrity(t *testing.T) {
 		// Generate uncompressible pseudo-random data to force multi-block solid LZMA2 stream
 		data := make([]byte, spec.size)
 		for i := range data {
-			data[i] = testByteInt64((int64(i)*13 + spec.seed*37) % 251)
+			data[i] = testutil.ByteInt64((int64(i)*13 + spec.seed*37) % 251)
 			if data[i] == 0 {
 				data[i] = 1
 			}

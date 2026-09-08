@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/piecetable"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -52,7 +53,7 @@ func TestScanEditorWrapSafety(t *testing.T) {
 
 func TestEditorView_UnsafeWordWrapCannotBeReenabled(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	ev := NewEditorView(piecetable.New([]byte("text")), nil, "")
 	defer ev.Close()
@@ -79,7 +80,7 @@ func TestEditorView_UnsafeWordWrapCannotBeReenabled(t *testing.T) {
 
 func TestEditorView_StartIndexingFindsUnsafeLaterLine(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	content := "first\n" + strings.Repeat("x", maxWordWrapLineBytes+1)
 	ev := NewEditorView(piecetable.New([]byte(content)), nil, "")

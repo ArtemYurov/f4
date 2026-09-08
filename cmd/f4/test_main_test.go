@@ -1,47 +1,29 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/unxed/f4/fusefs"
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
 
-// pressKey dispatches a key through the production input path: the
-// macro/hotkey filter first (action hotkeys are dispatched there), then
-// the frame's own ProcessKey for widget-level keys. It ensures the
-// global managers exist and the frame is the top frame.
+// pressKey is testutil.PressKey with this package's macro filter, which is
+// where action hotkeys are dispatched. The managers are created on demand
+// because most tests never touch them.
 func pressKey(f vtui.Frame, e *vtinput.InputEvent) bool {
-	if vtui.FrameManager == nil || len(vtui.FrameManager.Screens) == 0 {
-		vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	}
 	if GlobalHotkeysMgr == nil {
 		GlobalHotkeysMgr = NewHotkeyManager("")
 	}
 	if MacroMgr == nil {
 		MacroMgr = NewMacroManager("")
 	}
-	inStack := false
-	for _, s := range vtui.FrameManager.Screens {
-		for _, fr := range s.Frames {
-			if fr == f {
-				inStack = true
-				break
-			}
-		}
-	}
-	if !inStack {
-		vtui.FrameManager.Push(f)
-	}
-	if MacroMgr.Filter(e) {
-		return true
-	}
-	return f.ProcessKey(e)
+	return testutil.PressKey(f, e, MacroMgr.Filter)
 }
 
 // preserveActionRegistry keeps tests that register synthetic actions from
@@ -62,8 +44,12 @@ func preserveActionRegistry(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	baseFrameManager := vtui.FrameManager
-	baseFrameManager.Init(vtui.NewSilentScreenBuf())
+	os.Exit(testutil.Main(m, installTestSeams, unmountTestFilesystems))
+}
+
+// installTestSeams points this package's escape hatches somewhere harmless for
+// the duration of the run.
+func installTestSeams() {
 	vfs.InitSudoClient("/usr/bin/f4", "")
 
 	// Unit tests must never hand control to the user's desktop. Individual
@@ -84,72 +70,16 @@ func TestMain(m *testing.M) {
 		const minimumObservableToastDuration = 100 * time.Millisecond
 		return minimumObservableToastDuration
 	}
-
-	// The machine's clipboard is global, slow to reach (pbcopy/xclip) and
-	// shared with whatever else the CI runner is doing; tests keep clipboard
-	// traffic in vtui's process-local buffer instead, and skip the OSC 52
-	// stdout fallback that used to spray base64 into the test logs. A test
-	// that genuinely targets the OS clipboard switches the knob back off
-	// for its own scope.
-	vtui.SkipOSClipboard(true)
-	vtui.DisableTerminalClipboard()
 	queueShowToast = func(string, time.Duration) {}
 
-	tmpDir, err := os.MkdirTemp("", "f4-test-config-*")
-	if err == nil {
-		// XDG_CONFIG_HOME/APPDATA cover Linux and Windows; os.UserConfigDir
-		// ignores both on darwin, so the seam is what actually isolates the
-		// suite from the developer's real profile there.
-		if setErr := os.Setenv("XDG_CONFIG_HOME", tmpDir); setErr != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "set XDG_CONFIG_HOME: %v\n", setErr)
-			_ = os.RemoveAll(tmpDir) // Process exit makes cleanup failure uninteresting.
-			os.Exit(1)
-		}
-		if setErr := os.Setenv("APPDATA", tmpDir); setErr != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "set APPDATA: %v\n", setErr)
-			_ = os.RemoveAll(tmpDir) // Process exit makes cleanup failure uninteresting.
-			os.Exit(1)
-		}
-		userConfigDir = func() (string, error) { return tmpDir, nil }
+	// os.UserConfigDir ignores XDG_CONFIG_HOME and APPDATA on darwin, so the
+	// seam is what actually isolates the suite from the developer's profile.
+	if dir := testutil.ConfigDir(); dir != "" {
+		userConfigDir = func() (string, error) { return dir, nil }
 		resetConfigDirForTest()
 	}
+}
 
-	result := m.Run()
-
-	for _, unmountErr := range fusefs.UnmountAll() {
-		_, _ = fmt.Fprintf(os.Stderr, "unmount test FUSE filesystem: %v\n", unmountErr)
-		result = 1
-	}
-
-	globalFrameManager := vtui.FrameManager
-	if globalFrameManager != nil {
-		closeFrameManagerFrames(globalFrameManager)
-		globalFrameManager.Shutdown()
-	}
-	if baseFrameManager != globalFrameManager {
-		_, _ = fmt.Fprintln(os.Stderr, "vtui.FrameManager was not restored to the TestMain manager")
-		closeFrameManagerFrames(baseFrameManager)
-		baseFrameManager.Shutdown()
-		result = 1
-	}
-
-	taskPumps, goroutineProfile, profileErr := taskPumpGoroutineProfile()
-	if profileErr != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "capture goroutine profile after vtui shutdown: %v\n", profileErr)
-		result = 1
-	} else if taskPumps > 0 {
-		_, _ = fmt.Fprintf(os.Stderr,
-			"vtui task-pump goroutine leak: %d startTaskPump goroutine(s) remain after test teardown; want 0\n%s",
-			taskPumps, goroutineProfile)
-		result = 1
-	}
-
-	if err == nil {
-		if removeErr := os.RemoveAll(tmpDir); removeErr != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "remove test config directory: %v\n", removeErr)
-			result = 1
-		}
-	}
-
-	os.Exit(result)
+func unmountTestFilesystems() error {
+	return errors.Join(fusefs.UnmountAll()...)
 }

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -486,7 +487,7 @@ func TestDetailedArrowRoutingByNavigationFocus(t *testing.T) {
 		return &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vk}
 	}
 	typeChar := func(r rune) *vtinput.InputEvent {
-		return &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: r, VirtualKeyCode: testUint16Rune(r)}
+		return &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: r, VirtualKeyCode: testutil.Uint16Rune(r)}
 	}
 
 	AppConfig.NavigationMode = NavigationClassic

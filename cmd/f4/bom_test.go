@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -14,7 +15,7 @@ func TestShowEditor_UTF8BOMIsNotDisplayedOrLostOnSave(t *testing.T) {
 	for _, memoryMap := range []bool{false, true} {
 		t.Run(map[bool]string{false: "async", true: "mapped"}[memoryMap], func(t *testing.T) {
 			vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-			drainPendingTasks()
+			testutil.DrainPendingTasks()
 
 			dir := t.TempDir()
 			path := filepath.Join(dir, "bom.txt")
@@ -72,12 +73,12 @@ func TestShowEditor_UTF8BOMIsNotDisplayedOrLostOnSave(t *testing.T) {
 			// race-clean when the race shard schedules it during indexing.
 			ev.cancelIndexing()
 			ev.indexWG.Wait()
-			drainPendingTasks()
+			testutil.DrainPendingTasks()
 
 			ev.modified = true
 			ev.SaveToFile(nil)
 			waitEditorSave(t, ev)
-			drainPendingTasks()
+			testutil.DrainPendingTasks()
 			if ev.modified {
 				t.Fatal("editor remained modified after saving BOM-marked text")
 			}

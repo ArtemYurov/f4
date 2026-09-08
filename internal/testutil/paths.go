@@ -1,4 +1,4 @@
-package main
+package testutil
 
 import (
 	"crypto/sha256"
@@ -9,10 +9,32 @@ import (
 	"testing"
 )
 
-// skipIfNoRelevantChanges calculates a SHA256 hash of all files matching the given globs.
+// ModuleRootDir climbs from the package directory to the directory holding
+// go.mod. Repo-wide inventory tests (hardcoded strings, command-palette
+// surfaces) and fixtures living outside cmd/f4 (plugins/) must resolve paths
+// against the module root, not this package's directory.
+func ModuleRootDir(t *testing.T) string {
+	t.Helper()
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for {
+		if _, statErr := os.Stat(filepath.Join(dir, "go.mod")); statErr == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			t.Fatal("module root with go.mod not found above the test directory")
+		}
+		dir = parent
+	}
+}
+
+// SkipIfNoRelevantChanges calculates a SHA256 hash of all files matching the given globs.
 // If the hash matches the one saved from the last successful run, the test is skipped.
 // Cache is saved in the OS temporary directory to avoid polluting the repository.
-func skipIfNoRelevantChanges(t *testing.T, cacheName string, globPatterns ...string) {
+func SkipIfNoRelevantChanges(t *testing.T, cacheName string, globPatterns ...string) {
 	if os.Getenv("CI") != "" || os.Getenv("F4_FORCE_TESTS") != "" {
 		return // Never skip in CI or when explicitly forced
 	}

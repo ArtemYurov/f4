@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -63,7 +64,7 @@ func TestIssue821CommandHistoryKeepsLongEntryInsideDialog(t *testing.T) {
 		if x >= menu.X1 && x <= menu.X2 {
 			continue
 		}
-		if got := testRune(scr.GetCell(x, menu.Y1+1).Char); got != sentinel {
+		if got := testutil.Rune(scr.GetCell(x, menu.Y1+1).Char); got != sentinel {
 			t.Fatalf("long history entry escaped dialog at column %d as %q", x, got)
 		}
 	}

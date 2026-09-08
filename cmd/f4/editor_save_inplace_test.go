@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/piecetable"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -45,7 +46,7 @@ func openLocalEditor(t *testing.T, dir, path string) *EditorView {
 // insertion shifts them and falls back to the staged path.
 func TestEditorSave_InPlacePatchDoesNotRenameAMissingStage(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "aa.txt")
@@ -61,7 +62,7 @@ func TestEditorSave_InPlacePatchDoesNotRenameAMissingStage(t *testing.T) {
 
 	ev.SaveToFile(nil)
 	waitEditorSave(t, ev)
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	// The content alone proves nothing here: PatchInPlace writes it before the
 	// finalize step runs, so it is correct either way. Going clean is what says
@@ -84,7 +85,7 @@ func TestEditorSave_InPlacePatchDoesNotRenameAMissingStage(t *testing.T) {
 // PatchInPlace accepts trivially.
 func TestEditorSave_UnmodifiedBufferCompletes(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "untouched.txt")
@@ -99,7 +100,7 @@ func TestEditorSave_UnmodifiedBufferCompletes(t *testing.T) {
 	ev.modified = true // F2 on a buffer whose bytes happen to be unchanged
 	ev.SaveToFile(nil)
 	waitEditorSave(t, ev)
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	if ev.modified {
 		t.Error("editor still marked modified: the save reported failure")
@@ -119,7 +120,7 @@ func TestEditorSave_UnmodifiedBufferCompletes(t *testing.T) {
 // a staged sibling and rename it into place.
 func TestEditorSave_InsertionStillStages(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "grown.txt")
@@ -135,7 +136,7 @@ func TestEditorSave_InsertionStillStages(t *testing.T) {
 
 	ev.SaveToFile(nil)
 	waitEditorSave(t, ev)
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	if ev.modified {
 		t.Error("editor still marked modified: the save reported failure")
@@ -152,7 +153,7 @@ func TestEditorSave_InsertionStillStages(t *testing.T) {
 
 func TestEditorSave_ShrinkingEditStillTruncates(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "shrunk.txt")
@@ -169,7 +170,7 @@ func TestEditorSave_ShrinkingEditStillTruncates(t *testing.T) {
 	}
 	ev.SaveToFile(nil)
 	waitEditorSave(t, ev)
-	drainPendingTasks()
+	testutil.DrainPendingTasks()
 
 	got, err := os.ReadFile(path)
 	if err != nil {

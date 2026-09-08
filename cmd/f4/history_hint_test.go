@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -380,8 +381,8 @@ func TestActionCommandHistory_MouseClickPastesEntry(t *testing.T) {
 	menu.ProcessMouse(&vtinput.InputEvent{
 		Type:        vtinput.MouseEventType,
 		KeyDown:     true,
-		MouseX:      testInt16(x1 + 2),
-		MouseY:      testInt16(rowY),
+		MouseX:      testutil.Int16(x1 + 2),
+		MouseY:      testutil.Int16(rowY),
 		ButtonState: vtinput.FromLeft1stButtonPressed,
 	})
 
@@ -513,8 +514,8 @@ func TestActionFoldersHistory_MouseClickNavigates(t *testing.T) {
 	menu.ProcessMouse(&vtinput.InputEvent{
 		Type:        vtinput.MouseEventType,
 		KeyDown:     true,
-		MouseX:      testInt16(x1 + 2),
-		MouseY:      testInt16(rowY),
+		MouseX:      testutil.Int16(x1 + 2),
+		MouseY:      testutil.Int16(rowY),
 		ButtonState: vtinput.FromLeft1stButtonPressed,
 	})
 
