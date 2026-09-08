@@ -465,6 +465,22 @@ are what keeps it split.
   that needs an exemption there is a change to this document first, not a test
   edit.
 
+**Schema travels with the field; application stays behind.** When a package owns a
+setting, it owns the setting's *schema* — the enumeration of what the field may
+hold, the parser that normalises it, the default it falls back to. What it does
+not own is the *use* of that setting by a running application. `config` holds
+`StartupMode` and the function that parses it; the code that acts on a startup
+mode lives with the code that starts things. `saveSettingsGroups` does not move
+into `config` either — capturing the window geometry, writing the ini and saving
+the session is orchestration, and orchestration belongs to whoever orchestrates.
+
+The test is what a change would follow. A new value for an enumeration changes the
+type and its parser: schema, so it moves with the field. A new place that reacts to
+that value changes a caller: application, so it stays. Applied consistently this
+keeps a configuration package from slowly becoming the place where everything that
+mentions a setting ends up — the failure this whole layout exists to prevent, in
+miniature.
+
 Role separation is the same rule seen from the other side: `sdk/` and `vfs/`
 define contracts, `plugins/` implement them, `internal/*` runs the application,
 `cmd/f4` wires it together, `tools/` serves developers and ships in nothing. A
