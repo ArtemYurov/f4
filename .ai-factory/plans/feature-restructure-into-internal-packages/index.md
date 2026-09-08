@@ -391,7 +391,7 @@ upstream merge that must happen first, the open tails and the tool hazards.
 
 ### Phase 8: File Operations and the Editor
 - [x] Task 46: Audit the message keys — every literal `Msg`/`HelpMsg` key exists in `en.lng` ([details](phase-08-fileops-and-editor.md#task-46)) — runs before Task 32, outside the phase order
-- [ ] Task 32: Extract `internal/fileops` ([details](phase-08-fileops-and-editor.md#task-32-extract-internalfileops)) (depends on 5, 30, 31)
+- [x] Task 32: Extract `internal/fileops` ([details](phase-08-fileops-and-editor.md#task-32-extract-internalfileops)) (depends on 5, 30, 31)
 - [ ] Task 33: Extract `internal/editor` ([details](phase-08-fileops-and-editor.md#task-33-extract-internaleditor)) (depends on 14, 29, 32)
 
 ### Phase 9: Panels and the Command Line
@@ -569,6 +569,41 @@ The rule this implies: **a file arriving from upstream after Task 43 has no home
 in the roster.** Assign it by subject and record it here, or it stays in
 `cmd/f4` on its own wave with nobody to notice. Upstream is active and two
 merges have produced two such files; there will be a third.
+
+### Closed: `attributes_dialog.go` goes to `internal/dialog`
+
+The open tail is settled by the Task 32 wave. Its `PanelsFrame` ×9 were one
+parameter threaded through for one `RefreshAll`; as a `refresh func()` the file
+scores zero, and what it holds — 34 message lookups, a stack of vtui widgets,
+no file operation — puts it with its siblings in `internal/dialog`. Task 43's
+export table moves with it: `attributes_test.go` takes `ShowAttributes*` from
+`internal/dialog`.
+
+### `qual2.py` rewrote three packages it had no business in
+
+The export-and-qualify loop renames an identifier everywhere it appears, and
+"everywhere" includes other packages that happen to share the name and the
+method declarations of interfaces. Running it for `internal/fileops` turned
+`closeOnce` into `fileops.CloseOnce` in four `internal/terminal/pty_*.go` files
+and in `panel_plugins.go`, and rewrote `AskOverwrite`/`AskError` — method names
+in `internal/plughost`'s `Application` interface — into `fileops.AskOverwrite`
+and `fileops.AskError`, comments included. All of it is a syntax error, which is
+the only reason it was cheap to find.
+
+The same pass also rewrote **four string literals**, which is not a syntax
+error and was caught by the diff grep instead: a command-palette coverage key
+became `"fileops.(*fileops.QueueFrame).ProcessKey"`, and three test messages
+started naming package-qualified symbols in prose. The palette key is the one
+that mattered — an auditor keyed by a name nothing produces.
+
+The rule that holds, and it is the one HANDOFF already states: **grep the
+wave's own diff for changed string content before running the suite.** Compare
+the literals removed against the literals added; anything present on one side
+only is either the change you meant or damage.
+
+```
+git diff --cached -M -- cmd/f4 internal | grep -E '^[+-]' | grep '"'
+```
 
 ### Two packages the plan did not name
 

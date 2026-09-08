@@ -458,7 +458,7 @@ go test ./internal/toast/... ./internal/history/... ./cmd/f4/...
 ### Intent
 
 `RegisterAction` is called from seven files that land in five different packages
-(`fuse_mount_action.go` and `fuse_mount_list.go` → fileops, `sheet_actions.go` →
+(`fuse_mount_action.go` and `fuse_mount_list.go` → panel, `sheet_actions.go` →
 sheet, `sqlite_actions.go` → plughost, `static_direct_actions.go` and
 `vtvibe_host.go` → app/vtvibe, `action_table.go` → app). Every one of them needs
 the registry before it can move. This is the last primitive and it unblocks the

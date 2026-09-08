@@ -75,7 +75,8 @@ session can check the record rather than rediscover it.
 | `internal/media` is layer 3, not 1 | `phase-07` |
 | Nine `term` roster files could not move | `phase-07` |
 | `internal/textsearch` and early `internal/fileops`, neither planned | `phase-07` |
-| `fuse_mount_*.go` go to `internal/app`, not `fileops` | `phase-08`, before the wave |
+| `fuse_mount_*.go` go to `internal/panel` (Task 34) — they read `fsp.vfs` and `pf.getActivePanel` | `phase-08`, Task 32 |
+| `attributes_dialog.go` goes to `internal/dialog`, not `fileops` | `phase-08`, Task 32 |
 | `commands.go` cannot go to `internal/cmdline` | `phase-07` |
 | Package-name question for Task 44 | `phase-11`, Task 44 step 3 |
 

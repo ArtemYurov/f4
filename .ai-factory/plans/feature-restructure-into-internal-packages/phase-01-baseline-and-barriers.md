@@ -296,10 +296,11 @@ file moves.
    - `dialog` — `bookmarks_dialog.go`, `codepage_settings.go`,
      `command_palette_ui.go`, `find_file.go`, `grabber.go`, `hotkeys_ui.go`
    - `editor` — `editor_base64.go`, `editor_find_all.go`, `editor_view.go`
-   - `fileops` — `fuse_mount_list.go`, `queue_manager.go`
+   - `fileops` — `queue_manager.go`
    - `macro` — `macro.go`
    - `media` — `image_view.go`, `player_panel.go`, `video_view.go`
    - `panel` — `drive_bookmarks_ui.go`, `file_associations_editor.go`,
+     `fuse_mount_list.go`,
      `file_associations_ui.go`, `file_panel.go`, `info_panel.go`,
      `panel_plugins.go`, `panels_frame.go`, `quick_view_panel.go`,
      `temp_panel.go`, `user_menu_ui.go`, `viewer_editor_history.go`

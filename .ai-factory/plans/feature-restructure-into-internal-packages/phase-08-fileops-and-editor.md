@@ -166,27 +166,66 @@ would otherwise sweep a second, older copy of every file.
 ## Task 32: Extract `internal/fileops`
 
 
-### Roster deviations measured before the wave
+### Roster deviations, measured on the wave
 
-**`fuse_mount_action.go` and `fuse_mount_list.go` go to `internal/app`
-(Task 36), not here.** Measured: the first scores `PanelsFrame` ×4 and
-`FileSystemPanel` ×1 and has two `init()`; the second scores `PanelsFrame` ×2.
-`internal/fileops` is layer 1 and cannot hold either. `internal/panel` cannot
-either: both call `findPanelsFrameAnyScreen`, which `framework_actions.go`
-declares and which travels whole to `internal/app`, so a panel home would need
-the upward edge the auditor forbids. Nothing in either file is called from
-outside it — every function is a `Handler:` value reached through the action
-registry, the same shape that made `framework_actions.go` not a primitive.
-512 lines between them.
+**`fuse_mount_action.go` and `fuse_mount_list.go` go to `internal/panel`
+(Task 34)** — not here, and not `internal/app` as an earlier version of this
+block said. Measured: both read `fsp.vfs` (`file_panel.go:517`) and
+`pf.getActivePanel` (`panels_frame.go:3290`), private members of the panel
+types, eleven and six times respectively. A private member is visible only from
+its own package, so no package but the panels' own can hold these two without
+exporting the panel's core — which the export rule forbids for exactly this
+reason. `internal/fileops` is out regardless: it is layer 1 and cannot see
+layer-3 types at all, and mounting a filesystem is not a file operation.
 
-This is the fourth roster entry assigned by filename rather than by the graph,
-after `kitty_*` (media, actually term), `command_runner*` (cmdline, actually
-term) and `colors.go` (which the grep wrongly held back).
+The earlier reading — that they belong to `internal/app` because both call
+`findPanelsFrameAnyScreen`, "which `framework_actions.go` declares" — rested on
+a wrong address. That function is declared at `editor_view.go:5562`;
+`framework_actions.go:142` is one of its 52 call sites. **This is the fifth time
+a file was placed by its name and the graph disagreed**, after `kitty_*`,
+`command_runner*`, `colors.go` and `attributes_dialog.go` — and the first time
+the wrong answer came from a block written to correct the roster. A correction
+is a measurement too, and it goes stale like any other.
 
-**`attributes_dialog.go` scores `PanelsFrame` ×8** and its two platform files
-score zero. Its name asks for `internal/dialog`; measure it on the wave rather
-than deciding here, and note that dialog and fileops are both layer 3, so the
-gate alone will not settle it.
+*Follow-up for Task 33.* `findPanelsFrameAnyScreen` reads `pf.closed`
+(`panels_frame.go:327`), so Go requires it in `PanelsFrame`'s package. It cannot
+travel with `editor_view.go` to `internal/editor`; Task 33 has to lift it out of
+that file. `index.md` line 446 calls it composition-root code, which will also
+need correcting.
+
+**`attributes_dialog.go` goes to `internal/dialog`.** This closes the open tail:
+its name asked for dialog, the gate said `PanelsFrame` ×9, and the wave settled
+it. All nine references were the same parameter threaded through three levels
+for one call, `pf.RefreshAll()`; passed as a `refresh func()` the file scores
+zero and the gate stops deciding. What decides instead is what the file
+contains: 34 `i18n.Msg` lookups and a stack of `vtui` widgets, and not one
+reference to a file operation. Its two platform files follow it.
+
+Consequence for Task 43's export table: `attributes_test.go` (→ `app`,
+Task 36) takes `ShowAttributesUnix`, `ShowAttributesWindows`,
+`ShowAttributesWindowsForTargets` and `ShowAttributesWindowsWithProperties`
+from **`internal/dialog`**, not from `internal/fileops`.
+
+### Parked helpers, and why the gate cannot see them
+
+Seven functions sat in files this wave moved, each with callers in packages the
+file was not going to. None of them scores anything on the eight-type grep, and
+each would have followed its file into the wrong package silently.
+
+| Helper | Was in | Went to | Because |
+|---|---|---|---|
+| `isLocalOSVFS` | `attributes_dialog.go` | `internal/fileops` | a `vfs` predicate; editor, panel and app all ask it |
+| `sameVFSInstance` | `file_panel.go` | `internal/fileops` | the same question, and `ops.go` needs it |
+| `padLabel` | `attributes_dialog.go` | `internal/dialog` | dialog label padding; callers land in dialog and panel |
+| `ButtonRows` | `internal/dialog` | `internal/fileops` | one production caller, and it is here |
+| `ThemedForeground`, `UseTableColors` | `internal/dialog` | `internal/theme` | palette arithmetic, and `fileops` → `dialog` would be an upward edge |
+| `clickDialogButton`, `getCleanText` | `file_ops_test.go` | `internal/testutil` | test scaffolding three `cmd/f4` tests also use |
+
+`ButtonRows`, `ThemedForeground` and `UseTableColors` were not optional: they
+made `internal/fileops` import `internal/dialog`, which is layer 1 → layer 3 and
+forbidden, and together with the attributes dialog's edge the other way it was a
+cycle. The rule this leaves: **before moving a file, ask what it declares, not
+only what it references.** The gate asks the second question.
 
 ### Intent
 
@@ -203,9 +242,10 @@ would otherwise hit was pre-empted in Task 30, which pulled `clipboard.go`,
    `compare_folders.go`, `archive_index.go`
    (`//go:build !dragonfly && !netbsd && !solaris && !illumos`),
    `archive_index_fallback.go` (`dragonfly || netbsd || solaris || illumos`),
-   `attributes_dialog.go`, `attributes_dialog_unix.go`,
-   `attributes_dialog_windows.go`, `fuse_mount_action.go`, `fuse_mount_list.go`.
-   Score each before moving; the list is a starting roster, not a verdict.
+   Score each before moving; the list is a starting roster, not a verdict —
+   `atomic_file.go` and `file_state.go` had already left with the viewer wave,
+   the attributes files went to `internal/dialog`, and the two `fuse_mount_*`
+   files stayed for `internal/panel`.
 2. `file_ops.go` scores `PanelsFrame` ×5. Resolve each: a copy operation that
    refreshes a panel afterwards belongs to the panel, not to fileops. Leave those
    five call sites behind and give `internal/fileops` a completion callback the
@@ -215,16 +255,19 @@ would otherwise hit was pre-empted in Task 30, which pulled `clipboard.go`,
    here and from `panels_frame.go` / `file_panel.go` in the panel wave. Panel →
    fileops is layer 3 → layer 1 and legal, and this keeps two exported functions
    off the public `vfs` surface.
-4. `fuse_mount_action.go` has **two** `init()` blocks and `fuse_mount_list.go` one;
-   all three register actions. After Phase 4 they call `action.RegisterAction`.
-   Confirm `TestActionOrderIsStable` still passes — this is the wave most likely to
-   reorder the menu, because it moves registration files across a package boundary.
+4. The three `init()` blocks that register actions — two in
+   `fuse_mount_action.go`, one in `fuse_mount_list.go` — stay in `cmd/f4` until
+   Task 34 takes both files to `internal/panel`. Nothing this wave moves
+   registers an action, so the menu cannot reorder here; confirm
+   `TestActionOrderIsStable` anyway, and expect Task 34 to be the wave that
+   actually risks it.
 5. `compare_folders.go` no longer declares `compareOptions` (Task 4 moved the type
    to `config.go`); it uses `config.CompareOptions`. Confirm the import.
 6. Rename to the topic convention: `ops.go`, `ops_dialog.go`, `tracker.go`,
    `queue.go`, `atomic.go`, `state.go`, `mask.go`, `compare.go`, `archive_index.go`,
-   `archive_index_fallback.go`, `attributes.go`, `attributes_unix.go`,
-   `attributes_windows.go`, `fuse_mount.go`, `fuse_list.go`, `identity.go`.
+   `archive_index_fallback.go`, `identity.go`. The attributes files take
+   `attributes.go`, `attributes_unix.go` and `attributes_windows.go` in
+   `internal/dialog`.
 7. Add `"internal/fileops": 1` to the auditor's layer map.
 
 ### Required Interfaces and Contracts

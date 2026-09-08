@@ -81,6 +81,19 @@ editor slices.
 
 ## Task 34: Extract `internal/panel`
 
+
+### Two files arriving from Task 32
+
+`fuse_mount_action.go` (227 lines, two `init()`) and `fuse_mount_list.go` (285
+lines, one `init()`) were rostered for `internal/fileops` and measured into this
+wave instead: both read `fsp.vfs` and `pf.getActivePanel`, private members of
+the types this package owns. 512 lines between them.
+
+They carry the three action registrations this restructuring has left in
+`cmd/f4`, which makes **this** the wave that can reorder the menu. Run
+`go test ./cmd/f4 -run '^TestActionOrderIsStable'` after the move, and if it
+fails read it as a real reordering rather than as a stale golden.
+
 ### Intent
 
 Thirty outbound edges and the two largest types in the codebase: `PanelsFrame`
