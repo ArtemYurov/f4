@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/testutil"
@@ -3903,7 +3904,7 @@ func TestLayout_F4ActionDialogs_Validity(t *testing.T) {
 	})
 
 	t.Run("ViewerSettingsDialog", func(t *testing.T) {
-		actionViewerSettings(pf)
+		dialog.ShowViewerSettings()
 		dlg := fm.GetTopFrame().(vtui.Container)
 		vtui.AssertLayout(t, dlg)
 		fm.Pop()

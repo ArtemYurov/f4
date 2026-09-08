@@ -1112,7 +1112,7 @@ func (vv *ViewerView) ReloadWithAutoDetect() {
 func (vv *ViewerView) showCodepageDialog() {
 	_, overridden := rememberedCodepage(vv.vfs, vv.path)
 	items, currIdx := vfs.BuildCodepageMenuItems(vv.Codepage, !overridden)
-	menu := newCodepageMenu(i18n.Msg("Codepage.Title"), items)
+	menu := dialog.NewCodepageMenu(i18n.Msg("Codepage.Title"), items)
 
 	// This menu is about the file on screen, as Shift+F8 is in Far: a
 	// codepage picked here is remembered for this file, and Auto-detect

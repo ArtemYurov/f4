@@ -1,4 +1,4 @@
-package main
+package dialog
 
 import (
 	"errors"
@@ -25,10 +25,10 @@ import (
 // dialog therefore edits <exe>.ini and asks for a restart instead of flipping
 // a live flag.
 
-// portableProfileSubdirs are created inside a fresh portable profile so a user
+// PortableProfileSubdirs are created inside a fresh portable profile so a user
 // browsing the directory sees where macros, plugins and styles go instead of
 // an empty folder. Each name matches what the corresponding loader reads.
-var portableProfileSubdirs = []string{
+var PortableProfileSubdirs = []string{
 	filepath.Join("Macros", "scripts"),
 	"plugring",
 	"settings",
@@ -47,12 +47,12 @@ func currentPortableIniPath() string {
 	return config.PortableIniPath(exe)
 }
 
-// setPortableMode writes UseSystemProfiles into the ini next to the binary,
+// SetPortableMode writes UseSystemProfiles into the ini next to the binary,
 // creating the file when it does not exist. Any other key or comment in the
 // file is kept, so a hand-written Profile= survives toggling the checkbox.
 // The change is picked up on the next start; the running process keeps using
 // the profile it opened.
-func setPortableMode(iniPath string, enable bool) error {
+func SetPortableMode(iniPath string, enable bool) error {
 	data, err := os.ReadFile(iniPath) // #nosec G304 -- iniPath is derived from the executable path.
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
@@ -68,12 +68,12 @@ func setPortableMode(iniPath string, enable bool) error {
 	return os.WriteFile(iniPath, updated, 0600)
 }
 
-// ensureProfileLayout creates dir and the conventional subdirectories.
-func ensureProfileLayout(dir string) error {
+// EnsureProfileLayout creates dir and the conventional subdirectories.
+func EnsureProfileLayout(dir string) error {
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return err
 	}
-	for _, sub := range portableProfileSubdirs {
+	for _, sub := range PortableProfileSubdirs {
 		if err := os.MkdirAll(filepath.Join(dir, sub), 0700); err != nil {
 			return err
 		}
@@ -81,11 +81,11 @@ func ensureProfileLayout(dir string) error {
 	return nil
 }
 
-// copyProfileDir copies every file under src into dst, keeping files that
+// CopyProfileDir copies every file under src into dst, keeping files that
 // already exist in dst and skipping crash logs. It never deletes anything, so
 // switching modes twice cannot lose data: the user ends up with two copies
 // rather than none.
-func copyProfileDir(src, dst string) error {
+func CopyProfileDir(src, dst string) error {
 	src, dst = filepath.Clean(src), filepath.Clean(dst)
 	if src == dst {
 		return nil
@@ -164,12 +164,13 @@ func portableProfileDir() string {
 	return config.PortableProfileDirFor(filepath.Dir(iniPath), ini.Load(iniPath))
 }
 
-// actionPortableSettings is Options → Portable mode. It shows where the
 // profile lives now, lets the user move it next to the program (or back to
 // the user directory), optionally copies the current profile over, and tells
 // them a restart is needed — the only honest answer given how the mode is
 // detected (see the comment at the top of this file).
-func actionPortableSettings(pf *PanelsFrame) {
+// ShowPortableSettings is Options -> Portable mode. It shows where the running
+// profile lives and lets the user move it beside the executable.
+func ShowPortableSettings() {
 	iniPath := currentPortableIniPath()
 	wasPortable := config.IsPortableProfile()
 
@@ -189,7 +190,7 @@ func actionPortableSettings(pf *PanelsFrame) {
 	// tail, which is the part that tells the two locations apart.
 	pathLine := func(key, path string) string {
 		label := fmt.Sprintf(i18n.Msg(key), "")
-		return label + truncPathLeft(path, width-4-vtui.StringWidth(label))
+		return label + TruncPathLeft(path, width-4-vtui.StringWidth(label))
 	}
 	current := vtui.NewText(0, 0, pathLine("PortableSettings.Current", config.GetF4ConfigDir()), 0)
 	iniInfo := vtui.NewText(0, 0, pathLine("PortableSettings.ini.File", iniPath), 0)
@@ -252,7 +253,7 @@ func applyPortableMode(iniPath string, enable, copyProfile bool) error {
 	var dst string
 	if enable {
 		dst = portableProfileDir()
-		if err := ensureProfileLayout(dst); err != nil {
+		if err := EnsureProfileLayout(dst); err != nil {
 			return err
 		}
 	} else {
@@ -262,9 +263,9 @@ func applyPortableMode(iniPath string, enable, copyProfile bool) error {
 		}
 	}
 	if copyProfile {
-		if err := copyProfileDir(src, dst); err != nil {
+		if err := CopyProfileDir(src, dst); err != nil {
 			return err
 		}
 	}
-	return setPortableMode(iniPath, enable)
+	return SetPortableMode(iniPath, enable)
 }

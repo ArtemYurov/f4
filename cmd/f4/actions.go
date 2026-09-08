@@ -2797,10 +2797,10 @@ func actionEditorSettings(pf *PanelsFrame) {
 	editTabSize.ClearSelection()
 	lblTabSize := vtui.NewLabel(0, 0, i18n.Msg("EditorSettings.TabSize"), editTabSize)
 
-	editorCodepageIDs, editorCodepageLabels := codepageSettingChoices()
+	editorCodepageIDs, editorCodepageLabels := dialog.CodepageSettingChoices()
 	comboEditorCodepage := vtui.NewComboBox(0, 0, 40, editorCodepageLabels)
 	comboEditorCodepage.DropdownOnly = true
-	editorCodepagePos := codepageChoiceIndex(editorCodepageIDs, config.App.EditorDefaultCodePage)
+	editorCodepagePos := dialog.CodepageChoiceIndex(editorCodepageIDs, config.App.EditorDefaultCodePage)
 	comboEditorCodepage.Menu.SetSelectPos(editorCodepagePos)
 	comboEditorCodepage.Edit.SetText(editorCodepageLabels[editorCodepagePos])
 	lblEditorCodepage := vtui.NewLabel(0, 0, i18n.Msg("EditorSettings.DefaultCodePage"), comboEditorCodepage)

@@ -11,6 +11,7 @@ import (
 
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/keymap"
@@ -1210,7 +1211,7 @@ func init() {
 		Description: "Open viewer settings dialog",
 		DescKey:     "Action.Settings.Viewer.Desc",
 		MenuPath:    "Options",
-		Handler:     withPF(func(pf *PanelsFrame) { actionViewerSettings(pf) }),
+		Handler:     withPF(func(pf *PanelsFrame) { dialog.ShowViewerSettings() }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Settings.Colorer",
@@ -1250,7 +1251,7 @@ func init() {
 		Description: "Keep the profile next to the program (Far-style f4.ini) or in the user directory",
 		DescKey:     "Action.Settings.Portable.Desc",
 		MenuPath:    "Options",
-		Handler:     withPF(func(pf *PanelsFrame) { actionPortableSettings(pf) }),
+		Handler:     withPF(func(pf *PanelsFrame) { dialog.ShowPortableSettings() }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Settings.Confirmations",
@@ -2654,6 +2655,6 @@ func init() {
 		Description: "Open viewer settings dialog",
 		DescKey:     "Action.Settings.Viewer.Desc",
 		MenuPath:    "Options",
-		Handler:     withPF(func(pf *PanelsFrame) { actionViewerSettings(pf) }),
+		Handler:     withPF(func(pf *PanelsFrame) { dialog.ShowViewerSettings() }),
 	})
 }

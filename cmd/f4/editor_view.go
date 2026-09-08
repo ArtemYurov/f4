@@ -4724,7 +4724,7 @@ func (ev *EditorView) ReloadWithAutoDetect() {
 func (ev *EditorView) showCodepageDialog() {
 	_, overridden := rememberedCodepage(ev.vfs, ev.filePath)
 	items, currIdx := vfs.BuildCodepageMenuItems(ev.Codepage, !overridden)
-	menu := newCodepageMenu(i18n.Msg("Codepage.Title"), items)
+	menu := dialog.NewCodepageMenu(i18n.Msg("Codepage.Title"), items)
 
 	// Per file, as in Far's Shift+F8; the global editor settings are not
 	// touched from here (#875, see the viewer's dialog for why).
@@ -4753,7 +4753,7 @@ func (ev *EditorView) showConvertCodepageDialog() {
 		}
 		converts = append(converts, item)
 	}
-	menu := newCodepageMenu(i18n.Msg("Codepage.ConvertTitle"), converts)
+	menu := dialog.NewCodepageMenu(i18n.Msg("Codepage.ConvertTitle"), converts)
 
 	menu.OnAction = func(idx int) {
 		menu.Close()

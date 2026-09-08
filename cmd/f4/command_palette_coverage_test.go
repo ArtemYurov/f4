@@ -242,7 +242,7 @@ var commandPaletteNewVMenuAudit = map[string]commandPaletteSurfaceAudit{
 	"editor.(*EditorView).showFindAllMenu#1": {
 		class: paletteAuditModalLocal, rationale: "Find All results are a query-local result selector reached through the registered editor search action",
 	},
-	"dialog.newCodepageMenu#1": {
+	"dialog.NewCodepageMenu#1": {
 		class: paletteAuditDynamicAction, rationale: "the registered viewer, editor and convert-codepage actions all open the runtime codepage list through this builder",
 	},
 	"editor.(*EditorView).showBase64Menu#1": {

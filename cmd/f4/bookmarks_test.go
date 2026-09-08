@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/unxed/f4/internal/dialog"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -307,17 +308,17 @@ func TestTruncPathLeft(t *testing.T) {
 		{"/a/b/c", 0, ""},
 	}
 	for _, c := range cases {
-		if got := truncPathLeft(c.path, c.width); got != c.want {
-			t.Errorf("truncPathLeft(%q, %d) = %q, want %q", c.path, c.width, got, c.want)
+		if got := dialog.TruncPathLeft(c.path, c.width); got != c.want {
+			t.Errorf("dialog.TruncPathLeft(%q, %d) = %q, want %q", c.path, c.width, got, c.want)
 		}
 	}
 	// The tail is what identifies a path, so it must survive the cut.
-	got := truncPathLeft(long, 20)
+	got := dialog.TruncPathLeft(long, 20)
 	if !strings.HasPrefix(got, "…") || !strings.HasSuffix(got, "ski-analyzer") {
-		t.Errorf("truncPathLeft(%q, 20) = %q, want an ellipsis plus the tail", long, got)
+		t.Errorf("dialog.TruncPathLeft(%q, 20) = %q, want an ellipsis plus the tail", long, got)
 	}
 	if w := len([]rune(got)); w > 20 {
-		t.Errorf("truncPathLeft returned %d cells, want at most 20: %q", w, got)
+		t.Errorf("dialog.TruncPathLeft returned %d cells, want at most 20: %q", w, got)
 	}
 }
 

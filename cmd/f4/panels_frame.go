@@ -4961,7 +4961,7 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 				usedHotkeys[rune('0'+i)] = true
 				bookmarkRows[menu.GetItemCount()] = i
 				menu.AddItem(vtui.MenuItem{
-					Text: fmt.Sprintf("&%d  %s", i, escapeAmpersand(truncPathLeft(path, 64))),
+					Text: fmt.Sprintf("&%d  %s", i, escapeAmpersand(dialog.TruncPathLeft(path, 64))),
 					UserData: func(fsp *FileSystemPanel) {
 						pf.navigateToBookmark(fsp, bookmark)
 					},

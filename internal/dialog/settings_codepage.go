@@ -1,4 +1,4 @@
-package main
+package dialog
 
 import (
 	"github.com/unxed/f4/internal/config"
@@ -7,7 +7,7 @@ import (
 	"github.com/unxed/vtui"
 )
 
-func codepageSettingChoices() ([]int, []string) {
+func CodepageSettingChoices() ([]int, []string) {
 	ids := make([]int, 0, len(vfs.AvailableCodepages))
 	labels := make([]string, 0, len(vfs.AvailableCodepages))
 	for _, cp := range vfs.AvailableCodepages {
@@ -22,7 +22,7 @@ func codepageSettingChoices() ([]int, []string) {
 // and one column kept clear so a scrollbar never lands on a glyph.
 const codepageMenuChrome = 4
 
-// newCodepageMenu builds a codepage menu sized to the list it is showing.
+// NewCodepageMenu builds a codepage menu sized to the list it is showing.
 //
 // The three codepage menus all used to be a fixed 45 columns wide, which was
 // enough back when the list held a dozen built-in names. Now that f4 offers
@@ -31,7 +31,7 @@ const codepageMenuChrome = 4
 // without clipping it, so a longer name was painted over the right border and
 // on across whatever was behind the menu. Anything that still does not fit,
 // on a narrow terminal, is cut here instead of by the screen edge.
-func newCodepageMenu(title string, items []vtui.MenuItem) *vtui.VMenu {
+func NewCodepageMenu(title string, items []vtui.MenuItem) *vtui.VMenu {
 	screenW := vtui.FrameManager.GetScreenSize()
 	screenH := vtui.FrameManager.GetScreenHeight()
 
@@ -81,7 +81,7 @@ func newCodepageMenu(title string, items []vtui.MenuItem) *vtui.VMenu {
 	return menu
 }
 
-func codepageChoiceIndex(ids []int, current int) int {
+func CodepageChoiceIndex(ids []int, current int) int {
 	current = vfs.NormalizeCodepageID(current)
 	for i, id := range ids {
 		if id == current {
@@ -91,15 +91,16 @@ func codepageChoiceIndex(ids []int, current int) int {
 	return 0
 }
 
-func actionViewerSettings(pf *PanelsFrame) {
+// ShowViewerSettings is Options -> Viewer/Editor code pages.
+func ShowViewerSettings() {
 	width, height := 78, 10
 	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("ViewerSettings.Title"))
 	dlg.ShowClose = true
 
-	ids, labels := codepageSettingChoices()
+	ids, labels := CodepageSettingChoices()
 	comboDefault := vtui.NewComboBox(0, 0, 40, labels)
 	comboDefault.DropdownOnly = true
-	selected := codepageChoiceIndex(ids, config.App.ViewerDefaultCodePage)
+	selected := CodepageChoiceIndex(ids, config.App.ViewerDefaultCodePage)
 	comboDefault.Menu.SetSelectPos(selected)
 	comboDefault.Edit.SetText(labels[selected])
 	lblDefault := vtui.NewLabel(0, 0, i18n.Msg("ViewerSettings.DefaultCodePage"), comboDefault)

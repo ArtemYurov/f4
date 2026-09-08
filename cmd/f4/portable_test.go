@@ -31,7 +31,7 @@ func TestPortableSettingsDialogUsesContextHelp(t *testing.T) {
 		config.ResetConfigDirForTest()
 	})
 
-	actionPortableSettings(nil)
+	dialog.ShowPortableSettings()
 	top := vtui.FrameManager.GetTopFrame()
 	if top == nil {
 		t.Fatal("portable settings did not open a dialog")
@@ -162,7 +162,7 @@ func TestPortableIniPath_PrefersExeIni(t *testing.T) {
 func TestSetPortableMode_RoundTripKeepsOtherKeys(t *testing.T) {
 	iniPath := filepath.Join(t.TempDir(), config.PortableIniName)
 
-	if err := setPortableMode(iniPath, true); err != nil {
+	if err := dialog.SetPortableMode(iniPath, true); err != nil {
 		t.Fatal(err)
 	}
 	if got := ini.Load(iniPath).GetString("General", "UseSystemProfiles", ""); got != "0" {
@@ -178,7 +178,7 @@ func TestSetPortableMode_RoundTripKeepsOtherKeys(t *testing.T) {
 	if err := os.WriteFile(iniPath, []byte(custom), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := setPortableMode(iniPath, false); err != nil {
+	if err := dialog.SetPortableMode(iniPath, false); err != nil {
 		t.Fatal(err)
 	}
 	data, _ = os.ReadFile(iniPath)
@@ -213,7 +213,7 @@ func TestCopyProfileDir_NoClobberSkipsCrashes(t *testing.T) {
 	mk(src, "crashes/1.log", "boom")
 	mk(dst, "settings.ini", "dst")
 
-	if err := copyProfileDir(src, dst); err != nil {
+	if err := dialog.CopyProfileDir(src, dst); err != nil {
 		t.Fatal(err)
 	}
 	read := func(rel string) string {
@@ -229,20 +229,20 @@ func TestCopyProfileDir_NoClobberSkipsCrashes(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dst, "crashes")); !os.IsNotExist(err) {
 		t.Errorf("crash logs must not be copied")
 	}
-	if err := copyProfileDir(src, filepath.Join(src, "Profile")); err == nil {
+	if err := dialog.CopyProfileDir(src, filepath.Join(src, "Profile")); err == nil {
 		t.Errorf("copying a profile into itself must fail")
 	}
-	if err := copyProfileDir(filepath.Join(src, "missing"), dst); err != nil {
+	if err := dialog.CopyProfileDir(filepath.Join(src, "missing"), dst); err != nil {
 		t.Errorf("missing source is not an error: %v", err)
 	}
 }
 
 func TestEnsureProfileLayout(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "Profile")
-	if err := ensureProfileLayout(dir); err != nil {
+	if err := dialog.EnsureProfileLayout(dir); err != nil {
 		t.Fatal(err)
 	}
-	for _, sub := range portableProfileSubdirs {
+	for _, sub := range dialog.PortableProfileSubdirs {
 		if st, err := os.Stat(filepath.Join(dir, sub)); err != nil || !st.IsDir() {
 			t.Errorf("%s missing", sub)
 		}
