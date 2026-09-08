@@ -43,5 +43,9 @@ func getPlatformDrives() []DriveEntry {
 		Name:    "Physical Disks",
 		Factory: func() vfs.VFS { return vfs.NewDisksVFS() },
 	})
+	drives = append(drives, DriveEntry{
+		Name:    "Windows Registry",
+		Factory: func() vfs.VFS { return vfs.NewRegistryVFS() },
+	})
 	return drives
 }
