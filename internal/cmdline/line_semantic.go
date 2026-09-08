@@ -6,6 +6,7 @@ package cmdline
 
 import (
 	"github.com/unxed/f4/sdk/extui"
+	"github.com/unxed/f4/internal/semantic"
 	"github.com/unxed/vtui"
 )
 
@@ -15,7 +16,7 @@ func (cl *CommandLine) SemanticModel(ctx *vtui.SemanticContext) *extui.CommandLi
 		Visible:    cl.IsVisible(),
 		Focused:    cl.IsFocused(),
 		Prompt:     cl.Prompt,
-		PromptRuns: semanticRunsFromCells(cl.RichPrompt),
+		PromptRuns: semantic.RunsFromCells(cl.RichPrompt),
 		Text:       cl.Edit.GetText(),
 		Empty:      cl.IsEmpty(),
 	}

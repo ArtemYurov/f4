@@ -8,20 +8,21 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/piecetable"
+	"github.com/unxed/f4/internal/semantic"
 	"github.com/unxed/f4/sdk/extui"
 	"github.com/unxed/vtui"
 )
 
 // HandleSemanticAction runs a native GUI action addressed at this viewer.
 func (vv *ViewerView) HandleSemanticAction(action map[string]any) bool {
-	target := semanticString(action["target"])
+	target := semantic.String(action["target"])
 	if vtui.SemanticID(vv) != target {
 		return false
 	}
 
-	switch semanticString(action["action"]) {
+	switch semantic.String(action["action"]) {
 	case "viewer.scroll":
-		offset := int64(semanticInt(action["offset"]))
+		offset := int64(semantic.Int(action["offset"]))
 		if offset < 0 {
 			offset = 0
 		}
@@ -53,7 +54,7 @@ func (vv *ViewerView) SemanticNode(ctx *vtui.SemanticContext) map[string]any {
 		Kind:      "viewer",
 		Title:     vv.GetTitle(),
 		Path:      vv.Path,
-		BaseName:  semanticBaseName(vv.VFS, vv.Path),
+		BaseName:  semantic.BaseName(vv.VFS, vv.Path),
 		Mode:      mode,
 		HexMode:   vv.HexMode,
 		WrapMode:  vv.WrapMode,

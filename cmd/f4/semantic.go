@@ -1,13 +1,12 @@
 package main
 
 import (
-	"path/filepath"
 	"strings"
 
 	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/macro"
-	"github.com/unxed/f4/internal/numeric"
+	"github.com/unxed/f4/internal/semantic"
 	"github.com/unxed/f4/sdk/extui"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -53,17 +52,17 @@ func HandleSemanticAction(action map[string]any) bool {
 	if action == nil {
 		return false
 	}
-	actionName := semanticString(action["action"])
-	target := semanticString(action["target"])
+	actionName := semantic.String(action["action"])
+	target := semantic.String(action["target"])
 	if strings.HasPrefix(actionName, "workspace.") || actionName == "tab.activate" || strings.HasPrefix(target, "workspace-") {
 		return vtui.FrameManager.HandleSemanticAction(action)
 	}
 	if kind, _ := action["kind"].(string); kind == "command" {
-		return vtui.FrameManager.EmitCommand(semanticInt(action["command"]), action["args"])
+		return vtui.FrameManager.EmitCommand(semantic.Int(action["command"]), action["args"])
 	}
-	if semanticString(action["action"]) == "menu_bar_activate" || semanticString(action["action"]) == "menuBar.activate" {
+	if semantic.String(action["action"]) == "menu_bar_activate" || semantic.String(action["action"]) == "menuBar.activate" {
 		if mb := vtui.FrameManager.GetActiveMenuBar(); mb != nil {
-			idx := semanticInt(action["index"])
+			idx := semantic.Int(action["index"])
 			if idx >= 0 && idx < len(mb.Items) {
 				mb.Active = true
 				mb.ActivateSubMenu(idx)
@@ -82,7 +81,7 @@ func HandleSemanticAction(action map[string]any) bool {
 		}
 	}
 
-	target = semanticString(action["target"])
+	target = semantic.String(action["target"])
 	if target == "" {
 		return false
 	}
@@ -97,13 +96,13 @@ func HandleSemanticAction(action map[string]any) bool {
 
 func handleSemanticFrameAction(frame vtui.Frame, target string, action map[string]any) bool {
 	if vtui.SemanticID(frame) == target {
-		switch semanticString(action["action"]) {
+		switch semantic.String(action["action"]) {
 		case "close", "dialog.close", "window.close":
 			frame.Close()
 			return true
 		case "menu_activate", "menu.activate":
 			if menu, ok := frame.(*vtui.VMenu); ok {
-				idx := semanticInt(action["index"])
+				idx := semantic.Int(action["index"])
 				if idx >= 0 && idx < len(menu.Items) && !menu.Items[idx].Separator {
 					menu.SetSelectPos(idx)
 					return menu.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_RETURN, InputSource: "qt_semantic"})
@@ -132,7 +131,7 @@ func handleSemanticChildrenAction(children []vtui.UIElement, target string, acti
 }
 
 func handleSemanticElementAction(el vtui.UIElement, action map[string]any) bool {
-	switch semanticString(action["action"]) {
+	switch semantic.String(action["action"]) {
 	case "focus", "control.focus":
 		el.SetFocus(true)
 		return true
@@ -142,7 +141,7 @@ func handleSemanticElementAction(el vtui.UIElement, action map[string]any) bool 
 		return el.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_SPACE, Char: ' ', InputSource: "qt_semantic"})
 	case "set_text", "control.setText":
 		if edit, ok := el.(*vtui.Edit); ok {
-			edit.SetText(semanticString(action["text"]))
+			edit.SetText(semantic.String(action["text"]))
 			if edit.OnTextChange != nil {
 				edit.OnTextChange(edit.GetText())
 			}
@@ -150,11 +149,11 @@ func handleSemanticElementAction(el vtui.UIElement, action map[string]any) bool 
 		}
 	case "insert_text", "control.insertText":
 		if edit, ok := el.(*vtui.Edit); ok {
-			edit.InsertString(semanticString(action["text"]))
+			edit.InsertString(semantic.String(action["text"]))
 			return true
 		}
 	case "select", "control.select":
-		idx := semanticInt(action["index"])
+		idx := semantic.Int(action["index"])
 		switch w := el.(type) {
 		case *vtui.RadioGroup:
 			if idx >= 0 && idx < len(w.Items) {
@@ -178,9 +177,9 @@ func handleSemanticElementAction(el vtui.UIElement, action map[string]any) bool 
 }
 
 func (pf *PanelsFrame) HandleSemanticAction(action map[string]any) bool {
-	switch semanticString(action["action"]) {
+	switch semantic.String(action["action"]) {
 	case "activate_panel", "panel.activate":
-		side := semanticInt(action["side"])
+		side := semantic.Int(action["side"])
 		if side >= 0 && side < len(pf.panels) {
 			pf.activeIdx = side
 			pf.lastKey = 0
@@ -188,19 +187,19 @@ func (pf *PanelsFrame) HandleSemanticAction(action map[string]any) bool {
 		}
 	case "panel_cursor", "panel.cursor":
 		if fsp := pf.panelForSemanticAction(action); fsp != nil {
-			fsp.SetCursorIndex(semanticInt(action["index"]))
+			fsp.SetCursorIndex(semantic.Int(action["index"]))
 			return true
 		}
 	case "panel_open", "panel.open":
 		if fsp := pf.panelForSemanticAction(action); fsp != nil {
-			idx := semanticInt(action["index"])
+			idx := semantic.Int(action["index"])
 			pf.setActivePanelForAction(action)
 			fsp.SetCursorIndex(idx)
 			return pf.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_RETURN, InputSource: "qt_semantic"})
 		}
 	case "panel_toggle_selection", "panel.toggleSelection":
 		if fsp := pf.panelForSemanticAction(action); fsp != nil {
-			fsp.ToggleSelection(semanticInt(action["index"]))
+			fsp.ToggleSelection(semantic.Int(action["index"]))
 			return true
 		}
 	case "panel_refresh", "panel.refresh":
@@ -209,30 +208,30 @@ func (pf *PanelsFrame) HandleSemanticAction(action map[string]any) bool {
 			return true
 		}
 	case "submit_command", "command.submit":
-		if text := semanticString(action["text"]); text != "" && pf.cmdLine != nil {
+		if text := semantic.String(action["text"]); text != "" && pf.cmdLine != nil {
 			pf.cmdLine.Edit.SetText(text)
 		}
 		return pf.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_RETURN, InputSource: "qt_semantic"})
 	case "set_command_text", "command.setText":
 		if pf.cmdLine != nil {
-			pf.cmdLine.Edit.SetText(semanticString(action["text"]))
+			pf.cmdLine.Edit.SetText(semantic.String(action["text"]))
 			return true
 		}
 	case "emit_command", "command.emit":
-		return vtui.FrameManager.EmitCommand(semanticInt(action["command"]), action["args"])
+		return vtui.FrameManager.EmitCommand(semantic.Int(action["command"]), action["args"])
 	}
 	return false
 }
 
 func (pf *PanelsFrame) setActivePanelForAction(action map[string]any) {
-	side := semanticInt(action["side"])
+	side := semantic.Int(action["side"])
 	if side >= 0 && side < len(pf.panels) {
 		pf.activeIdx = side
 	}
 }
 
 func (pf *PanelsFrame) panelForSemanticAction(action map[string]any) *FileSystemPanel {
-	side := semanticInt(action["side"])
+	side := semantic.Int(action["side"])
 	if side < 0 || side >= len(pf.panels) {
 		side = pf.activeIdx
 	}
@@ -333,68 +332,4 @@ func sortModeName(mode SortMode) string {
 	default:
 		return "name"
 	}
-}
-
-func semanticBaseName(v interface{ Base(string) string }, path string) string {
-	if path == "" {
-		return ""
-	}
-	if v != nil {
-		return v.Base(path)
-	}
-	return filepath.Base(path)
-}
-
-func semanticString(v any) string {
-	if s, ok := v.(string); ok {
-		return s
-	}
-	return ""
-}
-
-func semanticInt(v any) int {
-	switch n := v.(type) {
-	case int:
-		return n
-	case int8:
-		return int(n)
-	case int16:
-		return int(n)
-	case int32:
-		return int(n)
-	case int64:
-		value, _ := numeric.BoundedInt64ToInt(n)
-		return value
-	case uint:
-		value, _ := numeric.BoundedUint64ToInt(uint64(n))
-		return value
-	case uint8:
-		return int(n)
-	case uint16:
-		return int(n)
-	case uint32:
-		value, _ := numeric.BoundedUint64ToInt(uint64(n))
-		return value
-	case uint64:
-		value, _ := numeric.BoundedUint64ToInt(n)
-		return value
-	case float32:
-		return int(n)
-	case float64:
-		return int(n)
-	}
-	return 0
-}
-
-func semanticBool(v any) bool {
-	if b, ok := v.(bool); ok {
-		return b
-	}
-	if n, ok := v.(int); ok {
-		return n != 0
-	}
-	if f, ok := v.(float64); ok {
-		return f != 0
-	}
-	return false
 }

@@ -6,6 +6,7 @@ package editor
 
 import (
 	"github.com/unxed/f4/internal/piecetable"
+	"github.com/unxed/f4/internal/semantic"
 	"github.com/unxed/f4/sdk/extui"
 	"github.com/unxed/vtui"
 )
@@ -18,7 +19,7 @@ func (ev *EditorView) SemanticNode(ctx *vtui.SemanticContext) map[string]any {
 		Kind:         "editor",
 		Title:        ev.GetTitle(),
 		Path:         ev.FilePath,
-		BaseName:     semanticBaseName(ev.Vfs, ev.FilePath),
+		BaseName:     semantic.BaseName(ev.Vfs, ev.FilePath),
 		Busy:         ev.IsBusy(),
 		Dirty:        ev.Modified,
 		Saving:       ev.Saving,
@@ -45,18 +46,18 @@ func (ev *EditorView) GetText() string {
 
 // HandleSemanticAction обрабатывает нативные GUI-действия для EditorView
 func (ev *EditorView) HandleSemanticAction(action map[string]any) bool {
-	target := semanticString(action["target"])
+	target := semantic.String(action["target"])
 	if vtui.SemanticID(ev) != target {
 		return false
 	}
 
-	switch semanticString(action["action"]) {
+	switch semantic.String(action["action"]) {
 	case "editor.setText":
-		text := semanticString(action["text"])
+		text := semantic.String(action["text"])
 		ev.SetText(text)
 		return true
 	case "editor.insertText":
-		text := semanticString(action["text"])
+		text := semantic.String(action["text"])
 		ev.PasteText(text)
 		return true
 	case "editor.deleteSelection":
@@ -72,10 +73,10 @@ func (ev *EditorView) HandleSemanticAction(action map[string]any) bool {
 		ev.SaveToFile(nil)
 		return true
 	case "editor.search":
-		pattern := semanticString(action["pattern"])
-		caseSensitive := semanticBool(action["case"])
-		reverse := semanticBool(action["reverse"])
-		next := semanticBool(action["next"])
+		pattern := semantic.String(action["pattern"])
+		caseSensitive := semantic.Bool(action["case"])
+		reverse := semantic.Bool(action["reverse"])
+		next := semantic.Bool(action["next"])
 		ev.Search(pattern, caseSensitive, reverse, false, false, next)
 		return true
 	case "control.focus":

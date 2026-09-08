@@ -1,9 +1,8 @@
 package terminal
 
 import (
-	"strings"
-	"unicode/utf8"
 
+	"github.com/unxed/f4/internal/semantic"
 	"github.com/unxed/f4/sdk/extui"
 	"github.com/unxed/vtui"
 )
@@ -44,7 +43,7 @@ func (tv *TerminalView) SemanticModel(ctx *vtui.SemanticContext) *extui.Terminal
 		}
 		rows = append(rows, extui.TextRowModel{
 			Index: drawY,
-			Runs:  semanticRunsFromCells(buf[y]),
+			Runs:  semantic.RunsFromCells(buf[y]),
 		})
 	}
 
@@ -59,48 +58,4 @@ func (tv *TerminalView) SemanticModel(ctx *vtui.SemanticContext) *extui.Terminal
 		CursorY:   tv.CursorY + offset,
 		Rows:      rows,
 	}
-}
-
-func semanticRunsFromCells(cells []vtui.CharInfo) []extui.RunModel {
-	if len(cells) == 0 {
-		return nil
-	}
-	var runs []extui.RunModel
-	var b strings.Builder
-	var attr uint64
-	haveRun := false
-	flush := func() {
-		if !haveRun {
-			return
-		}
-		runs = append(runs, extui.RunModel{
-			Text: b.String(),
-			Attr: attr,
-		})
-		b.Reset()
-	}
-	for _, cell := range cells {
-		if cell.Char == vtui.WideCharFiller {
-			continue
-		}
-		ch := cellRune(cell.Char)
-		if !haveRun {
-			attr = cell.Attributes
-			haveRun = true
-		} else if cell.Attributes != attr {
-			flush()
-			attr = cell.Attributes
-			haveRun = true
-		}
-		b.WriteRune(ch)
-	}
-	flush()
-	return runs
-}
-
-func cellRune(ch uint64) rune {
-	if ch == 0 || ch > utf8.MaxRune || (ch >= 0xD800 && ch <= 0xDFFF) {
-		return ' '
-	}
-	return rune(ch)
 }
