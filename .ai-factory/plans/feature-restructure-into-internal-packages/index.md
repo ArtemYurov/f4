@@ -312,9 +312,9 @@ titles, not the ordering.
 - [x] Task 43: Assign every `cmd/f4` file to a wave — 23 stray sources, 154 subject-less tests, 61 multi-package tests, 48 shared helpers ([details](phase-01-baseline-and-barriers.md#task-43-assign-every-cmdf4-file-to-a-wave)) (depends on 8)
 
 ### Phase 2: Clear the Repository Root
-- [ ] Task 10: Move the three shell scripts to `scripts/` ([details](phase-02-repository-root.md#task-10-move-the-shell-scripts-to-scripts)) (depends on 1)
-- [ ] Task 11: Move `screenshot.png` to `.github/assets/` ([details](phase-02-repository-root.md#task-11-move-screenshotpng-to-githubassets))
-- [ ] Task 12: Move the loose prose into `docs/` and delete `time.txt` ([details](phase-02-repository-root.md#task-12-move-the-loose-prose-into-docs-and-delete-timetxt))
+- [x] Task 10: Move the three shell scripts to `scripts/` ([details](phase-02-repository-root.md#task-10-move-the-shell-scripts-to-scripts)) (depends on 1)
+- [x] Task 11: Move `screenshot.png` to `.github/assets/` ([details](phase-02-repository-root.md#task-11-move-screenshotpng-to-githubassets))
+- [x] Task 12: Move the loose prose into `docs/` and delete `time.txt` ([details](phase-02-repository-root.md#task-12-move-the-loose-prose-into-docs-and-delete-timetxt))
 - [ ] Task 13: Rename the 40 issue reviews to `ISSUE_<number>_<SLUG>.md` ([details](phase-02-repository-root.md#task-13-rename-the-issue-reviews-to-issue_number_slugmd)) (depends on 12)
 - [ ] Task 14: Move `colorer/` to `internal/colorer/` with its own embed ([details](phase-02-repository-root.md#task-14-move-colorer-to-internalcolorer))
 - [ ] Task 15: Move `plugring/` to `plugins/plugring/` and fix its three URLs ([details](phase-02-repository-root.md#task-15-move-plugring-to-pluginsplugring))

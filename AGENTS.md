@@ -73,7 +73,7 @@ artifacts/       # build artifacts
 | README | `README.md` | Project overview, downloads, backends, philosophy |
 | Subsystem docs | `docs/*.md` | 48 documents: VFS, PLUGINS, MACROS, KEYMAP, TERMINAL, CONPTY, WINCON, UX_GUIDELINES and others |
 | Issue reviews | `docs/ISSUES/` | Per-issue solution reviews |
-| Spreadsheet | `SPREADSHEET.md` | Spreadsheet mode specification |
+| Spreadsheet | `docs/SPREADSHEET.md` | Spreadsheet mode specification |
 
 ## AI Context Files
 

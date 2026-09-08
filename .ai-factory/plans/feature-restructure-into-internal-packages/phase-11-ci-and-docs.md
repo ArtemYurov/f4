@@ -320,6 +320,18 @@ grep -rn 'flat package\|one flat\|687 files\|345 files' docs/ README.md AGENTS.m
 
 ---
 
+### Note: `docs/FILELIST.md` is generated
+
+`scripts/filelist_update.sh` writes it from a `tree -a` of the repository, so
+every commit that moves a file makes it stale. Do **not** regenerate it per
+commit: the current snapshot predates this branch's own tooling, and a fresh run
+would add `.ai-factory/`, `.claude/`, `.agents/` and `build/` to the diff in the
+same breath as the file being moved. Regenerate it once, here, when the tree has
+stopped moving — and check the result before committing it, since `tree -a`
+happily lists directories that are git-ignored.
+
+---
+
 ## Task 41: Rewrite `ARCHITECTURE.md` from target to fact
 
 ### Intent

@@ -2,7 +2,7 @@
 
 [![codecov](https://codecov.io/gh/unxed/f4/branch/main/graph/badge.svg)](https://codecov.io/gh/unxed/f4)
 
-![](https://raw.githubusercontent.com/unxed/f4/refs/heads/main/screenshot.png)
+![](https://raw.githubusercontent.com/unxed/f4/refs/heads/main/.github/assets/screenshot.png)
 ### ⚡ Quick Download (Nightly Builds)
 
 | Platform | Format | Link |
