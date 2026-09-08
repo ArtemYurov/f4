@@ -31,6 +31,8 @@
 | `codex/lunobot2-672-status` | PR #939, слита; remote ref ещё существует |
 | `codex/lunobot2-607-status` | PR #958, слита; remote ref ещё существует |
 | `codex/lunobot2-901-status` | PR #956, слита; remote ref ещё существует |
+| `codex/branches-doc` | PR #959, слита; remote ref после merge не обнаружен |
+| `codex/lunobot2-branches-fix` | PR #960, слита; remote ref ещё существует |
 | `codex/lunobot-1-511-status` | PR #947, слита; remote ref ещё существует |
 | `codex/lunobot-1-screen-dump` | PR #933, слита; remote ref ещё существует |
 | `codex/lunobot-1-status-docs` | PR #953, слита; remote ref ещё существует |
