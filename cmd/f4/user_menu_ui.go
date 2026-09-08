@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/dialog"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/piecetable"
@@ -733,7 +734,7 @@ func showEditItemDialog(s *userMenuState, current *vtui.VMenu, items []UserMenuI
 
 	makeRow := func(labelText string, edit vtui.UIElement) *vtui.HBoxLayout {
 		hbox := vtui.NewHBoxLayout(0, 0, width-4, 1)
-		l := vtui.NewLabel(0, 0, padLabel(labelText), edit)
+		l := vtui.NewLabel(0, 0, dialog.PadLabel(labelText), edit)
 		dlg.AddItem(l)
 		dlg.AddItem(edit)
 		hbox.Add(l, vtui.Margins{Right: 1}, vtui.AlignLeft)

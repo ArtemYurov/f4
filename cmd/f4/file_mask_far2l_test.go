@@ -37,7 +37,7 @@ func TestExecuteFileOp_WildcardDirectoryDestinationIsNotAMask(t *testing.T) {
 	dstVfs := vfs.NewOSVFS(dstRoot)
 	dest := filepath.Join(dstRoot, "notes*") + string(os.PathSeparator)
 	done := make(chan struct{})
-	ExecuteFileOpAt(nil, srcVfs, dstVfs, srcRoot, []string{"report.txt"}, dest, false, 2, func() { close(done) })
+	ExecuteFileOpAt(srcVfs, dstVfs, srcRoot, []string{"report.txt"}, dest, false, 2, func() { close(done) })
 	waitForFileOpTest(t, done)
 
 	want := filepath.Join(dstRoot, "notes*", "report.txt")
@@ -76,7 +76,7 @@ func TestExecuteFileOp_MaskedTreeCopyRenamesOnlyTheSelectedItem(t *testing.T) {
 	srcVfs := vfs.NewOSVFS(srcRoot)
 	dstVfs := vfs.NewOSVFS(dstRoot)
 	done := make(chan struct{})
-	ExecuteFileOpAt(nil, srcVfs, dstVfs, srcRoot, []string{"docs.old"}, filepath.Join(dstRoot, "*.new"), false, 2, func() { close(done) })
+	ExecuteFileOpAt(srcVfs, dstVfs, srcRoot, []string{"docs.old"}, filepath.Join(dstRoot, "*.new"), false, 2, func() { close(done) })
 	waitForFileOpTest(t, done)
 
 	for _, rel := range []string{

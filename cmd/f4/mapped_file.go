@@ -4,6 +4,7 @@ import (
 	"errors"
 	"runtime/debug"
 
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -91,7 +92,7 @@ func MapEditorFile(v vfs.VFS, f vfs.ReadAtCloser) (*MappedFile, error) {
 // logical slice that skips a UTF-8 BOM can still be unmapped from its true
 // platform-specific base address.
 func MapEditorFileWithOffset(v vfs.VFS, f vfs.ReadAtCloser, fileOffset int64) (*MappedFile, error) {
-	if f == nil || !isLocalOSVFS(v) {
+	if f == nil || !fileops.IsLocalOSVFS(v) {
 		return nil, errNotMappable
 	}
 	size := f.Size()

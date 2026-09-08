@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 	"runtime"
 	"strings"
 	"time"
@@ -12,49 +11,13 @@ import (
 	"os/user"
 	"strconv"
 
-	"github.com/mattn/go-runewidth"
-
+	"github.com/unxed/f4/internal/dialog"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/f4/vfs/hostmode"
 	"github.com/unxed/vtui"
 )
-
-func padLabel(s string) string {
-	for runewidth.StringWidth(s) < 12 {
-		s += " "
-	}
-	return s
-}
-func isLocalOSVFS(v any) bool {
-	if v == nil {
-		return false
-	}
-	val := reflect.ValueOf(v)
-	if val.Kind() == reflect.Interface {
-		val = val.Elem()
-	}
-	if val.Kind() == reflect.Ptr {
-		if _, ok := val.Interface().(*vfs.OSVFS); ok {
-			return true
-		}
-		if _, ok := val.Interface().(*vfs.DisksVFS); ok {
-			return true
-		}
-		val = val.Elem()
-	}
-	if val.Kind() == reflect.Struct {
-		for i := 0; i < val.NumField(); i++ {
-			field := val.Field(i)
-			if field.CanInterface() {
-				if isLocalOSVFS(field.Interface()) {
-					return true
-				}
-			}
-		}
-	}
-	return false
-}
 
 type attributesTarget struct {
 	path string
@@ -237,7 +200,7 @@ func showAttributesUnixForTargets(pf *PanelsFrame, v vfs.VFS, targets []attribut
 	if item.IsSymlink && len(targets) == 1 {
 		targetVal, _ := vfs.Readlink(context.Background(), v, path)
 		editTarget = vtui.NewEdit(0, 0, 35, targetVal)
-		lblTarget := vtui.NewLabel(0, 0, padLabel(i18n.Msg("Attributes.Target")), editTarget)
+		lblTarget := vtui.NewLabel(0, 0, dialog.PadLabel(i18n.Msg("Attributes.Target")), editTarget)
 		rowTarget := vtui.NewHBoxLayout(0, 0, 66, 1)
 		rowTarget.Add(lblTarget, vtui.Margins{Left: 2, Right: 1}, vtui.AlignLeft)
 		rowTarget.Add(editTarget, vtui.Margins{}, vtui.AlignFill)
@@ -259,7 +222,7 @@ func showAttributesUnixForTargets(pf *PanelsFrame, v vfs.VFS, targets []attribut
 
 	// Time Row
 	editMTime := vtui.NewEdit(0, 0, 20, item.MTime.Format(timeFormat))
-	lblTime := vtui.NewLabel(0, 0, padLabel(i18n.Msg("Attributes.MTime")), editMTime)
+	lblTime := vtui.NewLabel(0, 0, dialog.PadLabel(i18n.Msg("Attributes.MTime")), editMTime)
 	rowTime := vtui.NewHBoxLayout(0, 0, 66, 1)
 	rowTime.Add(lblTime, vtui.Margins{Left: 2, Right: 1}, vtui.AlignLeft)
 	rowTime.Add(editMTime, vtui.Margins{}, vtui.AlignLeft)
@@ -303,7 +266,7 @@ func showAttributesUnixForTargets(pf *PanelsFrame, v vfs.VFS, targets []attribut
 	vboxOwner := vtui.NewVBoxLayout(gbOwnership.X1+2, gbOwnership.Y1+1, gbOwnership.X2-gbOwnership.X1-4, 2)
 
 	r1 := vtui.NewHBoxLayout(0, 0, 60, 1)
-	l1 := vtui.NewLabel(0, 0, padLabel(i18n.Msg("Attributes.Owner")), editOwner)
+	l1 := vtui.NewLabel(0, 0, dialog.PadLabel(i18n.Msg("Attributes.Owner")), editOwner)
 	r1.Add(l1, vtui.Margins{Right: 1}, vtui.AlignLeft)
 	r1.Add(editOwner, vtui.Margins{}, vtui.AlignFill)
 	gbOwnership.AddItem(l1)
@@ -311,7 +274,7 @@ func showAttributesUnixForTargets(pf *PanelsFrame, v vfs.VFS, targets []attribut
 	vboxOwner.Add(r1, vtui.Margins{}, vtui.AlignFill)
 
 	r2 := vtui.NewHBoxLayout(0, 0, 60, 1)
-	l2 := vtui.NewLabel(0, 0, padLabel(i18n.Msg("Attributes.Group")), editGroup)
+	l2 := vtui.NewLabel(0, 0, dialog.PadLabel(i18n.Msg("Attributes.Group")), editGroup)
 	r2.Add(l2, vtui.Margins{Right: 1}, vtui.AlignLeft)
 	r2.Add(editGroup, vtui.Margins{}, vtui.AlignFill)
 	gbOwnership.AddItem(l2)
@@ -328,7 +291,7 @@ func showAttributesUnixForTargets(pf *PanelsFrame, v vfs.VFS, targets []attribut
 
 	makeRow := func(label string, bitOff uint) {
 		row := vtui.NewHBoxLayout(0, 0, 60, 1)
-		lbl := vtui.NewText(0, 0, padLabel(label), vtui.Palette[vtui.ColDialogText])
+		lbl := vtui.NewText(0, 0, dialog.PadLabel(label), vtui.Palette[vtui.ColDialogText])
 		r := vtui.NewCheckbox(0, 0, i18n.Msg("Attributes.Read"), false)
 		r.State = map[bool]int{true: 1}[(item.UnixMode&(0400>>bitOff)) != 0]
 		w := vtui.NewCheckbox(0, 0, i18n.Msg("Attributes.Write"), false)
@@ -355,7 +318,7 @@ func showAttributesUnixForTargets(pf *PanelsFrame, v vfs.VFS, targets []attribut
 	editOctal.Validator = &vtui.OctalValidator{MaxDigits: 4}
 	editOctal.ClearSelection()
 	rowOct := vtui.NewHBoxLayout(0, 0, 60, 1)
-	lblOct := vtui.NewLabel(0, 0, padLabel(i18n.Msg("Attributes.Octal")), editOctal)
+	lblOct := vtui.NewLabel(0, 0, dialog.PadLabel(i18n.Msg("Attributes.Octal")), editOctal)
 	rowOct.Add(lblOct, vtui.Margins{Right: 2}, vtui.AlignLeft)
 	rowOct.Add(editOctal, vtui.Margins{}, vtui.AlignLeft)
 	gbPerms.AddItem(lblOct)
@@ -518,7 +481,7 @@ func showAttributesWindowsWithPropertiesForTargets(
 	mainVBox.Add(gbAdv, vtui.Margins{Top: 1}, vtui.AlignFill)
 
 	editMTime := vtui.NewEdit(0, 0, 20, item.MTime.Format(timeFormat))
-	lblTime := vtui.NewLabel(0, 0, padLabel(i18n.Msg("Attributes.LastWrite")), editMTime)
+	lblTime := vtui.NewLabel(0, 0, dialog.PadLabel(i18n.Msg("Attributes.LastWrite")), editMTime)
 	rowTime := vtui.NewHBoxLayout(0, 0, 54, 1)
 	rowTime.Add(lblTime, vtui.Margins{Right: 1}, vtui.AlignLeft)
 	rowTime.Add(editMTime, vtui.Margins{}, vtui.AlignLeft)
@@ -532,7 +495,7 @@ func showAttributesWindowsWithPropertiesForTargets(
 	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 
 	var osPath string
-	if isLocalOSVFS(v) {
+	if fileops.IsLocalOSVFS(v) {
 		if abs, err := v.Abs(path); err == nil {
 			if runtime.GOOS == "windows" {
 				if (len(abs) >= 2 && abs[1] == ':') || strings.HasPrefix(abs, "\\\\") {

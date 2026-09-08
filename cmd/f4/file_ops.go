@@ -18,6 +18,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/dialog"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/vfs"
@@ -392,15 +393,15 @@ func transferNamesAreIdentity(srcVFS, dstVFS vfs.VFS, srcBasePath string, names 
 	return true
 }
 
-func ExecuteFileOp(pf *PanelsFrame, srcVfs, dstVfs vfs.VFS, names []string, destInput string, isMove bool, mode int, onComplete func()) {
-	ExecuteFileOpAt(pf, srcVfs, dstVfs, srcVfs.GetPath(), names, destInput, isMove, mode, onComplete)
+func ExecuteFileOp(srcVfs, dstVfs vfs.VFS, names []string, destInput string, isMove bool, mode int, onComplete func()) {
+	ExecuteFileOpAt(srcVfs, dstVfs, srcVfs.GetPath(), names, destInput, isMove, mode, onComplete)
 }
 
 // ExecuteFileOpAt uses the source directory captured at the user-action
 // boundary. Panel VFS instances are navigable, so consulting GetPath after a
 // goroutine or queued task starts can otherwise target same-named files in a
 // different directory.
-func ExecuteFileOpAt(pf *PanelsFrame, srcVfs, dstVfs vfs.VFS, srcBasePath string, names []string, destInput string, isMove bool, mode int, onComplete func()) {
+func ExecuteFileOpAt(srcVfs, dstVfs vfs.VFS, srcBasePath string, names []string, destInput string, isMove bool, mode int, onComplete func()) {
 	// A wildcard in the last component is a rename mask, as in far2l: the
 	// files land in the directory before it, under names the mask generates.
 	// Taken literally it would instead create a file called "*.1".
@@ -420,12 +421,6 @@ func ExecuteFileOpAt(pf *PanelsFrame, srcVfs, dstVfs vfs.VFS, srcBasePath string
 			isTargetDir = true
 		} else if destInput == "." || destInput == ".." {
 			isTargetDir = true
-		}
-	}
-
-	if isMove && pf != nil {
-		if fspSrc := pf.getActivePanel(); fspSrc != nil {
-			fspSrc.pendingSelection = fspSrc.GetSuccessorName()
 		}
 	}
 
@@ -774,13 +769,14 @@ func ExecuteFileOpAt(pf *PanelsFrame, srcVfs, dstVfs vfs.VFS, srcBasePath string
 		reporter := newDialogReporter(dlg)
 
 		vtui.FrameManager.PostTask(func() {
-			if mode == 1 && pf != nil {
-				clone := pf.Clone()
-				vtui.FrameManager.AddScreen(clone)
+			// The workspace has to be asked for, not assumed: the seam can be
+			// wired and still have nothing to copy, in a run with no panels.
+			if workspace := fileops.BackgroundScreen(mode); workspace != nil {
+				vtui.FrameManager.AddScreen(workspace)
 				vtui.FrameManager.Push(dlg)
-			} else {
-				vtui.FrameManager.AddScreenHeadless(dlg)
+				return
 			}
+			vtui.FrameManager.AddScreenHeadless(dlg)
 		})
 
 		taskCtx.Store(vtui.RunAsync(func(ctx *vtui.TaskContext) {
@@ -788,9 +784,6 @@ func ExecuteFileOpAt(pf *PanelsFrame, srcVfs, dstVfs vfs.VFS, srcBasePath string
 			ctx.RunOnUI(func() {
 				reporter.Stop()
 				dlg.Close()
-				if pf != nil {
-					pf.RefreshAll()
-				}
 				if onComplete != nil {
 					onComplete()
 				}
@@ -802,8 +795,8 @@ func ExecuteFileOpAt(pf *PanelsFrame, srcVfs, dstVfs vfs.VFS, srcBasePath string
 	}
 }
 
-func ExecuteDeleteOp(pf *PanelsFrame, activeVfs vfs.VFS, names []string, mode int, onComplete func()) {
-	ExecuteDeleteOpWithDisposition(pf, activeVfs, names, mode, vfs.DeletePermanently, onComplete)
+func ExecuteDeleteOp(activeVfs vfs.VFS, names []string, mode int, onComplete func()) {
+	ExecuteDeleteOpWithDisposition(activeVfs, names, mode, vfs.DeletePermanently, onComplete)
 }
 
 func deletePathWithDisposition(ctx context.Context, filesystem vfs.VFS, path string, disposition vfs.DeleteDisposition) error {
@@ -834,13 +827,13 @@ func calculateDeleteStats(ctx context.Context, filesystem vfs.VFS, basePath stri
 // ExecuteDeleteOpWithDisposition performs either a recoverable trash move or
 // a permanent Remove. disposition is an explicit task argument instead of a
 // config lookup so a queued operation cannot change meaning while waiting.
-func ExecuteDeleteOpWithDisposition(pf *PanelsFrame, activeVfs vfs.VFS, names []string, mode int, disposition vfs.DeleteDisposition, onComplete func()) {
-	ExecuteDeleteOpWithDispositionAt(pf, activeVfs, activeVfs.GetPath(), names, mode, disposition, onComplete)
+func ExecuteDeleteOpWithDisposition(activeVfs vfs.VFS, names []string, mode int, disposition vfs.DeleteDisposition, onComplete func()) {
+	ExecuteDeleteOpWithDispositionAt(activeVfs, activeVfs.GetPath(), names, mode, disposition, onComplete)
 }
 
 // ExecuteDeleteOpWithDispositionAt performs deletion relative to a directory
 // captured before asynchronous scheduling.
-func ExecuteDeleteOpWithDispositionAt(pf *PanelsFrame, activeVfs vfs.VFS, basePath string, names []string, mode int, disposition vfs.DeleteDisposition, onComplete func()) {
+func ExecuteDeleteOpWithDispositionAt(activeVfs vfs.VFS, basePath string, names []string, mode int, disposition vfs.DeleteDisposition, onComplete func()) {
 	// The panel and its VFS may navigate while a queued operation is waiting.
 	// Capture the directory alongside the disposition so the task cannot drift
 	// onto identically named items in a later directory.
@@ -1056,13 +1049,14 @@ func ExecuteDeleteOpWithDispositionAt(pf *PanelsFrame, activeVfs vfs.VFS, basePa
 		reporter := newDialogReporter(dlg)
 
 		vtui.FrameManager.PostTask(func() {
-			if mode == 1 && pf != nil {
-				clone := pf.Clone()
-				vtui.FrameManager.AddScreen(clone)
+			// The workspace has to be asked for, not assumed: the seam can be
+			// wired and still have nothing to copy, in a run with no panels.
+			if workspace := fileops.BackgroundScreen(mode); workspace != nil {
+				vtui.FrameManager.AddScreen(workspace)
 				vtui.FrameManager.Push(dlg)
-			} else {
-				vtui.FrameManager.AddScreenHeadless(dlg)
+				return
 			}
+			vtui.FrameManager.AddScreenHeadless(dlg)
 		})
 
 		taskCtx.Store(vtui.RunAsync(func(ctx *vtui.TaskContext) {
@@ -1070,9 +1064,6 @@ func ExecuteDeleteOpWithDispositionAt(pf *PanelsFrame, activeVfs vfs.VFS, basePa
 			ctx.RunOnUI(func() {
 				reporter.Stop()
 				dlg.Close()
-				if pf != nil {
-					pf.RefreshAll()
-				}
 				if onComplete != nil {
 					onComplete()
 				}

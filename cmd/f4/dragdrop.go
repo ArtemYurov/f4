@@ -302,7 +302,13 @@ func (pf *PanelsFrame) dropExternalFiles(info dropTargetInfo, paths []string, is
 		g := groups[i]
 		vtui.DebugLog("DND: dropExternalFiles group %d: srcDir=%q names=%v -> dstDir=%q", i, g.dir, g.names, dstDir)
 		src := vfs.NewOSVFS(g.dir)
-		go ExecuteFileOp(pf, src, dst, g.names, dstDir, isMove, config.App.DefaultFileOpMode, func() {
+		if isMove {
+			if fsp := pf.getActivePanel(); fsp != nil {
+				fsp.pendingSelection = fsp.GetSuccessorName()
+			}
+		}
+		go ExecuteFileOp(src, dst, g.names, dstDir, isMove, config.App.DefaultFileOpMode, func() {
+			pf.RefreshAll()
 			run(i + 1)
 		})
 	}
@@ -480,7 +486,8 @@ func (pf *PanelsFrame) startDragOut(fsp *FileSystemPanel, names []string) bool {
 		src := fsp.vfs
 		dst := vfs.NewOSVFS(tempDir)
 
-		ExecuteFileOp(pf, src, dst, names, tempDir, false, 1, func() {
+		ExecuteFileOp(src, dst, names, tempDir, false, 1, func() {
+			pf.RefreshAll()
 			var dragPaths []string
 			for _, name := range names {
 				p := filepath.Join(tempDir, name)

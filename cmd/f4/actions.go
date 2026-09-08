@@ -1044,7 +1044,7 @@ func openEditorInternal(pf *PanelsFrame, v vfs.VFS, path string) {
 		}()
 		return
 	}
-	if isLocalOSVFS(v) {
+	if fileops.IsLocalOSVFS(v) {
 		vtui.RunAsync(func(ctx *vtui.TaskContext) {
 			var f vfs.ReadAtCloser
 			if v != nil {
@@ -1579,7 +1579,7 @@ func openViewerInternal(pf *PanelsFrame, v vfs.VFS, path string) {
 	if tryOpenImageViewer(pf, v, path) {
 		return
 	}
-	if isLocalOSVFS(v) {
+	if fileops.IsLocalOSVFS(v) {
 		vtui.RunAsync(func(ctx *vtui.TaskContext) {
 			if v != nil {
 				if stat, err := v.Stat(ctx.Context, path); err == nil && stat.IsDir {
@@ -2240,13 +2240,22 @@ func actionCopyMove(pf *PanelsFrame, isMove bool) {
 		}
 	}
 
+	// A move takes the cursor's entry away with it, so the panel is told where
+	// to land before the operation starts — afterwards the name it would look
+	// for is gone.
+	if isMove {
+		if fsp := pf.getActivePanel(); fsp != nil {
+			fsp.pendingSelection = fsp.GetSuccessorName()
+		}
+	}
+
 	if isMove && !config.App.ConfirmMove {
-		go ExecuteFileOpAt(pf, srcVfs, dstVfs, srcBasePath, names, initialDest, isMove, config.App.DefaultFileOpMode, onCompleteWithClear)
+		go ExecuteFileOpAt(srcVfs, dstVfs, srcBasePath, names, initialDest, isMove, config.App.DefaultFileOpMode, onCompleteWithClear)
 		return
 	}
 
 	if !isMove && !config.App.ConfirmCopy {
-		go ExecuteFileOpAt(pf, srcVfs, dstVfs, srcBasePath, names, initialDest, isMove, config.App.DefaultFileOpMode, onCompleteWithClear)
+		go ExecuteFileOpAt(srcVfs, dstVfs, srcBasePath, names, initialDest, isMove, config.App.DefaultFileOpMode, onCompleteWithClear)
 		return
 	}
 
@@ -2283,7 +2292,7 @@ func actionCopyMove(pf *PanelsFrame, isMove bool) {
 		dlg.Close()
 		if dest != "" {
 			history.CommitHistory(editDest, dest)
-			go ExecuteFileOpAt(pf, srcVfs, dstVfs, srcBasePath, names, dest, isMove, mode, onCompleteWithClear)
+			go ExecuteFileOpAt(srcVfs, dstVfs, srcBasePath, names, dest, isMove, mode, onCompleteWithClear)
 		}
 	}
 	dlg.AddItem(btnOk)
@@ -2529,7 +2538,7 @@ func actionCopyInPlace(pf *PanelsFrame) {
 			}
 		}
 
-		go ExecuteFileOpAt(pf, sourceVFS, sourceVFS, sourceBasePath, []string{name}, newPath, false, config.App.DefaultFileOpMode, onCompleteWithClear)
+		go ExecuteFileOpAt(sourceVFS, sourceVFS, sourceBasePath, []string{name}, newPath, false, config.App.DefaultFileOpMode, onCompleteWithClear)
 	})
 }
 func actionEditorSettings(pf *PanelsFrame) {
@@ -2949,7 +2958,7 @@ func actionDeleteWithDisposition(pf *PanelsFrame, disposition vfs.DeleteDisposit
 	if !config.App.ConfirmDelete {
 		fsp.pendingSelection = fsp.GetSuccessorName()
 		stopPlayerForDelete(pf, activeVfs, basePath, names)
-		go ExecuteDeleteOpWithDispositionAt(pf, activeVfs, basePath, names, config.App.DefaultFileOpMode, disposition, pf.RefreshAll)
+		go ExecuteDeleteOpWithDispositionAt(activeVfs, basePath, names, config.App.DefaultFileOpMode, disposition, pf.RefreshAll)
 		return
 	}
 
@@ -3015,7 +3024,7 @@ func actionDeleteWithDisposition(pf *PanelsFrame, disposition vfs.DeleteDisposit
 		fsp.pendingSelection = fsp.GetSuccessorName()
 		dlg.Close()
 		stopPlayerForDelete(pf, activeVfs, basePath, names)
-		go ExecuteDeleteOpWithDispositionAt(pf, activeVfs, basePath, names, mode, disposition, pf.RefreshAll)
+		go ExecuteDeleteOpWithDispositionAt(activeVfs, basePath, names, mode, disposition, pf.RefreshAll)
 	}
 
 	if config.App.DeleteCancelFocused {

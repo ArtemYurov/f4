@@ -5191,7 +5191,7 @@ func (ev *EditorView) saveToFile(afterSave func(), fullWrite bool) {
 		// A colon denotes an NTFS alternate stream only for a local OS VFS.
 		// Treating cloud:// as an ADS used to bypass staging and overwrite remote
 		// objects directly on Windows.
-		useTemp := !identityPreservingWrite && (!isLocalOSVFS(ev.vfs) || !isAlternateDataStream(filePath))
+		useTemp := !identityPreservingWrite && (!fileops.IsLocalOSVFS(ev.vfs) || !isAlternateDataStream(filePath))
 		tempPath := ""
 		finalFilePath := filePath
 		var f io.WriteCloser
@@ -5252,7 +5252,7 @@ func (ev *EditorView) saveToFile(afterSave func(), fullWrite bool) {
 			// Tighten the stage before the first byte of potentially sensitive
 			// content is written. Providers without Unix modes safely ignore this.
 			stageAttrErr := ev.vfs.SetAttributes(ctx.Context, tempPath, vfs.VFSItem{UnixMode: 0o600, Uid: -1, Gid: -1})
-			if stageAttrErr != nil && isLocalOSVFS(ev.vfs) {
+			if stageAttrErr != nil && fileops.IsLocalOSVFS(ev.vfs) {
 				_ = f.Close()
 				cleanupEditorStage(ev.vfs, tempPath)
 				f = nil
@@ -5357,7 +5357,7 @@ func (ev *EditorView) saveToFile(afterSave func(), fullWrite bool) {
 			// after cancellation. Remote VFS handles stay open: their Rename can have
 			// an unknown/partial outcome and closing a lazy source there would strand
 			// the editor precisely when recovery matters most.
-			if isLocalOSVFS(ev.vfs) {
+			if fileops.IsLocalOSVFS(ev.vfs) {
 				if oldAsync != nil {
 					oldAsync.Close()
 				}
@@ -5399,7 +5399,7 @@ func (ev *EditorView) saveToFile(afterSave func(), fullWrite bool) {
 		// user-visible partial save and must not be silently ignored.
 		var metadataErr error
 		if statErr == nil {
-			if attrErr := ev.vfs.SetAttributes(ctx.Context, finalFilePath, originalStat); attrErr != nil && isLocalOSVFS(ev.vfs) {
+			if attrErr := ev.vfs.SetAttributes(ctx.Context, finalFilePath, originalStat); attrErr != nil && fileops.IsLocalOSVFS(ev.vfs) {
 				metadataErr = attrErr
 			}
 		}

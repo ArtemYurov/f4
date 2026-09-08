@@ -794,6 +794,16 @@ func SetupUI() {
 	vtui.GlobalHistoryProvider = history.NewF4HistoryProvider(config.GetF4ConfigDir())
 	history.SamePath = sameFolderHistoryPath
 	fileops.GlobalFileState = fileops.NewF4FileStateProvider()
+	// A file operation sent to the background keeps its progress dialog; the
+	// dialog needs a workspace behind it, and a copy is what lets the user go
+	// on working in the original.
+	fileops.BackgroundWorkspace = func() vtui.Frame {
+		pf := findPanelsFrame()
+		if pf == nil {
+			return nil
+		}
+		return pf.Clone()
+	}
 	StartQueueWorker()
 	// The registry is a leaf and cannot reach the message catalogue; the root
 	// hands it the lookup. Moves to internal/i18n's i18n.Msg when that package exists.

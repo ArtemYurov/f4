@@ -2774,7 +2774,7 @@ func TestExecuteFileOp_ContextualTitles(t *testing.T) {
 	dstVfs := vfs.NewOSVFS(t.TempDir())
 
 	done := make(chan struct{})
-	ExecuteFileOp(nil, srcVfs, dstVfs, []string{"data.txt"}, dstVfs.GetPath(), false, 2, func() {
+	ExecuteFileOp(srcVfs, dstVfs, []string{"data.txt"}, dstVfs.GetPath(), false, 2, func() {
 		close(done)
 	})
 

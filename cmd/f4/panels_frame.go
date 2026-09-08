@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/toast"
@@ -2466,7 +2467,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 					pf.setCommandLineFocus(false)
 				}
 				editPath = expandPathEnv(editPath)
-				if fsp := pf.getActivePanel(); fsp != nil && isLocalOSVFS(fsp.vfs) && !filepath.IsAbs(editPath) {
+				if fsp := pf.getActivePanel(); fsp != nil && fileops.IsLocalOSVFS(fsp.vfs) && !filepath.IsAbs(editPath) {
 					editPath = fsp.vfs.Join(fsp.vfs.GetPath(), editPath)
 				}
 				openEditFileIn(pf, editPath)
@@ -2499,7 +2500,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 			// shell_v2: route the typed command to its job runner instead of falling
 			// through to the local Windows shell. SSH-backed FISH+ keeps using its
 			// term.PTY below, preserving the full interactive terminal experience.
-			if fsp := pf.getActivePanel(); fsp != nil && !isLocalOSVFS(fsp.vfs) && !vfsHasRemotePTY(fsp.vfs) {
+			if fsp := pf.getActivePanel(); fsp != nil && !fileops.IsLocalOSVFS(fsp.vfs) && !vfsHasRemotePTY(fsp.vfs) {
 				if runner, ok := fsp.vfs.(vfs.CommandRunner); ok {
 					pf.cmdLine.Clear()
 					pf.cmdLine.Edit.HistoryPos = -1
@@ -2545,7 +2546,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 				var localShellVFS vfs.VFS
 				var integration vfs.PtyShellIntegration
 				if fsp, ok := pf.panels[pf.activeIdx].(*FileSystemPanel); ok {
-					if isLocalOSVFS(fsp.vfs) {
+					if fileops.IsLocalOSVFS(fsp.vfs) {
 						path = fsp.vfs.GetPath()
 						localShellVFS = fsp.vfs
 					} else if vfsHasRemotePTY(fsp.vfs) {

@@ -69,7 +69,7 @@ func TestQueuedTrashUsesActionBoundaryPathSnapshot(t *testing.T) {
 	if err := probe.SetPath("/navigated"); err != nil {
 		t.Fatal(err)
 	}
-	ExecuteDeleteOpWithDispositionAt(nil, probe, basePath, []string{"item.txt"}, 0, vfs.DeleteToTrash, nil)
+	ExecuteDeleteOpWithDispositionAt(probe, basePath, []string{"item.txt"}, 0, vfs.DeleteToTrash, nil)
 	queue.mu.Lock()
 	task := queue.tasks[0]
 	queue.mu.Unlock()
@@ -93,7 +93,7 @@ func TestDeleteDoesNotRetryPartialRemoteMutation(t *testing.T) {
 
 	partial := &vfs.PartialOperationError{Operation: "remote trash", Completed: []string{"child"}, Err: errors.New("later child failed")}
 	probe := &queuedDeleteProbe{NullVFS: vfs.NewNullVFS(0), err: partial}
-	ExecuteDeleteOpWithDispositionAt(nil, probe, "/original", []string{"item.txt"}, 0, vfs.DeleteToTrash, nil)
+	ExecuteDeleteOpWithDispositionAt(probe, "/original", []string{"item.txt"}, 0, vfs.DeleteToTrash, nil)
 	queue.mu.Lock()
 	task := queue.tasks[0]
 	queue.mu.Unlock()
@@ -168,7 +168,7 @@ func TestQueuedTrashCapturesOriginalDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 	wantPath := probe.Join(probe.GetPath(), "item.txt")
-	ExecuteDeleteOpWithDisposition(nil, probe, []string{"item.txt"}, 0, vfs.DeleteToTrash, nil)
+	ExecuteDeleteOpWithDisposition(probe, []string{"item.txt"}, 0, vfs.DeleteToTrash, nil)
 	if err := probe.SetPath("/"); err != nil {
 		t.Fatal(err)
 	}

@@ -91,7 +91,7 @@ func TestIssue815QueuedF5CopiesCompressedTarContents(t *testing.T) {
 	t.Cleanup(func() { GlobalQueueManager = previousQueue })
 
 	sourceBasePath := source.GetPath()
-	ExecuteFileOpAt(nil, source, destinationVFS, sourceBasePath, names, destination+string(os.PathSeparator), false, 0, nil)
+	ExecuteFileOpAt(source, destinationVFS, sourceBasePath, names, destination+string(os.PathSeparator), false, 0, nil)
 	if err := source.SetPath(source.Join(sourceBasePath, "other")); err != nil {
 		t.Fatal(err)
 	}

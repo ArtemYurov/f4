@@ -181,7 +181,7 @@ func TestExecuteFileOp_ArchiveIndexMigration(t *testing.T) {
 	})
 
 	done := make(chan struct{})
-	ExecuteFileOp(nil, srcVfs, dstVfs, []string{name}, tmpDst, true, 2, func() { close(done) })
+	ExecuteFileOp(srcVfs, dstVfs, []string{name}, tmpDst, true, 2, func() { close(done) })
 
 	timeout := time.After(2 * time.Second)
 loop:
