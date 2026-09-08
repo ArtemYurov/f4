@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/inifile"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/vtvibe"
 	"github.com/unxed/f4/vfs"
@@ -47,7 +48,7 @@ func vtvibeIniPath() string {
 // vtvibeConfig re-reads the settings on every use, so editing vtvibe.ini or
 // exporting a key does not need a restart.
 func vtvibeConfig() (vtvibe.Config, string) {
-	ini := LoadIni(vtvibeIniPath())
+	ini := inifile.Load(vtvibeIniPath())
 	cfg := vtvibe.Config{
 		BaseURL: ini.GetString("general", "base_url", vtvibeDefaultBaseURL),
 		Model:   ini.GetString("general", "model", vtvibeDefaultModel),
@@ -71,14 +72,14 @@ func vtvibeConfig() (vtvibe.Config, string) {
 // vtvibeSaveSetting rewrites one key of vtvibe.ini, keeping the rest.
 func vtvibeSaveSetting(key, value string) error {
 	path := vtvibeIniPath()
-	ini := LoadIni(path)
-	if ini.data["general"] == nil {
-		ini.data["general"] = map[string]string{}
+	ini := inifile.Load(path)
+	if ini.Sections()["general"] == nil {
+		ini.Sections()["general"] = map[string]string{}
 	}
-	ini.data["general"][key] = value
+	ini.Sections()["general"][key] = value
 
-	keys := make([]string, 0, len(ini.data["general"]))
-	for k := range ini.data["general"] {
+	keys := make([]string, 0, len(ini.Sections()["general"]))
+	for k := range ini.Sections()["general"] {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
@@ -86,7 +87,7 @@ func vtvibeSaveSetting(key, value string) error {
 	var sb strings.Builder
 	sb.WriteString("[general]\n")
 	for _, k := range keys {
-		fmt.Fprintf(&sb, "%s = %s\n", k, ini.data["general"][k])
+		fmt.Fprintf(&sb, "%s = %s\n", k, ini.Sections()["general"][k])
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		return err

@@ -34,6 +34,12 @@ var architectureLayers = map[string]int{
 	// Checked conversions, shared by seven packages. Zero imports of ours.
 	"internal/numeric": 0,
 
+	// The ini parser. Its own package because the four configuration leaves —
+	// config, i18n, theme, keymap — all parse ini files and none of them may
+	// import another of ours; a package that imports nothing can be shared by
+	// all four without putting one of them under another.
+	"internal/inifile": 0,
+
 	// The shared primitives: a notification channel and the history store.
 	// Both are leaves and both take what they cannot reach as a seam —
 	// history.SamePath and the config directory are set by the root.

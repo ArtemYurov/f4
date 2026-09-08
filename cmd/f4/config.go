@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/unxed/f4/internal/inifile"
 	"github.com/unxed/f4/internal/netproxy"
 	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/f4/vfs"
@@ -49,7 +50,7 @@ func GetF4ConfigDir() string {
 		}
 
 		// Ищем f4.exe.ini (имя_бинарника.ini) или f4.ini в папке программы
-		ini := LoadIni(portableIniPath(exe))
+		ini := inifile.Load(portableIniPath(exe))
 		cachedF4ConfigDir, cachedF4Portable = resolveProfileDir(exeDir, ini)
 		if cachedF4Portable {
 			_ = os.MkdirAll(cachedF4ConfigDir, 0700)
@@ -70,7 +71,7 @@ func GetF4ConfigDir() string {
 //
 // It is separated from GetF4ConfigDir so tests can exercise every branch
 // without touching the process-wide cache.
-func resolveProfileDir(exeDir string, ini *IniFile) (dir string, portable bool) {
+func resolveProfileDir(exeDir string, ini *inifile.File) (dir string, portable bool) {
 	if ini == nil || ini.GetString("General", "UseSystemProfiles", "1") != "0" {
 		sysDir, _ := userConfigDir()
 		return filepath.Join(sysDir, "f4"), false
@@ -80,7 +81,7 @@ func resolveProfileDir(exeDir string, ini *IniFile) (dir string, portable bool) 
 
 // portableProfileDirFor is the directory a portable profile lands in for the
 // given executable directory and ini, regardless of UseSystemProfiles.
-func portableProfileDirFor(exeDir string, ini *IniFile) string {
+func portableProfileDirFor(exeDir string, ini *inifile.File) string {
 	custom := ""
 	if ini != nil {
 		custom = strings.TrimSpace(ini.GetString("General", "Profile", ""))
@@ -669,12 +670,12 @@ func normalizeHighlighter(name string) string {
 
 func LoadConfig() {
 	paths := getConfigIniPaths()
-	ini := &IniFile{data: make(map[string]map[string]string)}
+	ini := inifile.New()
 
 	for _, path := range paths {
 		if _, err := os.Stat(path); !os.IsNotExist(err) {
 			vtui.DebugLog("CONFIG: Loading and merging config from %s", path)
-			partialIni := LoadIni(path)
+			partialIni := inifile.Load(path)
 			ini.Merge(partialIni)
 		}
 	}
@@ -924,7 +925,7 @@ func LoadConfig() {
 	fmt.Sscanf(ini.GetString("Layout", "LeftHeightDecrement", "0"), "%d", &AppConfig.LeftHeightDecrement)
 	fmt.Sscanf(ini.GetString("Layout", "RightHeightDecrement", "0"), "%d", &AppConfig.RightHeightDecrement)
 	AppConfig.LayoutExtras = nil
-	if layout, ok := ini.data["Layout"]; ok {
+	if layout, ok := ini.Sections()["Layout"]; ok {
 		for k, v := range layout {
 			switch k {
 			case "WidthDecrement", "LeftHeightDecrement", "RightHeightDecrement":
@@ -1188,10 +1189,10 @@ func saveConfigWithWindowSize(windowSize bool) {
 
 func persistedGuiWindowSize() (int, int) {
 	cols, rows := AppConfig.GuiCols, AppConfig.GuiRows
-	ini := newIniFile()
+	ini := inifile.New()
 	for _, path := range getConfigIniPaths() {
 		if _, err := os.Stat(path); err == nil {
-			ini.Merge(LoadIni(path))
+			ini.Merge(inifile.Load(path))
 		}
 	}
 	fmt.Sscanf(ini.GetString("Appearance", "GuiCols", fmt.Sprintf("%d", cols)), "%d", &cols)
@@ -1393,7 +1394,7 @@ const saveConfigDebounce = 500 * time.Millisecond
 
 // loadWheelLines reads a [Mouse] wheel-speed key: lines per notch,
 // 0 = system default. Negative values are treated as 0.
-func loadWheelLines(ini *IniFile, key string) int {
+func loadWheelLines(ini *inifile.File, key string) int {
 	n := 0
 	fmt.Sscanf(ini.GetString("Mouse", key, "0"), "%d", &n)
 	if n < 0 {

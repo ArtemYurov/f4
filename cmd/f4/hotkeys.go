@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/inifile"
 	"github.com/unxed/vtui"
 )
 
@@ -507,8 +508,8 @@ func (hm *HotkeyManager) Load() {
 		return
 	}
 
-	ini := LoadIni(hm.iniPath)
-	for area, binds := range ini.data {
+	ini := inifile.Load(hm.iniPath)
+	for area, binds := range ini.Sections() {
 		if hm.Bindings[area] == nil {
 			hm.Bindings[area] = make(map[string]string)
 		}

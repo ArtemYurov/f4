@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/unxed/f4/internal/inifile"
 	"github.com/unxed/vtui"
 )
 
@@ -112,7 +113,7 @@ func loadInstalledCommandPaletteLanguagePacks() []vtui.LanguagePack {
 		}
 		sort.Strings(paths)
 		for _, path := range paths {
-			ini := LoadIni(path)
+			ini := inifile.Load(path)
 			stringsMap := loadLangMapFromINI(ini)
 			if len(stringsMap) == 0 {
 				continue

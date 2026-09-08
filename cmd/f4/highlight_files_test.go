@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/inifile"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -33,7 +34,7 @@ func TestHighlightRule_Match(t *testing.T) {
 }
 
 func TestHighlightRule_CursorColorAliases(t *testing.T) {
-	ini := ParseIni(strings.NewReader(`[Highlight_0]
+	ini := inifile.Parse(strings.NewReader(`[Highlight_0]
 NormalColorUnderCursor = foreground:#112233
 SelectedColorUnderCursor = background:#445566
 `))
@@ -154,7 +155,7 @@ Name = Archives
 Mask = *.zip
 NormalColor = foreground:#FF00FF
 `
-	ini := ParseIni(strings.NewReader(iniData))
+	ini := inifile.Parse(strings.NewReader(iniData))
 	highlighter := &FileHighlighter{}
 	highlighter.LoadFromIni(ini)
 
@@ -219,7 +220,7 @@ Name = High Priority
 Mask = *.go
 NormalColor = foreground:#00FF00
 `
-	ini := ParseIni(strings.NewReader(iniData))
+	ini := inifile.Parse(strings.NewReader(iniData))
 	highlighter := &FileHighlighter{}
 	highlighter.LoadFromIni(ini)
 
@@ -268,7 +269,7 @@ Name = GreenText
 Mask = *.txt
 NormalColor = foreground:#00FF00
 `
-	ini := ParseIni(strings.NewReader(iniData))
+	ini := inifile.Parse(strings.NewReader(iniData))
 	highlighter := &FileHighlighter{}
 	highlighter.LoadFromIni(ini)
 
@@ -342,7 +343,7 @@ Name = RelativeNew
 DateRelative = 1
 DateAfter = 2d
 `
-	ini := ParseIni(strings.NewReader(iniData))
+	ini := inifile.Parse(strings.NewReader(iniData))
 	highlighter := &FileHighlighter{}
 	highlighter.LoadFromIni(ini)
 
@@ -373,7 +374,7 @@ Name = Dirs
 IncludeAttributes = Directory
 Mark = /
 `
-	ini := ParseIni(strings.NewReader(iniData))
+	ini := inifile.Parse(strings.NewReader(iniData))
 	highlighter := &FileHighlighter{}
 	highlighter.LoadFromIni(ini)
 
@@ -411,7 +412,7 @@ Name = BlueBackground
 Mask = *
 NormalColor = background:#0000FF
 `
-	ini := ParseIni(strings.NewReader(iniData))
+	ini := inifile.Parse(strings.NewReader(iniData))
 	highlighter := &FileHighlighter{}
 	highlighter.LoadFromIni(ini)
 
@@ -461,7 +462,7 @@ Mask = *.go
 Mark = •
 NormalColor = foreground:#00FF00
 `
-	ini := ParseIni(strings.NewReader(iniData))
+	ini := inifile.Parse(strings.NewReader(iniData))
 	GlobalFileHighlighter.LoadFromIni(ini)
 
 	// Создаем тестовую структуру файла панели
@@ -490,7 +491,7 @@ Mask = *
 Mark = *
 NormalColor = foreground:#00FF00
 `
-	ini := ParseIni(strings.NewReader(iniData))
+	ini := inifile.Parse(strings.NewReader(iniData))
 	highlighter := &FileHighlighter{}
 	highlighter.LoadFromIni(ini)
 
@@ -553,7 +554,7 @@ Name = DarkOnBlack
 Mask = *.txt
 NormalColor = foreground:#111111 | background:#000000
 `
-	ini := ParseIni(strings.NewReader(iniData))
+	ini := inifile.Parse(strings.NewReader(iniData))
 	highlighter := &FileHighlighter{}
 	highlighter.LoadFromIni(ini)
 
@@ -577,7 +578,7 @@ Name = Executables
 Mask = *.exe
 NormalColor = foreground:#00FF00
 `
-	ini := ParseIni(strings.NewReader(iniData))
+	ini := inifile.Parse(strings.NewReader(iniData))
 	highlighter := &FileHighlighter{}
 	highlighter.LoadFromIni(ini)
 
@@ -604,7 +605,7 @@ NormalColor = foreground:#FF9238
 CursorColor = foreground:#FF9238
 `
 	highlighter := &FileHighlighter{}
-	highlighter.LoadFromIni(ParseIni(strings.NewReader(iniData)))
+	highlighter.LoadFromIni(inifile.Parse(strings.NewReader(iniData)))
 
 	selectedCursorAttr := vtui.Palette[ColPanelSelectedCursor]
 	item := vfs.VFSItem{Name: "photo.jpg"}
@@ -624,7 +625,7 @@ SelectedColor = foreground:#123456
 CursorColor = foreground:#FF9238
 `
 	highlighter := &FileHighlighter{}
-	highlighter.LoadFromIni(ParseIni(strings.NewReader(iniData)))
+	highlighter.LoadFromIni(inifile.Parse(strings.NewReader(iniData)))
 
 	base := vtui.Palette[ColPanelSelectedCursor]
 	item := vfs.VFSItem{Name: "photo.jpg"}
@@ -638,7 +639,7 @@ CursorColor = foreground:#FF9238
 }
 
 func TestHighlightRule_FarColorKeyNames(t *testing.T) {
-	ini := ParseIni(strings.NewReader(`[Highlight_0]
+	ini := inifile.Parse(strings.NewReader(`[Highlight_0]
 NormalFileName = foreground:#111111
 SelectedFileName = foreground:#222222
 FileNameUnderCursor = foreground:#333333
@@ -666,7 +667,7 @@ FileNameSelectedUnderCursor = foreground:#444444
 }
 
 func TestHighlightRule_NativeColorKeysWinOverFarNames(t *testing.T) {
-	ini := ParseIni(strings.NewReader(`[Highlight_0]
+	ini := inifile.Parse(strings.NewReader(`[Highlight_0]
 NormalColor = foreground:#101010
 NormalFileName = foreground:#202020
 CursorColor = foreground:#303030
@@ -693,7 +694,7 @@ func TestFileHighlighter_NormalColorKeepsItsBackground(t *testing.T) {
 	defer func() { AppConfig = oldCfg }()
 
 	highlighter := &FileHighlighter{}
-	highlighter.LoadFromIni(ParseIni(strings.NewReader(`[Highlight_0]
+	highlighter.LoadFromIni(inifile.Parse(strings.NewReader(`[Highlight_0]
 Name = Archives
 Mask = *.zip
 NormalColor = foreground:#FF00FF | background:#008080
@@ -720,7 +721,7 @@ func TestFileHighlighter_DirectoryRuleLeavesFilesAlone(t *testing.T) {
 	// A rule for folders carries no mask, so only IncludeAttributes keeps it
 	// off the files; Name is a caption and matches nothing by itself (#912).
 	highlighter := &FileHighlighter{}
-	highlighter.LoadFromIni(ParseIni(strings.NewReader(`[Highlight_0]
+	highlighter.LoadFromIni(inifile.Parse(strings.NewReader(`[Highlight_0]
 Name = Directories
 IncludeAttributes = Directory
 NormalFileName = foreground:#FFFFFF

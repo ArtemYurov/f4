@@ -1,4 +1,4 @@
-package main
+package inifile
 
 import (
 	"bufio"
@@ -7,28 +7,34 @@ import (
 	"strings"
 )
 
-// IniFile represents a simple parsed INI configuration.
-type IniFile struct {
+// File represents a simple parsed INI configuration.
+type File struct {
 	data map[string]map[string]string
 }
 
-// LoadIni reads an INI file into memory. Returns an empty struct if file is missing.
-func LoadIni(filename string) *IniFile {
+// Load reads an INI file into memory. Returns an empty struct if file is missing.
+func Load(filename string) *File {
 	f, err := os.Open(filename)
 	if err != nil {
-		return newIniFile()
+		return New()
 	}
 	defer f.Close()
-	return ParseIni(f)
+	return Parse(f)
 }
 
-func newIniFile() *IniFile {
-	return &IniFile{data: make(map[string]map[string]string)}
+func New() *File {
+	return &File{data: make(map[string]map[string]string)}
 }
 
-// ParseIni reads INI data from an arbitrary source.
-func ParseIni(r io.Reader) *IniFile {
-	ini := newIniFile()
+// Sections returns every section by name, keyed by section then key. The maps
+// are the file's own, so a caller that writes to them writes to the file.
+func (f *File) Sections() map[string]map[string]string {
+	return f.data
+}
+
+// Parse reads INI data from an arbitrary source.
+func Parse(r io.Reader) *File {
+	ini := New()
 
 	scanner := bufio.NewScanner(r)
 	buf := make([]byte, 0, 64*1024)
@@ -58,8 +64,8 @@ func ParseIni(r io.Reader) *IniFile {
 	return ini
 }
 
-// Merge overlays settings from another IniFile. Values in 'other' overwrite existing ones.
-func (ini *IniFile) Merge(other *IniFile) {
+// Merge overlays settings from another File. Values in 'other' overwrite existing ones.
+func (ini *File) Merge(other *File) {
 	if other == nil {
 		return
 	}
@@ -74,7 +80,7 @@ func (ini *IniFile) Merge(other *IniFile) {
 }
 
 // GetString safely retrieves a value or returns the default.
-func (ini *IniFile) GetString(section, key, def string) string {
+func (ini *File) GetString(section, key, def string) string {
 	// First check environment variables for overrides (e.g. F4_PANEL_SHOW_HIDDEN_FILES)
 	envUpper := "F4_" + strings.ToUpper(section) + "_" + camelToSnake(key)
 	if val := os.Getenv(envUpper); val != "" {

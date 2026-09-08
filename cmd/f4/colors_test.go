@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/unxed/f4/internal/inifile"
 	"github.com/unxed/vtui"
 	"os"
 	"path/filepath"
@@ -72,7 +73,7 @@ Editor.Text = foreground:#A0A0A0 | background:#232323
 		t.Fatalf("Failed to write mock INI: %v", err)
 	}
 
-	ini := LoadIni(iniPath)
+	ini := inifile.Load(iniPath)
 	InitColors(ini)
 
 	// Check that ColPanelText got updated to custom Red on Blue
@@ -110,7 +111,7 @@ func TestColors_HelpBoxOverrideReachesHelpViewFrame(t *testing.T) {
 	AppConfig.EnforceColorCorrection = false
 	vtui.SetDefaultPalette()
 	SetDefaultF4Palette()
-	InitColors(ParseIni(strings.NewReader(`[farcolors]
+	InitColors(inifile.Parse(strings.NewReader(`[farcolors]
 Help.Box = foreground:#102030 | background:#405060
 `)))
 
@@ -143,7 +144,7 @@ func TestColors_HelpScrollbarOverrideReachesHelpViewScrollbar(t *testing.T) {
 	AppConfig.EnforceColorCorrection = false
 	vtui.SetDefaultPalette()
 	SetDefaultF4Palette()
-	InitColors(ParseIni(strings.NewReader(`[farcolors]
+	InitColors(inifile.Parse(strings.NewReader(`[farcolors]
 Scrollbar = foreground:#C0C0C0 | background:#0000A0
 Help.Scrollbar = foreground:#102030 | background:#405060
 `)))
@@ -265,7 +266,7 @@ func TestColors_ExportColorsPreservesAuthoredExpressions(t *testing.T) {
 	AppConfig.EnforceColorCorrection = true
 	defer func() { AppConfig = oldCfg }()
 
-	ini := ParseIni(strings.NewReader(`[farcolors]
+	ini := inifile.Parse(strings.NewReader(`[farcolors]
 Panel.Cursor.Inactive.Selected = foreground:#feff00 | background:#555753
 Panel.FastFindNoMatch = foreground:#d65f5f | background:#0000a0
 Panel.Scrollbar.Minimal = foreground:#0000ff | background:#0000a0
@@ -279,7 +280,7 @@ WarnDialog.Edit.Unchanged = foreground:#a0a0a0 | background:#0000a0
 	if err := ExportColors(path); err != nil {
 		t.Fatal(err)
 	}
-	exported := LoadIni(path)
+	exported := inifile.Load(path)
 	for key, want := range map[string]string{
 		"Panel.Cursor.Inactive.Selected": "foreground:#feff00 | background:#555753",
 		"Panel.FastFindNoMatch":          "foreground:#d65f5f | background:#0000a0",
@@ -301,7 +302,7 @@ func TestColors_ExportColorsUsesCurrentPaletteAfterDirectChange(t *testing.T) {
 	AppConfig.EnforceColorCorrection = true
 	defer func() { AppConfig = oldCfg }()
 
-	ini := ParseIni(strings.NewReader(`[farcolors]
+	ini := inifile.Parse(strings.NewReader(`[farcolors]
 Panel.Text = foreground:#123456 | background:#654321
 `))
 	InitColors(ini)
@@ -311,7 +312,7 @@ Panel.Text = foreground:#123456 | background:#654321
 	if err := ExportColors(path); err != nil {
 		t.Fatal(err)
 	}
-	exported := LoadIni(path)
+	exported := inifile.Load(path)
 	if got := exported.GetString("farcolors", "Panel.Text", ""); got != "foreground:#abcdef | background:#102030" {
 		t.Fatalf("direct palette change exported as %q", got)
 	}
@@ -336,7 +337,7 @@ CommandLine.Prefix = foreground:#00FF00
 		t.Fatalf("Failed to write mock INI: %v", err)
 	}
 
-	ini := LoadIni(iniPath)
+	ini := inifile.Load(iniPath)
 	InitColors(ini)
 
 	promptAttr := vtui.Palette[ColCommandLinePrompt]

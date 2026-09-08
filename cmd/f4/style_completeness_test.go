@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/inifile"
 	"strings"
 	"testing"
 )
@@ -63,7 +64,7 @@ func TestBuiltInThemesCoverAllColorSlots(t *testing.T) {
 // slotDefinedInIni reports whether the given colour slot has any entry
 // in the theme's [farcolors] section, checking the canonical key first
 // and then each alias.
-func slotDefinedInIni(ini *IniFile, slot ColorSlot) bool {
+func slotDefinedInIni(ini *inifile.File, slot ColorSlot) bool {
 	const sentinel = "\x00missing\x00"
 	if ini.GetString("farcolors", slot.Canonical, sentinel) != sentinel {
 		return true

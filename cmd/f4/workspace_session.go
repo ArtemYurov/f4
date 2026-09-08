@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/unxed/f4/internal/inifile"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -166,13 +167,13 @@ func captureWorkspaceSessions() ([]workspaceSessionState, int) {
 	return states, active
 }
 
-func parseSessionInt(ini *IniFile, section, key string, fallback int) int {
+func parseSessionInt(ini *inifile.File, section, key string, fallback int) int {
 	value := fallback
 	fmt.Sscanf(ini.GetString(section, key, fmt.Sprintf("%d", fallback)), "%d", &value)
 	return value
 }
 
-func loadWorkspaceSessions(ini *IniFile) ([]workspaceSessionState, int) {
+func loadWorkspaceSessions(ini *inifile.File) ([]workspaceSessionState, int) {
 	count := parseSessionInt(ini, "Workspaces", "Count", 0)
 	if count <= 0 || count > 100 {
 		return nil, 0

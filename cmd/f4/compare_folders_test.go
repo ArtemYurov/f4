@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/inifile"
 	"github.com/unxed/f4/vfs"
 )
 
@@ -311,7 +312,7 @@ func TestCollectCompareSideHonoursTheMarkedScope(t *testing.T) {
 }
 
 func TestCompareOptionsDefaultsWhenTheSectionIsAbsent(t *testing.T) {
-	opts := loadCompareOptions(&IniFile{data: make(map[string]map[string]string)})
+	opts := loadCompareOptions(inifile.New())
 	if opts != defaultCompareOptions() {
 		t.Fatalf("empty config gave %+v", opts)
 	}

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/history"
+	"github.com/unxed/f4/internal/inifile"
 	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -730,7 +731,7 @@ Times=804c4587aa28dd01 004e237daa28dd01 0021f27baa28dd01
 		t.Fatal(err)
 	}
 
-	recs, err := history.ImportFar2lHistory(LoadIni(hstPath), hstPath)
+	recs, err := history.ImportFar2lHistory(inifile.Load(hstPath), hstPath)
 	if err != nil {
 		t.Fatalf("history.ImportFar2lHistory failed: %v", err)
 	}

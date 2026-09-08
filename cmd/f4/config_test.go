@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/inifile"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtui"
 )
@@ -211,7 +212,7 @@ func TestSaveSettingsGroupsKeepUnselectedValues(t *testing.T) {
 	AppConfig.GuiCols = 120
 	AppConfig.GuiRows = 40
 	saveSettingsGroups(true, false, false)
-	ini := LoadIni(settingsPath)
+	ini := inifile.Load(settingsPath)
 	if got := ini.GetString("Interface", "ColorStyle", ""); got != "Pending" {
 		t.Fatalf("general settings were not saved: ColorStyle = %q", got)
 	}
@@ -234,7 +235,7 @@ func TestSaveSettingsGroupsKeepUnselectedValues(t *testing.T) {
 	AppConfig.GuiCols = 140
 	AppConfig.GuiRows = 50
 	saveSettingsGroups(false, false, true)
-	ini = LoadIni(settingsPath)
+	ini = inifile.Load(settingsPath)
 	if got := ini.GetString("Interface", "ColorStyle", ""); got != "Pending" {
 		t.Fatalf("window-only save changed general settings: %q", got)
 	}
@@ -873,9 +874,7 @@ func TestConfig_LayoutRoundTrip(t *testing.T) {
 }
 
 func TestLoadWheelLines(t *testing.T) {
-	ini := &IniFile{data: map[string]map[string]string{
-		"Mouse": {"PanelUp": "5", "PanelDown": "-2"},
-	}}
+	ini := inifile.Parse(strings.NewReader("[Mouse]\nPanelUp = 5\nPanelDown = -2\n"))
 	if got := loadWheelLines(ini, "PanelUp"); got != 5 {
 		t.Errorf("Expected 5, got %d", got)
 	}

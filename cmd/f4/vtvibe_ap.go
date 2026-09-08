@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unxed/f4/internal/inifile"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/internal/vtvibe"
 	"github.com/unxed/f4/vfs"
@@ -273,7 +274,7 @@ func aiPythonPath() (string, error) {
 	if runtime.GOOS == "windows" {
 		candidates = []string{"python", "python3", "py"}
 	}
-	if ini := LoadIni(vtvibeIniPath()); ini != nil {
+	if ini := inifile.Load(vtvibeIniPath()); ini != nil {
 		if custom := strings.TrimSpace(ini.GetString("general", "python", "")); custom != "" {
 			candidates = append([]string{custom}, candidates...)
 		}
@@ -290,7 +291,7 @@ func aiPythonPath() (string, error) {
 // vtvibe.ini may point at a local copy with ap_patcher, or at another build
 // of the script with ap_url.
 func aiEnsurePatcher(ctx context.Context, update func(msg string, percent int)) (string, error) {
-	ini := LoadIni(vtvibeIniPath())
+	ini := inifile.Load(vtvibeIniPath())
 	url := vtvibeAPScriptURL
 	if ini != nil {
 		if custom := strings.TrimSpace(ini.GetString("general", "ap_patcher", "")); custom != "" {
@@ -333,7 +334,7 @@ func aiAttachAPSpec(pf *PanelsFrame) {
 		return
 	}
 	url := vtvibeAPSpecURL
-	if ini := LoadIni(vtvibeIniPath()); ini != nil {
+	if ini := inifile.Load(vtvibeIniPath()); ini != nil {
 		url = ini.GetString("general", "ap_spec_url", vtvibeAPSpecURL)
 	}
 	var spec []byte

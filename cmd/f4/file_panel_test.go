@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/inifile"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
@@ -76,7 +77,7 @@ IncludeAttributes = Directory
 Mark = /
 NormalColor = foreground:#FFFFFF
 `
-	ini := ParseIni(strings.NewReader(iniData))
+	ini := inifile.Parse(strings.NewReader(iniData))
 	GlobalFileHighlighter.LoadFromIni(ini)
 
 	dir := &fileEntry{VFSItem: vfs.VFSItem{Name: "work", IsDir: true}}
@@ -4821,7 +4822,7 @@ Mask = *.go
 Mark = •
 NormalColor = foreground:#00FF00
 `
-	ini := ParseIni(strings.NewReader(iniData))
+	ini := inifile.Parse(strings.NewReader(iniData))
 	GlobalFileHighlighter.LoadFromIni(ini)
 
 	entry := &fileEntry{

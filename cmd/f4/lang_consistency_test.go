@@ -14,6 +14,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/abadojack/whatlanggo"
+	"github.com/unxed/f4/internal/inifile"
 	"github.com/unxed/f4/internal/testutil"
 )
 
@@ -83,7 +84,7 @@ func TestLangConsistency(t *testing.T) {
 		t.Fatalf("Failed to read en.lng: %v", err)
 	}
 
-	enIni := ParseIni(bytes.NewReader(enData))
+	enIni := inifile.Parse(bytes.NewReader(enData))
 	enStrings := loadLangMapFromINI(enIni)
 
 	var enKeys []string
@@ -146,7 +147,7 @@ func TestLangConsistency(t *testing.T) {
 			continue
 		}
 
-		ini := ParseIni(bytes.NewReader(data))
+		ini := inifile.Parse(bytes.NewReader(data))
 		stringsMap := loadLangMapFromINI(ini)
 
 		code := ini.GetString("Language", "Code", "")

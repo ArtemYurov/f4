@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/inifile"
 	"strings"
 	"testing"
 )
@@ -47,7 +48,7 @@ Name=TestLang
 Key1=Value1
 Key2=Line1\nLine2
 `
-	ini := ParseIni(strings.NewReader(iniContent))
+	ini := inifile.Parse(strings.NewReader(iniContent))
 	m := loadLangMapFromINI(ini)
 
 	if m["Key1"] != "Value1" {

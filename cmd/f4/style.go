@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/unxed/f4/internal/inifile"
 	"github.com/unxed/vtui"
 )
 
@@ -17,7 +18,7 @@ var builtInStyles embed.FS
 
 type ColorStyle struct {
 	Name     string
-	ini      *IniFile
+	ini      *inifile.File
 	custom   bool
 	baseName string
 }
@@ -28,7 +29,7 @@ var getUserStylesDir = func() string {
 	return filepath.Join(GetF4ConfigDir(), "styles")
 }
 
-func styleFromIni(fallbackName string, ini *IniFile) ColorStyle {
+func styleFromIni(fallbackName string, ini *inifile.File) ColorStyle {
 	name := strings.TrimSpace(ini.GetString("style", "Name", fallbackName))
 	if name == "" {
 		name = fallbackName
@@ -36,7 +37,7 @@ func styleFromIni(fallbackName string, ini *IniFile) ColorStyle {
 	return ColorStyle{Name: name, ini: ini}
 }
 
-func customStyleFromIni(ini *IniFile) ColorStyle {
+func customStyleFromIni(ini *inifile.File) ColorStyle {
 	baseName := strings.TrimSpace(ini.GetString("style", "Base", ""))
 	if baseName == "" || strings.EqualFold(baseName, customColorStyleName) {
 		baseName = strings.TrimSpace(AppConfig.ColorStyle)
@@ -60,7 +61,7 @@ func loadStylesFromFS(source fs.FS, pattern string) []ColorStyle {
 		if err != nil {
 			continue
 		}
-		ini := ParseIni(f)
+		ini := inifile.Parse(f)
 		f.Close()
 		fallback := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 		styles = append(styles, styleFromIni(fallback, ini))
@@ -80,7 +81,7 @@ func AvailableColorStyles() []ColorStyle {
 			if entry.IsDir() || !strings.EqualFold(filepath.Ext(entry.Name()), ".ini") {
 				continue
 			}
-			ini := LoadIni(filepath.Join(userDir, entry.Name()))
+			ini := inifile.Load(filepath.Join(userDir, entry.Name()))
 			fallback := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
 			style := styleFromIni(fallback, ini)
 			byName[strings.ToLower(style.Name)] = style
@@ -93,7 +94,7 @@ func AvailableColorStyles() []ColorStyle {
 	// is selected, making the selector appear broken. Partial files retain the
 	// historical overlay behavior below in ApplyColorStyle.
 	if path := userColorOverridesPath(); fileExists(path) {
-		byName[strings.ToLower(customColorStyleName)] = customStyleFromIni(LoadIni(path))
+		byName[strings.ToLower(customColorStyleName)] = customStyleFromIni(inifile.Load(path))
 	}
 
 	styles := make([]ColorStyle, 0, len(byName))
@@ -129,11 +130,11 @@ func findColorStyle(styles []ColorStyle, name string) (ColorStyle, bool) {
 	return ColorStyle{}, false
 }
 
-func colorIniDefinesSlot(ini *IniFile, slot ColorSlot) bool {
+func colorIniDefinesSlot(ini *inifile.File, slot ColorSlot) bool {
 	if ini == nil {
 		return false
 	}
-	section, ok := ini.data["farcolors"]
+	section, ok := ini.Sections()["farcolors"]
 	if !ok {
 		return false
 	}
@@ -148,7 +149,7 @@ func colorIniDefinesSlot(ini *IniFile, slot ColorSlot) bool {
 	return false
 }
 
-func isCompleteColorIni(ini *IniFile) bool {
+func isCompleteColorIni(ini *inifile.File) bool {
 	for _, slot := range ColorSlots {
 		if !colorIniDefinesSlot(ini, slot) {
 			return false
@@ -157,9 +158,9 @@ func isCompleteColorIni(ini *IniFile) bool {
 	return true
 }
 
-func isStandaloneCustomColorIni(ini *IniFile) bool {
+func isStandaloneCustomColorIni(ini *inifile.File) bool {
 	if ini != nil {
-		if section, ok := ini.data["style"]; ok && strings.EqualFold(strings.TrimSpace(section["Name"]), customColorStyleName) {
+		if section, ok := ini.Sections()["style"]; ok && strings.EqualFold(strings.TrimSpace(section["Name"]), customColorStyleName) {
 			return true
 		}
 	}
@@ -206,7 +207,7 @@ func ApplyColorStyle(name string) error {
 	} else {
 		ApplyColorIni(style.ini)
 		if path := userColorOverridesPath(); fileExists(path) {
-			userIni := LoadIni(path)
+			userIni := inifile.Load(path)
 			if !isStandaloneCustomColorIni(userIni) {
 				ApplyColorIni(userIni)
 			}

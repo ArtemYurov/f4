@@ -1,4 +1,4 @@
-package main
+package inifile
 
 import (
 	"os"
@@ -24,7 +24,7 @@ PanelText = F_WHITE | B_BLACK
 		t.Fatal(err)
 	}
 
-	ini := LoadIni(tmpFile)
+	ini := Load(tmpFile)
 	if ini.GetString("Settings", "Theme", "Light") != "Dark" {
 		t.Errorf("Expected Theme=Dark, got %s", ini.GetString("Settings", "Theme", "Light"))
 	}
@@ -41,14 +41,14 @@ PanelText = F_WHITE | B_BLACK
 
 func TestIniFile_MissingFile(t *testing.T) {
 	// Should not panic, just return empty config
-	ini := LoadIni("non_existent_file.ini")
+	ini := Load("non_existent_file.ini")
 	if ini.GetString("Any", "Key", "Fallback") != "Fallback" {
 		t.Errorf("Expected fallback value on missing file")
 	}
 }
 
 func TestIniFile_EnvOverride(t *testing.T) {
-	ini := newIniFile()
+	ini := New()
 
 	// 1. Set environment variables
 	t.Setenv("F4_PANEL_SHOW_HIDDEN_FILES", "0")
@@ -86,7 +86,7 @@ func TestIniFile_UTF8BOM(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ini := LoadIni(tmpFile)
+	ini := Load(tmpFile)
 	if ini.GetString("Settings", "Theme", "Light") != "Dark" {
 		t.Errorf("Expected Theme=Dark (parsed despite UTF-8 BOM), got %s", ini.GetString("Settings", "Theme", "Light"))
 	}

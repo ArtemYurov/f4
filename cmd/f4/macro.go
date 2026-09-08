@@ -9,6 +9,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/unxed/f4/internal/inifile"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -675,8 +676,8 @@ func (m *MacroManager) showAssignDialog() {
 func (m *MacroManager) Load() {
 	vtui.DebugLog("MACRO: Loading macros from %s", m.iniPath)
 	newMacros := make(map[string]map[string][]*vtinput.InputEvent)
-	ini := LoadIni(m.iniPath)
-	for sectionName, sec := range ini.data {
+	ini := inifile.Load(m.iniPath)
+	for sectionName, sec := range ini.Sections() {
 		if strings.HasPrefix(sectionName, "KeyMacros/") {
 			parts := strings.SplitN(sectionName, "/", 3)
 			if len(parts) == 3 {

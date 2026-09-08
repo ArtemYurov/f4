@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/inifile"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -28,7 +29,7 @@ func TestWorkspaceSessionSerializationPreservesOrderNumbersAndActiveTab(t *testi
 
 	var encoded strings.Builder
 	writeWorkspaceSessions(&encoded, states, 1)
-	got, active := loadWorkspaceSessions(ParseIni(strings.NewReader(encoded.String())))
+	got, active := loadWorkspaceSessions(inifile.Parse(strings.NewReader(encoded.String())))
 	if active != 1 {
 		t.Fatalf("active workspace = %d, want 1", active)
 	}

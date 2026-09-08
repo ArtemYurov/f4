@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/inifile"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -192,7 +193,7 @@ func TestPathHintItems_HighlightMarker(t *testing.T) {
 	AppConfig.PathHintFullPath = false
 	AppConfig.ShowHighlightMarks = true
 
-	ini := ParseIni(strings.NewReader("[Highlight_0]\nMask = *.exe\nMark = !\n"))
+	ini := inifile.Parse(strings.NewReader("[Highlight_0]\nMask = *.exe\nMark = !\n"))
 	GlobalFileHighlighter.LoadFromIni(ini)
 
 	dirPart := dir + string(filepath.Separator)
