@@ -3,8 +3,14 @@ package archive
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -98,18 +104,202 @@ func findEmbeddedArchive(filename string) (embeddedArchive, bool, error) {
 
 type sfxBacking struct {
 	path string
+	dir  string
 	once sync.Once
 	err  error
 }
 
 func (b *sfxBacking) Close() error {
 	b.once.Do(func() {
-		b.err = os.Remove(b.path)
-		if errors.Is(b.err, os.ErrNotExist) {
-			b.err = nil
+		if b.dir != "" {
+			b.err = os.RemoveAll(b.dir)
+		} else {
+			b.err = os.Remove(b.path)
+			if errors.Is(b.err, os.ErrNotExist) {
+				b.err = nil
+			}
 		}
 	})
 	return b.err
+}
+
+type sfxVolume struct {
+	source string
+	target string
+}
+
+type sfxVolumePlan struct {
+	first      string
+	companions []sfxVolume
+}
+
+func sfxVolumePlanFor(filename string, embedded embeddedArchive) (sfxVolumePlan, error) {
+	base := filepath.Base(filename)
+	stem := strings.TrimSuffix(base, filepath.Ext(base))
+	plan := sfxVolumePlan{first: stem + embedded.suffix}
+
+	entries, err := os.ReadDir(filepath.Dir(filename))
+	if err != nil {
+		return sfxVolumePlan{}, err
+	}
+
+	switch strings.ToLower(embedded.suffix) {
+	case ".zip":
+		for volume := 1; ; volume++ {
+			target := fmt.Sprintf("%s.z%02d", stem, volume)
+			source := findCaseInsensitiveEntry(entries, target)
+			if source == "" {
+				break
+			}
+			plan.companions = append(plan.companions, sfxVolume{
+				source: filepath.Join(filepath.Dir(filename), source),
+				target: target,
+			})
+		}
+	case ".7z":
+		for volume := 2; ; volume++ {
+			target := fmt.Sprintf("%s.7z.%03d", stem, volume)
+			source := findCaseInsensitiveEntry(entries, target)
+			if source == "" {
+				break
+			}
+			plan.companions = append(plan.companions, sfxVolume{
+				source: filepath.Join(filepath.Dir(filename), source),
+				target: target,
+			})
+		}
+	case ".rar":
+		plan = planRARVolumes(filepath.Dir(filename), stem, entries)
+	}
+
+	return plan, nil
+}
+
+func findCaseInsensitiveEntry(entries []os.DirEntry, target string) string {
+	for _, entry := range entries {
+		if strings.EqualFold(entry.Name(), target) {
+			return entry.Name()
+		}
+	}
+	return ""
+}
+
+type rarVolumeMatch struct {
+	name   string
+	part   int
+	width  int
+	total  string
+	legacy bool
+}
+
+func planRARVolumes(dir, stem string, entries []os.DirEntry) sfxVolumePlan {
+	newPattern := regexp.MustCompile(`(?i)^` + regexp.QuoteMeta(stem) + `\.part([0-9]+)(?:of([0-9]+))?\.rar$`)
+	legacyPattern := regexp.MustCompile(`(?i)^` + regexp.QuoteMeta(stem) + `\.r([0-9]+)$`)
+	var modern []rarVolumeMatch
+	var legacy []rarVolumeMatch
+	for _, entry := range entries {
+		name := entry.Name()
+		if match := newPattern.FindStringSubmatch(name); match != nil {
+			part, err := strconv.Atoi(match[1])
+			if err == nil && part >= 2 {
+				modern = append(modern, rarVolumeMatch{
+					name:  name,
+					part:  part,
+					width: len(match[1]),
+					total: match[2],
+				})
+			}
+			continue
+		}
+		if match := legacyPattern.FindStringSubmatch(name); match != nil {
+			part, err := strconv.Atoi(match[1])
+			if err == nil {
+				legacy = append(legacy, rarVolumeMatch{
+					name:   name,
+					part:   part,
+					width:  len(match[1]),
+					legacy: true,
+				})
+			}
+		}
+	}
+
+	plan := sfxVolumePlan{first: stem + ".rar"}
+	if len(modern) > 0 {
+		sort.Slice(modern, func(i, j int) bool { return modern[i].part < modern[j].part })
+		first := modern[0]
+		firstPart := fmt.Sprintf("%0*d", first.width, 1)
+		plan.first = stem + ".part" + firstPart
+		if first.total != "" {
+			plan.first += "of" + first.total
+		}
+		plan.first += ".rar"
+		for _, volume := range modern {
+			part := fmt.Sprintf("%0*d", first.width, volume.part)
+			target := stem + ".part" + part
+			if first.total != "" {
+				target += "of" + first.total
+			}
+			plan.companions = append(plan.companions, sfxVolume{
+				source: filepath.Join(dir, volume.name),
+				target: target + ".rar",
+			})
+		}
+		return plan
+	}
+
+	if len(legacy) > 0 {
+		sort.Slice(legacy, func(i, j int) bool { return legacy[i].part < legacy[j].part })
+		first := legacy[0]
+		for _, volume := range legacy {
+			target := stem + ".r" + fmt.Sprintf("%0*d", first.width, volume.part)
+			plan.companions = append(plan.companions, sfxVolume{
+				source: filepath.Join(dir, volume.name),
+				target: target,
+			})
+		}
+	}
+	return plan
+}
+
+func copySFXFile(dst, source string, offset int64) error {
+	input, err := os.Open(source)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = input.Close() }()
+
+	output, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	removeOutput := true
+	defer func() {
+		_ = output.Close()
+		if removeOutput {
+			_ = os.Remove(dst)
+		}
+	}()
+
+	if offset > 0 {
+		stat, err := input.Stat()
+		if err != nil {
+			return err
+		}
+		if offset >= stat.Size() {
+			return os.ErrInvalid
+		}
+		if _, err := io.Copy(output, io.NewSectionReader(input, offset, stat.Size()-offset)); err != nil {
+			return err
+		}
+	} else if _, err := io.Copy(output, input); err != nil {
+		return err
+	}
+	if err := output.Close(); err != nil {
+		return err
+	}
+	removeOutput = false
+	return nil
 }
 
 func materializeEmbeddedArchive(filename string, embedded embeddedArchive) (string, io.Closer, error) {
@@ -117,45 +307,42 @@ func materializeEmbeddedArchive(filename string, embedded embeddedArchive) (stri
 		return filename, nil, nil
 	}
 
-	source, err := os.Open(filename)
+	plan, err := sfxVolumePlanFor(filename, embedded)
 	if err != nil {
 		return "", nil, err
 	}
-	stat, err := source.Stat()
-	if err != nil {
-		_ = source.Close()
-		return "", nil, err
-	}
-	if embedded.offset >= stat.Size() {
-		_ = source.Close()
-		return "", nil, os.ErrInvalid
+	if len(plan.companions) == 0 {
+		target, err := os.CreateTemp("", "f4-sfx-*"+embedded.suffix)
+		if err != nil {
+			return "", nil, err
+		}
+		targetName := target.Name()
+		if err := target.Close(); err != nil {
+			_ = os.Remove(targetName)
+			return "", nil, err
+		}
+		if err := copySFXFile(targetName, filename, embedded.offset); err != nil {
+			_ = os.Remove(targetName)
+			return "", nil, err
+		}
+		return targetName, &sfxBacking{path: targetName}, nil
 	}
 
-	target, err := os.CreateTemp("", "f4-sfx-*"+embedded.suffix)
+	dir, err := os.MkdirTemp("", "f4-sfx-*")
 	if err != nil {
-		_ = source.Close()
 		return "", nil, err
 	}
-	targetName := target.Name()
-	cleanup := func() {
-		_ = source.Close()
-		_ = target.Close()
-		_ = os.Remove(targetName)
-	}
-
-	_, copyErr := io.Copy(target, io.NewSectionReader(source, embedded.offset, stat.Size()-embedded.offset))
-	closeTargetErr := target.Close()
-	closeSourceErr := source.Close()
-	if copyErr != nil || closeTargetErr != nil || closeSourceErr != nil {
+	cleanup := func() { _ = os.RemoveAll(dir) }
+	targetName := filepath.Join(dir, plan.first)
+	if err := copySFXFile(targetName, filename, embedded.offset); err != nil {
 		cleanup()
-		if copyErr != nil {
-			return "", nil, copyErr
-		}
-		if closeTargetErr != nil {
-			return "", nil, closeTargetErr
-		}
-		return "", nil, closeSourceErr
+		return "", nil, err
 	}
-
-	return targetName, &sfxBacking{path: targetName}, nil
+	for _, volume := range plan.companions {
+		if err := copySFXFile(filepath.Join(dir, volume.target), volume.source, 0); err != nil {
+			cleanup()
+			return "", nil, err
+		}
+	}
+	return targetName, &sfxBacking{path: targetName, dir: dir}, nil
 }
