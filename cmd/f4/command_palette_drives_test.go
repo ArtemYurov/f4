@@ -8,14 +8,14 @@ import (
 )
 
 func replaceDriveRegistryForCommandPaletteTest(drives []DriveEntry) func() {
-	pluginRegistryMu.Lock()
+	driveRegistryMu.Lock()
 	previous := append([]DriveEntry(nil), DriveRegistry...)
 	DriveRegistry = append([]DriveEntry(nil), drives...)
-	pluginRegistryMu.Unlock()
+	driveRegistryMu.Unlock()
 	return func() {
-		pluginRegistryMu.Lock()
+		driveRegistryMu.Lock()
 		DriveRegistry = previous
-		pluginRegistryMu.Unlock()
+		driveRegistryMu.Unlock()
 	}
 }
 
@@ -83,12 +83,12 @@ func TestCommandPaletteDriveEntryReResolvesFactoryAndRejectsRemoval(t *testing.T
 		left = entries[1]
 	}
 
-	pluginRegistryMu.Lock()
+	driveRegistryMu.Lock()
 	DriveRegistry[0].Factory = func() vfs.VFS {
 		replacementCalls++
 		return nil
 	}
-	pluginRegistryMu.Unlock()
+	driveRegistryMu.Unlock()
 	if executeCommandPaletteEntry(left) {
 		t.Fatal("nil replacement VFS was reported as a successful drive switch")
 	}
@@ -96,9 +96,9 @@ func TestCommandPaletteDriveEntryReResolvesFactoryAndRejectsRemoval(t *testing.T
 		t.Fatalf("stale/current factory calls = %d/%d, want 0/1", oldCalls, replacementCalls)
 	}
 
-	pluginRegistryMu.Lock()
+	driveRegistryMu.Lock()
 	DriveRegistry = nil
-	pluginRegistryMu.Unlock()
+	driveRegistryMu.Unlock()
 	if executeCommandPaletteEntry(left) {
 		t.Fatal("removed drive executed from a stale palette entry")
 	}

@@ -91,14 +91,18 @@ Loop:
 
 func TestCoreAPI_Registrations(t *testing.T) {
 	api := &coreAPI{}
-	pluginRegistryMu.Lock()
+	driveRegistryMu.Lock()
 	initialDrives := append([]DriveEntry(nil), DriveRegistry...)
+	driveRegistryMu.Unlock()
+	pluginRegistryMu.Lock()
 	initialHotkeyEntries := append([]HotkeyEntry(nil), GlobalHotkeys...)
 	initialMenuItems := append([]PluginMenuItem(nil), PluginMenuItems...)
 	pluginRegistryMu.Unlock()
 	t.Cleanup(func() {
-		pluginRegistryMu.Lock()
+		driveRegistryMu.Lock()
 		DriveRegistry = initialDrives
+		driveRegistryMu.Unlock()
+		pluginRegistryMu.Lock()
 		GlobalHotkeys = initialHotkeyEntries
 		PluginMenuItems = initialMenuItems
 		pluginRegistryMu.Unlock()

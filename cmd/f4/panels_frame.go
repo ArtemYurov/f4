@@ -23,31 +23,7 @@ import (
 	"github.com/unxed/vtui"
 )
 
-type DriveEntry struct {
-	Name    string
-	Factory func() vfs.VFS
-}
-
-var DriveRegistry []DriveEntry
 var pluginRegistryMu sync.RWMutex
-
-func RegisterDrive(name string, factory func() vfs.VFS) {
-	pluginRegistryMu.Lock()
-	defer pluginRegistryMu.Unlock()
-	for i, d := range DriveRegistry {
-		if d.Name == name {
-			DriveRegistry[i].Factory = factory
-			return
-		}
-	}
-	DriveRegistry = append(DriveRegistry, DriveEntry{Name: name, Factory: factory})
-}
-
-func driveRegistrySnapshot() []DriveEntry {
-	pluginRegistryMu.RLock()
-	defer pluginRegistryMu.RUnlock()
-	return append([]DriveEntry(nil), DriveRegistry...)
-}
 
 type HotkeyEntry struct {
 	VK      uint16
