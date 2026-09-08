@@ -175,6 +175,25 @@ Finding this locally costs one run. Finding it in review costs the PR.
    These four are new code written during this work, so they can be held to the
    strict bar.
 
+5. Verify that **every commit** on the branch builds, not only `HEAD`. The
+   plan's central invariant is that any commit can be checked out and built, and
+   checking `HEAD` alone never tests it:
+   ```
+   git rebase --exec 'CGO_ENABLED=0 go build ./... && go vet ./...' upstream/main
+   ```
+   It replays the branch and stops at the first commit that fails. Note that a
+   rebase rewrites every commit id, so run it only after the last content commit
+   and before the branch is pushed for review — never under work in progress. To
+   check without rewriting anything, walk the same revisions in a scratch
+   worktree (`git worktree add --detach`) and build each one there.
+
+   A broken commit in the middle of a 300-file restructuring is not cosmetic: it
+   breaks `git bisect` for whoever debugs a regression a year from now, and it is
+   the first thing a maintainer notices on a branch that claims every step is
+   green. The failure mode to watch for is a staged deletion travelling in
+   somebody else's commit — `git commit` takes the whole index, not the paths
+   just handed to `git add`.
+
 ### Required Interfaces and Contracts
 
 - No `nolint` directive is added to work around rename detection.
@@ -182,6 +201,7 @@ Finding this locally costs one run. Finding it in review costs the PR.
   scope of this plan.
 - `gosec`'s `G115` findings must be zero in `internal/numeric` — Task 19 required
   the `#nosec` annotations to travel verbatim, and this is where that is confirmed.
+- Every commit from `upstream/main` to `HEAD` builds and vets clean.
 
 ### Error Handling and Logging
 
@@ -196,6 +216,7 @@ The lint runs above are the test.
 - Both counts are recorded.
 - `golangci-lint run -c .golangci-strict.yml ./internal/numeric/...` reports no
   `G115`.
+- The per-commit walk reaches `HEAD` without a failure.
 - If rename detection failed, the PR body says so with the measured numbers.
 
 ### Verification
