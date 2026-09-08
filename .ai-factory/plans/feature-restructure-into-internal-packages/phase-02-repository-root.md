@@ -26,6 +26,7 @@ so it lands alone, before any package moves. Closes issue #505.
 | `docs/ISSUES/ISSUE_91_FREEBSD_CONSOLE_DIAGNOSIS.md` | — | The existing precedent for the target naming |
 | `ISSUE_95_FOLLOWUP_SOLUTION_REVIEW.md` (root) | — | Collides in subject with `docs/ISSUES/ISSUE_95_SOLUTION_REVIEW.md` |
 | `issue-703-solution.md` (root) | — | Collides in subject with `docs/ISSUES/ISSUE_703_SOLUTION_REVIEW.md` |
+| `DISPATCH.md`, `LUNOBOT-2-266.md`, `LUNOBOT-2-881.md` (root) | 3 + 22 + 22 lines | Upstream's live scratch notes for open tickets, with unticked boxes; not documentation and not ours to move |
 | `colorer/configs/base/hrd/rgb/radiola.hrd` | 1 file | The entire `colorer/` tree |
 | `embedded.go:12` | `//go:embed colorer/…/radiola.hrd` | Root package's second embed |
 | `cmd/f4/plugring.go:20` | `PlugRingCatalogURL` | Published catalogue URL containing the path |
@@ -182,12 +183,22 @@ Three markdown files and one empty text file sit in the root. Prose belongs in
    (`grep -rn 'time\.txt' . --exclude-dir=.git` confirms before deleting).
 4. `f4.example.ini` and `highlight.ini` **stay**: they are reference configs the
    README points at, and the target layout keeps them beside it.
+5. `DISPATCH.md`, `LUNOBOT-2-266.md` and `LUNOBOT-2-881.md` **stay** too, untouched.
+   They arrived from upstream after this plan was written and are the maintainer's
+   working notes on tickets that are still open — each carries unticked boxes such
+   as `- [ ] PR объединён в main`. They are not documentation, `docs/` is not where
+   an unfinished note belongs, and relocating another author's live state
+   manufactures a conflict in the pull request for no gain. Upstream deletes them
+   when those tickets close; if that happens before the PR opens, the root list in
+   the contract below is met without any action here.
 
 ### Required Interfaces and Contracts
 
 - After this task the root contains, in addition to directories: `README.md`,
   `LICENSE`, `go.mod`, `go.sum`, `embedded.go`, `f4.example.ini`, `highlight.ini`,
-  `AGENTS.md`, `skills-lock.json` and the dotfiles. Nothing else.
+  `AGENTS.md`, `skills-lock.json` and the dotfiles — plus whichever of upstream's
+  ticket notes (`DISPATCH.md`, `LUNOBOT-2-*.md`) are still open at that moment, per
+  step 5. Nothing else.
   `AGENTS.md` and `skills-lock.json` are harness metadata that ships in this pull
   request deliberately (see `index.md`'s Delivery note); they are not loose prose
   and this task does not move them.
@@ -210,7 +221,8 @@ No new tests. Step 3's grep is the check for `time.txt`.
 
 - `git ls-files -- ':(exclude)*/*' | grep -v '^\.'`
 - Expected result: exactly `AGENTS.md LICENSE README.md embedded.go f4.example.ini
-  go.mod go.sum highlight.ini skills-lock.json`.
+  go.mod go.sum highlight.ini skills-lock.json`, plus any of upstream's still-open
+  ticket notes.
   Use `git ls-files`, not `ls`: `.gitignore:3` ignores `/f4`, so on any machine
   that has run `go build ./cmd/f4` a plain `ls` also lists the built binary and the
   check fails for a reason that has nothing to do with this task.

@@ -4,11 +4,9 @@
 Mode: ultra
 Branch: feature/restructure-into-internal-packages
 Created: 2026-09-07
-Base revision: `83177611`, level with `upstream/main` at `c31f9f50` —
-**re-checked and replaced by Task 0 with the post-rebase HEAD.** One sync has
-already been performed at this revision, so Task 0's job is to re-measure the
-divergence, not to assume it is non-zero. Every count in this bundle was
-verified against `83177611`.
+Base revision: `0cda22a7`, level with `upstream/main` at `ef3640c7`
+(`git rev-list --left-right --count upstream/main...HEAD` reports `0` on the
+left). Every count in this bundle is verified against `0cda22a7`.
 
 ## Original Request
 
@@ -248,8 +246,8 @@ titles, not the ordering.
 ## Tasks
 
 ### Phase 1: Upstream Sync, Baseline and Barrier Removal
-- [ ] Task 0: Rebase onto `upstream/main` behind a backup branch, re-verify the plan's counts ([details](phase-01-baseline-and-barriers.md#task-0-synchronize-with-upstreammain))
-- [ ] Task 1: Record the immutable pre-restructuring baseline across all six modules ([details](phase-01-baseline-and-barriers.md#task-1-record-the-pre-restructuring-test-baseline)) (depends on 0)
+- [x] Task 0: Rebase onto `upstream/main` behind a backup branch, re-verify the plan's counts ([details](phase-01-baseline-and-barriers.md#task-0-synchronize-with-upstreammain))
+- [x] Task 1: Record the immutable pre-restructuring baseline across all six modules ([details](phase-01-baseline-and-barriers.md#task-1-record-the-pre-restructuring-test-baseline)) (depends on 0)
 - [ ] Task 2: Re-key the command-palette auditor's 42 entries to qualified symbols ([details](phase-01-baseline-and-barriers.md#task-2-re-key-the-command-palette-auditor-to-qualified-symbols))
 - [ ] Task 3: Make action registration order explicit and golden-tested ([details](phase-01-baseline-and-barriers.md#task-3-make-action-registration-order-explicit))
 - [ ] Task 4: Move `F4Config`'s three stray field types into `config.go` ([details](phase-01-baseline-and-barriers.md#task-4-move-f4configs-field-types-into-configgo))
