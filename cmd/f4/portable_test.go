@@ -10,6 +10,10 @@ import (
 	"github.com/unxed/vtui"
 )
 
+func portableSettingsMouseCoordinate(value int) int16 {
+	return int16(value) // #nosec G115 -- the test dialog is inside the test screen.
+}
+
 func TestPortableSettingsDialogUsesContextHelp(t *testing.T) {
 	initFrameworkActionTestScreen(t)
 	tmpDir := t.TempDir()
@@ -46,16 +50,16 @@ func TestPortableSettingsDialogUsesContextHelp(t *testing.T) {
 		Type:        vtinput.MouseEventType,
 		KeyDown:     true,
 		ButtonState: vtinput.FromLeft1stButtonPressed,
-		MouseX:      int16(startX2),
-		MouseY:      int16(startY2),
+		MouseX:      portableSettingsMouseCoordinate(startX2),
+		MouseY:      portableSettingsMouseCoordinate(startY2),
 	}) {
 		t.Fatal("portable settings resize corner was not handled")
 	}
 	dlg.ProcessMouse(&vtinput.InputEvent{
 		Type:        vtinput.MouseEventType,
 		ButtonState: vtinput.FromLeft1stButtonPressed,
-		MouseX:      int16(startX2 + 8),
-		MouseY:      int16(startY2 + 4),
+		MouseX:      portableSettingsMouseCoordinate(startX2 + 8),
+		MouseY:      portableSettingsMouseCoordinate(startY2 + 4),
 	})
 	dlg.ProcessMouse(&vtinput.InputEvent{Type: vtinput.MouseEventType})
 	if dlg.X2 != startX2+8 {

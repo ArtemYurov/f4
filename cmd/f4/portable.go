@@ -245,7 +245,7 @@ func copyFileNoClobber(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600) // #nosec G304 -- dst is inside the target profile.
 	if err != nil {
 		if errors.Is(err, os.ErrExist) {
@@ -254,7 +254,7 @@ func copyFileNoClobber(src, dst string) error {
 		return err
 	}
 	if _, err := io.Copy(out, in); err != nil {
-		out.Close()
+		_ = out.Close()
 		return err
 	}
 	return out.Close()
@@ -327,7 +327,7 @@ func (t *portableSettingsPathText) SetPosition(x1, y1, x2, y2 int) {
 	if available < 0 {
 		available = 0
 	}
-	t.Text.SetText(label + truncPathLeft(t.path, available))
+	t.SetText(label + truncPathLeft(t.path, available))
 }
 
 // actionPortableSettings is Options → Portable mode. It shows where the
