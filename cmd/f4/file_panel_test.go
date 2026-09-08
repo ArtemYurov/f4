@@ -2419,6 +2419,55 @@ func TestFileSystemPanel_GetSuccessorName(t *testing.T) {
 		t.Errorf("Case 5 failed: expected '..', got %q", res)
 	}
 }
+
+func TestFileSystemPanel_GetPredecessorName(t *testing.T) {
+	fp := &FileSystemPanel{}
+
+	setupEntries := func(names ...string) {
+		fp.cursorIdx = 0
+		fp.entries = []*fileEntry{{VFSItem: vfs.VFSItem{Name: "..", IsDir: true}}}
+		for _, n := range names {
+			fp.entries = append(fp.entries, &fileEntry{VFSItem: vfs.VFSItem{Name: n}})
+		}
+	}
+
+	// A single removal normally moves the cursor to the item above it.
+	setupEntries("A", "B", "C")
+	fp.cursorIdx = 2 // B
+	if res := fp.GetPredecessorName(); res != "A" {
+		t.Errorf("middle item: expected 'A', got %q", res)
+	}
+
+	// At the first item there is no predecessor, so keep the cursor on the
+	// first item that will remain after the removal.
+	setupEntries("A", "B")
+	fp.cursorIdx = 1 // A
+	if res := fp.GetPredecessorName(); res != "B" {
+		t.Errorf("first item: expected 'B', got %q", res)
+	}
+
+	// The same rule applies to a selected range: use the row before its first
+	// member, then fall back to the first remaining row.
+	setupEntries("A", "B", "C", "D")
+	fp.entries[2].Selected = true // B
+	fp.entries[3].Selected = true // C
+	if res := fp.GetPredecessorName(); res != "A" {
+		t.Errorf("selected range: expected 'A', got %q", res)
+	}
+
+	setupEntries("A", "B", "C")
+	fp.entries[1].Selected = true // A
+	fp.entries[2].Selected = true // B
+	if res := fp.GetPredecessorName(); res != "C" {
+		t.Errorf("selected range at start: expected 'C', got %q", res)
+	}
+
+	setupEntries()
+	if res := fp.GetPredecessorName(); res != ".." {
+		t.Errorf("empty list: expected '..', got %q", res)
+	}
+}
+
 func TestGetSelectedNames_ParentSafety(t *testing.T) {
 	fp := &FileSystemPanel{}
 	// Setup entries: 0: "..", 1: "file.txt"

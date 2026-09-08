@@ -3197,7 +3197,14 @@ func actionMkDir(pf *PanelsFrame) {
 		// F7 removes references from TempPanel. Do this at the concrete F7
 		// action boundary: PanelActionCreate is also used by Shift+F4 for
 		// creating a new file and must keep its ordinary meaning.
-		if temp.removePanelReferences(selectedPanelActionPaths(panel)) {
+		paths := selectedPanelActionPaths(panel)
+		if len(paths) > 0 {
+			// Unlike a real delete, removing a TempPanel reference is immediate.
+			// Preserve the row above the removed item before the refresh resets
+			// the asynchronously loaded panel contents.
+			panel.pendingSelection = panel.GetPredecessorName()
+		}
+		if temp.removePanelReferences(paths) {
 			pf.RefreshAll()
 			return
 		}
