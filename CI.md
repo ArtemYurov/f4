@@ -9,6 +9,9 @@
 
 ## Последний проверенный прогон
 
-- `34187866847` — PR `https://github.com/unxed/f4/pull/948`, commit
-  `77b94a8b4b374b2ea276a31305ffe8d56ea44b42`; завершён успешно. Windows
-  amd64/arm64 builds и Windows amd64 native tests прошли.
+- `34194464508` — commit `561da80e197d14522af3093e08fadc1e8916eafe`; завершён
+  с ошибкой в двух независимых shuffled-проверках: `Race (cmd/f4 rest)` —
+  `TestMacKeysSkipsCommandRulesWithoutTheChannelSplit`, `Test (linux/amd64)` —
+  `TestMainMenuFilePath_HasExpectedSuffix`. Clipboard race из предыдущего
+  прогона этим результатом не подтверждена; follow-up исправляет оставшийся
+  такой же асинхронный helper `waitForMarkedClipboard`.

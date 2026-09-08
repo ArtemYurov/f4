@@ -22,10 +22,14 @@ func withMacKeys(t *testing.T, commandIsDistinct bool) {
 	macCommandIsDistinct = func() bool { return commandIsDistinct }
 	t.Cleanup(func() { macCommandIsDistinct = previousProbe })
 
-	// The keyboard is ours. Without this the substitution is suspended and
-	// every assertion below reads "was not rewritten", which is what the test
-	// says when a foreign program owns the keyboard, not when the rule is
-	// wrong.
+	// The keyboard is ours. ApplyMacKeys respects the same handover guard as
+	// the live key path, so without this a shuffled predecessor that left a
+	// hidden PanelsFrame on the frame manager suppresses the mapping — and
+	// every assertion below then reads "was not rewritten", which is what the
+	// test says when a foreign program owns the keyboard rather than when the
+	// rule is wrong. Upstream fixed the same flake by giving each test a
+	// neutral frame manager; the guard is a seam here, so pinning it says the
+	// same thing without the test knowing what a frame is.
 	previousSuspended := Suspended
 	Suspended = func() bool { return false }
 	t.Cleanup(func() { Suspended = previousSuspended })
