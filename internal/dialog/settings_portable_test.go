@@ -17,7 +17,8 @@ func portableSettingsMouseCoordinate(value int) int16 {
 }
 
 // The portable settings dialog is dragged by its resize corner: the width
-// follows the pointer while the height stays where the layout put it (#274).
+// grows symmetrically about the centre so the dialog stays centred, and the
+// height stays where the layout put it.
 func TestPortableSettingsDialogResizesHorizontallyOnly(t *testing.T) {
 	t.Cleanup(testutil.SwapFrameManager(t))
 	screen := vtui.NewSilentScreenBuf()
@@ -51,7 +52,7 @@ func TestPortableSettingsDialogResizesHorizontallyOnly(t *testing.T) {
 		t.Fatalf("portable settings frame has type %T, want *portableSettingsDialog", top)
 	}
 
-	startX2, startY2 := dlg.X2, dlg.Y2
+	startX1, startX2, startY2 := dlg.X1, dlg.X2, dlg.Y2
 	if !dlg.ProcessMouse(&vtinput.InputEvent{
 		Type:        vtinput.MouseEventType,
 		KeyDown:     true,
@@ -68,8 +69,14 @@ func TestPortableSettingsDialogResizesHorizontallyOnly(t *testing.T) {
 		MouseY:      portableSettingsMouseCoordinate(startY2 + 4),
 	})
 	dlg.ProcessMouse(&vtinput.InputEvent{Type: vtinput.MouseEventType})
+	if dlg.X1 != startX1-8 {
+		t.Errorf("portable settings left edge = %d, want %d", dlg.X1, startX1-8)
+	}
 	if dlg.X2 != startX2+8 {
 		t.Errorf("portable settings right edge = %d, want %d", dlg.X2, startX2+8)
+	}
+	if dlg.X1+dlg.X2 != startX1+startX2 {
+		t.Errorf("portable settings center moved from %d to %d", startX1+startX2, dlg.X1+dlg.X2)
 	}
 	if dlg.Y2 != startY2 {
 		t.Errorf("portable settings bottom edge = %d, want fixed %d", dlg.Y2, startY2)

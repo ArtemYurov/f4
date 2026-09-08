@@ -36,7 +36,10 @@ func InitHelpSystem() {
 		lang = "en"
 	}
 
-	if lang != "en" && lang != "eng" {
+	// An explicitly enabled profile overlay also applies to English. The
+	// embedded English help remains the baseline, while help/en.hlf can provide
+	// user-specific topics and corrections.
+	if config.App.UseLocalLanguageFiles || (lang != "en" && lang != "eng") {
 		exeDir := filepath.Dir(os.Args[0])
 		candidates := []string{
 			filepath.Join(exeDir, "help", lang+".hlf"),

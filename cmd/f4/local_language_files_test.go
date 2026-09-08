@@ -96,3 +96,33 @@ func TestInitHelpSystemHonorsUseLocalLanguageFiles(t *testing.T) {
 		t.Fatal("local help file was not loaded when enabled")
 	}
 }
+
+func TestInitHelpSystemLoadsLocalEnglishHelpWhenEnabled(t *testing.T) {
+	tempDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(tempDir, "help"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(tempDir, "help", "en.hlf"), []byte("@LocalEnglishTopic\nLocal English help content\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	oldCfg := config.App
+	oldConfigDir := config.CachedF4ConfigDir
+	oldUseSystemProfiles := config.CachedF4Portable
+	oldHelpEngine := vtui.GlobalHelpEngine
+	t.Cleanup(func() {
+		config.CachedF4ConfigDir = oldConfigDir
+		config.CachedF4Portable = oldUseSystemProfiles
+		config.App = oldCfg
+		vtui.GlobalHelpEngine = oldHelpEngine
+	})
+	_ = config.GetF4ConfigDir()
+	config.CachedF4ConfigDir = tempDir
+
+	config.App.HelpLanguage = "en"
+	config.App.UseLocalLanguageFiles = true
+	InitHelpSystem()
+	if topic := vtui.GlobalHelpEngine.GetTopic("LocalEnglishTopic"); topic == nil {
+		t.Fatal("local English help file was not loaded when enabled")
+	}
+}
