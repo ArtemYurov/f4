@@ -168,6 +168,9 @@ func sfxVolumePlanFor(filename string, embedded embeddedArchive) (sfxVolumePlan,
 				target: target,
 			})
 		}
+		if len(plan.companions) > 0 {
+			plan.first = stem + ".7z.001"
+		}
 	case ".rar":
 		plan = planRARVolumes(filepath.Dir(filename), stem, entries)
 	}
