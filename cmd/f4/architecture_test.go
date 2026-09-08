@@ -31,6 +31,9 @@ var architectureLayers = map[string]int{
 	"internal/ttyx":     0,
 	"internal/wincon":   0,
 
+	// Data with an embed directive beside it, nothing else.
+	"internal/colorer": 0,
+
 	// Test scaffolding, placed by what it may import: testutil imports no
 	// package of ours, paneltest sits above the three it builds a frame from.
 	// Neither may be imported from production code.

@@ -10,7 +10,7 @@ import (
 	"unicode/utf8"
 
 	colorer "github.com/unxed/colorer4go"
-	embedded "github.com/unxed/f4"
+	colorerdata "github.com/unxed/f4/internal/colorer"
 	"github.com/unxed/vtui"
 )
 
@@ -153,7 +153,7 @@ func ensureRadiolaSchema(configsDir string) {
 	hrdPath := filepath.Join(hrdDir, "radiola.hrd")
 
 	_ = os.MkdirAll(hrdDir, 0700)
-	_ = os.WriteFile(hrdPath, []byte(embedded.RadiolaHRD), 0600)
+	_ = os.WriteFile(hrdPath, []byte(colorerdata.RadiolaHRD), 0600)
 	_ = os.Chmod(hrdPath, 0600)
 
 	catalogRGBPath := filepath.Join(configsDir, "base", "hrd", "catalog-rgb.xml")

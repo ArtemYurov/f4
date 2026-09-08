@@ -35,7 +35,7 @@ luaplug/         # Lua plugin engine
 piecetable/      # piece table backing the editor
 textlayout/      # text layout and wrapping
 sheet/           # spreadsheet mode
-colorer/         # colorer4go syntax highlighting integration
+
 fusefs/          # FUSE mounting
 vtvibe/          # vtvibe session/provider layer
 internal/        # module-private platform helpers
@@ -44,6 +44,7 @@ internal/        # module-private platform helpers
   netproxy/      #   network proxy
   testutil/      #   test scaffolding shared across packages; _test.go use only
   paneltest/     #   the same, for helpers that need a panels frame
+  colorer/       #   the colour scheme f4 installs for colorer4go
   hideconsole/   #   console hiding on Windows
 tools/           # developer tooling, incl. the ttytest terminal harness
 docs/            # 48 subsystem documents — read the relevant one before editing

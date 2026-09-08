@@ -13,7 +13,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	embedded "github.com/unxed/f4"
+	"github.com/unxed/f4/internal/colorer"
 	"github.com/unxed/f4/piecetable"
 
 	"github.com/unxed/vtui"
@@ -53,7 +53,7 @@ func TestColorer_EnsureRadiolaSchema(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to read generated radiola.hrd: %v", err)
 	}
-	if string(generated) != embedded.RadiolaHRD {
+	if string(generated) != colorer.RadiolaHRD {
 		t.Error("generated Radiola HRD differs from the repository's canonical embedded schema")
 	}
 }

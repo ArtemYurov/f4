@@ -36,8 +36,7 @@ adding a package or a file.
 - `luaplug/` — Lua plugin engine (moves under `internal/`)
 - `piecetable/`, `textlayout/`, `sheet/`, `fusefs/`, `vtvibe/` — self-contained
   subsystems consumed by `cmd/f4` (move under `internal/`)
-- `colorer/`, `plugring/` — data, not Go packages: colour schemes and the
-  plugin catalogue
+- `plugring/` — data, not a Go package: the plugin catalogue
 - `tools/` — developer tooling, not shipped in the binary
 - UI and input live outside this repository, in the `vtui` and `vtinput` libraries
 

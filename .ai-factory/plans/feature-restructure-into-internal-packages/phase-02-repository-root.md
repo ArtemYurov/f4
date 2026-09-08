@@ -306,10 +306,11 @@ consumer, no callers.
 
 ### Implementation Steps
 
-1. `mkdir -p internal/colorer && git mv colorer internal/colorer/configs`
-   — preserve the `configs/base/hrd/rgb/` sub-path so the `.hrd` file keeps the
-   layout colorer4go expects. Confirm with
-   `find internal/colorer -type f` that exactly one file landed.
+1. `mkdir -p internal/colorer && git mv colorer internal/colorer` — the tree
+   already begins at `configs/`, so naming the destination `internal/colorer/configs`
+   buries it one level too deep. Confirm with `find internal/colorer -type f` that
+   the single file landed at `internal/colorer/configs/base/hrd/rgb/radiola.hrd`;
+   that is the layout colorer4go expects and the path the embed directive names.
 2. Create `internal/colorer/embedded.go`:
    ```go
    package colorer
@@ -323,8 +324,17 @@ consumer, no callers.
    the `RadiolaHRD` variable from root `embedded.go:11-12`. The file keeps its
    package doc, its `import _ "embed"`, and `ReadmeMD`.
 4. Update **both** consumers — `cmd/f4/colorer_plugin.go:156` and
-   `cmd/f4/colorer_plugin_test.go:56` — from `embedded.RadiolaHRD` to
-   `colorer.RadiolaHRD`, adding the import to each. Confirm the list with
+   `cmd/f4/colorer_plugin_test.go:56` — from `embedded.RadiolaHRD` to the new
+   package's variable, adding the import to each.
+
+   `colorer_plugin.go` already imports `colorer "github.com/unxed/colorer4go"`,
+   the highlighting engine, so the name is taken and ours needs an alias there:
+   `colorerdata "github.com/unxed/f4/internal/colorer"`. That reads correctly —
+   the engine is the code, this package is the data it is fed. The test file does
+   not import the engine and takes the package under its own name.
+
+   Both files also lose their `embedded` import: `RadiolaHRD` was the only thing
+   either took from the root package. Confirm the list with
    `grep -rn 'RadiolaHRD' --include='*.go' .`, which must return exactly three
    lines: the declaration and those two.
    Do **not** use `codegraph callers RadiolaHRD` for this — it reports "No callers
