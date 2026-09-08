@@ -1,39 +1,14 @@
-package main
+package action
 
 import (
-	"os"
 	"strings"
 	"testing"
 )
 
 // The order actions are presented in is what the user reads in the menu, so it
-// is behaviour and not an implementation detail. These tests hold it still
-// while the registry's 174 registration calls are split across packages.
-
-func TestActionOrderIsStable(t *testing.T) {
-	data, err := os.ReadFile("testdata/action_order.golden")
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := strings.Fields(string(data))
-
-	var got []string
-	for _, action := range GetOrderedActions() {
-		got = append(got, action.Name)
-	}
-
-	for index := 0; index < len(want) && index < len(got); index++ {
-		if got[index] != want[index] {
-			t.Fatalf("action %d = %q, want %q\n"+
-				"the menu the user sees has been rearranged; if that is intended, "+
-				"move the entry in actionMenuOrder and regenerate "+
-				"testdata/action_order.golden", index, got[index], want[index])
-		}
-	}
-	if len(got) != len(want) {
-		t.Fatalf("presented actions = %d, want %d: %v", len(got), len(want), symmetricDifference(got, want))
-	}
-}
+// is behaviour and not an implementation detail. The golden list of that order
+// lives with the table that produces it, in the composition root; what is
+// checked here is the mechanism underneath it.
 
 func TestActionOrderCoversRegistry(t *testing.T) {
 	if len(actionOrder) != len(actionRegistry) {
@@ -59,10 +34,10 @@ func TestActionOrderCoversRegistry(t *testing.T) {
 }
 
 // TestActionOrderIndependentOfRegistrationSequence is the property the split
-// depends on: once the 174 RegisterAction calls live in different packages, Go
+// depends on: once the registration calls live in different packages, Go
 // decides their sequence from the import graph, and the answer must not change.
 func TestActionOrderIndependentOfRegistrationSequence(t *testing.T) {
-	preserveActionRegistry(t)
+	t.Cleanup(Snapshot())
 
 	forward := []Action{
 		{Name: "Workspace.New", Area: "Shell"},
@@ -74,12 +49,12 @@ func TestActionOrderIndependentOfRegistrationSequence(t *testing.T) {
 	registerOnly := func(actions []Action) []string {
 		actionRegistry = make(map[string]Action, len(actions))
 		actionOrder = nil
-		for _, action := range actions {
-			RegisterAction(action)
+		for _, a := range actions {
+			RegisterAction(a)
 		}
 		var names []string
-		for _, action := range GetOrderedActions() {
-			names = append(names, action.Name)
+		for _, a := range All() {
+			names = append(names, a.Name)
 		}
 		return names
 	}
@@ -94,25 +69,24 @@ func TestActionOrderIndependentOfRegistrationSequence(t *testing.T) {
 	}
 }
 
-func symmetricDifference(got, want []string) []string {
-	inWant := make(map[string]bool, len(want))
-	for _, name := range want {
-		inWant[name] = true
+// TestDisplayLabelFallsBackToEnglish covers the shape of Localize's default.
+// DisplayLabel keeps a localized label only when the lookup did not answer with
+// its missing-key form, so a default that returned the key unchanged would
+// render raw keys as menu labels.
+func TestDisplayLabelFallsBackToEnglish(t *testing.T) {
+	a := Action{Label: "Screen grab", LabelKey: "Action.App.ScreenGrab",
+		Description: "Capture the screen", DescKey: "Action.App.ScreenGrab.Desc"}
+	if got := a.DisplayLabel(); got != "Screen grab" {
+		t.Errorf("DisplayLabel with no localizer = %q, want the English label", got)
 	}
-	inGot := make(map[string]bool, len(got))
-	for _, name := range got {
-		inGot[name] = true
+	if got := a.DisplayDescription(); got != "Capture the screen" {
+		t.Errorf("DisplayDescription with no localizer = %q, want the English text", got)
 	}
-	var only []string
-	for _, name := range got {
-		if !inWant[name] {
-			only = append(only, "+"+name)
-		}
+
+	old := Localize
+	t.Cleanup(func() { Localize = old })
+	Localize = func(key string) string { return "translated:" + key }
+	if got := a.DisplayLabel(); got != "translated:Action.App.ScreenGrab" {
+		t.Errorf("DisplayLabel with a localizer = %q", got)
 	}
-	for _, name := range want {
-		if !inGot[name] {
-			only = append(only, "-"+name)
-		}
-	}
-	return only
 }

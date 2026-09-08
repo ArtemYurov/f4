@@ -498,7 +498,24 @@ waves.
    the code.
 5. Update the seven registration files and `action_table.go` to call
    `action.RegisterAction` and to construct `action.Action`.
-6. **Split** `cmd/f4/action_registry_order_test.go` (Task 3) — do not move it
+
+   Two hazards in the mechanical rewrite, both of which produce a tree that
+   compiles into something wrong rather than failing loudly:
+
+   - **`Action.` appears inside string literals.** Every `LabelKey` and `DescKey`
+     in the table is a catalogue key spelled `"Action.App.ScreenGrab"`. A
+     word-boundary rewrite turns 375 of them into `"action.Action.…"`, the
+     catalogue lookup then misses, and every menu falls back to its English
+     label — which is visible only if a test asserts a localized string.
+   - **`action` is a common local name.** 61 loops read `for _, action := range
+     …`, and `hotkeyRow` has a field called `Action`. Both shadow the package;
+     rename the locals inside the affected functions rather than the field.
+
+6. Assign `action.Localize` in `cmd/f4`. Two places need it, not one: `SetupUI`
+   for the four production entry points, and the test binary's own seams —
+   `TestMain` never calls `SetupUI`, and without the assignment every action
+   renders its English fallback.
+7. **Split** `cmd/f4/action_registry_order_test.go` (Task 3) — do not move it
    whole. `TestActionOrderIsStable` asserts the full ordered list, which is
    produced by `action_table.go` and still lives in `cmd/f4` at this point.
    - The ordering-mechanism cases

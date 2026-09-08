@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/vtui"
 )
@@ -18,7 +19,7 @@ import (
 // Mounts started from a shell live in the cross-process registry and are a
 // separate step.
 func init() {
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.MountList",
 		Area:        "Shell",
 		Label:       "FUSE Mounts",

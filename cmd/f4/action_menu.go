@@ -3,6 +3,7 @@ package main
 import (
 	"strings"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -33,7 +34,7 @@ func BuildMenuBarItems(area string) []vtui.MenuBarItem {
 	var order []string
 	menus := make(map[string]*menu)
 
-	appendAction := func(a Action) {
+	appendAction := func(a action.Action) {
 		// Asked before the menu is created, so a group whose every action
 		// is hidden does not appear as an empty one.
 		if a.Visible != nil && !a.Visible() {
@@ -114,7 +115,7 @@ func BuildMenuBarItems(area string) []vtui.MenuBarItem {
 			menus[command.MenuPath] = m
 			order = append(order, command.MenuPath)
 		}
-		text := plainLabel(pluginCommandDisplayLabel(command))
+		text := action.PlainLabel(pluginCommandDisplayLabel(command))
 		if !strings.Contains(text, "&") {
 			text = "&" + text
 		}
@@ -139,14 +140,14 @@ func BuildMenuBarItems(area string) []vtui.MenuBarItem {
 	}
 
 	// The area's own actions first (stable registry order).
-	for _, a := range GetOrderedActions() {
+	for _, a := range action.All() {
 		if a.MenuPath != "" && !a.HideFromMenu && a.Area == area {
 			appendAction(a)
 		}
 	}
 	// Common actions join only menu groups that already exist in the
 	// area, so they cannot create stray top-level menus.
-	for _, a := range GetOrderedActions() {
+	for _, a := range action.All() {
 		if a.MenuPath != "" && !a.HideFromMenu && a.Area == "Common" && menus[a.MenuPath] != nil {
 			appendAction(a)
 		}

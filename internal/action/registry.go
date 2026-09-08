@@ -1,4 +1,10 @@
-package main
+// Package action is the registry of everything the user can trigger: a macro
+// command, a menu entry, a help line and a default hotkey are all one Action.
+//
+// It is a leaf on purpose. The table that fills it reaches into every view in
+// the application and stays in the composition root; what lives here is the
+// mechanism, which knows nothing but names and func() bool.
+package action
 
 import (
 	"sort"
@@ -85,7 +91,7 @@ type Action struct {
 // DisplayLabel returns the localized label, falling back to the English one.
 func (a Action) DisplayLabel() string {
 	if a.LabelKey != "" {
-		if s := Msg(a.LabelKey); !strings.HasPrefix(s, "{") {
+		if s := Localize(a.LabelKey); !strings.HasPrefix(s, "{") {
 			return s
 		}
 	}
@@ -95,12 +101,18 @@ func (a Action) DisplayLabel() string {
 // DisplayDescription returns the localized description, falling back to English.
 func (a Action) DisplayDescription() string {
 	if a.DescKey != "" {
-		if s := Msg(a.DescKey); !strings.HasPrefix(s, "{") {
+		if s := Localize(a.DescKey); !strings.HasPrefix(s, "{") {
 			return s
 		}
 	}
 	return a.Description
 }
+
+// Localize resolves a message key to display text. The composition root sets
+// it to the message catalogue's lookup; the default reproduces that lookup's
+// missing-key form, because DisplayLabel tests for exactly that shape and an
+// identity default would silently render raw keys as labels.
+var Localize = func(key string) string { return "{" + key + "}" }
 
 var actionRegistry = make(map[string]Action)
 
@@ -119,7 +131,8 @@ func RegisterAction(action Action) {
 }
 
 // GetActions returns a list of all registered actions, sorted by name.
-func GetActions() []Action {
+// AllSorted returns every registered action ordered by name.
+func AllSorted() []Action {
 	var actions []Action
 	for _, a := range actionRegistry {
 		actions = append(actions, a)
@@ -135,7 +148,8 @@ func GetActions() []Action {
 // registration order. This is what the user sees in the menu, so it must not
 // depend on which file or which package a RegisterAction call happens to sit
 // in — see actionMenuOrder.
-func GetOrderedActions() []Action {
+// All returns every registered action in presentation order.
+func All() []Action {
 	keys := append([]string(nil), actionOrder...)
 	sort.SliceStable(keys, func(i, j int) bool {
 		return actionMenuRank(keys[i]) < actionMenuRank(keys[j])
@@ -147,9 +161,9 @@ func GetOrderedActions() []Action {
 	return actions
 }
 
-// plainLabel strips hotkey markers ('&') from a menu label for contexts
-// that cannot render them (keybar, plain lists). '&&' unescapes to '&'.
-func plainLabel(s string) string {
+// PlainLabel strips hotkey markers ('&') from a menu label for contexts that
+// cannot render them (keybar, plain lists). '&&' unescapes to '&'.
+func PlainLabel(s string) string {
 	if !strings.Contains(s, "&") {
 		return s
 	}
@@ -166,4 +180,32 @@ func plainLabel(s string) string {
 		b.WriteByte(s[i])
 	}
 	return b.String()
+}
+
+// Lookup returns a registered action by name, matched case-insensitively.
+// A name the registry does not know is not an error here: the caller decides
+// whether to ask a plugin next.
+func Lookup(name string) (Action, bool) {
+	a, ok := actionRegistry[strings.ToLower(name)]
+	return a, ok
+}
+
+// Len reports how many actions are registered.
+func Len() int { return len(actionRegistry) }
+
+// Snapshot copies the registry and returns a function that puts it back. It is
+// the seam a test uses to register synthetic actions without leaking them into
+// the next test, and it lives here because the maps are unexported.
+func Snapshot() (restore func()) {
+	oldRegistry := actionRegistry
+	oldOrder := actionOrder
+	actionRegistry = make(map[string]Action, len(oldRegistry))
+	for key, a := range oldRegistry {
+		actionRegistry[key] = a
+	}
+	actionOrder = append([]string(nil), oldOrder...)
+	return func() {
+		actionRegistry = oldRegistry
+		actionOrder = oldOrder
+	}
 }

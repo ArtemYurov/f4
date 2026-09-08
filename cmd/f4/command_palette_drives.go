@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/vfs"
 )
 
@@ -17,7 +18,7 @@ func commandPaletteDriveEntries(pf *PanelsFrame) []commandPaletteEntry {
 		return nil
 	}
 
-	entries := commandPaletteDrivePair(pf, "other", "Panel.Other", plainLabel(Msg("Panel.Other")), func(panelIndex int) bool {
+	entries := commandPaletteDrivePair(pf, "other", "Panel.Other", action.PlainLabel(Msg("Panel.Other")), func(panelIndex int) bool {
 		return executeCommandPaletteOtherPanel(pf, panelIndex)
 	}, "Panel.Other")
 	for _, drive := range getPlatformDrives() {
@@ -36,7 +37,7 @@ func commandPaletteDriveEntries(pf *PanelsFrame) []commandPaletteEntry {
 				continue
 			}
 			path := bookmarks[slot].Path
-			displayName := fmt.Sprintf("%s %d: %s", plainLabel(Msg("Menu.Commands.Bookmarks")), slot, path)
+			displayName := fmt.Sprintf("%s %d: %s", action.PlainLabel(Msg("Menu.Commands.Bookmarks")), slot, path)
 			entries = append(entries, commandPaletteDrivePair(pf, "bookmark", fmt.Sprintf("Bookmark.%d", slot), displayName, func(panelIndex int) bool {
 				return executeCommandPaletteBookmark(pf, panelIndex, slot)
 			}, "Menu.Commands.Bookmarks")...)

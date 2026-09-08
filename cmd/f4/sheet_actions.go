@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/sheet"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -100,7 +101,7 @@ func selectedSpreadsheetPath() string {
 }
 
 func init() {
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "App.Spreadsheet",
 		Area:        "Shell",
 		Label:       "Spreadsheet",

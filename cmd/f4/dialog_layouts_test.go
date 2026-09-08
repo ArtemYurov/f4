@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
@@ -161,7 +162,7 @@ func TestAllDialogs_LayoutValidation(t *testing.T) {
 	defer rig.close(t)
 
 	// Complex-script widths are handled by vtui's grapheme-cell shaping.
-	for _, act := range GetActions() {
+	for _, act := range action.AllSorted() {
 		name := act.Name
 		if skipActions[strings.ToLower(name)] {
 			continue
@@ -253,7 +254,7 @@ func newDialogLayoutRig(t *testing.T, dir string) *dialogLayoutRig {
 	}
 }
 
-func (rig *dialogLayoutRig) validateAction(t *testing.T, act Action, name, srcFile string, rules vtui.LayoutRules) []error {
+func (rig *dialogLayoutRig) validateAction(t *testing.T, act action.Action, name, srcFile string, rules vtui.LayoutRules) []error {
 	t.Helper()
 	if strings.HasPrefix(name, "Editor.") {
 		showEditor(rig.panels, rig.localVFS, srcFile, &vfs.MemoryReadAtCloser{Data: []byte("dummy")})

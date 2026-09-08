@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/vtui"
 )
 
@@ -12,7 +13,7 @@ func commandPalettePanelsContextEntries(pf *PanelsFrame) []commandPaletteEntry {
 	if pf == nil || pf.closed || !pf.showPanels {
 		return nil
 	}
-	category := plainLabel(Msg("Help.Area.Shell"))
+	category := action.PlainLabel(Msg("Help.Area.Shell"))
 	entries := []commandPaletteEntry{
 		commandPaletteLocalizedPanelKeyEntry(pf, "Panel.ActivateSelected", "CommandPalette.Panel.ActivateSelected", "Activate selected item", "CommandPalette.Panel.ActivateSelected.Desc", "Open the selected item or execute it", "Enter", "Enter", category, nil, "Menu.Files.View"),
 		commandPaletteLocalizedPanelKeyEntry(pf, "Panel.SwitchActive", "CommandPalette.Panel.SwitchActive", "Switch active panel", "CommandPalette.Panel.SwitchActive.Desc", "Move focus to the other panel", "Tab", "Tab", category, nil, "Panel.Other"),
@@ -105,7 +106,7 @@ func commandPalettePanelsContextEntries(pf *PanelsFrame) []commandPaletteEntry {
 					"Copy the focused information value or selected rows to the clipboard",
 					"C",
 					"C",
-					plainLabel(Msg("InfoPanel.Title")),
+					action.PlainLabel(Msg("InfoPanel.Title")),
 					func() bool { return commandPaletteInfoPanelFocused(pf, panel) },
 					"InfoPanel.Title",
 				))
@@ -127,7 +128,7 @@ func commandPalettePanelsContextEntries(pf *PanelsFrame) []commandPaletteEntry {
 					"Toggle long-line wrapping in Quick View",
 					"F2",
 					"F2",
-					plainLabel(Msg("QuickView.Title")),
+					action.PlainLabel(Msg("QuickView.Title")),
 					func() bool { return commandPaletteQuickViewPanelFocused(pf, panel) },
 					"QuickView.Title",
 				)
@@ -145,7 +146,7 @@ func commandPalettePanelsContextEntries(pf *PanelsFrame) []commandPaletteEntry {
 					"Copy the latest assistant response to the clipboard",
 					"Right Ctrl+C",
 					"RCtrlC",
-					plainLabel(Msg("Action.AI.ViewChat")),
+					action.PlainLabel(Msg("Action.AI.ViewChat")),
 					func() bool { return commandPaletteAIChatPanelFocused(pf, panel) },
 					"Action.AI.ViewChat",
 				))
@@ -221,7 +222,7 @@ func commandPaletteAIChatFocusedEntries(pf *PanelsFrame, panel *AIChatPanel, bar
 	if !commandPaletteAIChatPanelFocused(pf, panel) {
 		return nil
 	}
-	category := plainLabel(Msg("Action.AI.ViewChat"))
+	category := action.PlainLabel(Msg("Action.AI.ViewChat"))
 	if panel.focusedLinkIdx == -1 {
 		draft := panel.input.GetText()
 		if strings.TrimSpace(draft) == "" {
@@ -343,7 +344,7 @@ func commandPalettePanelKeyEntry(pf *PanelsFrame, id, labelKey, englishLabel, de
 	translationKeys := append([]string{labelKey}, aliasKeys...)
 	return commandPaletteEntry{
 		Key:                "panel-context:" + strings.ToLower(id),
-		Label:              plainLabel(label),
+		Label:              action.PlainLabel(label),
 		EnglishLabel:       englishLabel,
 		Description:        description,
 		EnglishDescription: description,
@@ -361,7 +362,7 @@ func commandPalettePanelKeyEntry(pf *PanelsFrame, id, labelKey, englishLabel, de
 }
 
 func commandPaletteBookmarkEntries(pf *PanelsFrame) []commandPaletteEntry {
-	category := plainLabel(Msg("Menu.Commands.Bookmarks"))
+	category := action.PlainLabel(Msg("Menu.Commands.Bookmarks"))
 	aliases := commandPaletteTranslations("Menu.Commands.Bookmarks", "Action.Panel.Bookmarks.Desc")
 	bookmarks, _ := LoadBookmarks(BookmarksFilePath())
 	entries := make([]commandPaletteEntry, 0, 21)

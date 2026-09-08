@@ -1,5 +1,7 @@
 package main
 
+import "github.com/unxed/f4/internal/action"
+
 import "testing"
 
 // TestMenuHonoursVisible checks the three things the hook has to get right:
@@ -8,7 +10,7 @@ import "testing"
 func TestMenuHonoursVisible(t *testing.T) {
 	preserveActionRegistry(t)
 	show := true
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:     "Test.Visibility.Shown",
 		Area:     "Shell",
 		Label:    "Sometimes Here",
@@ -16,7 +18,7 @@ func TestMenuHonoursVisible(t *testing.T) {
 		Visible:  func() bool { return show },
 		Handler:  func() bool { return true },
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:     "Test.Visibility.Group",
 		Area:     "Shell",
 		Label:    "Only Member",

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/internal/toast"
@@ -28,20 +29,11 @@ func pressKey(f vtui.Frame, e *vtinput.InputEvent) bool {
 }
 
 // preserveActionRegistry keeps tests that register synthetic actions from
-// leaking them into later tests or the next -count iteration.
+// leaking them into later tests or the next -count iteration. The copy itself
+// lives in internal/action, which is the only package that can reach the maps.
 func preserveActionRegistry(t *testing.T) {
 	t.Helper()
-	oldRegistry := actionRegistry
-	oldOrder := actionOrder
-	actionRegistry = make(map[string]Action, len(oldRegistry))
-	for key, action := range oldRegistry {
-		actionRegistry[key] = action
-	}
-	actionOrder = append([]string(nil), oldOrder...)
-	t.Cleanup(func() {
-		actionRegistry = oldRegistry
-		actionOrder = oldOrder
-	})
+	t.Cleanup(action.Snapshot())
 }
 
 func TestMain(m *testing.M) {
@@ -52,6 +44,10 @@ func TestMain(m *testing.M) {
 // the duration of the run.
 func installTestSeams() {
 	vfs.InitSudoClient("/usr/bin/f4", "")
+
+	// SetupUI installs this in production; the test binary never runs it, and
+	// without it every action label falls back to its English spelling.
+	action.Localize = Msg
 
 	// Unit tests must never hand control to the user's desktop. Individual
 	// tests that exercise these routes install per-dialog/per-frame recorders.

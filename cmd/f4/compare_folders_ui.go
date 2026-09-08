@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -44,7 +45,7 @@ func panelCanCompareFolders() bool {
 // compareCaptionWidth is how many columns a checkbox with this caption
 // paints, indent included: the "[x] " prefix is four columns wide.
 func compareCaptionWidth(indent int, caption string) int {
-	return indent + 4 + vtui.StringWidth(plainLabel(caption))
+	return indent + 4 + vtui.StringWidth(action.PlainLabel(caption))
 }
 
 // compareRadioWidth is the same measurement for a radio group, whose
@@ -52,7 +53,7 @@ func compareCaptionWidth(indent int, caption string) int {
 func compareRadioWidth(indent int, items []string) int {
 	widest := 0
 	for _, item := range items {
-		if w := vtui.StringWidth(plainLabel(item)); w > widest {
+		if w := vtui.StringWidth(action.PlainLabel(item)); w > widest {
 			widest = w
 		}
 	}

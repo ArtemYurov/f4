@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/vtui"
 )
 
@@ -56,15 +57,15 @@ func TestCommandPaletteMatchesEveryShippedTranslationWithoutChangingDisplay(t *t
 }
 
 func TestCommandPaletteActionCatalogIndexesTranslationsButDisplaysCurrentLanguage(t *testing.T) {
-	action, ok := GetAction("Settings.PluginConfiguration")
+	act, ok := GetAction("Settings.PluginConfiguration")
 	if !ok {
 		t.Fatal("Settings.PluginConfiguration is not registered")
 	}
-	wantLabel := plainLabel(action.DisplayLabel())
+	wantLabel := action.PlainLabel(act.DisplayLabel())
 
 	var target commandPaletteEntry
 	for _, entry := range commandPaletteActionEntries("Shell") {
-		if entry.ID == action.Name {
+		if entry.ID == act.Name {
 			target = entry
 			break
 		}

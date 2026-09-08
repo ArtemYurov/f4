@@ -12,6 +12,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 	embedded "github.com/unxed/f4"
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/vtui"
 )
 
@@ -211,7 +212,7 @@ func generateKeysHelpTopic(name, title string, areas []string, navTarget string)
 	}
 	active := hm.GetActiveBindings()
 
-	keysFor := func(area string, action Action) string {
+	keysFor := func(area string, action action.Action) string {
 		var keys []string
 		for key, binding := range active[area] {
 			parts := strings.SplitN(binding, ":", 2)
@@ -229,7 +230,7 @@ func generateKeysHelpTopic(name, title string, areas []string, navTarget string)
 			header = area
 		}
 		topic.Lines = append(topic.Lines, header+":")
-		for _, a := range GetOrderedActions() {
+		for _, a := range action.All() {
 			if a.Area != area {
 				continue
 			}

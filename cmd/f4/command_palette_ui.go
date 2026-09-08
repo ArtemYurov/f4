@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -46,7 +47,7 @@ func (row commandPaletteRow) GetCellText(column int) string {
 	case 0:
 		label := commandPaletteDisplayLabel(row.entry)
 		if row.entry.Checked {
-			label = plainLabel(Msg("CommandPalette.CheckedPrefix")) + " " + label
+			label = action.PlainLabel(Msg("CommandPalette.CheckedPrefix")) + " " + label
 		}
 		return label
 	case 1:
@@ -61,7 +62,7 @@ func (row commandPaletteRow) GetCellText(column int) string {
 func commandPaletteDisplayLabel(entry commandPaletteEntry) string {
 	for _, label := range []string{entry.Label, entry.EnglishLabel, entry.Key, entry.ID} {
 		if label != "" {
-			return plainLabel(label)
+			return action.PlainLabel(label)
 		}
 	}
 	return ""

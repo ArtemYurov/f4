@@ -6,6 +6,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -226,7 +227,7 @@ func buildHotkeyRows(draft *HotkeyManager) []hotkeyRow {
 
 	var hkRows []hotkeyRow
 	activeBinds := draft.GetActiveBindings()
-	actions := GetActions()
+	actions := action.AllSorted()
 	// Only configurable bindings count as assigned here. Native chords are
 	// documented below but deliberately stay out of this set.
 	assignedActions := make(map[string]bool)
@@ -241,11 +242,11 @@ func buildHotkeyRows(draft *HotkeyManager) []hotkeyRow {
 			}
 			act, ok := GetAction(actName)
 			if !ok {
-				act = Action{Name: actName, Label: actName, Description: "Unknown action"}
+				act = action.Action{Name: actName, Label: actName, Description: "Unknown action"}
 			}
 			hkRows = append(hkRows, hotkeyRow{
 				Action:    act.Name,
-				Label:     plainLabel(act.DisplayLabel()),
+				Label:     action.PlainLabel(act.DisplayLabel()),
 				Area:      area,
 				Key:       FormatKeyForUI(key),
 				RawKey:    key,
@@ -289,7 +290,7 @@ func buildHotkeyRows(draft *HotkeyManager) []hotkeyRow {
 			seenNative[displayKey] = true
 			hkRows = append(hkRows, hotkeyRow{
 				Action:    act.Name,
-				Label:     plainLabel(act.DisplayLabel()),
+				Label:     action.PlainLabel(act.DisplayLabel()),
 				Area:      act.Area,
 				Key:       displayKey,
 				RawKey:    key,
@@ -303,7 +304,7 @@ func buildHotkeyRows(draft *HotkeyManager) []hotkeyRow {
 		if !assignedActions[strings.ToLower(act.Name)] {
 			hkRows = append(hkRows, hotkeyRow{
 				Action:    act.Name,
-				Label:     plainLabel(act.DisplayLabel()),
+				Label:     action.PlainLabel(act.DisplayLabel()),
 				Area:      act.Area, // unassigned, shown under the action's native area
 				Key:       "",
 				Editable:  true,
@@ -331,7 +332,7 @@ func buildHotkeyRows(draft *HotkeyManager) []hotkeyRow {
 		}
 		hkRows = append(hkRows, hotkeyRow{
 			Action:   act.Name,
-			Label:    plainLabel(act.DisplayLabel()),
+			Label:    action.PlainLabel(act.DisplayLabel()),
 			Area:     act.Area,
 			Key:      key,
 			RawKey:   rawKey,
@@ -419,7 +420,7 @@ func actionHotkeyConfig(pf *PanelsFrame) {
 	btnUnbind.OnClick = func() {
 		if row, ok := selectedHotkeyRow(table, hkRows); ok && row.Editable {
 			if row.RawKey != "" && row.Area != "" {
-				question := fmt.Sprintf("%s %s?", plainLabel(Msg("Hotkeys.BtnUnbind")), row.Key)
+				question := fmt.Sprintf("%s %s?", action.PlainLabel(Msg("Hotkeys.BtnUnbind")), row.Key)
 				vtui.ShowMessageOn(dlg, Msg("Hotkeys.Title"), question, []string{Msg("vtui.Ok"), Msg("vtui.Cancel")}).OnResult = func(choice int) {
 					if choice != 0 {
 						return

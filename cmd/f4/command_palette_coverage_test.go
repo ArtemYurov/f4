@@ -15,14 +15,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtui"
 )
 
 // This file deliberately combines two different invariants:
 //
-//   1. Action-generated menu leaves are executable actions, so every visible
-//      non-separator leaf must have a palette entry carrying the same Action ID.
+//   1. action.Action-generated menu leaves are executable actions, so every visible
+//      non-separator leaf must have a palette entry carrying the same action.Action ID.
 //   2. ProcessKey methods and VMenu constructors are broader command-surface
 //      indicators. They cannot be proved complete mechanically, so an exact AST
 //      inventory makes every new or removed surface require an explicit audit.
@@ -281,9 +282,9 @@ func TestCommandPaletteResolvesEveryActionGeneratedMenuLeafByID(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
 	areas := make(map[string]bool)
-	for _, action := range GetOrderedActions() {
-		if action.MenuPath != "" && !action.HideFromMenu && !strings.EqualFold(action.Area, "Common") {
-			areas[action.Area] = true
+	for _, act := range action.All() {
+		if act.MenuPath != "" && !act.HideFromMenu && !strings.EqualFold(act.Area, "Common") {
+			areas[act.Area] = true
 		}
 	}
 	orderedAreas := make([]string, 0, len(areas))
@@ -298,7 +299,7 @@ func TestCommandPaletteResolvesEveryActionGeneratedMenuLeafByID(t *testing.T) {
 			expected := commandPaletteAuditedActionMenuGroups(area)
 			actual := BuildMenuBarItems(area)
 			if len(actual) != len(expected) {
-				t.Fatalf("top-level action menus = %d, audited action groups = %d", len(actual), len(expected))
+				t.Fatalf("top-level act menus = %d, audited act groups = %d", len(actual), len(expected))
 			}
 
 			paletteByID := make(map[string]commandPaletteEntry)
@@ -328,25 +329,25 @@ func TestCommandPaletteResolvesEveryActionGeneratedMenuLeafByID(t *testing.T) {
 				}
 				collect(actual[groupIndex].SubItems)
 				if len(leaves) != len(group.actions) {
-					t.Fatalf("menu group %q has %d non-separator leaves, want %d action leaves", group.path, len(leaves), len(group.actions))
+					t.Fatalf("menu group %q has %d non-separator leaves, want %d act leaves", group.path, len(leaves), len(group.actions))
 				}
-				for index, action := range group.actions {
+				for index, act := range group.actions {
 					if leaves[index].OnClick == nil {
-						t.Errorf("menu group %q leaf %d for action %q has no executor", group.path, index, action.Name)
+						t.Errorf("menu group %q leaf %d for act %q has no executor", group.path, index, act.Name)
 					}
-					gotLabel := plainLabel(strings.TrimPrefix(leaves[index].Text, "√ "))
-					wantLabel := plainLabel(action.DisplayLabel())
+					gotLabel := action.PlainLabel(strings.TrimPrefix(leaves[index].Text, "√ "))
+					wantLabel := action.PlainLabel(act.DisplayLabel())
 					if gotLabel != wantLabel {
-						t.Errorf("menu group %q leaf %d = %q, want action %q label %q", group.path, index, gotLabel, action.Name, wantLabel)
+						t.Errorf("menu group %q leaf %d = %q, want act %q label %q", group.path, index, gotLabel, act.Name, wantLabel)
 					}
-					entry, ok := paletteByID[strings.ToLower(action.Name)]
+					entry, ok := paletteByID[strings.ToLower(act.Name)]
 					if !ok {
-						t.Errorf("menu action %q has no command-palette entry in area %q", action.Name, area)
+						t.Errorf("menu act %q has no command-palette entry in area %q", act.Name, area)
 						continue
 					}
-					wantKey := "action:" + strings.ToLower(action.Name)
-					if entry.ID != action.Name || entry.Key != wantKey {
-						t.Errorf("menu action %q resolves to palette ID/key %q/%q, want %q/%q", action.Name, entry.ID, entry.Key, action.Name, wantKey)
+					wantKey := "act:" + strings.ToLower(act.Name)
+					if entry.ID != act.Name || entry.Key != wantKey {
+						t.Errorf("menu act %q resolves to palette ID/key %q/%q, want %q/%q", act.Name, entry.ID, entry.Key, act.Name, wantKey)
 					}
 				}
 			}
@@ -356,8 +357,8 @@ func TestCommandPaletteResolvesEveryActionGeneratedMenuLeafByID(t *testing.T) {
 
 type commandPaletteActionMenuGroup struct {
 	path    string
-	actions []Action
-	pinned  []Action
+	actions []action.Action
+	pinned  []action.Action
 }
 
 // commandPaletteAuditedActionMenuGroups mirrors BuildMenuBarItems' grouping
@@ -366,7 +367,7 @@ type commandPaletteActionMenuGroup struct {
 func commandPaletteAuditedActionMenuGroups(area string) []commandPaletteActionMenuGroup {
 	var groups []commandPaletteActionMenuGroup
 	byPath := make(map[string]int)
-	appendAction := func(action Action) {
+	appendAction := func(action action.Action) {
 		if action.Visible != nil && !action.Visible() {
 			return
 		}
@@ -383,12 +384,12 @@ func commandPaletteAuditedActionMenuGroups(area string) []commandPaletteActionMe
 		groups[index].actions = append(groups[index].actions, action)
 	}
 
-	for _, action := range GetOrderedActions() {
+	for _, action := range action.All() {
 		if action.MenuPath != "" && !action.HideFromMenu && action.Area == area {
 			appendAction(action)
 		}
 	}
-	for _, action := range GetOrderedActions() {
+	for _, action := range action.All() {
 		if action.MenuPath == "" || action.HideFromMenu || !strings.EqualFold(action.Area, "Common") {
 			continue
 		}

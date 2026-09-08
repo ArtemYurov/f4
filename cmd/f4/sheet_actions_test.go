@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/vtui"
 )
 
@@ -41,7 +42,7 @@ func TestSpreadsheetStaysInTheMenuWhileAPopupIsOpen(t *testing.T) {
 	if !ok {
 		t.Fatal("the spreadsheet command is missing from the panels menu")
 	}
-	if commands := plainLabel(Msg("Menu.Shell.Commands")); !strings.Contains(bar.Label, commands) {
+	if commands := action.PlainLabel(Msg("Menu.Shell.Commands")); !strings.Contains(bar.Label, commands) {
 		t.Errorf("the spreadsheet command sits in %q, expected %q", bar.Label, commands)
 	}
 

@@ -4,6 +4,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/unxed/f4/internal/action"
 )
 
 // TestDefaultKeysAreUniquePerArea guards the registry against two actions in
@@ -21,7 +23,7 @@ func TestDefaultKeysAreUniquePerArea(t *testing.T) {
 	type owner struct{ area, key string }
 	owners := map[owner][]string{}
 
-	for _, action := range GetOrderedActions() {
+	for _, action := range action.All() {
 		// DefaultAreas receive the same bindings as Area, and a key may
 		// carry a ":Condition" suffix that does not change which physical
 		// key is claimed, so both are resolved before comparing.

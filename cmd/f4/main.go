@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/vfs"
@@ -773,6 +774,9 @@ func SetupUI() {
 	history.SamePath = sameFolderHistoryPath
 	GlobalFileState = NewF4FileStateProvider()
 	StartQueueWorker()
+	// The registry is a leaf and cannot reach the message catalogue; the root
+	// hands it the lookup. Moves to internal/i18n's Msg when that package exists.
+	action.Localize = Msg
 	vtinput.Logger = vtui.DebugLog // Pipe vtinput logs to vtui's debug logger
 	vtui.GlobalClipboardAccessManager = NewF4ClipboardAuth()
 	// RegisterDrive("Null VFS", func() vfs.VFS { return vfs.NewNullVFS(50 * 1024 * 1024) }) // 50 MB/s

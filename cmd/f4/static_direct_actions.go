@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/vtui"
 )
 
@@ -218,7 +219,7 @@ func init() {
 		side := side
 		for _, view := range fixedPanelViewActionSpecs {
 			view := view
-			RegisterAction(Action{
+			action.RegisterAction(action.Action{
 				Name:         "Panel." + side.id + "." + view.id,
 				Area:         "Shell",
 				Label:        view.label,
@@ -242,7 +243,7 @@ func init() {
 			if sortMode.mode == SortUnsorted {
 				description = fmt.Sprintf("Disable sorting for the %s panel", strings.ToLower(side.id))
 			}
-			RegisterAction(Action{
+			action.RegisterAction(action.Action{
 				Name:         "Panel." + side.id + "." + sortMode.id,
 				Area:         "Shell",
 				Label:        sortMode.label,
@@ -260,7 +261,7 @@ func init() {
 			})
 		}
 
-		RegisterAction(Action{
+		action.RegisterAction(action.Action{
 			Name:         "Panel." + side.id + ".SortUseGroups",
 			Area:         "Shell",
 			Label:        "Use Sort Groups",
@@ -279,7 +280,7 @@ func init() {
 
 		for _, aiView := range fixedAIViewActionSpecs {
 			aiView := aiView
-			RegisterAction(Action{
+			action.RegisterAction(action.Action{
 				Name:         "AI." + side.id + "." + aiView.id,
 				Area:         "Shell",
 				Label:        aiView.label,
@@ -294,7 +295,7 @@ func init() {
 		}
 	}
 
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Viewer.GoTo",
 		Area:        "Viewer",
 		Label:       "Go To",
@@ -305,7 +306,7 @@ func init() {
 		MenuPath:    "Search",
 		Handler:     actionViewerGoTo,
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.GoTo",
 		Area:        "Editor",
 		Label:       "Go To",
@@ -316,7 +317,7 @@ func init() {
 		MenuPath:    "Search",
 		Handler:     actionEditorGoTo,
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:         "App.Background",
 		Area:         "Shell",
 		Label:        "Background",
@@ -327,7 +328,7 @@ func init() {
 		HideFromMenu: true,
 		Handler:      actionBackground,
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:         "App.Arkanoid",
 		Area:         "Shell",
 		Label:        "Arkanoid",

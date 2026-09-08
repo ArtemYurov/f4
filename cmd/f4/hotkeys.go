@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/vtui"
 )
 
@@ -315,7 +316,7 @@ func FormatKeyForUI(key string) string {
 // explicit user binding on the same key can nevertheless override or silence
 // that fallback, so do not advertise a native shortcut that is currently
 // claimed by another action (or by None).
-func NativeShortcutsForAction(area string, action Action) []string {
+func NativeShortcutsForAction(area string, action action.Action) []string {
 	seen := make(map[string]bool)
 	var shortcuts []string
 	for _, spec := range action.NativeKeys {
@@ -463,7 +464,7 @@ func nativeShortcutConditionTrue(area, condition string) bool {
 // A key entry may carry a ":Condition" suffix (e.g. "Esc:EscToggle").
 func (hm *HotkeyManager) initDefaults() {
 	hm.Defaults = make(map[string]map[string]string)
-	for _, a := range GetOrderedActions() {
+	for _, a := range action.All() {
 		if len(a.DefaultKeys) == 0 {
 			continue
 		}
@@ -724,7 +725,7 @@ func KeyBarLabelsForArea(area string, fallbacks *vtui.KeySet) *vtui.KeySet {
 					return ""
 				}
 				if act, ok := GetAction(actName); ok {
-					return plainLabel(act.DisplayLabel())
+					return action.PlainLabel(act.DisplayLabel())
 				}
 			}
 		}

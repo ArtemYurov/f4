@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/vtui"
 )
 
@@ -61,7 +62,7 @@ func TestInitLangUsesEmbeddedCurrentLanguageAndResetsFallback(t *testing.T) {
 
 	AppConfig.Language = "de"
 	InitLang()
-	if got := Msg("Action.Workspace.Close"); plainLabel(got) != "Close workspace" {
+	if got := Msg("Action.Workspace.Close"); action.PlainLabel(got) != "Close workspace" {
 		t.Fatalf("missing German translation inherited a stale language: %q", got)
 	}
 }

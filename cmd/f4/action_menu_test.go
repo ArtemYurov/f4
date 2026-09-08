@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -190,7 +191,7 @@ func TestBuildMenuBarItems_OnClickRunsAction(t *testing.T) {
 	defer func() { GlobalHotkeysMgr = old }()
 
 	clicked := false
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:     "Test.MenuClick",
 		Area:     "Editor",
 		Label:    "Click me",
@@ -241,7 +242,7 @@ func TestBuildMenuBarItems_IncludesPluginPanelCommandsInDeclaredMenu(t *testing.
 	files := items[0].SubItems
 	var archiveItem *vtui.MenuItem
 	for index := range files {
-		if plainLabel(files[index].Text) == "Add to archive" {
+		if action.PlainLabel(files[index].Text) == "Add to archive" {
 			archiveItem = &files[index]
 			break
 		}
@@ -346,7 +347,7 @@ func TestBuildMenuBarItemsSeparatesPluginCommandsFromBuiltIns(t *testing.T) {
 	files := items[0].SubItems
 	indexOf := func(label string) int {
 		for index := range files {
-			if plainLabel(files[index].Text) == label {
+			if action.PlainLabel(files[index].Text) == label {
 				return index
 			}
 		}
@@ -378,7 +379,7 @@ func TestBuildMenuBarItemsFoldsRareCommandsIntoSubMenus(t *testing.T) {
 
 	find := func(list []vtui.MenuItem, label string) *vtui.MenuItem {
 		for index := range list {
-			if plainLabel(list[index].Text) == plainLabel(label) {
+			if action.PlainLabel(list[index].Text) == action.PlainLabel(label) {
 				return &list[index]
 			}
 		}
@@ -396,21 +397,21 @@ func TestBuildMenuBarItemsFoldsRareCommandsIntoSubMenus(t *testing.T) {
 	} {
 		heading := find(commands, sub.title)
 		if heading == nil {
-			t.Errorf("Commands menu has no %q submenu", plainLabel(sub.title))
+			t.Errorf("Commands menu has no %q submenu", action.PlainLabel(sub.title))
 			continue
 		}
 		if heading.OnClick != nil || heading.Shortcut != "" {
-			t.Errorf("%q is a submenu heading, it must not act as a command", plainLabel(sub.title))
+			t.Errorf("%q is a submenu heading, it must not act as a command", action.PlainLabel(sub.title))
 		}
-		action, ok := GetAction(sub.member)
+		act, ok := GetAction(sub.member)
 		if !ok {
 			t.Fatalf("%s is not registered", sub.member)
 		}
-		if find(heading.SubItems, action.DisplayLabel()) == nil {
-			t.Errorf("%q is missing from the %q submenu: %+v", action.DisplayLabel(), plainLabel(sub.title), heading.SubItems)
+		if find(heading.SubItems, act.DisplayLabel()) == nil {
+			t.Errorf("%q is missing from the %q submenu: %+v", act.DisplayLabel(), action.PlainLabel(sub.title), heading.SubItems)
 		}
-		if find(commands, action.DisplayLabel()) != nil {
-			t.Errorf("%q is listed both at the top level and in the %q submenu", action.DisplayLabel(), plainLabel(sub.title))
+		if find(commands, act.DisplayLabel()) != nil {
+			t.Errorf("%q is listed both at the top level and in the %q submenu", act.DisplayLabel(), action.PlainLabel(sub.title))
 		}
 	}
 }

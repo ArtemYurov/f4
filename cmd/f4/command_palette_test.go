@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -23,17 +24,17 @@ func TestCommandPaletteActionIsRegistered(t *testing.T) {
 }
 
 func TestCommandPaletteActionApplicability(t *testing.T) {
-	if !commandPaletteActionApplies(Action{Area: "Common"}, "Viewer") {
+	if !commandPaletteActionApplies(action.Action{Area: "Common"}, "Viewer") {
 		t.Fatal("Common action is not applicable in Viewer")
 	}
-	if !commandPaletteActionApplies(Action{Area: "Editor"}, "Editor") {
+	if !commandPaletteActionApplies(action.Action{Area: "Editor"}, "Editor") {
 		t.Fatal("native Editor action is not applicable in Editor")
 	}
-	if commandPaletteActionApplies(Action{Area: "Editor"}, "Shell") {
+	if commandPaletteActionApplies(action.Action{Area: "Editor"}, "Shell") {
 		t.Fatal("Editor-only action leaked into Shell")
 	}
-	if !commandPaletteActionApplies(Action{Area: "Shell"}, "Editor") ||
-		!commandPaletteActionApplies(Action{Area: "Shell"}, "Viewer") {
+	if !commandPaletteActionApplies(action.Action{Area: "Shell"}, "Editor") ||
+		!commandPaletteActionApplies(action.Action{Area: "Shell"}, "Viewer") {
 		t.Fatal("Shell settings and panel commands are not globally discoverable")
 	}
 
@@ -49,7 +50,7 @@ func TestCommandPaletteActionApplicability(t *testing.T) {
 		}
 	})
 
-	conditional := Action{
+	conditional := action.Action{
 		Area:         "Editor",
 		DefaultAreas: []string{"Terminal"},
 		DefaultKeys:  []string{"F2:" + conditionName},

@@ -4,16 +4,17 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
 
 // sqliteMenuItem finds the SQLite client entry in a built menu bar.
 func sqliteMenuItem(items []vtui.MenuBarItem) (vtui.MenuBarItem, vtui.MenuItem, bool) {
-	label := plainLabel(Msg("Action.App.SQLite"))
+	label := action.PlainLabel(Msg("Action.App.SQLite"))
 	for _, bar := range items {
 		for _, item := range bar.SubItems {
-			if plainLabel(item.Text) == label {
+			if action.PlainLabel(item.Text) == label {
 				return bar, item, true
 			}
 		}
@@ -43,7 +44,7 @@ func TestSQLiteClientIsInTheCommandsMenuWithItsKey(t *testing.T) {
 	if !ok {
 		t.Fatal("the SQLite client is missing from the panels menu")
 	}
-	if commands := plainLabel(Msg("Menu.Shell.Commands")); !strings.Contains(bar.Label, commands) {
+	if commands := action.PlainLabel(Msg("Menu.Shell.Commands")); !strings.Contains(bar.Label, commands) {
 		t.Errorf("the SQLite client sits in %q, expected %q", bar.Label, commands)
 	}
 	if want := FormatKeyForUI("CtrlAltD"); item.Shortcut != want {

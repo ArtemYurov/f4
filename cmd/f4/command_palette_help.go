@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/vtui"
 )
 
@@ -29,9 +30,9 @@ func commandPaletteHelpEntries(help commandPaletteHelpFrame) []commandPaletteEnt
 		}
 		return commandPaletteEntry{
 			Key:                "help:" + strings.ToLower(id),
-			Label:              plainLabel(label),
+			Label:              action.PlainLabel(label),
 			EnglishLabel:       english,
-			Description:        plainLabel(label),
+			Description:        action.PlainLabel(label),
 			EnglishDescription: description,
 			ID:                 "Help." + id,
 			Category:           category,

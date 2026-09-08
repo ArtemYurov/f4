@@ -8,6 +8,7 @@ import (
 	"unicode"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -16,7 +17,7 @@ import (
 // Plugin menu entries are actions too, but their lifetime is controlled by a
 // plugin registration rather than by the built-in action registry. Keeping a
 // separate namespace lets hotkeys.ini refer to them without leaving stale
-// Action values behind when an RPC plugin disconnects.
+// action.Action values behind when an RPC plugin disconnects.
 func pluginCommandActionName(id string) string { return "Plugin.Command." + id }
 
 func legacyPluginActionName(index int) string {
@@ -28,7 +29,7 @@ func isPluginActionName(name string) bool {
 	return strings.HasPrefix(name, "plugin.command.") || strings.HasPrefix(name, "plugin.legacy.")
 }
 
-func pluginActionForName(name string) (Action, bool) {
+func pluginActionForName(name string) (action.Action, bool) {
 	rawName := strings.TrimSpace(name)
 	lowerName := strings.ToLower(rawName)
 	switch {
@@ -41,11 +42,11 @@ func pluginActionForName(name string) (Action, bool) {
 		}
 		pluginCommandRegistry.RUnlock()
 		if !ok {
-			return Action{}, false
+			return action.Action{}, false
 		}
 		command := registered.command
 		actionName := pluginCommandActionName(command.ID)
-		return Action{
+		return action.Action{
 			Name:        actionName,
 			Area:        "Shell",
 			Label:       pluginCommandDisplayLabel(command),
@@ -55,18 +56,18 @@ func pluginActionForName(name string) (Action, bool) {
 	case strings.HasPrefix(lowerName, "plugin.legacy."):
 		index, err := strconv.Atoi(strings.TrimSpace(rawName[len("Plugin.Legacy."):]))
 		if err != nil || index < 0 {
-			return Action{}, false
+			return action.Action{}, false
 		}
 		items := pluginMenuItemsSnapshot()
 		if index >= len(items) {
-			return Action{}, false
+			return action.Action{}, false
 		}
 		item := items[index]
 		actionName := item.ActionName
 		if actionName == "" {
 			actionName = legacyPluginActionName(index)
 		}
-		return Action{
+		return action.Action{
 			Name:        actionName,
 			Area:        "Shell",
 			Label:       item.Label,
@@ -74,7 +75,7 @@ func pluginActionForName(name string) (Action, bool) {
 			Handler:     func() bool { return runPluginHotkeyAction(actionName) },
 		}, true
 	default:
-		return Action{}, false
+		return action.Action{}, false
 	}
 }
 
@@ -545,12 +546,12 @@ func pluginMenuKeyLabels(pf *PanelsFrame) *vtui.KeySet {
 // pluginHotkeyActionsSnapshot includes commands that are currently hidden from
 // the F11 menu as well. A user can therefore assign a shortcut once and keep
 // it when moving to another drive or when a plugin changes its visibility.
-func pluginHotkeyActionsSnapshot() []Action {
+func pluginHotkeyActionsSnapshot() []action.Action {
 	pluginCommandRegistry.RLock()
 	commandIDs := append([]string(nil), pluginCommandRegistry.order...)
 	pluginCommandRegistry.RUnlock()
 
-	actions := make([]Action, 0, len(commandIDs)+len(pluginMenuItemsSnapshot()))
+	actions := make([]action.Action, 0, len(commandIDs)+len(pluginMenuItemsSnapshot()))
 	for _, id := range commandIDs {
 		pluginCommandRegistry.RLock()
 		registered, ok := pluginCommandRegistry.byID[id]

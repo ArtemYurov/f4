@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
@@ -18,7 +19,7 @@ import (
 
 // RunAction executes an action by name if it exists.
 func RunAction(name string) bool {
-	if a, ok := actionRegistry[strings.ToLower(name)]; ok && a.Handler != nil {
+	if a, ok := action.Lookup(name); ok && a.Handler != nil {
 		// Fast Find is a transient panel input mode. Any action means the user
 		// is leaving it, including actions that replace a file panel in place
 		// (Info/Quick View) and therefore do not push a focus-stealing frame.
@@ -36,8 +37,8 @@ func RunAction(name string) bool {
 }
 
 // GetAction returns an action by name.
-func GetAction(name string) (Action, bool) {
-	a, ok := actionRegistry[strings.ToLower(name)]
+func GetAction(name string) (action.Action, bool) {
+	a, ok := action.Lookup(name)
 	if !ok {
 		return pluginActionForName(name)
 	}
@@ -174,7 +175,7 @@ func init() {
 	}
 
 	// --- Common actions (available in every area) ---
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "App.ScreenGrab",
 		Area:        "Common",
 		Label:       "Screen Grab",
@@ -185,7 +186,7 @@ func init() {
 		MenuPath:    "File",
 		Handler:     actionScreenGrab,
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:                "App.CopyWindowTitle",
 		Area:                "Common",
 		Label:               "Copy Window Identity",
@@ -197,7 +198,7 @@ func init() {
 		MenuSeparatorBefore: true,
 		Handler:             actionCopyWindowTitle,
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Macro.Reload",
 		Area:        "Common",
 		Label:       "Reload Lua Macros",
@@ -208,7 +209,7 @@ func init() {
 		MenuPath:    "Commands",
 		Handler:     actionReloadLuaMacros,
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:                commandPaletteActionName,
 		Area:                "Common",
 		Label:               "Command Palette",
@@ -221,7 +222,7 @@ func init() {
 		MenuLast:            true,
 		Handler:             ShowCommandPalette,
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "App.Help",
 		Area:        "Common",
 		Label:       "Context Help",
@@ -233,7 +234,7 @@ func init() {
 		Visible:     contextHelpActionAvailable,
 		Handler:     actionContextHelp,
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "App.MainMenu",
 		Area:        "Common",
 		Label:       "Main Menu",
@@ -245,7 +246,7 @@ func init() {
 		Visible:     mainMenuActionAvailable,
 		Handler:     actionActivateMainMenu,
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "App.LastMenuItem",
 		Area:        "Common",
 		Label:       "Last Menu Item",
@@ -255,7 +256,7 @@ func init() {
 		DefaultKeys: []string{"ShiftF10"},
 		Handler:     actionSelectLastMenuItem,
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Workspace.New",
 		Area:        "Common",
 		Label:       "New Workspace",
@@ -266,7 +267,7 @@ func init() {
 		NativeKeys:  []string{"CtrlN:TerminalCtrlNWorkspace"},
 		Handler:     actionWorkspaceNew,
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Workspace.NewTerminal",
 		Area:        "Common",
 		Label:       "Terminal in New Workspace",
@@ -277,7 +278,7 @@ func init() {
 		DefaultKeys: []string{"CtrlShiftO"},
 		Handler:     actionWorkspaceNewTerminal,
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Workspace.Close",
 		Area:        "Common",
 		Label:       "Close Workspace",
@@ -288,7 +289,7 @@ func init() {
 		NativeKeys:  []string{"CtrlW:FrameworkNoTerminalApp"},
 		Handler:     actionWorkspaceClose,
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Workspace.Next",
 		Area:        "Common",
 		Label:       "Next Workspace",
@@ -300,7 +301,7 @@ func init() {
 		Visible:     multipleWorkspacesAvailable,
 		Handler:     actionWorkspaceNext,
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Workspace.Previous",
 		Area:        "Common",
 		Label:       "Previous Workspace",
@@ -312,7 +313,7 @@ func init() {
 		Visible:     multipleWorkspacesAvailable,
 		Handler:     actionWorkspacePrevious,
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Workspace.List",
 		Area:        "Common",
 		Label:       "Workspace List",
@@ -323,7 +324,7 @@ func init() {
 		NativeKeys:  []string{"F12:FrameworkNoTerminalApp"},
 		Handler:     actionWorkspaceList,
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Debug.ScreenDump",
 		Area:        "Common",
 		Label:       "Dump Screen",
@@ -344,7 +345,7 @@ func init() {
 
 	// --- Shell (panels) actions ---
 	// Registration order defines the menu order inside each top-level menu.
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "File.View",
 		Area:        "Shell",
 		Label:       "View",
@@ -355,7 +356,7 @@ func init() {
 		MenuPath:    "Files",
 		Handler:     withPF(func(pf *PanelsFrame) { actionViewFile(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "File.Edit",
 		Area:        "Shell",
 		Label:       "Edit",
@@ -366,7 +367,7 @@ func init() {
 		MenuPath:    "Files",
 		Handler:     withPF(func(pf *PanelsFrame) { actionEditFile(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:         "File.New",
 		Area:         "Shell",
 		Label:        "New File",
@@ -378,7 +379,7 @@ func init() {
 		MenuPath:     "Files",
 		Handler:      withPF(func(pf *PanelsFrame) { actionNewFile(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "File.ApplyCommand",
 		Area:        "Shell",
 		Label:       "Apply command",
@@ -396,7 +397,7 @@ func init() {
 			return false
 		},
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:                "File.Copy",
 		Area:                "Shell",
 		Label:               "Copy",
@@ -408,7 +409,7 @@ func init() {
 		MenuSeparatorBefore: true,
 		Handler:             withPF(func(pf *PanelsFrame) { actionCopyMove(pf, false) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "File.CopyInPlace",
 		Area:        "Shell",
 		Label:       "Copy In Place",
@@ -419,7 +420,7 @@ func init() {
 		MenuPath:    "Files",
 		Handler:     withPF(func(pf *PanelsFrame) { actionCopyInPlace(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "File.Move",
 		Area:        "Shell",
 		Label:       "Move",
@@ -430,7 +431,7 @@ func init() {
 		MenuPath:    "Files",
 		Handler:     withPF(func(pf *PanelsFrame) { actionCopyMove(pf, true) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "File.CreateLink",
 		Area:        "Shell",
 		Label:       "Create Link",
@@ -441,7 +442,7 @@ func init() {
 		MenuPath:    "Files",
 		Handler:     withPF(func(pf *PanelsFrame) { actionCreateLink(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "File.Rename",
 		Area:        "Shell",
 		Label:       "Rename",
@@ -452,7 +453,7 @@ func init() {
 		MenuPath:    "Files",
 		Handler:     withPF(func(pf *PanelsFrame) { actionRename(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:         "File.MakeDir",
 		Area:         "Shell",
 		Label:        "Make Folder",
@@ -464,7 +465,7 @@ func init() {
 		MenuPath:     "Files",
 		Handler:      withPF(func(pf *PanelsFrame) { actionMkDir(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "File.Delete",
 		Area:        "Shell",
 		Label:       "Delete",
@@ -475,7 +476,7 @@ func init() {
 		MenuPath:    "Files",
 		Handler:     withPF(func(pf *PanelsFrame) { actionDelete(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "File.DeletePermanent",
 		Area:        "Shell",
 		Label:       "Delete permanently",
@@ -486,7 +487,7 @@ func init() {
 		MenuPath:    "Files",
 		Handler:     withPF(func(pf *PanelsFrame) { actionDeletePermanent(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:                "File.Attributes",
 		Area:                "Shell",
 		Label:               "File Attributes",
@@ -498,7 +499,7 @@ func init() {
 		MenuSeparatorBefore: true,
 		Handler:             withPF(func(pf *PanelsFrame) { actionFileAttributes(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "File.Share",
 		Area:        "Shell",
 		Label:       "Share...",
@@ -520,7 +521,7 @@ func init() {
 		},
 		Handler: withPF(func(pf *PanelsFrame) { actionShareLink(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.SystemExplorer",
 		Area:        "Shell",
 		Label:       "Open in Explorer",
@@ -566,7 +567,7 @@ func init() {
 		}),
 	})
 
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:                "Panel.SelectGroup",
 		Area:                "Shell",
 		Label:               "Select Group",
@@ -589,7 +590,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.DeselectGroup",
 		Area:        "Shell",
 		Label:       "Deselect Group",
@@ -609,7 +610,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.InvertSelection",
 		Area:        "Shell",
 		Label:       "Invert Selection",
@@ -624,7 +625,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.RestoreSelection",
 		Area:        "Shell",
 		Label:       "Restore Selection",
@@ -639,7 +640,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.SelectNavigation",
 		Area:        "Shell",
 		Label:       "Select While Navigating",
@@ -654,7 +655,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.ToggleCommandLineFocus",
 		Area:        "Shell",
 		Label:       "Toggle Command Line Focus",
@@ -670,7 +671,7 @@ func init() {
 		},
 	})
 
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:         "Panel.UserMenu",
 		Area:         "Shell",
 		Label:        "User Menu",
@@ -682,7 +683,7 @@ func init() {
 		MenuPath:     "Commands",
 		Handler:      withPF(func(pf *PanelsFrame) { ShowUserMenu(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.FileAssociations",
 		Area:        "Shell",
 		Label:       "File Associations…",
@@ -692,7 +693,7 @@ func init() {
 		MenuPath:    "Commands",
 		Handler:     withPF(func(pf *PanelsFrame) { ShowFileAssociations(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:                "File.Find",
 		Area:                "Shell",
 		Label:               "Find File",
@@ -704,7 +705,7 @@ func init() {
 		MenuSeparatorBefore: true,
 		Handler:             withPF(func(pf *PanelsFrame) { actionFindFile(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "File.FindDuplicates",
 		Area:        "Shell",
 		Label:       "Find Duplicates",
@@ -715,7 +716,7 @@ func init() {
 		Visible:     panelCanFindDuplicates,
 		Handler:     withPF(func(pf *PanelsFrame) { actionFindDuplicates(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.CompareFolders",
 		Area:        "Shell",
 		Label:       "Compare Folders",
@@ -726,7 +727,7 @@ func init() {
 		Visible:     panelCanCompareFolders,
 		Handler:     withPF(func(pf *PanelsFrame) { ShowCompareFoldersDialog(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "File.RunRemoteCommand",
 		Area:        "Shell",
 		Label:       "Run Command Remotely",
@@ -737,7 +738,7 @@ func init() {
 		Visible:     panelCanRunCommand,
 		Handler:     withPF(func(pf *PanelsFrame) { actionRunRemoteCommand(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.BackgroundJobs",
 		Area:        "Shell",
 		Label:       "Background Jobs",
@@ -747,7 +748,7 @@ func init() {
 		MenuPath:    "Commands",
 		Handler:     withPF(func(pf *PanelsFrame) { ShowBackgroundJobs(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:                "Panel.Bookmarks",
 		Area:                "Shell",
 		Label:               "Bookmarks",
@@ -759,7 +760,7 @@ func init() {
 		MenuSeparatorBefore: true,
 		Handler:             withPF(func(pf *PanelsFrame) { ShowBookmarksDialog(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.PluginMenu",
 		Area:        "Shell",
 		Label:       "Plugin Commands",
@@ -770,7 +771,7 @@ func init() {
 		MenuPath:    "Commands",
 		Handler:     withPF(func(pf *PanelsFrame) { pf.showPluginMenu() }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.TempPanel",
 		Area:        "Shell",
 		Label:       "Temporary panel",
@@ -781,7 +782,7 @@ func init() {
 		MenuPath:    "Commands",
 		Handler:     withPF(func(pf *PanelsFrame) { actionOpenTempPanel(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:                "Panel.CommandHistory",
 		Area:                "Shell",
 		Label:               "Command History",
@@ -794,7 +795,7 @@ func init() {
 		MenuSeparatorBefore: true,
 		Handler:             withPF(func(pf *PanelsFrame) { actionCommandHistory(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.FoldersHistory",
 		Area:        "Shell",
 		Label:       "Folders History",
@@ -806,7 +807,7 @@ func init() {
 		MenuSubPath: "History",
 		Handler:     withPF(func(pf *PanelsFrame) { actionFoldersHistory(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.ViewerEditorHistory",
 		Area:        "Shell",
 		Label:       "Viewer and Editor History",
@@ -818,7 +819,7 @@ func init() {
 		MenuSubPath: "History",
 		Handler:     withPF(func(pf *PanelsFrame) { actionViewerEditorHistory(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "History.ImportFar2l",
 		Area:        "Shell",
 		Label:       "Import far2l History",
@@ -827,7 +828,7 @@ func init() {
 		MenuSubPath: "History",
 		Handler:     withPF(func(pf *PanelsFrame) { actionImportFar2lHistory(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.GoParent",
 		Area:        "Shell",
 		Label:       "Parent Folder",
@@ -861,7 +862,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.GoRoot",
 		Area:        "Shell",
 		Label:       "Root Folder",
@@ -884,7 +885,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.HistoryBack",
 		Area:        "Shell",
 		Label:       "History Back",
@@ -907,7 +908,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.HistoryForward",
 		Area:        "Shell",
 		Label:       "History Forward",
@@ -927,7 +928,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.ScrollNamesLeft",
 		Area:        "Shell",
 		Label:       "Scroll Names Left",
@@ -940,7 +941,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.ScrollNamesRight",
 		Area:        "Shell",
 		Label:       "Scroll Names Right",
@@ -953,7 +954,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.ScrollNamesHome",
 		Area:        "Shell",
 		Label:       "Scroll Names to Start",
@@ -967,7 +968,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.ScrollNamesEnd",
 		Area:        "Shell",
 		Label:       "Scroll Names to End",
@@ -981,7 +982,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.CopyPath",
 		Area:        "Shell",
 		Label:       "Copy Path",
@@ -999,7 +1000,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.InsertPath",
 		Area:        "Shell",
 		Label:       "Insert Path into Command Line",
@@ -1015,7 +1016,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.CopyName",
 		Area:        "Shell",
 		Label:       "Copy Name",
@@ -1047,7 +1048,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.CopySelectedNames",
 		Area:        "Shell",
 		Label:       "Copy Selected Names",
@@ -1068,7 +1069,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.CopySelectedPaths",
 		Area:        "Shell",
 		Label:       "Copy Selected Paths",
@@ -1098,7 +1099,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.CopySelectedRealPaths",
 		Area:        "Shell",
 		Label:       "Copy Selected Real Paths",
@@ -1137,7 +1138,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.SortUseGroups",
 		Area:        "Shell",
 		Label:       "Use Sort Groups",
@@ -1154,7 +1155,7 @@ func init() {
 		},
 		Handler: withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(CmSortGroups, nil) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:                "Panel.SortMenu",
 		Area:                "Shell",
 		Label:               "Sort Modes",
@@ -1167,7 +1168,7 @@ func init() {
 		Handler:             withPF(func(pf *PanelsFrame) { actionSortMenu(pf) }),
 	})
 
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Settings.Language",
 		Area:        "Shell",
 		Label:       "Language",
@@ -1177,7 +1178,7 @@ func init() {
 		MenuPath:    "Options",
 		Handler:     withPF(func(pf *PanelsFrame) { actionLanguage(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:                "Settings.Panel",
 		Area:                "Shell",
 		Label:               "Panel Settings",
@@ -1188,7 +1189,7 @@ func init() {
 		MenuSeparatorBefore: true,
 		Handler:             withPF(func(pf *PanelsFrame) { actionPanelSettings(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Settings.Editor",
 		Area:        "Shell",
 		Label:       "Editor Settings",
@@ -1198,7 +1199,7 @@ func init() {
 		MenuPath:    "Options",
 		Handler:     withPF(func(pf *PanelsFrame) { actionEditorSettings(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Settings.Viewer",
 		Area:        "Shell",
 		Label:       "Viewer Settings",
@@ -1208,7 +1209,7 @@ func init() {
 		MenuPath:    "Options",
 		Handler:     withPF(func(pf *PanelsFrame) { actionViewerSettings(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Settings.Colorer",
 		Area:        "Shell",
 		Label:       "Colorer Settings",
@@ -1218,7 +1219,7 @@ func init() {
 		MenuPath:    "Options",
 		Handler:     withPF(func(pf *PanelsFrame) { actionColorerSettings(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Settings.Appearance",
 		Area:        "Shell",
 		Label:       "Appearance Settings",
@@ -1228,7 +1229,7 @@ func init() {
 		MenuPath:    "Options",
 		Handler:     withPF(func(pf *PanelsFrame) { actionAppearanceSettings(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Settings.Startup",
 		Area:        "Shell",
 		Label:       "Startup Settings",
@@ -1238,7 +1239,7 @@ func init() {
 		MenuPath:    "Options",
 		Handler:     withPF(func(pf *PanelsFrame) { actionStartupSettings(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Settings.Portable",
 		Area:        "Shell",
 		Label:       "Portable Mode",
@@ -1248,7 +1249,7 @@ func init() {
 		MenuPath:    "Options",
 		Handler:     withPF(func(pf *PanelsFrame) { actionPortableSettings(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Settings.Confirmations",
 		Area:        "Shell",
 		Label:       "Confirmations Settings",
@@ -1258,7 +1259,7 @@ func init() {
 		MenuPath:    "Options",
 		Handler:     withPF(func(pf *PanelsFrame) { actionConfirmationsSettings(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Settings.MouseWheel",
 		Area:        "Shell",
 		Label:       "Mouse Wheel Settings",
@@ -1268,7 +1269,7 @@ func init() {
 		MenuPath:    "Options",
 		Handler:     withPF(func(pf *PanelsFrame) { actionMouseWheelSettings(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Settings.PathHints",
 		Area:        "Shell",
 		Label:       "Path Hints Settings",
@@ -1278,7 +1279,7 @@ func init() {
 		MenuPath:    "Options",
 		Handler:     withPF(func(pf *PanelsFrame) { actionPathHintSettings(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:                "Settings.Hotkeys",
 		Area:                "Shell",
 		Label:               "Hotkey Configuration",
@@ -1289,7 +1290,7 @@ func init() {
 		MenuSeparatorBefore: true,
 		Handler:             withPF(func(pf *PanelsFrame) { actionHotkeyConfig(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:                "Settings.AutoUpdate",
 		Area:                "Shell",
 		Label:               "Auto Update Settings",
@@ -1300,7 +1301,7 @@ func init() {
 		MenuSeparatorBefore: true,
 		Handler:             withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(CmUpdateSettings, nil) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Settings.Proxy",
 		Area:        "Shell",
 		Label:       "Proxy Settings",
@@ -1310,7 +1311,7 @@ func init() {
 		MenuPath:    "Options",
 		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(CmProxySettings, nil) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:                "Settings.PluginConfiguration",
 		Area:                "Shell",
 		Label:               "Plugin Configuration",
@@ -1322,7 +1323,7 @@ func init() {
 		MenuSeparatorBefore: true,
 		Handler:             withPF(func(pf *PanelsFrame) { actionPluginConfiguration(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:                "Settings.Plugins",
 		Area:                "Shell",
 		Label:               "Plugins Menu",
@@ -1333,7 +1334,7 @@ func init() {
 		MenuSeparatorBefore: true,
 		Handler:             withPF(func(pf *PanelsFrame) { actionManagePlugins(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:                "App.PlugRing",
 		Area:                "Shell",
 		Label:               "f4 PlugRing",
@@ -1344,7 +1345,7 @@ func init() {
 		MenuSeparatorBefore: true,
 		Handler:             withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(CmPlugRing, nil) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:         "App.SaveSettings",
 		Area:         "Shell",
 		Label:        "Save Settings",
@@ -1358,7 +1359,7 @@ func init() {
 			actionSaveSettings(pf)
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "App.ToggleWindowSize",
 		Area:        "Common",
 		Label:       "Toggle Window Size",
@@ -1383,7 +1384,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.ToggleKeyBar",
 		Area:        "Shell",
 		Label:       "Toggle KeyBar",
@@ -1397,7 +1398,7 @@ func init() {
 			pf.ResizeConsole(pf.lastW, pf.lastH)
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Settings.MacKeyboard",
 		Area:        "Shell",
 		Label:       "Mac keyboard",
@@ -1422,7 +1423,7 @@ func init() {
 	})
 
 	// --- Shell key-only actions (no menu entries) ---
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.Rescan",
 		Area:        "Shell",
 		Label:       "Rescan",
@@ -1431,7 +1432,7 @@ func init() {
 		DefaultKeys: []string{"CtrlR"},
 		Handler:     withPF(func(pf *PanelsFrame) { pf.RefreshAll() }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.Swap",
 		Area:        "Shell",
 		Label:       "Swap Panels",
@@ -1440,7 +1441,7 @@ func init() {
 		DefaultKeys: []string{"CtrlU"},
 		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(CmSwapPanels, nil) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:         "Panel.Toggle",
 		Area:         "Shell",
 		Label:        "Toggle Panels",
@@ -1452,7 +1453,7 @@ func init() {
 			pf.togglePanelsVisibility()
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.ToggleLeftPanel",
 		Area:        "Shell",
 		Label:       "Toggle Left Panel",
@@ -1477,7 +1478,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.ToggleRightPanel",
 		Area:        "Shell",
 		Label:       "Toggle Right Panel",
@@ -1502,7 +1503,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:         "Panel.TogglePassivePanel",
 		Area:         "Shell",
 		Label:        "Toggle Passive Panel",
@@ -1529,7 +1530,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.InfoPanel",
 		Area:        "Shell",
 		Label:       "Info Panel",
@@ -1540,7 +1541,7 @@ func init() {
 			pf.toggleAltPanel("info", func(src *FileSystemPanel) AltPanel { return NewInfoPanel(src) })
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.QuickView",
 		Area:        "Shell",
 		Label:       "Quick View",
@@ -1551,7 +1552,7 @@ func init() {
 			pf.toggleAltPanel("quick_view", func(src *FileSystemPanel) AltPanel { return NewQuickViewPanel(src) })
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.Player",
 		Area:        "Shell",
 		Label:       "Player",
@@ -1563,7 +1564,7 @@ func init() {
 			pf.toggleAltPanel("player", func(src *FileSystemPanel) AltPanel { return NewPlayerPanel(src) })
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.SplitLeft",
 		Area:        "Shell",
 		Label:       "Move Split Left",
@@ -1581,7 +1582,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.SplitRight",
 		Area:        "Shell",
 		Label:       "Move Split Right",
@@ -1599,7 +1600,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.SplitUp",
 		Area:        "Shell",
 		Label:       "Move Split Up",
@@ -1621,7 +1622,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.SplitDown",
 		Area:        "Shell",
 		Label:       "Move Split Down",
@@ -1643,7 +1644,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.SplitActiveUp",
 		Area:        "Shell",
 		Label:       "Shrink Active Panel",
@@ -1668,7 +1669,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.SplitActiveDown",
 		Area:        "Shell",
 		Label:       "Grow Active Panel",
@@ -1693,7 +1694,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.SplitReset",
 		Area:        "Shell",
 		Label:       "Reset Split",
@@ -1714,7 +1715,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.SyncPanels",
 		Area:        "Shell",
 		Label:       "Sync Panels",
@@ -1723,7 +1724,7 @@ func init() {
 		DefaultKeys: []string{"AltI"},
 		Handler:     withPF(func(pf *PanelsFrame) { pf.syncPassivePanel() }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.ToggleInfoBytes",
 		Area:        "Shell",
 		Label:       "Toggle Bytes Format",
@@ -1736,7 +1737,7 @@ func init() {
 			vtui.FrameManager.HardRefresh()
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.ToggleHidden",
 		Area:        "Shell",
 		Label:       "Toggle Hidden",
@@ -1750,7 +1751,7 @@ func init() {
 			pf.RefreshAll()
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.ViewBrief",
 		Area:        "Shell",
 		Label:       "Brief Mode",
@@ -1760,7 +1761,7 @@ func init() {
 		Visible:     func() bool { return !isAIPanelActive() },
 		Handler:     withPF(func(pf *PanelsFrame) { pf.setPanelViewMode(pf.activeIdx, ViewModeBrief) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.ViewMedium",
 		Area:        "Shell",
 		Label:       "Medium Mode",
@@ -1770,7 +1771,7 @@ func init() {
 		Visible:     func() bool { return !isAIPanelActive() },
 		Handler:     withPF(func(pf *PanelsFrame) { pf.setPanelViewMode(pf.activeIdx, ViewModeMedium) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.ViewDetailed",
 		Area:        "Shell",
 		Label:       "Detailed Mode",
@@ -1780,7 +1781,7 @@ func init() {
 		Visible:     func() bool { return !isAIPanelActive() },
 		Handler:     withPF(func(pf *PanelsFrame) { pf.setPanelViewMode(pf.activeIdx, ViewModeDetailed) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.ViewWide",
 		Area:        "Shell",
 		Label:       "Wide Mode",
@@ -1790,7 +1791,7 @@ func init() {
 		Visible:     func() bool { return !isAIPanelActive() },
 		Handler:     withPF(func(pf *PanelsFrame) { pf.setWidePanel(pf.activeIdx) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.SortByName",
 		Area:        "Shell",
 		Label:       "Sort by Name",
@@ -1799,7 +1800,7 @@ func init() {
 		DefaultKeys: []string{"CtrlF3"},
 		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(CmSortName, nil) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.SortByExt",
 		Area:        "Shell",
 		Label:       "Sort by Extension",
@@ -1808,7 +1809,7 @@ func init() {
 		DefaultKeys: []string{"CtrlF4"},
 		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(CmSortExt, nil) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.SortByTime",
 		Area:        "Shell",
 		Label:       "Sort by Time",
@@ -1817,7 +1818,7 @@ func init() {
 		DefaultKeys: []string{"CtrlF5"},
 		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(CmSortTime, nil) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.SortBySize",
 		Area:        "Shell",
 		Label:       "Sort by Size",
@@ -1826,7 +1827,7 @@ func init() {
 		DefaultKeys: []string{"CtrlF6"},
 		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(CmSortSize, nil) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.SortUnsorted",
 		Area:        "Shell",
 		Label:       "Unsorted",
@@ -1835,7 +1836,7 @@ func init() {
 		DefaultKeys: []string{"CtrlF7"},
 		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(CmSortUnsorted, nil) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:         "Panel.LeftDriveMenu",
 		Area:         "Shell",
 		Label:        "Left Drive Menu",
@@ -1846,7 +1847,7 @@ func init() {
 		DefaultAreas: []string{"Terminal"},
 		Handler:      withPF(func(pf *PanelsFrame) { pf.showDriveMenu(0) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:         "Panel.RightDriveMenu",
 		Area:         "Shell",
 		Label:        "Right Drive Menu",
@@ -1857,7 +1858,7 @@ func init() {
 		DefaultAreas: []string{"Terminal"},
 		Handler:      withPF(func(pf *PanelsFrame) { pf.showDriveMenu(1) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.EnterDirectory",
 		Area:        "Shell",
 		Label:       "Enter Directory",
@@ -1885,7 +1886,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.InsertFileName",
 		Area:        "Shell",
 		Label:       "Insert File Name",
@@ -1902,7 +1903,7 @@ func init() {
 			pf.insertSelectedFileName()
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.InsertLeftPath",
 		Area:        "Shell",
 		Label:       "Insert Left Path",
@@ -1915,7 +1916,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.InsertRightPath",
 		Area:        "Shell",
 		Label:       "Insert Right Path",
@@ -1928,7 +1929,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:         "App.Quit",
 		Area:         "Shell",
 		Label:        "Quit",
@@ -1938,7 +1939,7 @@ func init() {
 		DefaultAreas: []string{"Terminal"},
 		Handler:      func() bool { return vtui.FrameManager.EmitCommand(vtui.CmQuit, nil) },
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Debug.DummyOperation",
 		Area:        "Shell",
 		Label:       "Dummy Long Operation",
@@ -1949,7 +1950,7 @@ func init() {
 	})
 
 	// --- Terminal actions ---
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Terminal.ViewLog",
 		Area:        "Terminal",
 		Label:       "View Terminal Log",
@@ -1960,7 +1961,7 @@ func init() {
 		MenuPath:    "File",
 		Handler:     withPF(func(pf *PanelsFrame) { actionViewTerminalLog(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Terminal.EditLog",
 		Area:        "Terminal",
 		Label:       "Edit Terminal Log",
@@ -1973,7 +1974,7 @@ func init() {
 	})
 
 	// --- Editor actions (menu order follows registration order) ---
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.Save",
 		Area:        "Editor",
 		Label:       "Save",
@@ -1984,7 +1985,7 @@ func init() {
 		MenuPath:    "File",
 		Handler:     withEditor(func(ev *EditorView) { ev.SaveToFile(nil) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.SaveAs",
 		Area:        "Editor",
 		Label:       "Save as...",
@@ -1995,7 +1996,7 @@ func init() {
 		MenuPath:    "File",
 		Handler:     withEditor(func(ev *EditorView) { ev.showSaveAsDialog() }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.SwitchToViewer",
 		Area:        "Editor",
 		Label:       "Switch to Viewer",
@@ -2006,7 +2007,7 @@ func init() {
 		MenuPath:    "File",
 		Handler:     withEditor(func(ev *EditorView) { actionSwitchEditorToViewer(ev) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.Quit",
 		Area:        "Editor",
 		Label:       "Quit",
@@ -2018,7 +2019,7 @@ func init() {
 		Handler:     withEditor(func(ev *EditorView) { ev.tryClose() }),
 	})
 
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.Undo",
 		Area:        "Editor",
 		Label:       "Undo",
@@ -2029,7 +2030,7 @@ func init() {
 		MenuPath:    "Edit",
 		Handler:     withEditor(func(ev *EditorView) { ev.Undo() }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.Redo",
 		Area:        "Editor",
 		Label:       "Redo",
@@ -2040,7 +2041,7 @@ func init() {
 		MenuPath:    "Edit",
 		Handler:     withEditor(func(ev *EditorView) { ev.Redo() }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.Copy",
 		Area:        "Editor",
 		Label:       "Copy",
@@ -2055,7 +2056,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.Cut",
 		Area:        "Editor",
 		Label:       "Cut",
@@ -2075,7 +2076,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.Paste",
 		Area:        "Editor",
 		Label:       "Paste",
@@ -2090,7 +2091,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.SelectAll",
 		Area:        "Editor",
 		Label:       "Select All",
@@ -2109,7 +2110,7 @@ func init() {
 			ev.ensureCursorVisible()
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.DeleteLine",
 		Area:        "Editor",
 		Label:       "Delete Line",
@@ -2120,7 +2121,7 @@ func init() {
 		MenuPath:    "Edit",
 		Handler:     withEditor(func(ev *EditorView) { ev.DeleteCurrentLine() }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.DuplicateLine",
 		Area:        "Editor",
 		Label:       "Duplicate Line",
@@ -2134,7 +2135,7 @@ func init() {
 		MenuPath:    "Edit",
 		Handler:     withEditor(func(ev *EditorView) { ev.DuplicateLines() }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.AddCursorAtNextOccurrence",
 		Area:        "Editor",
 		Label:       "Add Cursor at Next Occurrence",
@@ -2147,7 +2148,7 @@ func init() {
 		MenuPath:    "Edit",
 		Handler:     withMultiEditor(func(ev *EditorView) { ev.AddCursorAtNextOccurrence() }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.SelectAllOccurrences",
 		Area:        "Editor",
 		Label:       "Select All Occurrences",
@@ -2158,7 +2159,7 @@ func init() {
 		MenuPath:    "Edit",
 		Handler:     withMultiEditor(func(ev *EditorView) { ev.SelectAllOccurrences() }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.MoveLineUp",
 		Area:        "Editor",
 		Label:       "Move Line Up",
@@ -2171,7 +2172,7 @@ func init() {
 		MenuPath:    "Edit",
 		Handler:     withEditor(func(ev *EditorView) { ev.MoveLines(-1) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.MoveLineDown",
 		Area:        "Editor",
 		Label:       "Move Line Down",
@@ -2182,7 +2183,7 @@ func init() {
 		MenuPath:    "Edit",
 		Handler:     withEditor(func(ev *EditorView) { ev.MoveLines(1) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.Base64Menu",
 		Area:        "Editor",
 		Label:       "Base64 Tools",
@@ -2192,7 +2193,7 @@ func init() {
 		DefaultKeys: []string{"F11"},
 		Handler:     withEditor(func(ev *EditorView) { ev.showBase64Menu() }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.Base64Encode",
 		Area:        "Editor",
 		Label:       "Encode selection as Base64",
@@ -2206,7 +2207,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.Base64Decode",
 		Area:        "Editor",
 		Label:       "Decode selection from Base64",
@@ -2220,7 +2221,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.ToggleOvertype",
 		Area:        "Editor",
 		Label:       "Insert/Overtype",
@@ -2236,7 +2237,7 @@ func init() {
 		}),
 	})
 
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.Search",
 		Area:        "Editor",
 		Label:       "Search",
@@ -2247,7 +2248,7 @@ func init() {
 		MenuPath:    "Search",
 		Handler:     withEditor(func(ev *EditorView) { vtui.FrameManager.EmitCommand(CmSearch, nil) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.Replace",
 		Area:        "Editor",
 		Label:       "Replace",
@@ -2258,7 +2259,7 @@ func init() {
 		MenuPath:    "Search",
 		Handler:     withEditor(func(ev *EditorView) { vtui.FrameManager.EmitCommand(CmReplace, nil) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.SearchNext",
 		Area:        "Editor",
 		Label:       "Search Next",
@@ -2273,7 +2274,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.SearchForward",
 		Area:        "Editor",
 		Label:       "Search Next",
@@ -2283,7 +2284,7 @@ func init() {
 		DefaultKeys: []string{"CtrlEnter"},
 		Handler:     withEditor(func(ev *EditorView) { repeatEditorSearchDirection(ev, false) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.SearchPrevious",
 		Area:        "Editor",
 		Label:       "Search Backwards",
@@ -2294,7 +2295,7 @@ func init() {
 		Handler:     withEditor(func(ev *EditorView) { repeatEditorSearchDirection(ev, true) }),
 	})
 
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.WordWrap",
 		Area:        "Editor",
 		Label:       "Word Wrap",
@@ -2319,7 +2320,7 @@ func init() {
 			ev.ensureCursorVisible()
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.HexMode",
 		Area:        "Editor",
 		Label:       "Hex Mode",
@@ -2355,7 +2356,7 @@ func init() {
 			vtui.FrameManager.Redraw()
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.DisasmMode",
 		Area:        "Editor",
 		Label:       "Disassembler mode",
@@ -2373,7 +2374,7 @@ func init() {
 			vtui.FrameManager.Redraw()
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.ShowWhitespaces",
 		Area:        "Editor",
 		Label:       "Show Whitespaces",
@@ -2385,7 +2386,7 @@ func init() {
 		Checked:     editorState(func(ev *EditorView) bool { return ev.ShowWhitespaces }),
 		Handler:     withEditor(func(ev *EditorView) { ev.ShowWhitespaces = !ev.ShowWhitespaces }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.CodepageNext",
 		Area:        "Editor",
 		Label:       "Next Codepage",
@@ -2401,7 +2402,7 @@ func init() {
 			toast.Show(fmt.Sprintf("Codepage: %s", vfs.DisplayCodepageName(next)), time.Second)
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.CodepageMenu",
 		Area:        "Editor",
 		Label:       "Codepage Menu",
@@ -2412,7 +2413,7 @@ func init() {
 		MenuPath:    "Options",
 		Handler:     withEditor(func(ev *EditorView) { ev.showCodepageDialog() }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.ConvertCodepage",
 		Area:        "Editor",
 		Label:       "Convert codepage...",
@@ -2423,7 +2424,7 @@ func init() {
 		Handler:     withEditor(func(ev *EditorView) { ev.showConvertCodepageDialog() }),
 	})
 
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.InsertLeftPanelPath",
 		Area:        "Editor",
 		Label:       "Insert Left Panel Path",
@@ -2438,7 +2439,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.InsertRightPanelPath",
 		Area:        "Editor",
 		Label:       "Insert Right Panel Path",
@@ -2453,7 +2454,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.InsertActivePanelFileName",
 		Area:        "Editor",
 		Label:       "Insert Current File Name",
@@ -2467,7 +2468,7 @@ func init() {
 			}
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.DeleteSpacersForward",
 		Area:        "Editor",
 		Label:       "Delete Word Forward",
@@ -2480,7 +2481,7 @@ func init() {
 	})
 
 	// --- Viewer actions ---
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Viewer.SwitchToEditor",
 		Area:        "Viewer",
 		Label:       "Switch to Editor",
@@ -2491,7 +2492,7 @@ func init() {
 		MenuPath:    "File",
 		Handler:     withViewer(func(vv *ViewerView) { actionSwitchViewerToEditor(vv) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Viewer.Reload",
 		Area:        "Viewer",
 		Label:       "Reread File",
@@ -2502,7 +2503,7 @@ func init() {
 		MenuPath:    "File",
 		Handler:     withViewer(func(vv *ViewerView) { vv.reload() }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Viewer.Quit",
 		Area:        "Viewer",
 		Label:       "Quit",
@@ -2514,7 +2515,7 @@ func init() {
 		Handler:     withViewer(func(vv *ViewerView) { vv.Close() }),
 	})
 
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Viewer.WrapMode",
 		Area:        "Viewer",
 		Label:       "Wrap Mode",
@@ -2526,7 +2527,7 @@ func init() {
 		Checked:     viewerState(func(vv *ViewerView) bool { return vv.WrapMode }),
 		Handler:     withViewer(func(vv *ViewerView) { vv.WrapMode = !vv.WrapMode }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Viewer.HexMode",
 		Area:        "Viewer",
 		Label:       "Hex Mode",
@@ -2552,7 +2553,7 @@ func init() {
 			vtui.FrameManager.Redraw()
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Viewer.DisasmMode",
 		Area:        "Viewer",
 		Label:       "Disassembler mode",
@@ -2568,7 +2569,7 @@ func init() {
 		}),
 	})
 
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Viewer.Search",
 		Area:        "Viewer",
 		Label:       "Search",
@@ -2579,7 +2580,7 @@ func init() {
 		MenuPath:    "Search",
 		Handler:     withViewer(func(vv *ViewerView) { vtui.FrameManager.EmitCommand(CmSearch, nil) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Viewer.SearchNext",
 		Area:        "Viewer",
 		Label:       "Search Next",
@@ -2590,7 +2591,7 @@ func init() {
 		MenuPath:    "Search",
 		Handler:     withViewer(func(vv *ViewerView) { actionViewerSearchAgain(vv, false) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Viewer.SearchPrevious",
 		Area:        "Viewer",
 		Label:       "Search Backwards",
@@ -2602,7 +2603,7 @@ func init() {
 		Handler:     withViewer(func(vv *ViewerView) { actionViewerSearchAgain(vv, true) }),
 	})
 
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Viewer.CodepageNext",
 		Area:        "Viewer",
 		Label:       "Next Codepage",
@@ -2618,7 +2619,7 @@ func init() {
 			toast.Show(fmt.Sprintf("Codepage: %s", vfs.DisplayCodepageName(next)), time.Second)
 		}),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Viewer.CodepageMenu",
 		Area:        "Viewer",
 		Label:       "Codepage Menu",
@@ -2632,7 +2633,7 @@ func init() {
 	// The shell menu is not present while an Editor or Viewer owns the
 	// workspace. Mirror the settings commands into those area menus so the
 	// codepage defaults remain discoverable in the context where they apply.
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Editor.Settings",
 		Area:        "Editor",
 		Label:       "Editor Settings",
@@ -2642,7 +2643,7 @@ func init() {
 		MenuPath:    "Options",
 		Handler:     withPF(func(pf *PanelsFrame) { actionEditorSettings(pf) }),
 	})
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Viewer.Settings",
 		Area:        "Viewer",
 		Label:       "Viewer Settings",

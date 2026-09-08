@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/plugins/archive"
 	"github.com/unxed/f4/vfs"
@@ -1656,7 +1657,7 @@ func TestPanelsFrame_AIHotkeyCanBeUnbound(t *testing.T) {
 	GlobalHotkeys = nil
 
 	ctrlARuns := 0
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:    "Test.CtrlA",
 		Area:    "Shell",
 		Label:   "Ctrl+A stand-in",
@@ -4425,7 +4426,7 @@ func TestPanelsFrame_VimHotkeys_Comprehensive(t *testing.T) {
 		t.Errorf("Vim 'k' failed, expected index 1, got %d", fsp.GetCursorIndex())
 	}
 
-	// 2. Action dd (Delete)
+	// 2. action.Action dd (Delete)
 	cmdCaught = 0
 	pf.cmdLine.Clear()
 	pressKey(pf, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, Char: 'd'})

@@ -4659,7 +4659,7 @@ func TestFileSystemPanel_LiveSelectionPreservation(t *testing.T) {
 	fp.Refresh()
 	fp.SetCursorIndex(1) // Stand on item1
 
-	// 2. Simulate User Action: Deselect item1, Select item2 and move cursor to it
+	// 2. Simulate User action.Action: Deselect item1, Select item2 and move cursor to it
 	// (while the "real" scan is technically running in background)
 	fp.entries[1].Selected = false
 	fp.entries[2].Selected = true

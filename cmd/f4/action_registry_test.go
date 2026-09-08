@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtui"
 )
@@ -10,7 +11,7 @@ import (
 func TestActionRegistry(t *testing.T) {
 	preserveActionRegistry(t)
 	called := false
-	testAction := Action{
+	testAction := action.Action{
 		Name:        "Test.Action",
 		Label:       "Test Label",
 		Description: "Test Description",
@@ -20,7 +21,7 @@ func TestActionRegistry(t *testing.T) {
 		},
 	}
 
-	RegisterAction(testAction)
+	action.RegisterAction(testAction)
 
 	// Test GetAction
 	a, ok := GetAction("test.action")
@@ -31,8 +32,8 @@ func TestActionRegistry(t *testing.T) {
 		t.Errorf("Action fields mismatch. Got %+v", a)
 	}
 
-	// Test GetActions
-	actions := GetActions()
+	// Test action.AllSorted
+	actions := action.AllSorted()
 	found := false
 	for _, act := range actions {
 		if act.Name == "Test.Action" {

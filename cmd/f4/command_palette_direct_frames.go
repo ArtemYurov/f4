@@ -3,6 +3,7 @@ package main
 import (
 	"strings"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -27,12 +28,12 @@ func commandPaletteLocalizedDirectEntry(
 	translationKeys := append([]string{categoryKey, labelKey, descKey}, aliasKeys...)
 	return commandPaletteEntry{
 		Key:                key,
-		Label:              plainLabel(label),
+		Label:              action.PlainLabel(label),
 		EnglishLabel:       englishLabel,
-		Description:        plainLabel(description),
+		Description:        action.PlainLabel(description),
 		EnglishDescription: englishDescription,
 		ID:                 id,
-		Category:           plainLabel(category),
+		Category:           action.PlainLabel(category),
 		Shortcut:           shortcut,
 		SearchFields:       commandPaletteTranslations(translationKeys...),
 		run:                run,

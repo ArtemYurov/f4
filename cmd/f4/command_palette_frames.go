@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/vtui"
 )
 
 // commandPaletteFrameEntries exposes commands owned by full-screen frames
-// that are not represented by the application Action registry. Text-entry
+// that are not represented by the application action.Action registry. Text-entry
 // and cursor-only primitives are intentionally left to the frame itself.
 func commandPaletteFrameEntries() []commandPaletteEntry {
 	if vtui.FrameManager == nil {
@@ -110,9 +111,9 @@ func commandPaletteQueueEntries(queue *QueueFrame) []commandPaletteEntry {
 		}
 		return commandPaletteEntry{
 			Key:                "queue:" + strings.ToLower(id),
-			Label:              plainLabel(label),
+			Label:              action.PlainLabel(label),
 			EnglishLabel:       english,
-			Description:        plainLabel(label),
+			Description:        action.PlainLabel(label),
 			EnglishDescription: description,
 			ID:                 "Queue." + id,
 			Category:           category,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -43,7 +44,7 @@ func runPanelMountProgressTask(
 // that mounts what the active panel is showing. The mounts dialog (Unmount /
 // Unmount all / Go to) is a separate step.
 func init() {
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.Mount",
 		Area:        "Shell",
 		Label:       "Mount via FUSE",
@@ -85,7 +86,7 @@ func init() {
 // the mount would be sharing one object with the panel, and the panel closes
 // that object when the user walks out of it.
 func init() {
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "Panel.MountRW",
 		Area:        "Shell",
 		Label:       "Mount via FUSE (read-write)",

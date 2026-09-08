@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/vfs"
 )
 
@@ -31,7 +32,7 @@ func actionSQLiteClient() bool {
 }
 
 func init() {
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name:        "App.SQLite",
 		Area:        "Shell",
 		Label:       "SQLite &client",

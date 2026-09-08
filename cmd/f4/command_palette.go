@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -158,47 +159,47 @@ func commandPaletteCanIncludeUserMenu(area string) bool {
 }
 
 func commandPaletteActionEntries(area string) []commandPaletteEntry {
-	entries := make([]commandPaletteEntry, 0, len(actionOrder))
-	for _, action := range GetOrderedActions() {
-		// The palette used to skip its own launcher action, but that broke the
+	entries := make([]commandPaletteEntry, 0, action.Len())
+	for _, act := range action.All() {
+		// The palette used to skip its own launcher act, but that broke the
 		// invariant (enforced by TestCommandPaletteResolvesEveryActionGeneratedMenuLeafByID)
 		// that every visible menu leaf has a matching palette entry. Listing it
 		// is harmless: the running dialog's own alreadyOpen guard makes
 		// selecting it a no-op while it is still open, and by the time a
 		// deferred re-selection runs the dialog has already been popped, so it
 		// simply reopens a fresh palette, same as the CtrlShiftP shortcut would.
-		if !commandPaletteActionApplies(action, area) {
+		if !commandPaletteActionApplies(act, area) {
 			continue
 		}
-		if action.Visible != nil && !action.Visible() {
+		if act.Visible != nil && !act.Visible() {
 			continue
 		}
 
-		label := plainLabel(action.DisplayLabel())
-		englishLabel := plainLabel(action.Label)
-		category := commandPaletteActionCategory(action)
+		label := action.PlainLabel(act.DisplayLabel())
+		englishLabel := action.PlainLabel(act.Label)
+		category := commandPaletteActionCategory(act)
 		shortcuts := mergeCommandPaletteShortcuts(
-			commandPaletteActionShortcuts(area, action.Name),
-			NativeShortcutsForAction(area, action),
+			commandPaletteActionShortcuts(area, act.Name),
+			NativeShortcutsForAction(area, act),
 		)
-		searchFields := []string{action.Area, action.MenuPath, area}
-		translationKeys := append([]string{action.LabelKey, action.DescKey}, action.SearchKeys...)
-		translationKeys = append(translationKeys, commandPaletteActionCategoryKeys(action)...)
+		searchFields := []string{act.Area, act.MenuPath, area}
+		translationKeys := append([]string{act.LabelKey, act.DescKey}, act.SearchKeys...)
+		translationKeys = append(translationKeys, commandPaletteActionCategoryKeys(act)...)
 		searchFields = append(searchFields, commandPaletteTranslations(translationKeys...)...)
 		entry := commandPaletteEntry{
-			Key:                "action:" + strings.ToLower(action.Name),
+			Key:                "act:" + strings.ToLower(act.Name),
 			Label:              label,
 			EnglishLabel:       englishLabel,
-			Description:        action.DisplayDescription(),
-			EnglishDescription: action.Description,
-			ID:                 action.Name,
+			Description:        act.DisplayDescription(),
+			EnglishDescription: act.Description,
+			ID:                 act.Name,
 			Category:           category,
 			Shortcut:           strings.Join(shortcuts, ", "),
 			SearchFields:       searchFields,
 			source:             commandPaletteSourceAction,
 		}
-		if action.Checked != nil {
-			entry.Checked = action.Checked()
+		if act.Checked != nil {
+			entry.Checked = act.Checked()
 		}
 		entries = append(entries, entry)
 	}
@@ -222,7 +223,7 @@ func mergeCommandPaletteShortcuts(groups ...[]string) []string {
 	return merged
 }
 
-func commandPaletteActionApplies(action Action, area string) bool {
+func commandPaletteActionApplies(action action.Action, area string) bool {
 	if strings.EqualFold(action.Area, "Common") || strings.EqualFold(action.Area, area) {
 		return true
 	}
@@ -257,19 +258,19 @@ func commandPaletteConditionTrue(name string) bool {
 	return !ok || condition()
 }
 
-func commandPaletteActionCategory(action Action) string {
-	for _, key := range commandPaletteActionCategoryKeys(action) {
+func commandPaletteActionCategory(act action.Action) string {
+	for _, key := range commandPaletteActionCategoryKeys(act) {
 		if category := Msg(key); category != "" && !strings.HasPrefix(category, "{") {
-			return plainLabel(category)
+			return action.PlainLabel(category)
 		}
 	}
-	if action.MenuPath != "" {
-		return action.MenuPath
+	if act.MenuPath != "" {
+		return act.MenuPath
 	}
-	return action.Area
+	return act.Area
 }
 
-func commandPaletteActionCategoryKeys(action Action) []string {
+func commandPaletteActionCategoryKeys(action action.Action) []string {
 	var keys []string
 	if strings.HasPrefix(action.Name, "Workspace.") {
 		keys = append(keys, "CommandPalette.CategoryWorkspace")
@@ -323,7 +324,7 @@ func commandPalettePluginEntries(pf *PanelsFrame) []commandPaletteEntry {
 			category = Msg("CommandPalette.CategoryPluginConfig")
 		}
 		for _, command := range pluginCommandsSnapshot(location, pf) {
-			label := plainLabel(pluginCommandDisplayLabel(command))
+			label := action.PlainLabel(pluginCommandDisplayLabel(command))
 			description := pluginCommandDisplayDescription(command)
 			if description == "" {
 				description = command.ID
@@ -339,7 +340,7 @@ func commandPalettePluginEntries(pf *PanelsFrame) []commandPaletteEntry {
 			entries = append(entries, commandPaletteEntry{
 				Key:                fmt.Sprintf("plugin:%d:%s", location, strings.ToLower(command.ID)),
 				Label:              label,
-				EnglishLabel:       plainLabel(command.Label),
+				EnglishLabel:       action.PlainLabel(command.Label),
 				Description:        description,
 				EnglishDescription: englishDescription,
 				ID:                 command.ID,
@@ -357,7 +358,7 @@ func commandPalettePluginEntries(pf *PanelsFrame) []commandPaletteEntry {
 		if actionName == "" {
 			actionName = legacyPluginActionName(index)
 		}
-		label := plainLabel(item.Label)
+		label := action.PlainLabel(item.Label)
 		searchFields := []string{Msg("CommandPalette.CategoryLegacyPlugin")}
 		searchFields = append(searchFields, commandPaletteTranslations(
 			"CommandPalette.CategoryPlugin",
@@ -420,7 +421,7 @@ func flattenCommandPaletteUserMenu(source commandPaletteUserMenuSource, pf *Pane
 			if item.IsSeparator() {
 				continue
 			}
-			label := plainLabel(item.Label)
+			label := action.PlainLabel(item.Label)
 			pathLabels := append(append([]string(nil), labels...), label)
 			pathIndexes := append(append([]int(nil), indexes...), index)
 			if item.IsSubmenu() {
@@ -447,7 +448,7 @@ func flattenCommandPaletteUserMenu(source commandPaletteUserMenuSource, pf *Pane
 				Description:        breadcrumb,
 				EnglishDescription: breadcrumb,
 				ID:                 item.HotKey,
-				Category:           fmt.Sprintf("%s: %s", Msg("CommandPalette.CategoryUserMenu"), plainLabel(source.title)),
+				Category:           fmt.Sprintf("%s: %s", Msg("CommandPalette.CategoryUserMenu"), action.PlainLabel(source.title)),
 				Shortcut:           item.HotKey,
 				SearchFields:       searchFields,
 				source:             commandPaletteSourceUserMenu,

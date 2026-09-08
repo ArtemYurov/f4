@@ -40,6 +40,10 @@ var architectureLayers = map[string]int{
 	"internal/toast":   0,
 	"internal/history": 0,
 
+	// The registry mechanism. The table that fills it stays in the root: its
+	// closures reach every view in the application.
+	"internal/action": 0,
+
 	// Data with an embed directive beside it, nothing else.
 	"internal/colorer": 0,
 

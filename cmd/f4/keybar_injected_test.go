@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -28,7 +29,7 @@ func TestKeyBarClick_DispatchesHotkeyAction(t *testing.T) {
 	// whatever the registry ships with. This isolates the test from the
 	// actual File.Copy handler (which would try to open dialogs).
 	called := false
-	RegisterAction(Action{
+	action.RegisterAction(action.Action{
 		Name: "Test.KeyBarF5Probe",
 		Area: "Shell",
 		Handler: func() bool {
