@@ -175,7 +175,7 @@ func NewArchiveVFSContext(ctx context.Context, parent vfs.VFS, archivePath strin
 		if format == "" {
 			if embedded, found, probeErr := findEmbeddedArchive(finalPath); probeErr != nil {
 				return nil, probeErr
-			} else if found {
+			} else if found && embedded.offset > 0 {
 				format = embedded.format
 				sfxOffset = embedded.offset
 				sfxSuffix = embedded.suffix
