@@ -97,3 +97,48 @@ func TestPanelsFrameCommandPrefixIsConsumedBeforePTY(t *testing.T) {
 		t.Fatal("prefix command unexpectedly hid panels")
 	}
 }
+
+func TestCommandPrefixOpensRegisteredDrive(t *testing.T) {
+	pf := setupMockPanelsFrame(t)
+	defer pf.Close()
+
+	pluginRegistryMu.Lock()
+	previous := append([]DriveEntry(nil), DriveRegistry...)
+	DriveRegistry = []DriveEntry{{Name: "ExampleDrive", Factory: func() vfs.VFS {
+		return vfs.NewNullVFS(0)
+	}}}
+	pluginRegistryMu.Unlock()
+	t.Cleanup(func() {
+		pluginRegistryMu.Lock()
+		DriveRegistry = previous
+		pluginRegistryMu.Unlock()
+	})
+
+	if !dispatchCommandPrefix(pf, "EXAMPLEDRIVE:") {
+		t.Fatal("drive prefix was not consumed")
+	}
+	if _, ok := pf.getActivePanel().vfs.(*vfs.NullVFS); !ok {
+		t.Fatalf("active panel VFS = %T, want *vfs.NullVFS", pf.getActivePanel().vfs)
+	}
+}
+
+func TestCommandPrefixDriveRequiresBarePrefix(t *testing.T) {
+	pf := setupMockPanelsFrame(t)
+	defer pf.Close()
+
+	pluginRegistryMu.Lock()
+	previous := append([]DriveEntry(nil), DriveRegistry...)
+	DriveRegistry = []DriveEntry{{Name: "ExampleDrive", Factory: func() vfs.VFS {
+		return vfs.NewNullVFS(0)
+	}}}
+	pluginRegistryMu.Unlock()
+	t.Cleanup(func() {
+		pluginRegistryMu.Lock()
+		DriveRegistry = previous
+		pluginRegistryMu.Unlock()
+	})
+
+	if dispatchCommandPrefix(pf, "ExampleDrive:/child") {
+		t.Fatal("drive prefix with an argument was consumed")
+	}
+}
