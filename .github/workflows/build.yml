@@ -1115,7 +1115,7 @@ jobs:
       # the isolated TestAllDialogs_LayoutValidation pass a second time.
       # The first regex also covers an exact "Test" name; the negated class
       # puts every other non-standard Test* suffix in the second shard.
-      matrix: ${{ github.event_name == 'pull_request' && fromJSON('{"include":[{"os":"ubuntu-latest","target":"linux/amd64"},{"os":"ubuntu-24.04-arm","target":"linux/arm64"},{"os":"macos-latest","target":"darwin/arm64","shard":"A-D","run":"^Test([A-D]|$)"},{"os":"macos-latest","target":"darwin/arm64","shard":"rest","run":"^Test[^A-D]"},{"os":"windows-latest","target":"windows/amd64","shard":"A-D","run":"^Test([A-D]|$)"},{"os":"windows-latest","target":"windows/amd64","shard":"rest","run":"^Test[^A-D]"}]}') || fromJSON('{"include":[{"os":"ubuntu-latest","target":"linux/amd64"},{"os":"ubuntu-24.04-arm","target":"linux/arm64"},{"os":"macos-latest","target":"darwin/arm64","shard":"A-D","run":"^Test([A-D]|$)"},{"os":"macos-latest","target":"darwin/arm64","shard":"rest","run":"^Test[^A-D]"},{"os":"macos-15-intel","target":"darwin/amd64"},{"os":"windows-latest","target":"windows/amd64","shard":"A-D","run":"^Test([A-D]|$)"},{"os":"windows-latest","target":"windows/amd64","shard":"rest","run":"^Test[^A-D]"},{"os":"windows-11-arm","target":"windows/arm64"}]}') }}
+      matrix: ${{ github.event_name == 'pull_request' && fromJSON('{"include":[{"os":"ubuntu-latest","target":"linux/amd64","cover":"linux"},{"os":"ubuntu-24.04-arm","target":"linux/arm64"},{"os":"macos-latest","target":"darwin/arm64","shard":"A-D","run":"^Test([A-D]|$)","cover":"macos"},{"os":"macos-latest","target":"darwin/arm64","shard":"rest","run":"^Test[^A-D]","cover":"macos"},{"os":"windows-latest","target":"windows/amd64","shard":"A-D","run":"^Test([A-D]|$)","cover":"windows"},{"os":"windows-latest","target":"windows/amd64","shard":"rest","run":"^Test[^A-D]","cover":"windows"}]}') || fromJSON('{"include":[{"os":"ubuntu-latest","target":"linux/amd64","cover":"linux"},{"os":"ubuntu-24.04-arm","target":"linux/arm64"},{"os":"macos-latest","target":"darwin/arm64","shard":"A-D","run":"^Test([A-D]|$)","cover":"macos"},{"os":"macos-latest","target":"darwin/arm64","shard":"rest","run":"^Test[^A-D]","cover":"macos"},{"os":"macos-15-intel","target":"darwin/amd64"},{"os":"windows-latest","target":"windows/amd64","shard":"A-D","run":"^Test([A-D]|$)","cover":"windows"},{"os":"windows-latest","target":"windows/amd64","shard":"rest","run":"^Test[^A-D]","cover":"windows"},{"os":"windows-11-arm","target":"windows/arm64"}]}') }}
     env:
       CGO_ENABLED: 0
       TEST_SHUFFLE: ${{ inputs.shuffle || 'on' }}
@@ -1161,6 +1161,10 @@ jobs:
       env:
         AFFECTED: ${{ steps.affected.outputs.packages }}
         RUN_FILTER: ${{ matrix.run || '' }}
+        # Coverage is collected on one Linux cell and both shards of each
+        # split desktop cell. Reusing an OS flag lets Codecov combine the two
+        # shard profiles without spending another full test matrix.
+        COVER: ${{ matrix.cover && '-coverpkg=./... -coverprofile=cover.out' || '' }}
       run: |
         # Pull requests test only the packages their diff reaches through
         # the import graph (see the affected-packages action); pushes, tags
@@ -1184,7 +1188,11 @@ jobs:
         if [ -n "$RUN_FILTER" ]; then
           run_args=(-run "$RUN_FILTER")
         fi
-        go test -shuffle="$TEST_SHUFFLE" -timeout 15m -skip '^TestAllDialogs_LayoutValidation$' "${run_args[@]}" "${targets[@]}"
+        cover_args=()
+        if [ -n "$COVER" ]; then
+          read -r -a cover_args <<< "$COVER"
+        fi
+        go test "${cover_args[@]}" -shuffle="$TEST_SHUFFLE" -timeout 15m -skip '^TestAllDialogs_LayoutValidation$' "${run_args[@]}" "${targets[@]}"
         # Layout validation mutates shared UI registries from parallel
         # subtests. Go 1.26 schedules them aggressively enough to expose the
         # upstream race, so isolate that test in a single-threaded process.
@@ -1194,6 +1202,21 @@ jobs:
               GOMAXPROCS=1 go test -timeout 15m -run '^TestAllDialogs_LayoutValidation$' ./cmd/f4 ;;
           esac
         fi
+
+    - name: Upload coverage to Codecov
+      if: matrix.cover && hashFiles('cover.out') != ''
+      uses: codecov/codecov-action@v7
+      with:
+        files: cover.out
+        # Without this the uploader also sweeps the tree for anything that
+        # looks like a report and picks up cmd/f4/lang/coverage_baseline.txt,
+        # which counts translation keys, not statements.
+        disable_search: true
+        flags: ${{ matrix.cover }}
+        token: ${{ secrets.CODECOV_TOKEN }}
+        # Coverage is a report, not a gate: a failed upload (or a repository
+        # with no token yet) must not turn the test run red.
+        fail_ci_if_error: false
 
     - name: Dump crash reports on failure
       if: failure()
