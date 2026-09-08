@@ -987,6 +987,7 @@ LanguageSettings.Title= Language Settings
 LanguageSettings.Primary=Primary language:
 LanguageSettings.Fallback=Fallback language:
 LanguageSettings.None=<none>
+LanguageSettings.UseLocalFiles=Use local language files
 
 HelpLanguage.Title=Help Languages
 HelpLanguage.Changed=Help language changed.

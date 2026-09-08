@@ -969,6 +969,7 @@ LanguageSettings.Title= Настройки языка
 LanguageSettings.Primary=Основной язык:
 LanguageSettings.Fallback=Резервный язык:
 LanguageSettings.None=<нет>
+LanguageSettings.UseLocalFiles=Использовать локальные файлы языков
 
 HelpLanguage.Title=Язык справки
 HelpLanguage.Changed=Язык справки изменен.
