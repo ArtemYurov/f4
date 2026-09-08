@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -16,22 +17,131 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+// conPTYAPI is loaded from the redistributable shipped next to f4.exe. The
+// DLL and OpenConsole.exe are a matched pair: the former starts the latter
+// from its own directory. Keeping the DLL loaded for the lifetime of the
+// process is required because every HPCON is owned by that module.
+type conPTYAPI struct {
+	dll    *windows.DLL
+	create *windows.Proc
+	resize *windows.Proc
+	close  *windows.Proc
+	path   string
+}
+
 var (
-	modKernel32             = windows.NewLazySystemDLL("kernel32.dll")
-	procCreatePseudoConsole = modKernel32.NewProc("CreatePseudoConsole")
-	procResizePseudoConsole = modKernel32.NewProc("ResizePseudoConsole")
-	procClosePseudoConsole  = modKernel32.NewProc("ClosePseudoConsole")
+	conPTYOnce sync.Once
+	conPTY     *conPTYAPI
+	conPTYErr  error
+
+	// Tests run from the package source directory while the test executable
+	// itself lives in Go's temporary build directory. The test-only init in
+	// pty_windows_test.go points this hook at that source directory; normal
+	// binaries always resolve the bundle next to their own executable.
+	conPTYBundleDirectoryOverride func() (string, error)
 )
 
-// conPTYAvailable checks whether the Windows ConPTY API is available in kernel32.dll
-// without panicking on older Windows versions (Windows 7, 8, 8.1, Server 2012/2016).
+func conPTYBundleDirectory() (string, error) {
+	if conPTYBundleDirectoryOverride != nil {
+		return conPTYBundleDirectoryOverride()
+	}
+	exe, err := f4Executable()
+	if err != nil {
+		return "", fmt.Errorf("find f4 executable: %w", err)
+	}
+	return filepath.Dir(exe), nil
+}
+
+func loadConPTY() (*conPTYAPI, error) {
+	dir, err := conPTYBundleDirectory()
+	if err != nil {
+		return nil, err
+	}
+	dllPath := filepath.Join(dir, "conpty.dll")
+	openConsolePath := filepath.Join(dir, "OpenConsole.exe")
+	for _, path := range []string{dllPath, openConsolePath} {
+		info, statErr := os.Stat(path)
+		if statErr != nil {
+			return nil, fmt.Errorf("ConPTY bundle is incomplete: %s: %w", path, statErr)
+		}
+		if !info.Mode().IsRegular() {
+			return nil, fmt.Errorf("ConPTY bundle member is not a regular file: %s", path)
+		}
+	}
+
+	dll, err := windows.LoadDLL(dllPath)
+	if err != nil {
+		return nil, fmt.Errorf("load bundled ConPTY %s: %w", dllPath, err)
+	}
+	find := func(names ...string) (*windows.Proc, error) {
+		for _, name := range names {
+			if proc, findErr := dll.FindProc(name); findErr == nil {
+				return proc, nil
+			}
+		}
+		return nil, fmt.Errorf("bundled ConPTY %s exports none of %q", dllPath, names)
+	}
+	create, err := find("ConptyCreatePseudoConsole", "CreatePseudoConsole")
+	if err != nil {
+		return nil, err
+	}
+	resize, err := find("ConptyResizePseudoConsole", "ResizePseudoConsole")
+	if err != nil {
+		return nil, err
+	}
+	close, err := find("ConptyClosePseudoConsole", "ClosePseudoConsole")
+	if err != nil {
+		return nil, err
+	}
+	return &conPTYAPI{dll: dll, create: create, resize: resize, close: close, path: dllPath}, nil
+}
+
+func bundledConPTY() (*conPTYAPI, error) {
+	conPTYOnce.Do(func() {
+		conPTY, conPTYErr = loadConPTY()
+	})
+	return conPTY, conPTYErr
+}
+
+func packedConPTYCoord(size windows.Coord) uintptr {
+	return uintptr(*(*uint32)(unsafe.Pointer(&size)))
+}
+
+func (api *conPTYAPI) createPseudoConsole(size windows.Coord, in, out windows.Handle, flags uint32, console *windows.Handle) error {
+	hr, _, callErr := api.create.Call(
+		packedConPTYCoord(size), uintptr(in), uintptr(out), uintptr(flags), uintptr(unsafe.Pointer(console)),
+	)
+	if hr != 0 {
+		return fmt.Errorf("%s!CreatePseudoConsole failed with HRESULT 0x%08x: %w", api.path, uint32(hr), callErr)
+	}
+	return nil
+}
+
+func (api *conPTYAPI) resizePseudoConsole(console windows.Handle, size windows.Coord) error {
+	hr, _, callErr := api.resize.Call(uintptr(console), packedConPTYCoord(size))
+	if hr != 0 {
+		return fmt.Errorf("%s!ResizePseudoConsole failed with HRESULT 0x%08x: %w", api.path, uint32(hr), callErr)
+	}
+	return nil
+}
+
+func (api *conPTYAPI) closePseudoConsole(console windows.Handle) {
+	_, _, _ = api.close.Call(uintptr(console))
+}
+
+// conPTYAvailable checks whether the matched ConPTY redistributable is
+// available beside f4.exe. Older Windows versions remain usable through the
+// other console backends, but they must never silently select the in-box API.
 func conPTYAvailable() bool {
 	if vtui.IsWine() {
 		return false
 	}
-	return procCreatePseudoConsole.Find() == nil &&
-		procResizePseudoConsole.Find() == nil &&
-		procClosePseudoConsole.Find() == nil
+	_, err := bundledConPTY()
+	if err != nil {
+		vtui.DebugLog("PTY_WIN: bundled ConPTY unavailable: %v", err)
+		return false
+	}
+	return true
 }
 func isPlatformPTYUsable() bool {
 	return conPTYAvailable()
@@ -58,8 +168,12 @@ type PTY struct {
 }
 
 func NewPTY() (*PTY, error) {
-	if !conPTYAvailable() {
-		return nil, fmt.Errorf("ConPTY is not supported on this Windows version (requires Windows 10 build 1809+)")
+	if vtui.IsWine() {
+		return nil, fmt.Errorf("bundled ConPTY is unavailable under Wine")
+	}
+	api, err := bundledConPTY()
+	if err != nil {
+		return nil, fmt.Errorf("bundled ConPTY is unavailable (requires the f4 ConPTY bundle on Windows 10 build 1809+): %w", err)
 	}
 
 	var inPipeOur, inPipePty windows.Handle
@@ -80,7 +194,7 @@ func NewPTY() (*PTY, error) {
 	// Создаем псевдоконсоль
 	var console windows.Handle
 	size := windows.Coord{X: 80, Y: 24}
-	err := windows.CreatePseudoConsole(size, inPipePty, outPipePty, 0, &console)
+	err = api.createPseudoConsole(size, inPipePty, outPipePty, 0, &console)
 	if err != nil {
 		windows.CloseHandle(inPipePty)
 		windows.CloseHandle(inPipeOur)
@@ -140,7 +254,12 @@ func (p *PTY) SetSize(cols, rows int) {
 	// compare against REFLOW_PTY and FM_RESIZE. The HRESULT used to be
 	// dropped on the floor; a refused resize left the pseudoconsole at its
 	// previous size with nothing in the log to say so.
-	err := windows.ResizePseudoConsole(p.console, windows.Coord{X: int16(cols), Y: int16(rows)})
+	api, err := bundledConPTY()
+	if err != nil {
+		vtui.DebugLog("PTY_WIN_SIZE: bundled ConPTY unavailable: %v", err)
+		return
+	}
+	err = api.resizePseudoConsole(p.console, windows.Coord{X: int16(cols), Y: int16(rows)})
 	if err != nil {
 		vtui.DebugLog("PTY_WIN_SIZE: ResizePseudoConsole(%dx%d) failed: %v", cols, rows, err)
 		return
@@ -229,7 +348,12 @@ func (p *PTY) closeConsole() {
 		return
 	}
 	p.consoleClosed = true
-	windows.ClosePseudoConsole(p.console)
+	api, err := bundledConPTY()
+	if err != nil {
+		vtui.DebugLog("PTY_WIN: bundled ConPTY unavailable while closing: %v", err)
+		return
+	}
+	api.closePseudoConsole(p.console)
 }
 
 func (p *PTY) Close() error {
@@ -247,7 +371,11 @@ func (p *PTY) Close() error {
 	}
 	if !p.consoleClosed {
 		p.consoleClosed = true
-		windows.ClosePseudoConsole(p.console)
+		if api, err := bundledConPTY(); err == nil {
+			api.closePseudoConsole(p.console)
+		} else {
+			vtui.DebugLog("PTY_WIN: bundled ConPTY unavailable while closing: %v", err)
+		}
 	}
 	p.inWriter.Close()
 	p.outReader.Close()
