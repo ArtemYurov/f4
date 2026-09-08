@@ -4,50 +4,6 @@ import (
 	"strings"
 )
 
-// StartupMode says which renderer family f4 starts in when nothing on the
-// command line settles the question. It exists so that a user who always
-// wants the same answer does not have to retype --gui or --tty on every run
-// (issue #601).
-type StartupMode int
-
-const (
-	// StartupModeAuto keeps the historical behavior: probe the environment
-	// and pick a graphical window when one is available.
-	StartupModeAuto StartupMode = iota
-	// StartupModeTTY always starts in the terminal, even on a desktop where
-	// automatic selection would have opened a window.
-	StartupModeTTY
-	// StartupModeGui always starts in a graphical window, including on the
-	// platforms where automatic selection deliberately does not try one
-	// (native Windows and Wine, see shouldTryGui).
-	StartupModeGui
-)
-
-func (m StartupMode) String() string {
-	switch m {
-	case StartupModeTTY:
-		return "tty"
-	case StartupModeGui:
-		return "gui"
-	default:
-		return "auto"
-	}
-}
-
-// ParseStartupMode maps a settings.ini value to a mode. Anything unknown
-// means "auto": a hand-edited or newer-version config must not be able to
-// stop f4 from starting.
-func ParseStartupMode(value string) StartupMode {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "tty", "console", "terminal", "text":
-		return StartupModeTTY
-	case "gui", "graphics", "graphical", "window":
-		return StartupModeGui
-	default:
-		return StartupModeAuto
-	}
-}
-
 // startupAutoBackend is the spelling that means "decide at startup". It is
 // accepted both in settings.ini and on the command line, where it is the way
 // to override a configured backend back to automatic selection for one run.

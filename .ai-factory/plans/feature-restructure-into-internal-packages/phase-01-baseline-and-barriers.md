@@ -464,11 +464,24 @@ depend on layer 4.
    `internal/panel`.
 2. Move `type compareOptions struct` from `cmd/f4/compare_folders.go:61` into
    `config.go`. Keep the field comments verbatim: they document the Advanced
-   Compare dialog field by field.
+   Compare dialog field by field. Its two methods, `normalize` and `hasCriteria`,
+   come with it, and so do the three constants they and `defaultCompareOptions`
+   read — `compareIgnoreEOL`, `compareIgnoreSpaces` and `compareMaxDepthLimit` —
+   plus `defaultCompareOptions` itself, which `config.go:469` calls to seed
+   `AppConfig.Compare`.
 3. Move `type StartupMode int` and its constants from
-   `cmd/f4/startup_backend.go:11` into `config.go`.
-4. Leave every function and method that *uses* these types where it is. Only the
-   declarations move.
+   `cmd/f4/startup_backend.go:11` into `config.go`, together with its `String`
+   method and `ParseStartupMode`, which `config.go:643` calls.
+4. Leave every function and method that *uses* these types where it is. What
+   moves is each type's own declaration set: the type, its constants, its
+   methods, and whatever `config.go` itself calls.
+
+   A method must travel with its receiver — Go refuses `func (o compareOptions)`
+   in a package that does not declare `compareOptions`, so leaving `normalize` in
+   `compare_folders.go` stops compiling the moment that file becomes
+   `internal/dialog`. `PanelScrollbarMode` and `WorkspaceTabNumberingMode`
+   (`config.go:125`, `:144`) already sit in `config.go` in exactly this shape:
+   type, constants, `String`, parser.
 5. Confirm no fourth type is hiding: re-derive the list with
    ```
    awk '/^type F4Config struct/,/^}/' cmd/f4/config.go |
@@ -507,6 +520,8 @@ packages exist.
 - `ls cmd/f4/navigation_mode.go` fails; `grep -n 'func ParsePanelNavigationMode' cmd/f4/config.go` finds it.
 - `grep -n '^type StartupMode' cmd/f4/startup_backend.go` returns nothing.
 - `grep -n '^type compareOptions' cmd/f4/compare_folders.go` returns nothing.
+- `grep -rn 'func (. compareOptions)\|func (. StartupMode)\|func (. PanelNavigationMode)' cmd/f4/`
+  names `config.go` and nothing else.
 - All five `F4Config` field types are declared in `config.go`.
 
 ### Verification

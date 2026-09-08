@@ -171,6 +171,168 @@ func ParseWorkspaceTabNumberingMode(value string) WorkspaceTabNumberingMode {
 	}
 }
 
+// PanelNavigationMode controls how unmodified keyboard input is interpreted
+// while file panels are visible.
+type PanelNavigationMode int
+
+const (
+	NavigationClassic PanelNavigationMode = iota
+	NavigationVim
+	NavigationSearchFirst
+)
+
+func (m PanelNavigationMode) String() string {
+	switch m {
+	case NavigationVim:
+		return "vim"
+	case NavigationSearchFirst:
+		return "search"
+	default:
+		return "classic"
+	}
+}
+
+func ParsePanelNavigationMode(value string) PanelNavigationMode {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "vim":
+		return NavigationVim
+	case "search":
+		return NavigationSearchFirst
+	default:
+		return NavigationClassic
+	}
+}
+
+// StartupMode says which renderer family f4 starts in when nothing on the
+// command line settles the question. It exists so that a user who always
+// wants the same answer does not have to retype --gui or --tty on every run
+// (issue #601).
+type StartupMode int
+
+const (
+	// StartupModeAuto keeps the historical behavior: probe the environment
+	// and pick a graphical window when one is available.
+	StartupModeAuto StartupMode = iota
+	// StartupModeTTY always starts in the terminal, even on a desktop where
+	// automatic selection would have opened a window.
+	StartupModeTTY
+	// StartupModeGui always starts in a graphical window, including on the
+	// platforms where automatic selection deliberately does not try one
+	// (native Windows and Wine, see shouldTryGui).
+	StartupModeGui
+)
+
+func (m StartupMode) String() string {
+	switch m {
+	case StartupModeTTY:
+		return "tty"
+	case StartupModeGui:
+		return "gui"
+	default:
+		return "auto"
+	}
+}
+
+// ParseStartupMode maps a settings.ini value to a mode. Anything unknown
+// means "auto": a hand-edited or newer-version config must not be able to
+// stop f4 from starting.
+func ParseStartupMode(value string) StartupMode {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "tty", "console", "terminal", "text":
+		return StartupModeTTY
+	case "gui", "graphics", "graphical", "window":
+		return StartupModeGui
+	default:
+		return StartupModeAuto
+	}
+}
+
+// What "ignore" means when comparing contents.
+const (
+	// compareIgnoreEOL treats CRLF, CR and LF as the same line break, so a
+	// file that has travelled through Windows still equals its Unix twin.
+	compareIgnoreEOL = iota
+	// compareIgnoreSpaces drops every whitespace byte, which also covers
+	// line breaks: indentation changes stop counting as differences.
+	compareIgnoreSpaces
+)
+
+const (
+	// compareMaxDepthLimit is the nesting level Far3's dialog offers, and
+	// the largest value the field accepts.
+	compareMaxDepthLimit = 99
+)
+
+// compareOptions mirrors the Advanced Compare dialog field for field.
+type compareOptions struct {
+	// Recursive walks subfolders instead of comparing only what the two
+	// panels show side by side.
+	Recursive bool
+	// LimitDepth caps that walk at MaxDepth levels below the panel folder.
+	LimitDepth bool
+	MaxDepth   int
+	// MarkedOnly narrows the comparison to the items marked in each panel.
+	MarkedOnly bool
+
+	// ByTime, BySize and ByContent are the comparison criteria. A pair of
+	// files differs as soon as one of the enabled criteria says so.
+	ByTime bool
+	// TimeSlack allows compareTimeSlack between two modification times.
+	TimeSlack bool
+	// IgnoreZones additionally ignores differences that are a whole
+	// number of quarter hours, i.e. a file stamped in another time zone.
+	IgnoreZones bool
+	BySize      bool
+	ByContent   bool
+
+	// Ignore enables the content filter selected by IgnoreMode.
+	Ignore     bool
+	IgnoreMode int
+
+	// ReportEqual asks for a message when the comparison found nothing.
+	// Without it a comparison of two identical folders looks like a
+	// command that did not run.
+	ReportEqual bool
+}
+
+// defaultCompareOptions is Far's built-in "Compare folders": names, times
+// and sizes, across the whole tree, and a word when nothing differs.
+func defaultCompareOptions() compareOptions {
+	return compareOptions{
+		Recursive:   true,
+		MaxDepth:    compareMaxDepthLimit,
+		ByTime:      true,
+		TimeSlack:   true,
+		IgnoreZones: true,
+		BySize:      true,
+		IgnoreMode:  compareIgnoreEOL,
+		ReportEqual: true,
+	}
+}
+
+// normalize repairs values a hand-edited config may hold and reports the
+// options actually usable. Nothing here silently turns a criterion on: a
+// comparison with no criterion at all is refused by the dialog instead.
+func (o compareOptions) normalize() compareOptions {
+	if o.MaxDepth < 1 {
+		o.MaxDepth = 1
+	}
+	if o.MaxDepth > compareMaxDepthLimit {
+		o.MaxDepth = compareMaxDepthLimit
+	}
+	if o.IgnoreMode != compareIgnoreSpaces {
+		o.IgnoreMode = compareIgnoreEOL
+	}
+	return o
+}
+
+// hasCriteria reports whether anything at all is being compared. Presence
+// alone is not a criterion: two folders holding the same names would then
+// always come back equal, whatever the files inside them look like.
+func (o compareOptions) hasCriteria() bool {
+	return o.ByTime || o.BySize || o.ByContent
+}
+
 func ParsePanelScrollbarMode(value string) PanelScrollbarMode {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "minimal":
