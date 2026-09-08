@@ -1,65 +1,31 @@
 # Handoff — where this stands
 
-Written at `a1da963e`, on a clean, green tree. Everything here is either a
-thing that must happen first or a thing that lives nowhere else.
+Everything here is either a thing that must happen first or a thing that lives
+nowhere else.
 
-## Start here: the upstream merge
+## Where this stands
 
-`upstream/main` is **12 commits ahead** and was attempted at `a1da963e`. The
-merge was aborted rather than half-resolved, because a session was ending and a
-partly-merged tree is worse to inherit than a clean one. Nothing is lost; redo
-it as the first action.
-
-```
-git merge upstream/main
-```
-
-Four files conflict, eight hunks. What each needs:
-
-- **`cmd/f4/macro.go`** — modify/delete. The file is gone: Task 28 split it into
-  `internal/macro/engine.go` (recording, playback, storage, the assign dialog)
-  and `cmd/f4/macro_dispatch.go` (the key router). Upstream's change is four
-  lines and belongs to the router. Apply it inside `macroFilter`, immediately
-  after the `configuredHotkeyAction` block that resolves the palette chord:
-
-  ```go
-  if commandPaletteLegacyShortcut(currentArea, e) {
-      RunAction(commandPaletteActionName)
-      return true
-  }
-  ```
-
-  `commandPaletteLegacyShortcut` arrives with the merge; the hunk does not
-  compile before the rest of the merge is in place. Then `git rm cmd/f4/macro.go`.
-
-- **`internal/dialog/settings_portable.go`** — four hunks, and the expensive
-  one. This is `cmd/f4/portable.go` renamed by Task 25, with four names
-  exported for `cmd/f4` (`SetPortableMode`, `EnsureProfileLayout`,
-  `CopyProfileDir`, `MoveProfileDir`, `ShowPortableSettings`,
-  `PortableProfileSubdirs`) and `Msg` qualified as `i18n.Msg`. Do **not** take
-  upstream's file wholesale — it references `cmd/f4` symbols Task 25 already
-  resolved differently, and taking it costs more than merging by hand. The
-  method that worked last time: keep our side, then re-apply upstream's hunks
-  one at a time against it.
-
-- **`cmd/f4/action_table.go`** (2 hunks), **`cmd/f4/actions.go`** (1),
-  **`cmd/f4/portable_test.go`** (1) — ordinary content conflicts. Watch for
-  `internal/terminal` and `internal/media` qualifiers on our side that
-  upstream's incoming code will not have.
-
-After the merge: full suite, cross-build, `GOOS=… go vet` on four systems.
+Written at `c92a6e72`, on a clean, green tree, level with `upstream/main`
+(`git rev-list --count HEAD..upstream/main` reports 0). Two merges brought in
+27 upstream commits; both are recorded in `index.md`'s Open Findings, along with
+the live bug the first of them fixed.
 
 ## Where the work stands
 
-Tasks 26-31 are done and committed; phases 6 and 7 are closed. `cmd/f4` is
-down from 596 files to 404. The checkboxes in `index.md` match the tree —
-verified at `a1da963e`.
+Tasks 26-32 and 46 are done and committed; phases 6 and 7 are closed and phase
+8 is half done. `cmd/f4` is down from 596 files to 378. The checkboxes in
+`index.md` match the tree.
 
-Next is **Task 32, `internal/fileops`**. The package already exists: the viewer
-wave created it early with `state.go` and `codepage.go`, because the viewer
-reads a remembered codepage and Task 24 had already found that
-`codepage_state.go` could not move without `file_state.go`. Task 32 fills in
-the rest as written.
+Next is **Task 33, `internal/editor`**. One thing is known about it before it
+starts: `findPanelsFrameAnyScreen` is declared in `editor_view.go:5562` and
+reads `pf.closed`, a private field of `PanelsFrame`, so Go requires it in the
+panel's package. It cannot travel with the file; Task 33 has to lift it out.
+`index.md` line 446 calls it composition-root code, which is also wrong.
+
+Task 34 after that is the wave most likely to reorder the menu: it takes
+`fuse_mount_action.go` and `fuse_mount_list.go`, and with them the last three
+action registrations left in `cmd/f4`. `TestActionOrderIsStable` is the check
+that says so.
 
 ## Deviations from the plan, and where each is recorded
 
@@ -106,6 +72,57 @@ session can check the record rather than rediscover it.
 - The plan's layer numbers for `gui` (1), `term` (1), `media` (1) and
   `fileops` (1) were assigned before the edges existed. Three are corrected in
   the auditor; `fileops` is still 1 and is still true.
+
+## What the extraction gate does not ask
+
+The gate counts what a file **references**. It says nothing about what a file
+**declares** — and a function parked in a moving file travels with it silently,
+away from callers that stay behind. Task 32 found seven of them in one wave, and
+three were not cosmetic: `padLabel`, `ThemedForeground` and `UseTableColors`
+made `internal/fileops` import `internal/dialog`, a layer 1 → layer 3 edge, and
+with the attributes dialog pointing back it was a cycle. The compiler caught
+that one only because the edge happened to be mutual.
+
+So the wave procedure gains a backward pass, run **before** the move: for every
+declaration in the files being moved, where are its callers, and are they going
+to the same package?
+
+```sql
+WITH decl AS (SELECT id, name, file_path FROM nodes WHERE file_path IN (<wave files>))
+SELECT d.name, s.file_path AS caller
+FROM edges e JOIN nodes s ON s.id = e.source JOIN decl d ON d.id = e.target
+WHERE e.kind IN ('calls','references') AND s.file_path NOT IN (<wave files>);
+```
+
+Three things about that index, all measured: run `codegraph sync` first, because
+it lags commits and answers about yesterday's tree without saying so;
+`is_exported` is 0 for every method, constant and variable regardless of case,
+so filter on the first letter instead; and struct fields are not in the model at
+all — `fsp.vfs` does not appear — so the query names candidates and grep
+confirms them.
+
+## Two mechanical traps, both hit once
+
+**`git commit --only $(git diff --cached --name-only)` builds a commit that does
+not compile.** With rename detection, `--name-only` prints only the new path;
+the old one stays in the tree and the commit holds both copies. For a wave of
+moves take the paths from `git status --short` instead. The point of the
+pointed-commit rule is a commit that builds and takes nothing of anyone else's,
+and this form quietly broke the first half of it.
+
+**The palette auditor's target map empties itself, and a wave that forgets its
+line leaves litter.** `commandPaletteTargetPackage` forward-declares where each
+`cmd/f4` file will land so audit keys survive the move; the wave that moves a
+file deletes its entry, at which point the directory gives the same answer.
+Three entries were stale when Task 32 looked — `codepage_settings.go`,
+`macro.go` and its own `queue_manager.go` — so it is worth checking the whole
+map rather than only the file you moved:
+
+```
+sed -n '/^var commandPaletteTargetPackage/,/^}/p' cmd/f4/command_palette_coverage_test.go \
+  | grep -oE '"[a-z_0-9]+\.go"' | tr -d '"' \
+  | while read f; do [ -e "cmd/f4/$f" ] || echo "stale: $f"; done
+```
 
 ## Tools
 

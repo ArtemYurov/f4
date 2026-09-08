@@ -88,7 +88,6 @@ var commandPaletteTargetPackage = map[string]string{
 	"apply_command_output.go":     "cmdline",
 	"command_line.go":             "cmdline",
 	"bookmarks_dialog.go":         "dialog",
-	"codepage_settings.go":        "dialog",
 	"command_palette_ui.go":       "dialog",
 	"find_file.go":                "dialog",
 	"grabber.go":                  "dialog",
@@ -96,9 +95,7 @@ var commandPaletteTargetPackage = map[string]string{
 	"editor_base64.go":            "editor",
 	"editor_find_all.go":          "editor",
 	"editor_view.go":              "editor",
-	"fuse_mount_list.go":          "fileops",
-	"queue_manager.go":            "fileops",
-	"macro.go":                    "macro",
+	"fuse_mount_list.go":          "panel",
 	"player_panel.go":             "panel",
 	"drive_bookmarks_ui.go":       "panel",
 	"file_associations_editor.go": "panel",
@@ -250,7 +247,7 @@ var commandPaletteNewVMenuAudit = map[string]commandPaletteSurfaceAudit{
 	"panel.showAssociationPicker#1": {
 		class: paletteAuditDynamicAction, rationale: "matching file associations are runtime choices reached through the registered file operation",
 	},
-	"fileops.showMountList#1": {
+	"panel.showMountList#1": {
 		class: paletteAuditDynamicAction, rationale: "the registered mount-list action opens the current mount inventory",
 	},
 	"panel.(*PanelsFrame).menuItemsWithKeyLabels#1": {
