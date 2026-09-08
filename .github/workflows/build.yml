@@ -1161,9 +1161,14 @@ jobs:
         Copy-Item $package $zip -Force
         $extract = Join-Path $env:RUNNER_TEMP 'conpty-package'
         Expand-Archive -Path $zip -DestinationPath $extract -Force
-        Copy-Item (Join-Path $extract "runtimes/win-$runtime/native/conpty.dll") 'cmd/f4/conpty.dll' -Force
-        Copy-Item (Join-Path $extract "build/native/runtimes/$runtime/OpenConsole.exe") 'cmd/f4/OpenConsole.exe' -Force
-        Get-Item cmd/f4/conpty.dll, cmd/f4/OpenConsole.exe | Format-Table Name,Length
+        # cmd/f4 is where the built binary looks for its bundle;
+        # internal/terminal is where the test that checks the bundle now runs,
+        # and go test makes a package's own directory the working directory.
+        foreach ($dest in 'cmd/f4', 'internal/terminal') {
+          Copy-Item (Join-Path $extract "runtimes/win-$runtime/native/conpty.dll") "$dest/conpty.dll" -Force
+          Copy-Item (Join-Path $extract "build/native/runtimes/$runtime/OpenConsole.exe") "$dest/OpenConsole.exe" -Force
+        }
+        Get-Item cmd/f4/conpty.dll, cmd/f4/OpenConsole.exe, internal/terminal/conpty.dll, internal/terminal/OpenConsole.exe | Format-Table Name,Length
 
     - name: Move Go caches to the fast disk (Windows)
       # C: is the OS disk and glacial at unpacking the ~650 MB Go cache --

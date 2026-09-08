@@ -28,9 +28,9 @@ func TestEditorView_WorkspaceCloseActionConfirmsUnsavedChanges(t *testing.T) {
 	ev := editor.NewEditorView(piecetable.New([]byte("test")), nil, "file.txt")
 	defer ev.Close()
 	vtui.FrameManager.AddScreen(ev)
-	testutil.PressKey(ev, &vtinput.InputEvent{
+	pressKey(ev, &vtinput.InputEvent{
 		Type: vtinput.KeyEventType, KeyDown: true, Char: '!',
-	}, nil)
+	})
 
 	if !actionWorkspaceClose() {
 		t.Fatal("Workspace.Close action was not handled")
@@ -78,9 +78,9 @@ func TestEditorView_BackgroundWorkspaceCloseAnchorsUnsavedChangesConfirm(t *test
 	defer ev.Close()
 	vtui.FrameManager.AddScreen(ev)
 	editorScreen := vtui.FrameManager.Screens[vtui.FrameManager.ActiveIdx]
-	testutil.PressKey(ev, &vtinput.InputEvent{
+	pressKey(ev, &vtinput.InputEvent{
 		Type: vtinput.KeyEventType, KeyDown: true, Char: '!',
-	}, nil)
+	})
 	vtui.FrameManager.SwitchScreen(0)
 
 	if !actionWorkspaceCloseNumber(editorScreen.Number) {

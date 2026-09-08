@@ -16,6 +16,7 @@ import (
 	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/f4/vfs"
@@ -53,6 +54,12 @@ func TestMain(m *testing.M) {
 // installTestSeams points this package's escape hatches somewhere harmless for
 // the duration of the run.
 func installTestSeams() {
+	// f4 extends vtui's palette past its last index, and any widget drawn with
+	// one of the extra colours indexes past the end of the default one. Which
+	// test draws first depends on the shuffle seed, so the palette is sized
+	// here rather than left to whichever test happens to grow it.
+	theme.SetDefaultF4Palette()
+
 	vfs.InitSudoClient("/usr/bin/f4", "")
 
 	// main() wires this before it reads the config directory; without it here

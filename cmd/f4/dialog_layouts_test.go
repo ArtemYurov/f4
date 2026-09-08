@@ -16,6 +16,7 @@ import (
 	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/testutil"
+	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -35,7 +36,11 @@ func TestAllDialogs_LayoutValidation(t *testing.T) {
 		"dialog_layouts_test.go",
 		"go.mod",
 	)
+	// vtui.SetDefaultPalette sizes the palette to vtui's own last index; f4
+	// extends it, and a dialog that reads one of the extra colours indexes past
+	// the end. Grow it back the way the application does.
 	vtui.SetDefaultPalette()
+	theme.SetDefaultF4Palette()
 
 	// 1. Temporary redirect of the config paths to prevent writing/reading from the user's home directory.
 	tmpDir := t.TempDir()

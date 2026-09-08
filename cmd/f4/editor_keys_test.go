@@ -68,12 +68,12 @@ func TestEditor_DeleteLine(t *testing.T) {
 	ev.CursorLine = 1
 	ev.CursorPos = 2
 
-	testutil.PressKey(ev, &vtinput.InputEvent{
+	pressKey(ev, &vtinput.InputEvent{
 		Type:            vtinput.KeyEventType,
 		KeyDown:         true,
 		VirtualKeyCode:  vtinput.VK_Y,
 		ControlKeyState: vtinput.LeftCtrlPressed,
-	}, nil)
+	})
 
 	expected := "line1\nline3"
 	if ev.Pt.String() != expected {
@@ -84,12 +84,12 @@ func TestEditor_DeleteLine(t *testing.T) {
 		t.Errorf("Expected CursorLine 1, got %d", ev.CursorLine)
 	}
 
-	testutil.PressKey(ev, &vtinput.InputEvent{
+	pressKey(ev, &vtinput.InputEvent{
 		Type:            vtinput.KeyEventType,
 		KeyDown:         true,
 		VirtualKeyCode:  vtinput.VK_Y,
 		ControlKeyState: vtinput.LeftCtrlPressed,
-	}, nil)
+	})
 
 	expected2 := "line1"
 	if ev.Pt.String() != expected2 {
@@ -131,10 +131,10 @@ func TestEditorView_EscRunsQuitAction(t *testing.T) {
 	Pt := piecetable.New([]byte("foo"))
 	ev := editor.NewEditorView(Pt, nil, "test.txt")
 
-	testutil.PressKey(ev, &vtinput.InputEvent{
+	pressKey(ev, &vtinput.InputEvent{
 		Type: vtinput.KeyEventType, KeyDown: true,
 		VirtualKeyCode: vtinput.VK_ESCAPE,
-	}, nil)
+	})
 
 	if !ev.IsDone() {
 		t.Error("Editor should be closed by the Editor.Quit action")
@@ -174,7 +174,7 @@ func TestEditorView_SaveFile(t *testing.T) {
 
 	// 4. Simulate pressing F2 (Save)
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf()) // Needed for PostTask to work
-	testutil.PressKey(ev, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_F2}, nil)
+	pressKey(ev, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_F2})
 
 	// 5. Wait for async save to finish by processing tasks
 	timeout := time.After(1 * time.Second)
@@ -240,13 +240,13 @@ func TestEditorView_F3_ToggleWordWrap(t *testing.T) {
 	ev.WordWrap = true
 
 	// Press F3 (Wait, make sure your code uses VK_F3 now)
-	testutil.PressKey(ev, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_F3}, nil)
+	pressKey(ev, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_F3})
 	if ev.WordWrap {
 		t.Error("F3 failed to disable WordWrap")
 	}
 
 	// Press F3 again
-	testutil.PressKey(ev, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_F3}, nil)
+	pressKey(ev, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_F3})
 	if !ev.WordWrap {
 		t.Error("F3 failed to re-enable WordWrap")
 	}
@@ -266,13 +266,13 @@ func TestEditorView_DefaultsAndToggles(t *testing.T) {
 	}
 
 	// 2. Toggle F3 (Wrap)
-	testutil.PressKey(ev, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_F3}, nil)
+	pressKey(ev, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_F3})
 	if !ev.WordWrap {
 		t.Error("F3 failed to toggle WordWrap to ON")
 	}
 
 	// 3. Toggle F5 (Whitespaces)
-	testutil.PressKey(ev, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_F5}, nil)
+	pressKey(ev, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_F5})
 	if !ev.ShowWhitespaces {
 		t.Error("F5 failed to toggle ShowWhitespaces to ON")
 	}
@@ -284,10 +284,10 @@ func TestEditorView_SelectAll(t *testing.T) {
 	defer ev.Close()
 
 	// Ctrl+A
-	testutil.PressKey(ev, &vtinput.InputEvent{
+	pressKey(ev, &vtinput.InputEvent{
 		Type: vtinput.KeyEventType, KeyDown: true,
 		VirtualKeyCode: vtinput.VK_A, ControlKeyState: vtinput.LeftCtrlPressed,
-	}, nil)
+	})
 
 	if !ev.SelActive {
 		t.Fatal("Selection should be active after Ctrl+A")
@@ -312,7 +312,7 @@ func TestEditorView_FarX_SmartCut(t *testing.T) {
 	ev.SelActive = true
 	ev.SelAnchorOffset = 0
 	ev.CursorPos = 6 // "Select"
-	testutil.PressKey(ev, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_X, ControlKeyState: vtinput.LeftCtrlPressed}, nil)
+	pressKey(ev, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_X, ControlKeyState: vtinput.LeftCtrlPressed})
 	if Pt.String() != " me\nNext line" {
 		t.Errorf("Ctrl+X Cut failed: %q", Pt.String())
 	}
@@ -331,10 +331,10 @@ func TestEditorView_FarSelectAll_Behavior(t *testing.T) {
 	ev := editor.NewEditorView(Pt, nil, "")
 	defer ev.Close()
 
-	testutil.PressKey(ev, &vtinput.InputEvent{
+	pressKey(ev, &vtinput.InputEvent{
 		Type: vtinput.KeyEventType, KeyDown: true,
 		VirtualKeyCode: vtinput.VK_A, ControlKeyState: vtinput.LeftCtrlPressed,
-	}, nil)
+	})
 
 	if !ev.SelActive || ev.SelAnchorOffset != 0 {
 		t.Error("Ctrl+A anchor should be 0")
@@ -349,10 +349,10 @@ func TestEditorView_FarSelectAll(t *testing.T) {
 	ev := editor.NewEditorView(Pt, nil, "")
 	defer ev.Close()
 
-	testutil.PressKey(ev, &vtinput.InputEvent{
+	pressKey(ev, &vtinput.InputEvent{
 		Type: vtinput.KeyEventType, KeyDown: true,
 		VirtualKeyCode: vtinput.VK_A, ControlKeyState: vtinput.LeftCtrlPressed,
-	}, nil)
+	})
 
 	if !ev.SelActive {
 		t.Fatal("Selection should be active after Ctrl+A")
@@ -379,10 +379,10 @@ func TestEditorView_FarX_CutVsDown(t *testing.T) {
 	ev.SelAnchorOffset = 0
 	ev.CursorPos = 4 // Выделено "Some"
 
-	testutil.PressKey(ev, &vtinput.InputEvent{
+	pressKey(ev, &vtinput.InputEvent{
 		Type: vtinput.KeyEventType, KeyDown: true,
 		VirtualKeyCode: vtinput.VK_X, ControlKeyState: vtinput.LeftCtrlPressed,
-	}, nil)
+	})
 
 	if Pt.String() != " selected text\nNext line" {
 		t.Errorf("Ctrl+X (Cut) failed: text is %q", Pt.String())
@@ -449,10 +449,10 @@ func TestEditorView_Search_ShiftF7_Reverse(t *testing.T) {
 	ev.SelActive = false
 	editor.LastEditorSearchReverse = true
 	vtui.DebugLog("TEST_SEARCH: Triggering Search 2. Current CursorPos: %d", ev.CursorPos)
-	testutil.PressKey(ev, &vtinput.InputEvent{
+	pressKey(ev, &vtinput.InputEvent{
 		Type: vtinput.KeyEventType, KeyDown: true,
 		VirtualKeyCode: vtinput.VK_F7, ControlKeyState: vtinput.ShiftPressed,
-	}, nil)
+	})
 
 	// Use a more robust drain to handle async search completion
 	found := false
@@ -509,7 +509,7 @@ func TestEditorView_SaveFailure_NoDataLoss(t *testing.T) {
 	}
 
 	// 2. Attempt to save (F2)
-	testutil.PressKey(ev, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_F2}, nil)
+	pressKey(ev, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_F2})
 
 	// Process async tasks
 	timeout := time.After(2 * time.Second)
@@ -577,13 +577,13 @@ func TestEditorView_ModificationStress(t *testing.T) {
 		if op.ctrl {
 			ctrlFlag = vtinput.LeftCtrlPressed
 		}
-		testutil.PressKey(ev, &vtinput.InputEvent{
+		pressKey(ev, &vtinput.InputEvent{
 			Type:            vtinput.KeyEventType,
 			KeyDown:         true,
 			Char:            rune(op.char),
 			VirtualKeyCode:  op.vk,
 			ControlKeyState: ctrlFlag,
-		}, nil)
+		})
 
 		// After every op, verify LineIndex integrity
 		expectedLi := piecetable.NewLineIndex()
@@ -657,11 +657,11 @@ func TestEditor_InsertToggle(t *testing.T) {
 	}
 
 	// Нажимаем Insert
-	testutil.PressKey(ev, &vtinput.InputEvent{
+	pressKey(ev, &vtinput.InputEvent{
 		Type:           vtinput.KeyEventType,
 		KeyDown:        true,
 		VirtualKeyCode: vtinput.VK_INSERT,
-	}, nil)
+	})
 
 	if !ev.Overtype {
 		t.Error("Insert key failed to toggle Overtype mode")
@@ -703,11 +703,11 @@ func TestEditorViewInsertOverwriteCursorShape(t *testing.T) {
 	}
 
 	// Нажимаем Insert
-	testutil.PressKey(ev, &vtinput.InputEvent{
+	pressKey(ev, &vtinput.InputEvent{
 		Type:           vtinput.KeyEventType,
 		KeyDown:        true,
 		VirtualKeyCode: vtinput.VK_INSERT,
-	}, nil)
+	})
 
 	// Проверяем, что режим сменился на overtype
 	if !ev.Overtype {
@@ -739,11 +739,11 @@ func TestEditorView_WordWrapToggleIsRemembered(t *testing.T) {
 	ev := editor.NewEditorView(piecetable.New([]byte("some text")), nil, "wrapped.txt")
 	defer ev.Close()
 
-	testutil.PressKey(ev, &vtinput.InputEvent{
+	pressKey(ev, &vtinput.InputEvent{
 		Type:           vtinput.KeyEventType,
 		KeyDown:        true,
 		VirtualKeyCode: vtinput.VK_F3,
-	}, nil)
+	})
 	if !ev.WordWrap {
 		t.Fatal("F3 did not turn word wrap on")
 	}
@@ -754,11 +754,11 @@ func TestEditorView_WordWrapToggleIsRemembered(t *testing.T) {
 		t.Fatal("word wrap turned on with F3 was not remembered for the file")
 	}
 
-	testutil.PressKey(ev, &vtinput.InputEvent{
+	pressKey(ev, &vtinput.InputEvent{
 		Type:           vtinput.KeyEventType,
 		KeyDown:        true,
 		VirtualKeyCode: vtinput.VK_F3,
-	}, nil)
+	})
 	if ev.WordWrap {
 		t.Fatal("F3 did not turn word wrap off again")
 	}
