@@ -192,6 +192,12 @@ and `TestMain` — the waves would otherwise strand.
   `upstream/main`. Whatever the fork is behind by is reported as yours. Task 39
   levels them before it measures anything.
 
+  **Pass `--max-same-issues=0 --max-issues-per-linter=0`.** The defaults are 3
+  and 50, and the tool prints the count *after* truncation. A run that ends
+  "3 issues: errcheck: 3" looks like a short list to fix and was 30 in the config
+  wave — the same finding on thirty lines, twenty-seven of them hidden. The
+  report reads as reassuring precisely when there is most to do.
+
 - **Line numbers in `.github/workflows/build.yml` are a moving target.** The file
   grew from about 1350 lines to 1601 during this work and every upstream merge
   shifts it again. Every citation of it in this bundle is a convenience, not an

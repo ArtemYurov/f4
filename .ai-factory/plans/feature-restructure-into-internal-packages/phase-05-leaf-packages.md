@@ -84,7 +84,15 @@ each wave phase file so a task can be implemented from one file.
      good case, because it stops the build.
    - **Struct fields and composite-literal keys.** `hotkeyRow.Action` and
      `Action:` in a literal are names, not references. These compile as
-     "invalid field name", which is also loud.
+     "invalid field name", which is also loud. Watch the ini keys among them:
+     `GetString("Interface", "ColorStyle", …)` names a line in the user's
+     settings file, and a qualifier there compiles and silently reads the wrong
+     key.
+   - **The gate itself produces false positives.** The eight-type grep counts
+     names, and a name can be a string. `colors.go` scored 5 and moved whole:
+     `"CommandLine"`, `"CommandLine.Prefix"` and three more are colour slot
+     names in a table, not the type. A score above zero is a reason to open the
+     file, not a verdict — in either direction.
    - **Locals shadowing the package.** 61 loops read `for _, action := range …`.
      Rename the local inside the affected function; renaming the package
      qualifier instead is how a wave loses a call it meant to keep.
