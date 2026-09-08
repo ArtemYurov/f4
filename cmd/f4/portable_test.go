@@ -6,8 +6,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
+
+func portableSettingsMouseCoordinate(value int) int16 {
+	return int16(value) // #nosec G115 -- the test dialog is inside the test screen.
+}
 
 func TestPortableSettingsDialogUsesContextHelp(t *testing.T) {
 	initFrameworkActionTestScreen(t)
@@ -35,6 +40,33 @@ func TestPortableSettingsDialogUsesContextHelp(t *testing.T) {
 	}
 	if got := top.GetHelp(); got != "PortableSettings" {
 		t.Fatalf("portable settings help topic = %q, want PortableSettings", got)
+	}
+	dlg, ok := top.(*portableSettingsDialog)
+	if !ok {
+		t.Fatalf("portable settings frame has type %T, want *portableSettingsDialog", top)
+	}
+	startX2, startY2 := dlg.X2, dlg.Y2
+	if !dlg.ProcessMouse(&vtinput.InputEvent{
+		Type:        vtinput.MouseEventType,
+		KeyDown:     true,
+		ButtonState: vtinput.FromLeft1stButtonPressed,
+		MouseX:      portableSettingsMouseCoordinate(startX2),
+		MouseY:      portableSettingsMouseCoordinate(startY2),
+	}) {
+		t.Fatal("portable settings resize corner was not handled")
+	}
+	dlg.ProcessMouse(&vtinput.InputEvent{
+		Type:        vtinput.MouseEventType,
+		ButtonState: vtinput.FromLeft1stButtonPressed,
+		MouseX:      portableSettingsMouseCoordinate(startX2 + 8),
+		MouseY:      portableSettingsMouseCoordinate(startY2 + 4),
+	})
+	dlg.ProcessMouse(&vtinput.InputEvent{Type: vtinput.MouseEventType})
+	if dlg.X2 != startX2+8 {
+		t.Errorf("portable settings right edge = %d, want %d", dlg.X2, startX2+8)
+	}
+	if dlg.Y2 != startY2 {
+		t.Errorf("portable settings bottom edge = %d, want fixed %d", dlg.Y2, startY2)
 	}
 }
 
