@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -41,13 +42,13 @@ func TestEventToHotkeyStringSupportsUnicodeLetters(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := EventToHotkeyString(tc.key); got != tc.want {
-				t.Fatalf("EventToHotkeyString = %q, want %q", got, tc.want)
+			if got := keymap.EventToHotkeyString(tc.key); got != tc.want {
+				t.Fatalf("keymap.EventToHotkeyString = %q, want %q", got, tc.want)
 			}
 		})
 	}
-	parsed := ParseFarKey("Ф")
-	if got := EventToHotkeyString(parsed); got != "Ф" {
+	parsed := keymap.ParseFarKey("Ф")
+	if got := keymap.EventToHotkeyString(parsed); got != "Ф" {
 		t.Fatalf("Unicode shortcut round trip = %q, want Ф", got)
 	}
 }

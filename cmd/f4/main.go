@@ -18,6 +18,7 @@ import (
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
+	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/f4/vfs"
@@ -175,6 +176,7 @@ func main() {
 	// Before anything asks where the configuration lives: internal/config is a
 	// layer-0 leaf and cannot reach internal/update for the answer.
 	config.Executable = update.Executable
+	keymap.Suspended = keyRemapSuspended
 	configureF4DebugLogPath(config.GetF4ConfigDir())
 	if archivePath, archiveKind, found, err := update.ParseHelperArgs(os.Args[1:]); found {
 		if err != nil {
@@ -814,9 +816,9 @@ func SetupUI() {
 	if _, err := os.Stat(keymapPath); os.IsNotExist(err) {
 		// The file is the documentation: a user fighting a multiplexer has to
 		// find it in the profile without knowing it exists first.
-		createDefaultKeymapIni(keymapPath)
+		keymap.CreateDefaultKeymapIni(keymapPath)
 	}
-	GlobalKeyRemap = NewKeyRemap(keymapPath)
+	keymap.GlobalKeyRemap = keymap.NewKeyRemap(keymapPath)
 	MacroMgr = NewMacroManager(filepath.Join(configDir, "key_macros.ini"))
 	MacroMgr.LoadLuaMacros(filepath.Join(configDir, "Macros", "scripts"))
 	// Help is initialized after the hotkey manager: key binding topics

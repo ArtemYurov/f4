@@ -1,4 +1,4 @@
-package main
+package keymap
 
 import (
 	"os"
@@ -10,7 +10,7 @@ import (
 
 func newTestKeyRemap(t *testing.T, content string) *KeyRemap {
 	t.Helper()
-	path := filepath.Join(t.TempDir(), "keymap.ini")
+	path := filepath.Join(t.TempDir(), "ini")
 	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -18,9 +18,9 @@ func newTestKeyRemap(t *testing.T, content string) *KeyRemap {
 }
 
 func TestKeyRemap_MissingFileIsEmpty(t *testing.T) {
-	kr := NewKeyRemap(filepath.Join(t.TempDir(), "keymap.ini"))
+	kr := NewKeyRemap(filepath.Join(t.TempDir(), "ini"))
 	if !kr.IsEmpty() {
-		t.Fatalf("a missing keymap.ini must produce an empty table")
+		t.Fatalf("a missing ini must produce an empty table")
 	}
 	if got := kr.Resolve("Shell", "CtrlO"); got != "" {
 		t.Fatalf("empty table resolved %q", got)
@@ -287,10 +287,10 @@ Alt1=F1
 }
 
 func TestKeyRemap_DefaultIniIsInert(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "keymap.ini")
-	createDefaultKeymapIni(path)
+	path := filepath.Join(t.TempDir(), "ini")
+	CreateDefaultKeymapIni(path)
 	if _, err := os.Stat(path); err != nil {
-		t.Fatalf("default keymap.ini was not written: %v", err)
+		t.Fatalf("default ini was not written: %v", err)
 	}
 	if kr := NewKeyRemap(path); !kr.IsEmpty() {
 		t.Fatalf("the shipped sample file must remap nothing: %+v / %+v", kr.Exact, kr.Prefix)

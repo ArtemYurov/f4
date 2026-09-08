@@ -111,6 +111,7 @@ func TestHotkeyManager_GetActiveBindings(t *testing.T) {
 		t.Errorf("Expected Editor CtrlS to be File.Save")
 	}
 }
+
 func TestFormatKeyForUI(t *testing.T) {
 	tests := []struct {
 		in  string
@@ -158,6 +159,7 @@ func TestHotkeyManager_GetKeyForActionIsDeterministic(t *testing.T) {
 		}
 	}
 }
+
 func TestHotkeyManager_ShellDefaults_Issue289(t *testing.T) {
 	hm := NewHotkeyManager("")
 	hm.initDefaults()

@@ -1,4 +1,4 @@
-package main
+package keymap
 
 // The last hop of issue #662: the key combinations a TTY cannot carry, taken
 // from the X server and fed into the same stream every other key arrives on.
@@ -132,11 +132,12 @@ type ttyxKeyboard struct {
 	once sync.Once
 }
 
-// startTTYXKeyboard opens the session, asks for the configured combinations
-// and starts forwarding them. It returns nil, quietly, whenever any of that is
-// not possible: this is an improvement on a terminal that cannot do better,
-// never a requirement.
-func startTTYXKeyboard() *ttyxKeyboard {
+// StartTTYXKeyboard asks sess for the configured combinations and starts
+// forwarding them. It returns nil, quietly, whenever any of that is not
+// possible: this is an improvement on a terminal that cannot do better, never a
+// requirement. The session is one per process and belongs to whoever opened it,
+// so it comes in rather than being reached for.
+func StartTTYXKeyboard(sess *ttyx.Session) *ttyxKeyboard {
 	if !config.App.TTYXKeys {
 		return nil
 	}
@@ -148,7 +149,6 @@ func startTTYXKeyboard() *ttyxKeyboard {
 		return nil
 	}
 
-	sess := sharedTTYXSession()
 	if sess == nil {
 		return nil
 	}

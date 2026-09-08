@@ -4,6 +4,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -112,7 +113,7 @@ func actionScreenGrab() bool {
 		return false
 	}
 	if grabber, ok := vtui.FrameManager.GetTopFrame().(*GrabberFrame); ok {
-		return grabber.ProcessKey(ParseFarKey("AltIns"))
+		return grabber.ProcessKey(keymap.ParseFarKey("AltIns"))
 	}
 	OpenGrabber()
 	return true

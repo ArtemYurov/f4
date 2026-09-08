@@ -5,6 +5,7 @@ import (
 
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -54,7 +55,7 @@ func commandPaletteGrabberEntries(grabber *GrabberFrame) []commandPaletteEntry {
 				if vtui.FrameManager == nil || vtui.FrameManager.GetTopFrame() != grabber {
 					return false
 				}
-				return grabber.ProcessKey(ParseFarKey(key))
+				return grabber.ProcessKey(keymap.ParseFarKey(key))
 			},
 			"Action.App.ScreenGrab", "Action.App.ScreenGrab.Desc",
 		)
@@ -100,15 +101,15 @@ func commandPaletteArkanoidEntries(arkanoid *ArkanoidFrame) []commandPaletteEntr
 	entryAutoPlay := newEntry(
 		"ToggleAutoPlay", "CommandPalette.Arkanoid.ToggleAutoPlay", "Toggle auto-play",
 		"CommandPalette.Arkanoid.ToggleAutoPlay.Desc", "Let the Arkanoid paddle play automatically",
-		"Ctrl+Alt+A", ParseFarKey("CtrlAltA"), autoPlayStillCurrent,
+		"Ctrl+Alt+A", keymap.ParseFarKey("CtrlAltA"), autoPlayStillCurrent,
 	)
 	entryAutoPlay.Checked = autoPlay
 	return []commandPaletteEntry{
 		entryAutoPlay,
-		newEntry("HighScores", "CommandPalette.Arkanoid.HighScores", "Show high scores", "CommandPalette.Arkanoid.HighScores.Desc", "Open the Arkanoid high-score table", "Ctrl+H", ParseFarKey("CtrlH"), nil),
+		newEntry("HighScores", "CommandPalette.Arkanoid.HighScores", "Show high scores", "CommandPalette.Arkanoid.HighScores.Desc", "Open the Arkanoid high-score table", "Ctrl+H", keymap.ParseFarKey("CtrlH"), nil),
 		newEntry("SpeedUp", "CommandPalette.Arkanoid.SpeedUp", "Increase game speed", "CommandPalette.Arkanoid.SpeedUp.Desc", "Increase the Arkanoid game-loop speed", "+, =", &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: '+'}, nil),
 		newEntry("SpeedDown", "CommandPalette.Arkanoid.SpeedDown", "Decrease game speed", "CommandPalette.Arkanoid.SpeedDown.Desc", "Decrease the Arkanoid game-loop speed", "-, _", &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: '-'}, nil),
-		newEntry("Close", "CommandPalette.Arkanoid.Close", "Close Arkanoid", "CommandPalette.Arkanoid.Close.Desc", "Close the Arkanoid game", "Esc", ParseFarKey("Esc"), nil),
+		newEntry("Close", "CommandPalette.Arkanoid.Close", "Close Arkanoid", "CommandPalette.Arkanoid.Close.Desc", "Close the Arkanoid game", "Esc", keymap.ParseFarKey("Esc"), nil),
 	}
 }
 
@@ -132,7 +133,7 @@ func commandPaletteImageGalleryOpenEntry(image *ImageView) []commandPaletteEntry
 				image.gal != gallery || gallery.cursor != cursor || image.galleryPath() != path {
 				return false
 			}
-			return image.ProcessKey(ParseFarKey("Enter"))
+			return image.ProcessKey(keymap.ParseFarKey("Enter"))
 		},
 		"CommandPalette.Image.Gallery",
 	)}
@@ -153,7 +154,7 @@ func commandPaletteQueueZoomEntry(queue *QueueFrame) []commandPaletteEntry {
 				queue.IsDone() || !queue.ShowZoom || (queue.SavedBounds != nil) != zoomed {
 				return false
 			}
-			return queue.ProcessKey(ParseFarKey("F5"))
+			return queue.ProcessKey(keymap.ParseFarKey("F5"))
 		},
 	)
 	entry.Checked = zoomed

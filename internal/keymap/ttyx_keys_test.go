@@ -1,4 +1,4 @@
-package main
+package keymap
 
 import (
 	"testing"
@@ -96,7 +96,7 @@ func TestTTYXKeyboardCanBeSwitchedOff(t *testing.T) {
 	config.App.TTYXKeys = false
 	defer func() { config.App.TTYXKeys = saved }()
 
-	if k := startTTYXKeyboard(); k != nil {
+	if k := StartTTYXKeyboard(nil); k != nil {
 		k.Close()
 		t.Error("Keys=0 must stop it starting at all")
 	}

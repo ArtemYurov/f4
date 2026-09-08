@@ -13,6 +13,7 @@ import (
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -653,7 +654,7 @@ func init() {
 		},
 		Handler: withPF(func(pf *PanelsFrame) {
 			if fsp := pf.getActivePanel(); fsp != nil {
-				fsp.ProcessKey(ParseFarKey("Ins"))
+				fsp.ProcessKey(keymap.ParseFarKey("Ins"))
 			}
 		}),
 	})
@@ -1411,10 +1412,10 @@ func init() {
 		// The menu entry is offered where the keyboard it describes is, and
 		// stays reachable for anyone who has already asked for the layout on
 		// another platform, so the switch is never one-way.
-		Visible: func() bool { return runtime.GOOS == "darwin" || macKeysEnabled() },
-		Checked: macKeysEnabled,
+		Visible: func() bool { return runtime.GOOS == "darwin" || keymap.MacKeysEnabled() },
+		Checked: keymap.MacKeysEnabled,
 		Handler: func() bool {
-			if macKeysEnabled() {
+			if keymap.MacKeysEnabled() {
 				config.App.MacKeyboard = config.MacKeysOff
 			} else {
 				config.App.MacKeyboard = config.MacKeysOn

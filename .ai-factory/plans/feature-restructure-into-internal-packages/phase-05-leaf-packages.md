@@ -579,6 +579,42 @@ func Msg(key string) string   // returns "{key}" for a missing key — the
 go test ./internal/config/... ./internal/i18n/... ./internal/theme/... ./internal/keymap/... ./plugins/netfox/... ./cmd/f4/...
 ```
 
+### What the wave actually found
+
+Six corrections to the task text above, all recorded rather than silently
+absorbed:
+
+1. **`ini.go` cannot live in `internal/config`.** All four leaves parse ini
+   files and none may import another of ours, so the parser went to
+   `internal/ini` first, in its own commit.
+2. **`config.go` left 26 symbols undefined**, reaching layers 1, 3 and 4 — not
+   the clean layer-0 core the evidence table promised. They were split by the
+   rule `ARCHITECTURE.md` now carries: a setting's schema travels with the
+   field, its use by a running application stays behind. `saveSettingsGroups`
+   is the clearest case of the second half and did not move.
+3. **`codepage_state.go` did not move.** It reads `GlobalFileState` from
+   `file_state.go`, which Task 32 takes to `internal/fileops` at layer 1.
+4. **`colors.go` moved whole.** Its gate score of 5 is five string literals —
+   `"CommandLine"`, `"CommandLine.Prefix"` and three more are colour slot names
+   in a table, not the type. The first place on this branch where the
+   eight-type grep said no to a file that could move.
+5. **`highlight_files.go` came to `internal/theme`**, against the Task 36
+   roster. `style.go` pushed the theme's rules into it, which would otherwise
+   need a seam; its own subject is colouring a file by a rule; and Task 43
+   already recorded that its test needs four `internal/theme` symbols.
+6. **`hotkeys.go` did not move.** Its `conditionRegistry` closures ask the panel
+   frame what is on screen and the command palette what is true, so it belongs
+   with the application. Only the Far key-name codec came out of it and out of
+   `macro.go` — `EventToFarString`, `EventToHotkeyString`, `ParseFarKey` and
+   their tables, which name keys for `hotkeys.ini`, `keymap.ini` and macros
+   alike.
+
+`internal/theme` and `internal/keymap` import `internal/config`, which the task
+text forbade and the layer rule permits: 0 to 0 is not an upward import, and
+eight settings steer the theme. `internal/i18n` does not, and that one is not a
+matter of taste — `internal/config`'s own proxy test imports `plugins/netfox`,
+which imports `internal/i18n`, so the edge would close a cycle.
+
 ### Acceptance Criteria
 
 - `grep -rn 'cmd/f4/lang' . --exclude-dir=.git` returns nothing.

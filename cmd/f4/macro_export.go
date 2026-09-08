@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/vtinput"
 )
 
@@ -53,7 +54,7 @@ func recordedKeyLines(events []*vtinput.InputEvent) []string {
 		if event == nil {
 			continue
 		}
-		name := EventToFarString(event)
+		name := keymap.EventToFarString(event)
 		if name == "" {
 			continue
 		}

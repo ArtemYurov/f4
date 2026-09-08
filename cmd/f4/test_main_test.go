@@ -10,6 +10,7 @@ import (
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/internal/update"
@@ -52,6 +53,7 @@ func installTestSeams() {
 	// the tests would exercise the "resolver not wired" fallback instead of the
 	// path a running f4 takes.
 	config.Executable = update.Executable
+	keymap.Suspended = keyRemapSuspended
 
 	// SetupUI installs this in production; the test binary never runs it, and
 	// without it every action label falls back to its English spelling.

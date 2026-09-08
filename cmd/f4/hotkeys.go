@@ -570,7 +570,7 @@ func (hm *HotkeyManager) Save() {
 // delKeyAlias returns the other spelling of a Del key string, or "" when the
 // key is not a Del key. "ShiftDel" <-> "ShiftNumDel", "Del" <-> "NumDel".
 //
-// EventToFarString derives the Num prefix from the EnhancedKey flag, but no
+// keymap.EventToFarString derives the Num prefix from the EnhancedKey flag, but no
 // input backend f4 supports reports that flag consistently for Delete: the
 // GUI hosts (ebiten, gogpu, x11, wayland) build events with plain Shift/Ctrl/
 // Alt state and never set it, and CSI 3~ carries no such flag either, so the

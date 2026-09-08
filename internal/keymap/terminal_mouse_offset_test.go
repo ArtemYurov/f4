@@ -1,4 +1,4 @@
-package main
+package keymap
 
 import (
 	"testing"
@@ -16,7 +16,7 @@ func TestRebaseTerminalMouseEventSubtractsViewportOrigin(t *testing.T) {
 		KeyDown:     true,
 		ButtonState: vtinput.FromLeft1stButtonPressed,
 	}
-	got := rebaseTerminalMouseEvent(e, 0, 1, 80, 24)
+	got := RebaseTerminalMouseEvent(e, 0, 1, 80, 24)
 	if got.MouseX != 7 || got.MouseY != 3 {
 		t.Fatalf("rebased event = (%d,%d), want (7,3)", got.MouseX, got.MouseY)
 	}
@@ -32,7 +32,7 @@ func TestRebaseTerminalMouseEventSubtractsViewportOrigin(t *testing.T) {
 // event must travel untouched.
 func TestRebaseTerminalMouseEventKeepsUnshiftedViewport(t *testing.T) {
 	e := &vtinput.InputEvent{Type: vtinput.MouseEventType, MouseX: 7, MouseY: 4}
-	if got := rebaseTerminalMouseEvent(e, 0, 0, 80, 25); got != e {
+	if got := RebaseTerminalMouseEvent(e, 0, 0, 80, 25); got != e {
 		t.Fatalf("event was copied for an unshifted viewport")
 	}
 }
@@ -41,11 +41,11 @@ func TestRebaseTerminalMouseEventKeepsUnshiftedViewport(t *testing.T) {
 // cell must not turn into negative or out-of-range cells.
 func TestRebaseTerminalMouseEventClampsToViewport(t *testing.T) {
 	above := &vtinput.InputEvent{Type: vtinput.MouseEventType, MouseX: 1, MouseY: 0}
-	if got := rebaseTerminalMouseEvent(above, 2, 1, 80, 24); got.MouseX != 0 || got.MouseY != 0 {
+	if got := RebaseTerminalMouseEvent(above, 2, 1, 80, 24); got.MouseX != 0 || got.MouseY != 0 {
 		t.Fatalf("event above the viewport = (%d,%d), want (0,0)", got.MouseX, got.MouseY)
 	}
 	below := &vtinput.InputEvent{Type: vtinput.MouseEventType, MouseX: 200, MouseY: 200}
-	if got := rebaseTerminalMouseEvent(below, 0, 1, 80, 24); got.MouseX != 79 || got.MouseY != 23 {
+	if got := RebaseTerminalMouseEvent(below, 0, 1, 80, 24); got.MouseX != 79 || got.MouseY != 23 {
 		t.Fatalf("event past the viewport = (%d,%d), want (79,23)", got.MouseX, got.MouseY)
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -429,7 +430,7 @@ func pluginHotkeyEventRune(e *vtinput.InputEvent) rune {
 	if e == nil || e.Type != vtinput.KeyEventType {
 		return 0
 	}
-	mods := normalizeMods(e.ControlKeyState)
+	mods := keymap.NormalizeMods(e.ControlKeyState)
 	if mods.Contains(vtinput.LeftCtrlPressed) || mods.Contains(vtinput.LeftAltPressed) {
 		return 0
 	}

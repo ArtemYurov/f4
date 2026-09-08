@@ -9,6 +9,7 @@ import (
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -612,7 +613,7 @@ func (f *HotkeyAssignFrame) ProcessKey(e *vtinput.InputEvent) bool {
 		return false
 	}
 
-	keyStr := EventToHotkeyString(e)
+	keyStr := keymap.EventToHotkeyString(e)
 
 	if f.hm != nil {
 		f.hm.Bind(f.area, keyStr, f.actionName)

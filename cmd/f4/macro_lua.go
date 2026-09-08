@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/f4/internal/luaplug"
 	"github.com/unxed/vtinput"
 	lua "github.com/yuin/gopher-lua"
@@ -322,7 +323,7 @@ func (e *LuaMacroEngine) Trigger(area string, event *vtinput.InputEvent) bool {
 	if e == nil || event == nil {
 		return false
 	}
-	key := EventToFarString(event)
+	key := keymap.EventToFarString(event)
 	macro := e.Find(area, key)
 	if macro == nil {
 		return false
@@ -458,7 +459,7 @@ func (e *LuaMacroEngine) Close() error {
 func parseMacroKeys(spec string) []*vtinput.InputEvent {
 	var events []*vtinput.InputEvent
 	for _, token := range strings.Fields(spec) {
-		if event := ParseFarKey(token); event != nil {
+		if event := keymap.ParseFarKey(token); event != nil {
 			events = append(events, event)
 		}
 	}

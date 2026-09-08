@@ -3,12 +3,13 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/vtinput"
 )
 
 // TestEventToFarString_CtrlLetter_LowercaseChar guards against a regression
 // where the Wayland/X11 gui backends deliver Ctrl+letter events with Char
-// set to the lowercase typed letter. EventToFarString must ignore that and
+// set to the lowercase typed letter. keymap.EventToFarString must ignore that and
 // produce the canonical uppercase form used by every default binding —
 // otherwise Ctrl+V paste, Ctrl+A select-all, Ctrl+O toggle-panels, and
 // every other Ctrl+letter shortcut silently fail on gui-linux.
@@ -36,8 +37,8 @@ func TestEventToFarString_CtrlLetter_LowercaseChar(t *testing.T) {
 				Char:            tc.char,
 				ControlKeyState: tc.mods,
 			}
-			if got := EventToFarString(e); got != tc.want {
-				t.Errorf("EventToFarString = %q, want %q", got, tc.want)
+			if got := keymap.EventToFarString(e); got != tc.want {
+				t.Errorf("keymap.EventToFarString = %q, want %q", got, tc.want)
 			}
 		})
 	}

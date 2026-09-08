@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/vtinput"
 )
 
@@ -14,9 +15,9 @@ import (
 // also what makes the two macro backends interchangeable for key sequences.
 func TestRecordedMacroRoundTrip(t *testing.T) {
 	events := []*vtinput.InputEvent{
-		ParseFarKey("F5"),
-		ParseFarKey("Enter"),
-		ParseFarKey("Esc"),
+		keymap.ParseFarKey("F5"),
+		keymap.ParseFarKey("Enter"),
+		keymap.ParseFarKey("Esc"),
 	}
 	source := RecordedMacroToLua("Shell", "CtrlA", "Copy and confirm", events)
 
@@ -70,7 +71,7 @@ func TestRecordedMacroEscapesText(t *testing.T) {
 func TestRecordedMacroWrapsLongSequences(t *testing.T) {
 	var events []*vtinput.InputEvent
 	for i := 0; i < 40; i++ {
-		events = append(events, ParseFarKey("F5"))
+		events = append(events, keymap.ParseFarKey("F5"))
 	}
 	source := RecordedMacroToLua("Shell", "CtrlD", "long one", events)
 
@@ -88,7 +89,7 @@ func TestRecordedMacroWrapsLongSequences(t *testing.T) {
 }
 
 func TestRecordedMacroSkipsUnusableEvents(t *testing.T) {
-	events := []*vtinput.InputEvent{ParseFarKey("F5"), nil, ParseFarKey("Tab")}
+	events := []*vtinput.InputEvent{keymap.ParseFarKey("F5"), nil, keymap.ParseFarKey("Tab")}
 	source := RecordedMacroToLua("Shell", "CtrlE", "with a hole", events)
 
 	host := newFakeMacroHost()
@@ -108,7 +109,7 @@ func TestSaveRecordedMacroTakesEffectImmediately(t *testing.T) {
 	manager := NewMacroManager("")
 	manager.Lua = engine
 
-	events := []*vtinput.InputEvent{ParseFarKey("F7"), ParseFarKey("Esc")}
+	events := []*vtinput.InputEvent{keymap.ParseFarKey("F7"), keymap.ParseFarKey("Esc")}
 	if err := manager.SaveRecordedMacro(dir, "Shell", "CtrlA", "make and cancel", events); err != nil {
 		t.Fatalf("SaveRecordedMacro: %v", err)
 	}

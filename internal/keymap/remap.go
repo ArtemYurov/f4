@@ -1,4 +1,4 @@
-package main
+package keymap
 
 import (
 	"os"
@@ -458,40 +458,33 @@ const defaultKeymapIni = `; Key remapping for f4.
 ; letter or a punctuation key for such a rule instead.
 `
 
-// createDefaultKeymapIni writes the commented sample file on first start.
+// CreateDefaultKeymapIni writes the commented sample file on first start.
 // A failure is not worth reporting: the feature is optional and an absent
 // file simply means no remapping.
-func createDefaultKeymapIni(path string) {
+func CreateDefaultKeymapIni(path string) {
 	os.MkdirAll(filepath.Dir(path), 0755)
 	os.WriteFile(path, []byte(defaultKeymapIni), 0644)
 }
 
-// keyRemapSuspended reports whether a foreign application currently owns the
-// keyboard. With the panels hidden and an AltScreen program or a busy child
-// running, every key is forwarded to it verbatim; substituting there would
-// send vim or htop a chord the user never pressed. This is the same handover
-// the noaltscreenapp and noterminalapp hotkey conditions respect.
-func keyRemapSuspended() bool {
-	if vtui.FrameManager == nil {
-		return false
-	}
-	pf, ok := vtui.FrameManager.GetTopFrame().(*PanelsFrame)
-	if !ok || pf.showPanels {
-		return false
-	}
-	if pf.shellMode == ShellModeSimpleInline {
-		// No PTY in this mode, so no foreign program can be holding the
-		// keyboard; the console view on screen is f4's own overlay.
-		return false
-	}
-	return (pf.termView != nil && pf.termView.UseAltScreen) || pf.isPtyBusy()
-}
+// Suspended reports whether a foreign application currently owns the keyboard.
+// With the panels hidden and an AltScreen program or a busy child running,
+// every key is forwarded to it verbatim; substituting there would send vim or
+// htop a chord the user never pressed. Only the panel frame can answer that, so
+// the root assigns this — it is the same handover the noaltscreenapp and
+// noterminalapp hotkey conditions respect.
+//
+// The default answers "yes, suspended", which switches remapping off rather
+// than leaving it on. Unwired, the wrong way round would send a foreign program
+// chords out of somebody's keymap.ini and look like the program misbehaving;
+// this way the only person who notices is the one who configured a remap, and
+// what they see is that it does nothing.
+var Suspended = func() bool { return true }
 
-// applyKeyRemap performs the substitution for a live keystroke and keeps the
+// ApplyKeyRemap performs the substitution for a live keystroke and keeps the
 // key bar honest about it. It is the only entry point the input filter uses.
-func applyKeyRemap(area string, e *vtinput.InputEvent) bool {
+func ApplyKeyRemap(area string, e *vtinput.InputEvent) bool {
 	kr := GlobalKeyRemap
-	if kr.IsEmpty() || keyRemapSuspended() {
+	if kr.IsEmpty() || Suspended() {
 		return false
 	}
 	if !kr.Apply(area, e) {

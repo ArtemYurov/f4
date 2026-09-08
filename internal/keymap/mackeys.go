@@ -1,4 +1,4 @@
-package main
+package keymap
 
 // Mac keyboard mode (issue #357).
 //
@@ -39,8 +39,8 @@ import (
 	"github.com/unxed/vtui"
 )
 
-// macKeysEnabled reports whether the user wants the Mac layout at all.
-func macKeysEnabled() bool {
+// MacKeysEnabled reports whether the user wants the Mac layout at all.
+func MacKeysEnabled() bool {
 	switch config.ParseMacKeysMode(config.App.MacKeyboard) {
 	case config.MacKeysOn:
 		return true
@@ -123,17 +123,17 @@ func macKeyTarget(area, source string) string {
 	return macCommandRules[source]
 }
 
-// applyMacKeys rewrites a live keystroke into the Far chord that means the
+// ApplyMacKeys rewrites a live keystroke into the Far chord that means the
 // same thing, and reports whether it did.
 //
 // It runs immediately after the user's own keymap.ini so that an explicit rule
 // still wins: a Mac user who has rebound a key by hand gets what they asked
 // for, and the built-in table only sees what keymap.ini left behind.
-func applyMacKeys(area string, e *vtinput.InputEvent) bool {
+func ApplyMacKeys(area string, e *vtinput.InputEvent) bool {
 	if e == nil || e.Type != vtinput.KeyEventType {
 		return false
 	}
-	if !macKeysEnabled() || keyRemapSuspended() {
+	if !MacKeysEnabled() || Suspended() {
 		return false
 	}
 	switch e.VirtualKeyCode {

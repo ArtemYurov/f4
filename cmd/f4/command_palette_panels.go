@@ -7,6 +7,7 @@ import (
 
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/vtui"
 )
 
@@ -186,7 +187,7 @@ func commandPaletteLocalizedPanelKeyEntry(
 		if valid != nil && !valid() {
 			return false
 		}
-		return pf.ProcessKey(ParseFarKey(key))
+		return pf.ProcessKey(keymap.ParseFarKey(key))
 	}
 	return entry
 }
@@ -357,7 +358,7 @@ func commandPalettePanelKeyEntry(pf *PanelsFrame, id, labelKey, englishLabel, de
 			if vtui.FrameManager == nil || vtui.FrameManager.GetTopFrame() != pf || pf.closed {
 				return false
 			}
-			return pf.ProcessKey(ParseFarKey(key))
+			return pf.ProcessKey(keymap.ParseFarKey(key))
 		},
 	}
 }

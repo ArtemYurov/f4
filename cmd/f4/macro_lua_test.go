@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/vtinput"
 	lua "github.com/yuin/gopher-lua"
 )
@@ -98,7 +99,7 @@ func (h *fakeMacroHost) injectedKeys() []string {
 	defer h.mu.Unlock()
 	names := make([]string, 0, len(h.injected))
 	for _, event := range h.injected {
-		names = append(names, EventToFarString(event))
+		names = append(names, keymap.EventToFarString(event))
 	}
 	return names
 }
@@ -127,7 +128,7 @@ func newTestMacroEngine(t *testing.T, host MacroHost, source string) *LuaMacroEn
 // execution is asynchronous by design.
 func fireMacro(t *testing.T, engine *LuaMacroEngine, key string) bool {
 	t.Helper()
-	consumed := engine.Trigger(engine.host.CurrentArea(), ParseFarKey(key))
+	consumed := engine.Trigger(engine.host.CurrentArea(), keymap.ParseFarKey(key))
 	if !engine.waitIdle(5 * time.Second) {
 		t.Fatal("macro did not finish in time")
 	}
@@ -238,7 +239,7 @@ func TestMacroUnboundKeyIsNotConsumed(t *testing.T) {
 		Macro { area = "Shell"; key = "CtrlM"; action = function() end }
 	`)
 
-	if engine.Trigger("Shell", ParseFarKey("CtrlN")) {
+	if engine.Trigger("Shell", keymap.ParseFarKey("CtrlN")) {
 		t.Fatal("an unbound key was consumed")
 	}
 }

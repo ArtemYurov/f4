@@ -6,6 +6,7 @@ import (
 
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/vtui"
 )
 
@@ -58,13 +59,13 @@ func commandPaletteImageEntries(image *ImageView) []commandPaletteEntry {
 		{"RotateCounterClockwise", "CommandPalette.Image.RotateCounterClockwise", "Rotate counterclockwise", "Rotate the image counterclockwise", ",", nil, func(iv *ImageView) { iv.Rotate(-90) }},
 		{"FlipHorizontal", "CommandPalette.Image.FlipHorizontal", "Flip horizontally", "Mirror the image horizontally", "Alt+.", nil, func(iv *ImageView) { iv.Flip(true, false) }},
 		{"FlipVertical", "CommandPalette.Image.FlipVertical", "Flip vertically", "Mirror the image vertically", "Alt+,", nil, func(iv *ImageView) { iv.Flip(false, true) }},
-		{"Next", "CommandPalette.Image.Next", "Next image", "Open the next image", "PgDn, Space", nil, func(iv *ImageView) { iv.ProcessKey(ParseFarKey("Space")) }},
-		{"Previous", "CommandPalette.Image.Previous", "Previous image", "Open the previous image", "PgUp", nil, func(iv *ImageView) { iv.ProcessKey(ParseFarKey("PgUp")) }},
-		{"First", "CommandPalette.Image.First", "First image", "Open the first image", "Home", nil, func(iv *ImageView) { iv.ProcessKey(ParseFarKey("Home")) }},
-		{"Last", "CommandPalette.Image.Last", "Last image", "Open the last image", "End", nil, func(iv *ImageView) { iv.ProcessKey(ParseFarKey("End")) }},
+		{"Next", "CommandPalette.Image.Next", "Next image", "Open the next image", "PgDn, Space", nil, func(iv *ImageView) { iv.ProcessKey(keymap.ParseFarKey("Space")) }},
+		{"Previous", "CommandPalette.Image.Previous", "Previous image", "Open the previous image", "PgUp", nil, func(iv *ImageView) { iv.ProcessKey(keymap.ParseFarKey("PgUp")) }},
+		{"First", "CommandPalette.Image.First", "First image", "Open the first image", "Home", nil, func(iv *ImageView) { iv.ProcessKey(keymap.ParseFarKey("Home")) }},
+		{"Last", "CommandPalette.Image.Last", "Last image", "Open the last image", "End", nil, func(iv *ImageView) { iv.ProcessKey(keymap.ParseFarKey("End")) }},
 		{"Gallery", "CommandPalette.Image.Gallery", "Toggle gallery", "Show or hide the image gallery", "F12", func(iv *ImageView) bool { return iv.gal != nil }, func(iv *ImageView) { iv.ToggleGallery() }},
-		{"Select", "CommandPalette.Image.Select", "Toggle image selection", "Toggle selection and advance to the next image", "Ins", nil, func(iv *ImageView) { iv.ProcessKey(ParseFarKey("Ins")) }},
-		{"ClearSelection", "CommandPalette.Image.ClearSelection", "Clear image selection", "Clear selection and advance to the next image", "Del", nil, func(iv *ImageView) { iv.ProcessKey(ParseFarKey("Del")) }},
+		{"Select", "CommandPalette.Image.Select", "Toggle image selection", "Toggle selection and advance to the next image", "Ins", nil, func(iv *ImageView) { iv.ProcessKey(keymap.ParseFarKey("Ins")) }},
+		{"ClearSelection", "CommandPalette.Image.ClearSelection", "Clear image selection", "Clear selection and advance to the next image", "Del", nil, func(iv *ImageView) { iv.ProcessKey(keymap.ParseFarKey("Del")) }},
 		{"Close", "CommandPalette.Image.Close", "Close image viewer", "Close the image viewer", "Esc, F10", nil, func(iv *ImageView) { iv.Close() }},
 	}
 	entries := make([]commandPaletteEntry, 0, len(specs))

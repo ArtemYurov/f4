@@ -7,6 +7,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
@@ -42,8 +43,8 @@ func TestCommandPaletteIncludesRecordedAndLuaMacros(t *testing.T) {
 	})
 	MacroMgr = &MacroManager{
 		Macros: map[string]map[string][]*vtinput.InputEvent{
-			"Shell":  {"CtrlR": {ParseFarKey("F5")}},
-			"Common": {"AltR": {ParseFarKey("F6")}},
+			"Shell":  {"CtrlR": {keymap.ParseFarKey("F5")}},
+			"Common": {"AltR": {keymap.ParseFarKey("F6")}},
 		},
 		Lua: engine,
 	}

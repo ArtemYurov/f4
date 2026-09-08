@@ -1,4 +1,4 @@
-package main
+package keymap
 
 import (
 	"fmt"
@@ -30,7 +30,7 @@ func formatTilde(mod int, code int) string {
 	return fmt.Sprintf("\x1b[%d~", code)
 }
 
-// rebaseTerminalMouseEvent converts a screen-coordinate mouse event into the
+// RebaseTerminalMouseEvent converts a screen-coordinate mouse event into the
 // coordinate space of the terminal viewport before it is handed to the child
 // process. The viewport does not start at the top-left corner of the screen
 // whenever rows above it are taken by the workspace tab bar or by an
@@ -42,7 +42,7 @@ func formatTilde(mod int, code int) string {
 //
 // The event is copied rather than adjusted in place, because the caller keeps
 // using the original screen coordinates for hit-testing and selection.
-func rebaseTerminalMouseEvent(e *vtinput.InputEvent, x1, y1, width, height int) *vtinput.InputEvent {
+func RebaseTerminalMouseEvent(e *vtinput.InputEvent, x1, y1, width, height int) *vtinput.InputEvent {
 	if e == nil || (x1 == 0 && y1 == 0) {
 		return e
 	}

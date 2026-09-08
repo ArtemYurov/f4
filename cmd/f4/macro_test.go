@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -42,7 +43,7 @@ Sequence=Up Up CtrlEnter Esc F5 Down ShiftF5 Esc Esc
 	if seq[0].VirtualKeyCode != vtinput.VK_UP {
 		t.Errorf("Expected first key VK_UP, got %d", seq[0].VirtualKeyCode)
 	}
-	if seq[2].VirtualKeyCode != vtinput.VK_RETURN || !normalizeMods(seq[2].ControlKeyState).Contains(vtinput.LeftCtrlPressed) {
+	if seq[2].VirtualKeyCode != vtinput.VK_RETURN || !keymap.NormalizeMods(seq[2].ControlKeyState).Contains(vtinput.LeftCtrlPressed) {
 		t.Errorf("Expected third key CtrlEnter, got %d", seq[2].VirtualKeyCode)
 	}
 
@@ -71,18 +72,18 @@ func TestEnterAndNumEnterUseCorrectFarKeyNames(t *testing.T) {
 		VirtualKeyCode:  vtinput.VK_RETURN,
 		ControlKeyState: vtinput.LeftCtrlPressed | vtinput.EnhancedKey,
 	}
-	if got := EventToFarString(mainEnter); got != "CtrlEnter" {
+	if got := keymap.EventToFarString(mainEnter); got != "CtrlEnter" {
 		t.Fatalf("main Enter = %q, want CtrlEnter", got)
 	}
-	if got := EventToFarString(numEnter); got != "CtrlNumEnter" {
+	if got := keymap.EventToFarString(numEnter); got != "CtrlNumEnter" {
 		t.Fatalf("numeric Enter = %q, want CtrlNumEnter", got)
 	}
 
-	parsedMain := ParseFarKey("CtrlEnter")
+	parsedMain := keymap.ParseFarKey("CtrlEnter")
 	if parsedMain.VirtualKeyCode != vtinput.VK_RETURN || parsedMain.ControlKeyState&vtinput.EnhancedKey != 0 {
 		t.Fatalf("parsed CtrlEnter = %#v, want non-enhanced Return", parsedMain)
 	}
-	parsedNum := ParseFarKey("CtrlNumEnter")
+	parsedNum := keymap.ParseFarKey("CtrlNumEnter")
 	if parsedNum.VirtualKeyCode != vtinput.VK_RETURN || parsedNum.ControlKeyState&vtinput.EnhancedKey == 0 {
 		t.Fatalf("parsed CtrlNumEnter = %#v, want enhanced Return", parsedNum)
 	}
@@ -196,7 +197,7 @@ func TestMacroRecordingAndPlayback(t *testing.T) {
 	assignFrame := NewMacroAssignFrame(mgr)
 	assignFrame.ProcessKey(ctrlF1)
 
-	f1Key := EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_F1, ControlKeyState: vtinput.LeftCtrlPressed})
+	f1Key := keymap.EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_F1, ControlKeyState: vtinput.LeftCtrlPressed})
 	if _, ok := mgr.Macros["Common"][f1Key]; !ok {
 		t.Fatal("Macro should be saved with Ctrl+F1 key in Common area")
 	}
@@ -210,14 +211,14 @@ func TestMacroRecordingAndPlayback(t *testing.T) {
 
 func TestKeyNormalization(t *testing.T) {
 	// Check that Left and Right Ctrl give same key string
-	k1 := EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_A, Char: 'a', ControlKeyState: vtinput.LeftCtrlPressed})
-	k2 := EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_A, Char: 'a', ControlKeyState: vtinput.RightCtrlPressed})
+	k1 := keymap.EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_A, Char: 'a', ControlKeyState: vtinput.LeftCtrlPressed})
+	k2 := keymap.EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_A, Char: 'a', ControlKeyState: vtinput.RightCtrlPressed})
 	if k1 != k2 {
 		t.Errorf("Normalization failed: %s != %s", k1, k2)
 	}
 
 	// Check Ctrl+Shift combination
-	k3 := EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_B, Char: 'B', ControlKeyState: vtinput.LeftCtrlPressed | vtinput.ShiftPressed})
+	k3 := keymap.EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_B, Char: 'B', ControlKeyState: vtinput.LeftCtrlPressed | vtinput.ShiftPressed})
 	if k3 != "CtrlShiftB" {
 		t.Errorf("Complex normalization failed: %s", k3)
 	}
@@ -228,13 +229,13 @@ func TestEventToHotkeyStringPreservesRightCtrl(t *testing.T) {
 	right := &vtinput.InputEvent{VirtualKeyCode: vtinput.VK_A, ControlKeyState: vtinput.RightCtrlPressed}
 	rightAlt := &vtinput.InputEvent{VirtualKeyCode: vtinput.VK_A, ControlKeyState: vtinput.RightCtrlPressed | vtinput.LeftAltPressed}
 
-	if got := EventToHotkeyString(left); got != "CtrlA" {
+	if got := keymap.EventToHotkeyString(left); got != "CtrlA" {
 		t.Fatalf("left Ctrl hotkey = %q, want CtrlA", got)
 	}
-	if got := EventToHotkeyString(right); got != "RCtrlA" {
+	if got := keymap.EventToHotkeyString(right); got != "RCtrlA" {
 		t.Fatalf("right Ctrl hotkey = %q, want RCtrlA", got)
 	}
-	if got := EventToHotkeyString(rightAlt); got != "RCtrlAltA" {
+	if got := keymap.EventToHotkeyString(rightAlt); got != "RCtrlAltA" {
 		t.Fatalf("right Ctrl+Alt hotkey = %q, want RCtrlAltA", got)
 	}
 }
@@ -286,7 +287,7 @@ func TestEventToHotkeyStringNamesPunctuationByVirtualKey(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		if got := EventToHotkeyString(tc.event); got != tc.want {
+		if got := keymap.EventToHotkeyString(tc.event); got != tc.want {
 			t.Errorf("%s: hotkey = %q, want %q", tc.name, got, tc.want)
 		}
 	}
@@ -295,7 +296,7 @@ func TestEventToHotkeyStringNamesPunctuationByVirtualKey(t *testing.T) {
 	// macro assigned to Ctrl+Shift+\ still answers to the same string it
 	// was stored under.
 	ctrlShiftBackslash := &vtinput.InputEvent{VirtualKeyCode: vtinput.VK_OEM_5, Char: '|', ControlKeyState: vtinput.LeftCtrlPressed | vtinput.ShiftPressed}
-	if got := EventToFarString(ctrlShiftBackslash); got != "CtrlShift|" {
+	if got := keymap.EventToFarString(ctrlShiftBackslash); got != "CtrlShift|" {
 		t.Errorf("macro key name = %q, want CtrlShift| (the macro layer must not change)", got)
 	}
 }
@@ -322,7 +323,7 @@ func TestKittyBackslashReachesBookmarks(t *testing.T) {
 		if event.VirtualKeyCode != vtinput.VK_OEM_5 {
 			t.Fatalf("ParseKitty(%q) gave VK 0x%X, want VK_OEM_5", tc.seq, event.VirtualKeyCode)
 		}
-		key := EventToHotkeyString(event)
+		key := keymap.EventToHotkeyString(event)
 		if got := configuredHotkeyAction(hm, "Shell", key); got != tc.want {
 			t.Errorf("ParseKitty(%q) -> %q -> %q, want %q", tc.seq, key, got, tc.want)
 		}
@@ -605,7 +606,7 @@ func TestMacroShellDoesNotRunDuringFastFind(t *testing.T) {
 		VirtualKeyCode: vtinput.VK_A,
 		Char:           'a',
 	}
-	keyStr := EventToFarString(key)
+	keyStr := keymap.EventToFarString(key)
 	mgr.Macros["Shell"] = map[string][]*vtinput.InputEvent{
 		keyStr: {{Type: vtinput.KeyEventType, KeyDown: true, Char: 'x', VirtualKeyCode: vtinput.VK_X}},
 	}
@@ -620,7 +621,7 @@ func TestMacroPlaybackLogic(t *testing.T) {
 	mgr := NewMacroManager("unused.ini")
 
 	// Create macro: print "hi" on F2 press
-	f2Key := EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_F2})
+	f2Key := keymap.EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_F2})
 	macroSeq := []*vtinput.InputEvent{
 		{Type: vtinput.KeyEventType, KeyDown: true, Char: 'h', VirtualKeyCode: vtinput.VK_H},
 		{Type: vtinput.KeyEventType, KeyDown: true, Char: 'i', VirtualKeyCode: vtinput.VK_I},
@@ -718,7 +719,7 @@ func TestMacro_AssignRobustness(t *testing.T) {
 		t.Error("Assign dialog should close after pressing Esc")
 	}
 
-	escKey := EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_ESCAPE})
+	escKey := keymap.EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_ESCAPE})
 	if _, ok := mgr.Macros["Common"][escKey]; ok {
 		t.Error("Esc should cancel, not assign a macro")
 	}
@@ -734,7 +735,7 @@ func TestMacro_AssignRobustness(t *testing.T) {
 		ControlKeyState: vtinput.LeftAltPressed,
 	})
 
-	altXKey := EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_X, Char: 'x', ControlKeyState: vtinput.LeftAltPressed})
+	altXKey := keymap.EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_X, Char: 'x', ControlKeyState: vtinput.LeftAltPressed})
 	if _, ok := mgr.Macros["Common"][altXKey]; !ok {
 		t.Error("Macro failed to assign to Alt+X")
 	}
@@ -786,7 +787,7 @@ func TestMacro_CancelEsc(t *testing.T) {
 
 	assign.ProcessKey(escEvent)
 
-	key := EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_ESCAPE})
+	key := keymap.EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_ESCAPE})
 	if _, ok := mgr.Macros["Common"][key]; ok {
 		t.Error("Esc should cancel, not assign a macro")
 	}
@@ -802,7 +803,7 @@ func TestMacro_Clear(t *testing.T) {
 	mgr.StartArea = "Common"
 
 	// 1. Assign a macro first
-	key := EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_F3})
+	key := keymap.EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_F3})
 	mgr.Macros["Common"] = make(map[string][]*vtinput.InputEvent)
 	mgr.Macros["Common"][key] = []*vtinput.InputEvent{
 		{Type: vtinput.KeyEventType, KeyDown: true, Char: 'x'},
@@ -886,7 +887,7 @@ func TestMacro_AssignFrame_Structure(t *testing.T) {
 	}
 
 	// Verify that macro was assigned to Tab
-	tabKey := EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_TAB})
+	tabKey := keymap.EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_TAB})
 	if _, ok := mgr.Macros["Common"][tabKey]; !ok {
 		t.Error("Macro failed to assign to Tab key")
 	}
@@ -894,10 +895,10 @@ func TestMacro_AssignFrame_Structure(t *testing.T) {
 
 func TestMacroKeyStrDistinguishesEnhancedKeys(t *testing.T) {
 	// Standard Delete has the EnhancedKey modifier in modern protocols
-	delKeyStr := EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_DELETE, ControlKeyState: vtinput.EnhancedKey})
+	delKeyStr := keymap.EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_DELETE, ControlKeyState: vtinput.EnhancedKey})
 
 	// Numpad Delete (NumDel) does not have the EnhancedKey modifier
-	numDelKeyStr := EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_DELETE, ControlKeyState: 0})
+	numDelKeyStr := keymap.EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_DELETE, ControlKeyState: 0})
 
 	if delKeyStr == numDelKeyStr {
 		t.Errorf("Expected different KeyStr representations for standard Del (%q) and NumDel (%q), but they are identical", delKeyStr, numDelKeyStr)
@@ -976,7 +977,7 @@ func TestMacroClearRecordingIsEmpty(t *testing.T) {
 
 func TestMacroClearResetsExisting(t *testing.T) {
 	mgr := NewMacroManager("")
-	clearKeyStr := EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_CLEAR})
+	clearKeyStr := keymap.EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_CLEAR})
 	mgr.Macros = map[string]map[string][]*vtinput.InputEvent{
 		"Common": {
 			clearKeyStr: {{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_CLEAR}},
@@ -1065,7 +1066,7 @@ func TestMacro_ReassignAndCleanup(t *testing.T) {
 	mgr := NewMacroManager(tmpFile)
 	mgr.StartArea = "Common"
 
-	key := EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_F3})
+	key := keymap.EventToFarString(&vtinput.InputEvent{VirtualKeyCode: vtinput.VK_F3})
 	mgr.Macros["Common"] = map[string][]*vtinput.InputEvent{
 		key: {
 			&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_F3},

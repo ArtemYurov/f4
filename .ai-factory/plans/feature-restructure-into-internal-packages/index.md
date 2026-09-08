@@ -348,7 +348,7 @@ titles, not the ordering.
 ### Phase 5: Leaf Packages
 - [x] Task 22: Extract `internal/sysinfo` (1 outbound) ([details](phase-05-leaf-packages.md#task-22-extract-internalsysinfo)) (depends on 6, 7, 19, 20, 21, 43)
 - [x] Task 23: Extract `internal/update` (3 outbound) ([details](phase-05-leaf-packages.md#task-23-extract-internalupdate)) (depends on 22)
-- [ ] Task 24: Extract `internal/config`, `internal/i18n`, `internal/theme`, `internal/keymap` ([details](phase-05-leaf-packages.md#task-24-extract-internalconfig-internali18n-internaltheme-internalkeymap)) (depends on 4, 23)
+- [x] Task 24: Extract `internal/config`, `internal/i18n`, `internal/theme`, `internal/keymap` ([details](phase-05-leaf-packages.md#task-24-extract-internalconfig-internali18n-internaltheme-internalkeymap)) (depends on 4, 23)
 
 ### Phase 6: Hosts and Services
 - [ ] Task 25: Extract `internal/dialog`, and fix the silent dialog-test drop ([details](phase-06-hosts-and-services.md#task-25-extract-internaldialog)) (depends on 24)
@@ -443,6 +443,30 @@ portable probe reading the ini next to `ld.so` with no error. Set it in
 The other three callers — `pty_windows.go`, `session_unix.go` and
 `detach_unix.go` — are layer 3 and above and keep calling `update.Executable`
 directly.
+
+### The darwin mackeys flake has a mechanism, and it is closed
+
+`TestMacKeysSkipsCommandRulesWithoutTheChannelSplit` failed once on
+`Test (darwin/amd64)` with `mackeys_test.go:109: Opt+Left was not rewritten`,
+and nothing on this branch had touched it. Task 24 found the mechanism while
+extracting `internal/keymap`.
+
+`applyMacKeys` refused to rewrite whenever `keyRemapSuspended()` said a foreign
+program owned the keyboard, and that function read
+`vtui.FrameManager.GetTopFrame()` — a process-wide global. A test that left a
+`PanelsFrame` on the frame manager with `showPanels == false` and an AltScreen
+`termView` made every later mackeys assertion report exactly "was not
+rewritten": not a wrong rule, a suspended one. `-shuffle=on` decides whether
+those tests are adjacent, which is why it failed once and passed the next run.
+
+It is closed rather than diagnosed-and-left. The check is now
+`keymap.Suspended`, a seam the root assigns, and `withMacKeys` pins it to false
+for the duration of a test — the tests no longer read the frame manager at all.
+
+The other cell, `TestMainMenuFilePath_HasExpectedSuffix` on linux/amd64, is
+still open and its lead is unchanged: an empty `cachedF4ConfigDir` observed
+between `setupPortableIni`'s cleanup replacing `configDirOnce` and the next
+`Do` completing.
 
 ### Two CI-only test failures, cause not identified
 

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -159,7 +160,7 @@ func (d *driveBookmarkEditDialog) ProcessKey(e *vtinput.InputEvent) bool {
 			d.hotkeyEdit.SetText("")
 			return true
 		}
-		key := EventToHotkeyString(e)
+		key := keymap.EventToHotkeyString(e)
 		if key != "" && key != "VK_0" {
 			d.hotkeyEdit.SetText(key)
 			return true

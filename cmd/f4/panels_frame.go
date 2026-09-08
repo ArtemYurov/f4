@@ -23,6 +23,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs/hostmode"
 	"github.com/unxed/vtinput"
@@ -2039,7 +2040,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 		if e.KeyDown || pf.termView.Win32InputMode || pf.termView.KittyFlags != 0 {
 			active := pf.getActivePTY()
 			if active != nil {
-				if seq := TranslateInput(e, pf.termView.Win32InputMode, pf.termView.KittyFlags, pf.termView.ApplicationCursorKeys); seq != "" {
+				if seq := keymap.TranslateInput(e, pf.termView.Win32InputMode, pf.termView.KittyFlags, pf.termView.ApplicationCursorKeys); seq != "" {
 					pf.writePTY(active, []byte(seq))
 				}
 			}
@@ -2191,7 +2192,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 		if e.KeyDown || pf.termView.Win32InputMode || pf.termView.KittyFlags != 0 {
 			active := pf.getActivePTY()
 			if active != nil {
-				if seq := TranslateInput(e, pf.termView.Win32InputMode, pf.termView.KittyFlags, pf.termView.ApplicationCursorKeys); seq != "" {
+				if seq := keymap.TranslateInput(e, pf.termView.Win32InputMode, pf.termView.KittyFlags, pf.termView.ApplicationCursorKeys); seq != "" {
 					pf.writePTY(active, []byte(seq))
 				}
 			}
@@ -3049,7 +3050,7 @@ func (pf *PanelsFrame) ProcessMouse(e *vtinput.InputEvent) bool {
 		}
 		active := pf.getActivePTY()
 		if active != nil && terminalWantsMouseEvent(pf.termView.MouseTrackingMode, e) {
-			seq := TranslateMouseInput(rebaseTerminalMouseEvent(
+			seq := keymap.TranslateMouseInput(keymap.RebaseTerminalMouseEvent(
 				e,
 				pf.termView.X1, pf.termView.Y1,
 				pf.termView.Width, pf.termView.Height,
@@ -5096,7 +5097,7 @@ func (pf *PanelsFrame) showDriveMenuAt(panelIdx, selectPos int) {
 			// Chords and non-Latin keys cannot be represented by VMenu's
 			// ampersand accelerator. Match them against the same Far-style
 			// spelling captured by the editor.
-			key := EventToHotkeyString(e)
+			key := keymap.EventToHotkeyString(e)
 			for row := 0; row < len(menu.Items); row++ {
 				index, ok := driveBookmarkRows[row]
 				if !ok {

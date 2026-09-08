@@ -1,0 +1,24 @@
+package main
+
+import "github.com/unxed/vtui"
+
+// keyRemapSuspended answers keymap.Suspended: with the panels hidden and an
+// AltScreen program or a busy child running, every key is forwarded to that
+// program verbatim, and substituting there would send vim or htop a chord the
+// user never pressed. It is the same handover the noaltscreenapp and
+// noterminalapp hotkey conditions respect.
+func keyRemapSuspended() bool {
+	if vtui.FrameManager == nil {
+		return false
+	}
+	pf, ok := vtui.FrameManager.GetTopFrame().(*PanelsFrame)
+	if !ok || pf.showPanels {
+		return false
+	}
+	if pf.shellMode == ShellModeSimpleInline {
+		// No PTY in this mode, so no foreign program can be holding the
+		// keyboard; the console view on screen is f4's own overlay.
+		return false
+	}
+	return (pf.termView != nil && pf.termView.UseAltScreen) || pf.isPtyBusy()
+}

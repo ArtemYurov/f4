@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/vtinput"
 )
 
@@ -86,10 +87,10 @@ func TestDriveBookmarkMenuTextUsesNameAndKeepsHotkeyLeft(t *testing.T) {
 }
 
 func TestDriveBookmarkKeyMatchesFarEventSpelling(t *testing.T) {
-	if !driveBookmarkKeyMatches(DriveBookmark{Name: "Русский", Path: "/tmp", Hotkey: "Ф"}, EventToHotkeyString(ParseFarKey("Ф"))) {
+	if !driveBookmarkKeyMatches(DriveBookmark{Name: "Русский", Path: "/tmp", Hotkey: "Ф"}, keymap.EventToHotkeyString(keymap.ParseFarKey("Ф"))) {
 		t.Fatal("Cyrillic drive bookmark key did not match")
 	}
-	if !driveBookmarkKeyMatches(DriveBookmark{Name: "Folder", Path: "/tmp", Hotkey: "CtrlF5"}, EventToHotkeyString(ParseFarKey("CtrlF5"))) {
+	if !driveBookmarkKeyMatches(DriveBookmark{Name: "Folder", Path: "/tmp", Hotkey: "CtrlF5"}, keymap.EventToHotkeyString(keymap.ParseFarKey("CtrlF5"))) {
 		t.Fatal("chord drive bookmark key did not match")
 	}
 }

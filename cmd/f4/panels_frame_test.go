@@ -3324,7 +3324,7 @@ func TestPanelsFrame_TerminalForwarding_Legacy(t *testing.T) {
 	pf.pty = pty
 
 	// 1. Ctrl+W should be FORWARDED (Legacy mode has no Kitty/Win32 flags)
-	// For letters, TranslateInput expects the Char field to be populated.
+	// For letters, keymap.TranslateInput expects the Char field to be populated.
 	pressKey(pf, &vtinput.InputEvent{
 		Type: vtinput.KeyEventType, KeyDown: true,
 		VirtualKeyCode: vtinput.VK_W, Char: 'w', ControlKeyState: vtinput.LeftCtrlPressed,

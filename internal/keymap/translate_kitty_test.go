@@ -1,4 +1,4 @@
-package main
+package keymap
 
 import (
 	"github.com/unxed/vtinput"

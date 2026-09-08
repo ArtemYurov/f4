@@ -1,4 +1,4 @@
-package main
+package keymap
 
 import (
 	"testing"
@@ -21,6 +21,14 @@ func withMacKeys(t *testing.T, commandIsDistinct bool) {
 	previousProbe := macCommandIsDistinct
 	macCommandIsDistinct = func() bool { return commandIsDistinct }
 	t.Cleanup(func() { macCommandIsDistinct = previousProbe })
+
+	// The keyboard is ours. Without this the substitution is suspended and
+	// every assertion below reads "was not rewritten", which is what the test
+	// says when a foreign program owns the keyboard, not when the rule is
+	// wrong.
+	previousSuspended := Suspended
+	Suspended = func() bool { return false }
+	t.Cleanup(func() { Suspended = previousSuspended })
 }
 
 // The probe still has to name a backend that exists, or the mode would be
@@ -64,7 +72,7 @@ func TestMacKeysRewritesCommandChords(t *testing.T) {
 	withMacKeys(t, true)
 
 	e := macKeyEvent(vtinput.LeftCtrlPressed, vtinput.VK_LEFT)
-	if !applyMacKeys("Editor", e) {
+	if !ApplyMacKeys("Editor", e) {
 		t.Fatal("Cmd+Left was not rewritten")
 	}
 	if got := EventToHotkeyString(e); got != "Home" {
@@ -72,7 +80,7 @@ func TestMacKeysRewritesCommandChords(t *testing.T) {
 	}
 
 	e = macKeyEvent(vtinput.LeftCtrlPressed|vtinput.ShiftPressed, vtinput.VK_UP)
-	if !applyMacKeys("Editor", e) {
+	if !ApplyMacKeys("Editor", e) {
 		t.Fatal("Cmd+Shift+Up was not rewritten")
 	}
 	if got := EventToHotkeyString(e); got != "CtrlShiftHome" {
@@ -86,7 +94,7 @@ func TestMacKeysLeavesPhysicalControlAlone(t *testing.T) {
 	withMacKeys(t, true)
 
 	e := macKeyEvent(vtinput.RightCtrlPressed, vtinput.VK_LEFT)
-	if applyMacKeys("Editor", e) {
+	if ApplyMacKeys("Editor", e) {
 		t.Fatalf("Ctrl+Left was rewritten to %q", EventToHotkeyString(e))
 	}
 	if got := EventToHotkeyString(e); got != "RCtrlLeft" {
@@ -100,13 +108,13 @@ func TestMacKeysSkipsCommandRulesWithoutTheChannelSplit(t *testing.T) {
 	withMacKeys(t, false)
 
 	e := macKeyEvent(vtinput.LeftCtrlPressed, vtinput.VK_LEFT)
-	if applyMacKeys("Editor", e) {
+	if ApplyMacKeys("Editor", e) {
 		t.Fatalf("Ctrl+Left was rewritten to %q", EventToHotkeyString(e))
 	}
 
 	// Option needs no such split: it reaches f4 as Alt on every backend.
 	e = macKeyEvent(vtinput.LeftAltPressed, vtinput.VK_LEFT)
-	if !applyMacKeys("Editor", e) {
+	if !ApplyMacKeys("Editor", e) {
 		t.Fatal("Opt+Left was not rewritten")
 	}
 	if got := EventToHotkeyString(e); got != "CtrlLeft" {
@@ -118,7 +126,7 @@ func TestMacKeysRewritesOptionWordNavigation(t *testing.T) {
 	withMacKeys(t, true)
 
 	e := macKeyEvent(vtinput.LeftAltPressed|vtinput.ShiftPressed, vtinput.VK_RIGHT)
-	if !applyMacKeys("Editor", e) {
+	if !ApplyMacKeys("Editor", e) {
 		t.Fatal("Opt+Shift+Right was not rewritten")
 	}
 	if got := EventToHotkeyString(e); got != "CtrlShiftRight" {
@@ -133,11 +141,11 @@ func TestMacKeysLeavesThePanelsAlone(t *testing.T) {
 
 	for _, area := range []string{"Shell", "Terminal", "Menu", "Viewer"} {
 		e := macKeyEvent(vtinput.LeftAltPressed, vtinput.VK_LEFT)
-		if applyMacKeys(area, e) {
+		if ApplyMacKeys(area, e) {
 			t.Errorf("Opt+Left was rewritten in area %s", area)
 		}
 		e = macKeyEvent(vtinput.LeftCtrlPressed, vtinput.VK_LEFT)
-		if applyMacKeys(area, e) {
+		if ApplyMacKeys(area, e) {
 			t.Errorf("Cmd+Left was rewritten in area %s", area)
 		}
 	}
@@ -148,11 +156,11 @@ func TestMacKeysOffLeavesEverythingAlone(t *testing.T) {
 	config.App.MacKeyboard = config.MacKeysOff
 
 	e := macKeyEvent(vtinput.LeftCtrlPressed, vtinput.VK_LEFT)
-	if applyMacKeys("Editor", e) {
+	if ApplyMacKeys("Editor", e) {
 		t.Error("Cmd+Left was rewritten with the mode off")
 	}
 	e = macKeyEvent(vtinput.LeftAltPressed, vtinput.VK_LEFT)
-	if applyMacKeys("Editor", e) {
+	if ApplyMacKeys("Editor", e) {
 		t.Error("Opt+Left was rewritten with the mode off")
 	}
 }
@@ -162,7 +170,7 @@ func TestMacKeysIgnoresBareModifiers(t *testing.T) {
 	withMacKeys(t, true)
 
 	e := macKeyEvent(vtinput.LeftCtrlPressed, vtinput.VK_LCONTROL)
-	if applyMacKeys("Editor", e) {
+	if ApplyMacKeys("Editor", e) {
 		t.Error("a bare Command press was rewritten")
 	}
 }

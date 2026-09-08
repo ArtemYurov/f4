@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/update"
@@ -653,7 +654,7 @@ func runServer(sockPath string) {
 
 		// The key combinations a TTY cannot carry, taken from the X
 		// server. See docs/TTYX.md.
-		ttyxKeys := startTTYXKeyboard()
+		ttyxKeys := keymap.StartTTYXKeyboard(sharedTTYXSession())
 
 		vtui.DebugLog("SERVER: Entering fm.Run()...")
 		vtui.FrameManager.Run(reader)

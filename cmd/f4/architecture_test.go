@@ -35,6 +35,11 @@ var architectureLayers = map[string]int{
 	// Checked conversions, shared by seven packages. Zero imports of ours.
 	"internal/numeric": 0,
 
+	// Key naming, remapping, input translation and the X key grabs. Reads
+	// internal/config like internal/theme does, and internal/numeric for the
+	// checked conversions the kitty and mouse decoders need.
+	"internal/keymap": 0,
+
 	// Colours, colour space maths, the styles/ that ship with f4, and the rules
 	// that colour a file by its name. It reads internal/config the way any
 	// package may — 0 to 0 is not an upward import — because eight settings
