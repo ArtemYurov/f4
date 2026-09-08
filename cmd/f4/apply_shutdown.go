@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/fusefs"
+	"github.com/unxed/f4/internal/term"
 )
 
 func cancelOperationsForShutdown() {
@@ -11,8 +12,8 @@ func cancelOperationsForShutdown() {
 	if GlobalQueueManager != nil {
 		GlobalQueueManager.CancelAll()
 	}
-	if GlobalBackgroundJobs != nil {
-		GlobalBackgroundJobs.CancelAll()
+	if term.GlobalBackgroundJobs != nil {
+		term.GlobalBackgroundJobs.CancelAll()
 	}
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
@@ -20,8 +21,8 @@ func cancelOperationsForShutdown() {
 		if GlobalQueueManager != nil {
 			queued = GlobalQueueManager.ActiveTasksCount()
 		}
-		if GlobalBackgroundJobs != nil {
-			background = GlobalBackgroundJobs.ActiveCount()
+		if term.GlobalBackgroundJobs != nil {
+			background = term.GlobalBackgroundJobs.ActiveCount()
 		}
 		if queued == 0 && background == 0 && activeForegroundApplyCommandCount() == 0 {
 			break

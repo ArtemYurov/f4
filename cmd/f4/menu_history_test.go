@@ -80,7 +80,7 @@ func TestLastMenuItemActionHasShiftF10Default(t *testing.T) {
 
 	manager := NewHotkeyManager("")
 	if got := manager.GetAction("Shell", "ShiftF10"); got != "App.LastMenuItem" {
-		t.Fatalf("Shell ShiftF10 binding = %q, want App.LastMenuItem", got)
+		t.Fatalf("Shell ShiftF10 binding = %q, want term.App.LastMenuItem", got)
 	}
 }
 

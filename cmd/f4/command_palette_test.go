@@ -73,7 +73,7 @@ func TestCommandPaletteHidesUserMenuFromBusyTerminal(t *testing.T) {
 	t.Cleanup(func() { conditionRegistry[condition] = previous })
 
 	if commandPaletteCanIncludeUserMenu("Terminal") {
-		t.Fatal("busy terminal exposes user-menu commands that would send Enter to its PTY")
+		t.Fatal("busy terminal exposes user-menu commands that would send Enter to its term.PTY")
 	}
 	if !commandPaletteCanIncludeUserMenu("Editor") {
 		t.Fatal("editor unexpectedly hides underlying user-menu commands")

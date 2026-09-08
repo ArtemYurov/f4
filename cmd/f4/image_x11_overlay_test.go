@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/f4/internal/ttyx"
 	"github.com/unxed/vtui"
 )
@@ -130,7 +131,7 @@ func TestHostGridRect(t *testing.T) {
 	win := ttyx.Rect{X: 100, Y: 200, W: 800, H: 630}
 
 	// Thirty pixels of menu bar at the top, ten of scroll bar on the right.
-	got := hostGridRect(win, 790, 600, true)
+	got := term.HostGridRect(win, 790, 600, true)
 	want := ttyx.Rect{X: 100, Y: 230, W: 790, H: 600}
 	if got != want {
 		t.Errorf("measured: got %+v, want %+v", got, want)
@@ -138,33 +139,33 @@ func TestHostGridRect(t *testing.T) {
 
 	// Nothing measured: the grid is the whole window, which is what this
 	// did before it could measure anything.
-	if got := hostGridRect(win, 0, 0, false); got != win {
+	if got := term.HostGridRect(win, 0, 0, false); got != win {
 		t.Errorf("unmeasured: got %+v, want %+v", got, win)
 	}
 
 	// A text area larger than the window is nonsense and is clamped rather
 	// than trusted.
-	if got := hostGridRect(win, 9000, 9000, true); got != win {
+	if got := term.HostGridRect(win, 9000, 9000, true); got != win {
 		t.Errorf("clamped: got %+v, want %+v", got, win)
 	}
 }
 
 func TestParseXTWinOps(t *testing.T) {
 	// CSI 14 t comes back as the text area, CSI 16 t as one cell.
-	w, h, ok := parseXTWinOps("\x1b[4;600;790t", "\x1b[4;")
+	w, h, ok := term.ParseXTWinOps("\x1b[4;600;790t", "\x1b[4;")
 	if !ok || w != 790 || h != 600 {
 		t.Errorf("text area: got %dx%d ok=%v, want 790x600", w, h, ok)
 	}
-	cw, ch, ok := parseXTWinOps("\x1b[6;20;10t", "\x1b[6;")
+	cw, ch, ok := term.ParseXTWinOps("\x1b[6;20;10t", "\x1b[6;")
 	if !ok || cw != 10 || ch != 20 {
 		t.Errorf("cell: got %dx%d ok=%v, want 10x20", cw, ch, ok)
 	}
 	// An answer to the other question must not be read as this one.
-	if _, _, ok := parseXTWinOps("\x1b[6;20;10t", "\x1b[4;"); ok {
+	if _, _, ok := term.ParseXTWinOps("\x1b[6;20;10t", "\x1b[4;"); ok {
 		t.Error("a cell answer is not a text area answer")
 	}
 	for _, s := range []string{"", "\x1b[4;t", "garbage"} {
-		if _, _, ok := parseXTWinOps(s, "\x1b[4;"); ok {
+		if _, _, ok := term.ParseXTWinOps(s, "\x1b[4;"); ok {
 			t.Errorf("%q must not parse", s)
 		}
 	}
@@ -175,40 +176,40 @@ func TestParseXTWinOps(t *testing.T) {
 // chooses to call padding.
 func TestHostTextSizePrefersTheCell(t *testing.T) {
 	saveCell := func() func() {
-		hostTextMu.Lock()
-		cw, chh, ck := hostCellW, hostCellH, hostCellKnown
-		tw, th, tk := hostTextW, hostTextH, hostTextKnown
-		hostTextMu.Unlock()
+		term.HostTextMu.Lock()
+		cw, chh, ck := term.HostCellW, term.HostCellH, term.HostCellKnown
+		tw, th, tk := term.HostTextW, term.HostTextH, term.HostTextKnown
+		term.HostTextMu.Unlock()
 		return func() {
-			hostTextMu.Lock()
-			hostCellW, hostCellH, hostCellKnown = cw, chh, ck
-			hostTextW, hostTextH, hostTextKnown = tw, th, tk
-			hostTextMu.Unlock()
+			term.HostTextMu.Lock()
+			term.HostCellW, term.HostCellH, term.HostCellKnown = cw, chh, ck
+			term.HostTextW, term.HostTextH, term.HostTextKnown = tw, th, tk
+			term.HostTextMu.Unlock()
 		}
 	}()
 	defer saveCell()
 
-	hostTextMu.Lock()
-	hostCellW, hostCellH, hostCellKnown = 10, 20, true
-	hostTextW, hostTextH, hostTextKnown = 999, 999, true
-	hostTextMu.Unlock()
-	if w, h, ok := hostTextSize(80, 25); !ok || w != 800 || h != 500 {
+	term.HostTextMu.Lock()
+	term.HostCellW, term.HostCellH, term.HostCellKnown = 10, 20, true
+	term.HostTextW, term.HostTextH, term.HostTextKnown = 999, 999, true
+	term.HostTextMu.Unlock()
+	if w, h, ok := term.HostTextSize(80, 25); !ok || w != 800 || h != 500 {
 		t.Errorf("with a cell: got %dx%d ok=%v, want 800x500", w, h, ok)
 	}
 
 	// Without a cell the reported text area is all there is.
-	hostTextMu.Lock()
-	hostCellKnown = false
-	hostTextMu.Unlock()
-	if w, h, ok := hostTextSize(80, 25); !ok || w != 999 || h != 999 {
+	term.HostTextMu.Lock()
+	term.HostCellKnown = false
+	term.HostTextMu.Unlock()
+	if w, h, ok := term.HostTextSize(80, 25); !ok || w != 999 || h != 999 {
 		t.Errorf("without a cell: got %dx%d ok=%v", w, h, ok)
 	}
 
 	// And without either, nothing is known.
-	hostTextMu.Lock()
-	hostTextKnown = false
-	hostTextMu.Unlock()
-	if _, _, ok := hostTextSize(80, 25); ok {
+	term.HostTextMu.Lock()
+	term.HostTextKnown = false
+	term.HostTextMu.Unlock()
+	if _, _, ok := term.HostTextSize(80, 25); ok {
 		t.Error("nothing was measured, so nothing is known")
 	}
 }
@@ -224,10 +225,10 @@ func TestHostPixelsFromIoctlOnAPipe(t *testing.T) {
 	defer r.Close()
 	defer w.Close()
 
-	if _, _, ok := hostPixelsFromIoctl(r); ok {
+	if _, _, ok := term.HostPixelsFromIoctl(r); ok {
 		t.Error("a pipe has no text area")
 	}
-	if _, _, ok := hostPixelsFromIoctl(nil); ok {
+	if _, _, ok := term.HostPixelsFromIoctl(nil); ok {
 		t.Error("neither has nothing at all")
 	}
 }
@@ -245,7 +246,7 @@ func TestAnswerComplete(t *testing.T) {
 		{"", false},
 	}
 	for _, c := range cases {
-		if got := answerComplete(c.in, "\x1b[4;"); got != c.want {
+		if got := term.AnswerComplete(c.in, "\x1b[4;"); got != c.want {
 			t.Errorf("%q: got %v, want %v", c.in, got, c.want)
 		}
 	}
@@ -258,11 +259,11 @@ func TestAnswerComplete(t *testing.T) {
 // size in the bottom left corner.
 func TestHostScaleFindsAScaledDisplay(t *testing.T) {
 	win := ttyx.Rect{X: 862, Y: 337, W: 1312, H: 868}
-	if got := hostScale(win, 640, 408); got != 2 {
+	if got := term.HostScale(win, 640, 408); got != 2 {
 		t.Errorf("scale: got %d, want 2", got)
 	}
 
-	grid := hostGridRect(win, 640, 408, true)
+	grid := term.HostGridRect(win, 640, 408, true)
 	want := ttyx.Rect{X: 862, Y: 337 + 868 - 816, W: 1280, H: 816}
 	if grid != want {
 		t.Errorf("grid: got %+v, want %+v", grid, want)
@@ -277,10 +278,10 @@ func TestHostScaleFindsAScaledDisplay(t *testing.T) {
 // already, and doubling it would not fit.
 func TestHostScaleLeavesAnUnscaledDisplayAlone(t *testing.T) {
 	win := ttyx.Rect{X: 0, Y: 0, W: 1312, H: 868}
-	if got := hostScale(win, 1280, 816); got != 1 {
+	if got := term.HostScale(win, 1280, 816); got != 1 {
 		t.Errorf("scale: got %d, want 1", got)
 	}
-	if got := hostGridRect(win, 1280, 816, true); got.W != 1280 || got.H != 816 {
+	if got := term.HostGridRect(win, 1280, 816, true); got.W != 1280 || got.H != 816 {
 		t.Errorf("grid: got %+v", got)
 	}
 }
@@ -288,10 +289,10 @@ func TestHostScaleLeavesAnUnscaledDisplayAlone(t *testing.T) {
 // Nonsense must not be scaled into worse nonsense.
 func TestHostScaleRefusesNonsense(t *testing.T) {
 	win := ttyx.Rect{W: 800, H: 600}
-	if got := hostScale(win, 0, 0); got != 1 {
+	if got := term.HostScale(win, 0, 0); got != 1 {
 		t.Errorf("nothing measured: got %d", got)
 	}
-	if got := hostScale(win, 9000, 9000); got != 1 {
+	if got := term.HostScale(win, 9000, 9000); got != 1 {
 		t.Errorf("larger than the window: got %d", got)
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/vtui"
 )
 
@@ -212,14 +213,14 @@ func TestHotkeyManager_Conditions(t *testing.T) {
 // did nothing at all, because the NoAltScreenApp condition consulted
 // pf.termView.UseAltScreen — a leftover background object in this shell mode,
 // unrelated to what's actually on screen — and treated it as a foreign
-// full-screen app that should keep the key. ShellModeSimpleInline has no PTY
+// full-screen app that should keep the key. term.ShellModeSimpleInline has no term.PTY
 // and therefore no way for a foreign app to own the console view, so the
 // condition must return true unconditionally once panels are hidden.
 func TestNoAltScreenApp_SimpleInline_IgnoresBackgroundTermView(t *testing.T) {
 	// The frame pushed below is never popped, so on the shared manager it
 	// stays on top for the rest of the process -- and it is precisely the
 	// state keyRemapSuspended() reads as "a foreign application owns the
-	// keyboard": panels hidden, a PTY shell mode, UseAltScreen set. Every
+	// keyboard": panels hidden, a term.PTY shell mode, UseAltScreen set. Every
 	// later test that expects a key substitution to happen then silently
 	// gets none. Take a manager of our own so the frame leaves with it.
 	t.Cleanup(swapFrameManager(t))
@@ -227,7 +228,7 @@ func TestNoAltScreenApp_SimpleInline_IgnoresBackgroundTermView(t *testing.T) {
 	pf := setupMockPanelsFrame(t)
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	pf.shellMode = ShellModeSimpleInline
+	pf.shellMode = term.ShellModeSimpleInline
 	pf.showPanels = false
 	pf.termView.UseAltScreen = true // the stray flip seen in the wild
 	vtui.FrameManager.Push(pf)
@@ -241,13 +242,13 @@ func TestNoAltScreenApp_SimpleInline_IgnoresBackgroundTermView(t *testing.T) {
 
 	// The same background flag must not swallow the other Terminal-area keys.
 	if got := GlobalHotkeysMgr.GetAction("Terminal", "F10"); got != "App.Quit" {
-		t.Errorf("Terminal F10 in SimpleInline with stray UseAltScreen=true: got %q, want App.Quit", got)
+		t.Errorf("Terminal F10 in SimpleInline with stray UseAltScreen=true: got %q, want term.App.Quit", got)
 	}
 
-	// ShellModeOwn keeps the original gating: a real AltScreen app must still
+	// term.ShellModeOwn keeps the original gating: a real AltScreen app must still
 	// win the key.
-	pf.shellMode = ShellModeOwn
+	pf.shellMode = term.ShellModeOwn
 	if got := GlobalHotkeysMgr.GetAction("Terminal", "CtrlO"); got != "" {
-		t.Errorf("Terminal CtrlO in ShellModeOwn with AltScreen app active: got %q, want empty (must fall through to app)", got)
+		t.Errorf("Terminal CtrlO in term.ShellModeOwn with AltScreen app active: got %q, want empty (must fall through to app)", got)
 	}
 }

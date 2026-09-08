@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/term"
 	"os"
 	"path/filepath"
 	"slices"
@@ -29,7 +30,7 @@ func envHasKey(env []string, key string) bool {
 
 func TestChildEnvAdvertisesGraphics(t *testing.T) {
 	base := []string{"PATH=/bin", "KITTY_WINDOW_ID=77", "TERM_PROGRAM=far2l"}
-	env := buildChildEnv(base, true, false)
+	env := term.BuildChildEnv(base, true, false)
 
 	if !envHas(env, "PATH=/bin") {
 		t.Error("the inherited environment must survive")
@@ -47,7 +48,7 @@ func TestChildEnvAdvertisesGraphics(t *testing.T) {
 
 func TestChildEnvKeepsQuietWithoutGraphics(t *testing.T) {
 	base := []string{"PATH=/bin", "KITTY_WINDOW_ID=77", "TERM=xterm-256color"}
-	env := buildChildEnv(base, false, false)
+	env := term.BuildChildEnv(base, false, false)
 
 	if envHasKey(env, "KITTY_WINDOW_ID") {
 		t.Errorf("a terminal that cannot show pictures must not claim it can: %v", env)
@@ -62,7 +63,7 @@ func TestChildEnvKeepsQuietWithoutGraphics(t *testing.T) {
 
 func TestChildEnvAnnouncesKittyTerm(t *testing.T) {
 	base := []string{"PATH=/bin", "TERM=xterm-256color"}
-	env := buildChildEnv(base, true, true)
+	env := term.BuildChildEnv(base, true, true)
 
 	if !envHas(env, "TERM=xterm-kitty") || envHas(env, "TERM=xterm-256color") {
 		t.Errorf("TERM must name a terminal that draws pictures: %v", env)
@@ -84,7 +85,7 @@ func TestTerminfoExists(t *testing.T) {
 	t.Setenv("TERMINFO", dir)
 	t.Setenv("TERMINFO_DIRS", "")
 
-	if terminfoExists("f4-no-such-terminal") {
+	if term.TerminfoExists("f4-no-such-terminal") {
 		t.Error("an unknown terminal must not be reported as installed")
 	}
 
@@ -95,7 +96,7 @@ func TestTerminfoExists(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "x", "xterm-kitty"), []byte("x"), 0o600); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
-	if !terminfoExists("xterm-kitty") {
+	if !term.TerminfoExists("xterm-kitty") {
 		t.Error("an installed description must be found by its letter")
 	}
 
@@ -108,7 +109,7 @@ func TestTerminfoExists(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(other, "78", "xterm-kitty"), []byte("x"), 0o600); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
-	if !terminfoExists("xterm-kitty") {
+	if !term.TerminfoExists("xterm-kitty") {
 		t.Error("an installed description must be found by its hex directory")
 	}
 }
@@ -119,7 +120,7 @@ func TestTerminfoExists(t *testing.T) {
 // kitty — therefore had nothing to go on and chafa drew characters until it
 // was told "-f kitty" by hand. See chafa/chafa-term-db.c.
 func TestChildEnvAnnouncesKittyPid(t *testing.T) {
-	env := buildChildEnv([]string{"PATH=/usr/bin"}, true, false)
+	env := term.BuildChildEnv([]string{"PATH=/usr/bin"}, true, false)
 
 	var pid string
 	for _, kv := range env {
@@ -142,7 +143,7 @@ func TestChildEnvAnnouncesKittyPid(t *testing.T) {
 // Claiming it where no picture can be shown would only make programs produce
 // output nobody sees.
 func TestChildEnvWithoutGraphicsClaimsNothing(t *testing.T) {
-	env := buildChildEnv([]string{"PATH=/usr/bin"}, false, false)
+	env := term.BuildChildEnv([]string{"PATH=/usr/bin"}, false, false)
 	for _, kv := range env {
 		if strings.HasPrefix(kv, "KITTY_PID=") || strings.HasPrefix(kv, "KITTY_WINDOW_ID=") {
 			t.Errorf("nothing may be claimed: %q", kv)
@@ -153,7 +154,7 @@ func TestChildEnvWithoutGraphicsClaimsNothing(t *testing.T) {
 // Whatever was inherited describes the terminal that started f4; the program
 // about to start talks to us instead.
 func TestChildEnvDropsInheritedKittyPid(t *testing.T) {
-	env := buildChildEnv([]string{"KITTY_PID=999", "KITTY_WINDOW_ID=7", "PATH=/usr/bin"}, false, false)
+	env := term.BuildChildEnv([]string{"KITTY_PID=999", "KITTY_WINDOW_ID=7", "PATH=/usr/bin"}, false, false)
 	for _, kv := range env {
 		if strings.HasPrefix(kv, "KITTY_PID=") || strings.HasPrefix(kv, "KITTY_WINDOW_ID=") {
 			t.Errorf("the inherited value must not survive: %q", kv)
@@ -173,12 +174,12 @@ func TestChildEnvDropsUniversalBridgeVariables(t *testing.T) {
 		"GOFFI_UNIVERSAL_ARGV0=42:/proc/self/fd/3",
 		"F4_EXE=/home/u/f4",
 	}
-	env := buildChildEnv(base, false, false)
+	env := term.BuildChildEnv(base, false, false)
 
 	if !envHas(env, "PATH=/usr/bin") {
 		t.Error("the inherited environment must otherwise survive")
 	}
-	for _, key := range privateToThisProcess {
+	for _, key := range term.PrivateToThisProcess {
 		if envHasKey(env, key) {
 			t.Errorf("%s describes this process and must not be passed on: %v", key, env)
 		}
@@ -189,7 +190,7 @@ func TestChildEnvDropsUniversalBridgeVariables(t *testing.T) {
 // hands the child its environment: the program still gets a libc of its own
 // or none at all.
 func TestChildEnvDropsUniversalBridgeVariablesInHostMode(t *testing.T) {
-	env := buildChildEnv([]string{"GOFFI_UNIVERSAL_REEXEC=1", "PATH=/usr/bin"}, false, false)
+	env := term.BuildChildEnv([]string{"GOFFI_UNIVERSAL_REEXEC=1", "PATH=/usr/bin"}, false, false)
 	if envHasKey(env, "GOFFI_UNIVERSAL_REEXEC") {
 		t.Errorf("host mode must drop the guard too: %v", env)
 	}
@@ -198,13 +199,13 @@ func TestChildEnvDropsUniversalBridgeVariablesInHostMode(t *testing.T) {
 // A partial entry has no name to match, and dropping it would quietly lose
 // something the child was meant to have.
 func TestPrivateEnvEntryIgnoresEntriesWithoutAName(t *testing.T) {
-	if privateEnvEntry("GOFFI_UNIVERSAL_REEXEC") {
+	if term.PrivateEnvEntry("GOFFI_UNIVERSAL_REEXEC") {
 		t.Error("an entry with no '=' names no variable")
 	}
-	if privateEnvEntry("F4_EXECUTABLE=/home/u/f4") {
+	if term.PrivateEnvEntry("F4_EXECUTABLE=/home/u/f4") {
 		t.Error("only the exact names are private, not everything starting with one")
 	}
-	if !privateEnvEntry("F4_EXE=") {
+	if !term.PrivateEnvEntry("F4_EXE=") {
 		t.Error("an empty value is still that variable")
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -22,7 +23,7 @@ func TestIssue95_HostConsoleTabCompletesBareDirectory(t *testing.T) {
 	t.Cleanup(func() { vtui.AutoCompleteEnabled = oldAutoCompleteEnabled })
 
 	config.App.CommandLineAutoComplete = true
-	config.App.ConsoleMode = ConsoleViewFar
+	config.App.ConsoleMode = term.ConsoleViewFar
 	config.App.ConsoleOverlayUI = true
 	vtui.PathHintProvider = pathHintProvider
 	vtui.AutoCompleteEnabled = true
@@ -31,7 +32,7 @@ func TestIssue95_HostConsoleTabCompletesBareDirectory(t *testing.T) {
 	theme.SetDefaultF4Palette()
 	pf := setupMockPanelsFrame(t)
 	defer pf.Close()
-	pf.shellMode = ShellModeHost
+	pf.shellMode = term.ShellModeHost
 	pf.showPanels = false
 	pf.ResizeConsole(80, 25)
 	root := t.TempDir()
@@ -57,6 +58,6 @@ func TestIssue95_HostConsoleTabCompletesBareDirectory(t *testing.T) {
 		t.Fatalf("Tab completion text = %q, want %q", got, want)
 	}
 	if got := mock.String(); got != beforePTY {
-		t.Fatalf("Tab completion leaked to PTY: before=%q after=%q", beforePTY, got)
+		t.Fatalf("Tab completion leaked to term.PTY: before=%q after=%q", beforePTY, got)
 	}
 }

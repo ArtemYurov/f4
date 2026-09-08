@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/vtui"
 )
 
@@ -42,7 +43,7 @@ func ShowBackgroundJobs(pf *PanelsFrame) {
 	// and the next and an index alone would then point at somebody else.
 	var ids []int
 	refresh := func() {
-		states := GlobalBackgroundJobs.List()
+		states := term.GlobalBackgroundJobs.List()
 		items := make([]string, 0, len(states))
 		ids = ids[:0]
 		for _, s := range states {
@@ -79,7 +80,7 @@ func ShowBackgroundJobs(pf *PanelsFrame) {
 		if id == 0 {
 			return
 		}
-		if GlobalBackgroundJobs.Open(id) {
+		if term.GlobalBackgroundJobs.Open(id) {
 			dlg.Close()
 			return
 		}
@@ -88,7 +89,7 @@ func ShowBackgroundJobs(pf *PanelsFrame) {
 	}
 	btnCancel.OnClick = func() {
 		if id := selected(); id != 0 {
-			GlobalBackgroundJobs.Cancel(id)
+			term.GlobalBackgroundJobs.Cancel(id)
 		}
 		refresh()
 		vtui.FrameManager.Redraw()

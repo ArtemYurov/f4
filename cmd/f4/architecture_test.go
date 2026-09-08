@@ -117,6 +117,11 @@ var architectureLayers = map[string]int{
 	// the editor both read; Task 32 brings the rest.
 	"internal/fileops": 1,
 
+	// Layer 3, not the 1 the plan assigned: the terminal reads gui.Running to
+	// tell a window from a TTY, and the viewer's URL model to underline a link
+	// under the mouse. Nothing below layer 3 imports it.
+	"internal/term": 3,
+
 	"internal/textsearch": 0,
 
 	"internal/dialog": 3,

@@ -6,16 +6,17 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
 
-// mutedPTY wraps a PtyBackend to silence automated parser and terminal responses
-// (such as CPR, DSR, DA, OSC 52, far2l APC) while mirroring in ShellModeHost.
+// mutedPTY wraps a term.PtyBackend to silence automated parser and terminal responses
+// (such as CPR, DSR, DA, OSC 52, far2l APC) while mirroring in term.ShellModeHost.
 // The host terminal provides real responses, so the internal mirror must stay mute.
-// Note: mutedPTY intentionally does NOT implement PtyPixelSizer.
+// Note: mutedPTY intentionally does NOT implement term.PtyPixelSizer.
 type mutedPTY struct {
-	backend PtyBackend
+	backend term.PtyBackend
 }
 
 func (m mutedPTY) Read(p []byte) (int, error)            { return m.backend.Read(p) }
@@ -39,12 +40,12 @@ func (pf *PanelsFrame) SetBusy(busy bool) {
 
 // consoleStyle returns the console view style effective for this frame.
 func (pf *PanelsFrame) consoleStyle() string {
-	return consoleViewStyleFor(pf.shellMode)
+	return term.ConsoleViewStyleFor(pf.shellMode)
 }
 
 // overlayLines returns the number of bottom rows reserved for the f4 overlay (0, 1, or 2).
 func (pf *PanelsFrame) overlayLines() int {
-	if pf.consoleStyle() != ConsoleViewFar {
+	if pf.consoleStyle() != term.ConsoleViewFar {
 		return 0
 	}
 	n := 1 // CommandLine
@@ -54,40 +55,12 @@ func (pf *PanelsFrame) overlayLines() int {
 	return n
 }
 
-// consoleOverlayContent is the backend-independent description of the overlay:
-// what to put on the command line row, where the cursor belongs, and the keybar
-// labels. The ANSI and Win32 Console emitters below render the same struct.
-type consoleOverlayContent struct {
-	Lines     int
-	Cmd       string
-	CursorCol int
-	Keys      []overlayKeySlot
-	Popup     *overlayPopupContent
-}
-
-type overlayPopupContent struct {
-	X         int
-	Y         int
-	Width     int
-	Height    int
-	SelectPos int
-	Items     []string
-}
-
-// overlayKeySlot is one F-key cell of the overlay keybar: the number, its
-// label, and the column the number starts at.
-type overlayKeySlot struct {
-	Col   int
-	Num   string
-	Label string
-}
-
 // overlayKeybarSlots lays the keybar out exactly the way vtui.KeyBar does, so
 // the console overlay and the panel keybar agree on slot width and label
 // truncation. The overlay used to hardcode five columns per label, which is why
 // it showed "RenMo" where the real keybar had room for "Rename or move".
 // Column math only, no drawing: unit-testable and shared by both emitters.
-func overlayKeybarSlots(labels vtui.KeyBarLabels, width int) []overlayKeySlot {
+func overlayKeybarSlots(labels vtui.KeyBarLabels, width int) []term.OverlayKeySlot {
 	if width <= 0 {
 		return nil
 	}
@@ -95,7 +68,7 @@ func overlayKeybarSlots(labels vtui.KeyBarLabels, width int) []overlayKeySlot {
 	if slotWidth < 3 {
 		slotWidth = 3
 	}
-	slots := make([]overlayKeySlot, 0, 12)
+	slots := make([]term.OverlayKeySlot, 0, 12)
 	for i := 0; i < 12; i++ {
 		x := i * slotWidth
 		if x > width-1 {
@@ -118,7 +91,7 @@ func overlayKeybarSlots(labels vtui.KeyBarLabels, width int) []overlayKeySlot {
 		if len(label) > labelW {
 			label = label[:labelW]
 		}
-		slots = append(slots, overlayKeySlot{
+		slots = append(slots, term.OverlayKeySlot{
 			Col:   x,
 			Num:   num,
 			Label: fmt.Sprintf("%-*s", labelW, string(label)),
@@ -128,8 +101,8 @@ func overlayKeybarSlots(labels vtui.KeyBarLabels, width int) []overlayKeySlot {
 }
 
 // buildConsoleOverlayContent collects the overlay text from the live UI state.
-func (pf *PanelsFrame) buildConsoleOverlayContent() consoleOverlayContent {
-	ov := consoleOverlayContent{Lines: pf.overlayLines()}
+func (pf *PanelsFrame) buildConsoleOverlayContent() term.ConsoleOverlayContent {
+	ov := term.ConsoleOverlayContent{Lines: pf.overlayLines()}
 
 	var sb strings.Builder
 	for _, ci := range pf.buildPrompt() {
@@ -152,7 +125,7 @@ func (pf *PanelsFrame) buildConsoleOverlayContent() consoleOverlayContent {
 	if vtui.FrameManager != nil {
 		if ac, ok := vtui.FrameManager.GetTopFrame().(*vtui.AutoCompleteMenu); ok && ac != nil && ac.HasMatches() {
 			x1, y1, x2, y2 := ac.GetPosition()
-			ov.Popup = &overlayPopupContent{
+			ov.Popup = &term.OverlayPopupContent{
 				X:         x1,
 				Y:         y1,
 				Width:     x2 - x1 + 1,
@@ -170,19 +143,19 @@ func (pf *PanelsFrame) buildConsoleOverlayContent() consoleOverlayContent {
 // screen buffer is not a VT stream and escape sequences would land in it as
 // literal text.
 func consoleOverlayUsesWinAPI() bool {
-	if SelectedTTYBackend != "winapi" && SelectedTTYBackend != "win32" {
+	if term.SelectedTTYBackend != "winapi" && term.SelectedTTYBackend != "win32" {
 		return false
 	}
-	return winConsoleOverlayAvailable()
+	return term.WinConsoleOverlayAvailable()
 }
 
 // consoleViewActive reports whether the frame currently shows a console view
-// (host console with a live shell, or the no-PTY console) rather than panels.
+// (host console with a live shell, or the no-term.PTY console) rather than panels.
 func (pf *PanelsFrame) consoleViewActive() bool {
 	switch pf.shellMode {
-	case ShellModeHost:
+	case term.ShellModeHost:
 		return pf.isHostConsoleActive()
-	case ShellModeSimpleInline:
+	case term.ShellModeSimpleInline:
 		return !pf.showPanels
 	}
 	return false
@@ -232,12 +205,12 @@ func (pf *PanelsFrame) drawConsoleOverlay() {
 	// what geometry it believed in. "Overlay drew at the top of the window"
 	// is either a wrong pf.lastH (ansi) or a wrong srWindow (winapi), and
 	// this tells the two apart without guessing.
-	p := probeConsole()
+	p := term.ProbeConsole()
 	vtui.DebugLog("OVERLAY: backend=%q winapi=%v lastW=%d lastH=%d lines=%d keys=%d csbi=%v win=%dx%d",
-		SelectedTTYBackend, consoleOverlayUsesWinAPI(), pf.lastW, pf.lastH, ov.Lines, len(ov.Keys),
+		term.SelectedTTYBackend, consoleOverlayUsesWinAPI(), pf.lastW, pf.lastH, ov.Lines, len(ov.Keys),
 		p.OK, p.WinCols(), p.WinRows())
 	if consoleOverlayUsesWinAPI() {
-		winDrawConsoleOverlay(ov)
+		term.WinDrawConsoleOverlay(ov)
 		return
 	}
 	pf.emitAnsiConsoleOverlay(ov)
@@ -261,7 +234,7 @@ func (pf *PanelsFrame) clearConsoleOverlay() {
 		return
 	}
 	if consoleOverlayUsesWinAPI() {
-		winClearConsoleOverlay(n)
+		term.WinClearConsoleOverlay(n)
 		return
 	}
 	h := pf.lastH
@@ -284,7 +257,7 @@ func (pf *PanelsFrame) drawHostConsoleOverlay() {
 
 // emitAnsiConsoleOverlay renders the overlay directly to the host terminal
 // using minimal ANSI escape sequences without involving ScreenBuf.
-func (pf *PanelsFrame) emitAnsiConsoleOverlay(ov consoleOverlayContent) {
+func (pf *PanelsFrame) emitAnsiConsoleOverlay(ov term.ConsoleOverlayContent) {
 	h := pf.lastH
 	if h <= 0 {
 		return
@@ -318,17 +291,17 @@ func (pf *PanelsFrame) emitAnsiConsoleOverlay(ov consoleOverlayContent) {
 	// 4. Restore cursor position and visibility
 	sb.WriteString("\x1b[0m\x1b8")
 
-	// Without a PTY there is no shell to own the cursor, so f4 parks it in its
+	// Without a term.PTY there is no shell to own the cursor, so f4 parks it in its
 	// own command line: that blinking caret is what tells the user the console
 	// is waiting for a command rather than hung.
-	if pf.shellMode == ShellModeSimpleInline {
+	if pf.shellMode == term.ShellModeSimpleInline {
 		fmt.Fprintf(&sb, "\x1b[%d;%dH\x1b[?25h", cmdRow, ov.CursorCol+1)
 	}
 	vtui.WritePassthrough([]byte(sb.String()))
 }
 
 // syncAutoCompleteSuppression keeps CommandLine.AutoCompleteSuppressed in
-// step with where the popup can actually be drawn safely. winDrawConsoleOverlay
+// step with where the popup can actually be drawn safely. term.WinDrawConsoleOverlay
 // (console_overlay_windows.go) paints AutoCompleteMenu directly with the
 // Windows Console API, so it's safe there. The ANSI console-view path has no
 // such renderer yet -- pushing the menu there would go through vtui's normal
@@ -385,9 +358,9 @@ func (pf *PanelsFrame) handleHostConsoleTab(e *vtinput.InputEvent) bool {
 }
 
 // enterHostConsole switches the physical terminal to the primary screen and activates
-// live passthrough of PTY output directly to the host console.
+// live passthrough of term.PTY output directly to the host console.
 func (pf *PanelsFrame) enterHostConsole() {
-	if pf.shellMode != ShellModeHost {
+	if pf.shellMode != term.ShellModeHost {
 		return
 	}
 	pf.hostConsoleMu.Lock()
@@ -413,7 +386,7 @@ func (pf *PanelsFrame) enterHostConsole() {
 
 // leaveHostConsole restores the alternate screen buffer and returns visual control to f4 panels.
 func (pf *PanelsFrame) leaveHostConsole() {
-	if pf.shellMode != ShellModeHost {
+	if pf.shellMode != term.ShellModeHost {
 		return
 	}
 	pf.hostConsoleMu.Lock()

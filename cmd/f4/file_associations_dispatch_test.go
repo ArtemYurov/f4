@@ -34,7 +34,7 @@ func withTempAssociations(t *testing.T, list []FileAssoc) string {
 
 // setupPanelWithFile stages a PanelsFrame whose active panel has the
 // cursor on a single file entry named `name` inside a real temp dir.
-// Returns the frame + the mock PTY so tests can observe writes.
+// Returns the frame + the mock term.PTY so tests can observe writes.
 func setupPanelWithFile(t *testing.T, name string) (*PanelsFrame, *mockPty) {
 	t.Helper()
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
@@ -77,7 +77,7 @@ func setupPanelWithFile(t *testing.T, name string) (*PanelsFrame, *mockPty) {
 
 // TestFileAssociation_SingleMatch_RunsDirectly is the happy path:
 // exactly one association fires for the file → its command reaches
-// the PTY without any picker in between.
+// the term.PTY without any picker in between.
 func TestFileAssociation_SingleMatch_RunsDirectly(t *testing.T) {
 	withTempAssociations(t, []FileAssoc{
 		{
@@ -218,7 +218,7 @@ func TestFileAssociation_MultipleMatches_ShowsPicker(t *testing.T) {
 }
 
 // TestFileAssociation_PickerRunsChosenCommand walks a full user flow:
-// picker appears, user hits Enter on row 1, PTY gets the second
+// picker appears, user hits Enter on row 1, term.PTY gets the second
 // command (verifying UserData routing).
 func TestFileAssociation_PickerRunsChosenCommand(t *testing.T) {
 	withTempAssociations(t, []FileAssoc{
@@ -245,7 +245,7 @@ func TestFileAssociation_PickerRunsChosenCommand(t *testing.T) {
 	// Fire OnAction to simulate Enter (the callback is what routes the
 	// pick to the run). Then drain the task queue: the OnAction posts a
 	// task that runs the command, and executeMenuCommands may enqueue
-	// further tasks on its way to the PTY.
+	// further tasks on its way to the term.PTY.
 	menu.OnAction(1)
 	// Drain the queue with a short timeout: PostTask hands off to an
 	// internal goroutine, so a plain non-blocking select races the

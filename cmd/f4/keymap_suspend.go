@@ -1,6 +1,10 @@
 package main
 
-import "github.com/unxed/vtui"
+import (
+	"github.com/unxed/vtui"
+
+	"github.com/unxed/f4/internal/term"
+)
 
 // keyRemapSuspended answers keymap.Suspended: with the panels hidden and an
 // AltScreen program or a busy child running, every key is forwarded to that
@@ -15,8 +19,8 @@ func keyRemapSuspended() bool {
 	if !ok || pf.showPanels {
 		return false
 	}
-	if pf.shellMode == ShellModeSimpleInline {
-		// No PTY in this mode, so no foreign program can be holding the
+	if pf.shellMode == term.ShellModeSimpleInline {
+		// No term.PTY in this mode, so no foreign program can be holding the
 		// keyboard; the console view on screen is f4's own overlay.
 		return false
 	}

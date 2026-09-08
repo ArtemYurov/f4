@@ -7,6 +7,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -24,7 +25,7 @@ func TestPanelsFrame_ExitResetsLocalShell(t *testing.T) {
 	oldPTY := pf.localPTY().(*mockPty)
 	spawnLocalShellPTY = true
 	created := make(chan *mockPty, 1)
-	newLocalPTY = func() (PtyBackend, error) {
+	newLocalPTY = func() (term.PtyBackend, error) {
 		pty := &mockPty{}
 		created <- pty
 		return pty, nil
@@ -114,7 +115,7 @@ func TestPanelsFrame_LocalShellExitReturnsPanelsAndRestartsShell(t *testing.T) {
 	// Start the read loop on the existing mock shell; TestMain leaves it off.
 	pf.initPTY()
 	created := make(chan *mockPty, 1)
-	newLocalPTY = func() (PtyBackend, error) {
+	newLocalPTY = func() (term.PtyBackend, error) {
 		pty := &mockPty{}
 		created <- pty
 		return pty, nil
@@ -151,8 +152,8 @@ func TestPanelsFrame_LocalShellExitReturnsPanelsAndRestartsShell(t *testing.T) {
 		t.Fatal("terminal still reported busy after the shell exited")
 	}
 	var screen strings.Builder
-	for _, row := range pf.termView.getBuffer() {
-		screen.WriteString(strings.TrimRight(cellsText(row), " "))
+	for _, row := range pf.termView.GetBuffer() {
+		screen.WriteString(strings.TrimRight(term.CellsText(row), " "))
 		screen.WriteString("\n")
 	}
 	if !strings.Contains(screen.String(), "batch output") {

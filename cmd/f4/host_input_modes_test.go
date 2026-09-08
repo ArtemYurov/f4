@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtui"
 )
@@ -48,7 +49,7 @@ func TestHostConsole_LeaveRestoresMouseTracking(t *testing.T) {
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
-	pf.shellMode = ShellModeHost
+	pf.shellMode = term.ShellModeHost
 	pf.ResizeConsole(80, 25)
 
 	pf.enterHostConsole()

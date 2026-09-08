@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/vtui"
 )
 
@@ -56,7 +57,7 @@ type cmdShellSession struct {
 	sentSeq   uint64
 	pending   bool // a typed line (command or directory sync) has no prompt yet
 	inBatch   bool // a .bat/.cmd file is being executed: nested cmd is not the shell
-	observed  promptSnapshot
+	observed  term.PromptSnapshot
 	timer     *time.Timer
 	attempts  int
 	closed    bool
@@ -92,16 +93,10 @@ var cmdPromptMaxAttempts = 20
 // the shell reads input from.
 const windowsShellPrompt = `$E]133;A$E\$P$G$E]133;B$E\`
 
-// childProcess is what the session needs to know about a child of the shell.
-type childProcess struct {
-	Name string // image file name, e.g. "PING.EXE"
-	GUI  bool   // built for the Windows GUI subsystem: cmd does not wait for it
-}
-
-// childInspector is implemented by PTY backends that can list the shell's
+// childInspector is implemented by term.PTY backends that can list the shell's
 // direct children. Backends that cannot are treated as having none.
 type childInspector interface {
-	ChildProcesses() []childProcess
+	ChildProcesses() []term.ChildProcess
 }
 
 // nestedShellImages are children that print a cmd-style prompt and accept
@@ -114,7 +109,7 @@ var nestedShellImages = map[string]bool{}
 
 // childHoldsTerminal reports whether one of the shell's children is a console
 // program f4 has to wait for.
-func childHoldsTerminal(children []childProcess) bool {
+func childHoldsTerminal(children []term.ChildProcess) bool {
 	for _, c := range children {
 		if c.GUI {
 			continue
@@ -194,9 +189,9 @@ func (s *cmdShellSession) close() {
 	s.mu.Unlock()
 }
 
-// handleMark runs on the PTY goroutine for every OSC 133 mark of the local
+// handleMark runs on the term.PTY goroutine for every OSC 133 mark of the local
 // shell.
-func (s *cmdShellSession) handleMark(mark string, snap promptSnapshot) {
+func (s *cmdShellSession) handleMark(mark string, snap term.PromptSnapshot) {
 	if s == nil || mark != "B" {
 		return
 	}

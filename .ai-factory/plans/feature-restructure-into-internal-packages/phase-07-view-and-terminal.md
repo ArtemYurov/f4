@@ -383,6 +383,58 @@ done
 
 ---
 
+## What the terminal wave actually found
+
+**`internal/term` is layer 3, not the 1 the task assigns.** It reads
+`gui.Running` to tell a window from a TTY and the viewer's URL model to
+underline a link under the mouse. Nothing below layer 3 imports it, so the
+number is the honest one; a `1` fails the auditor outright.
+
+**The interface is eight methods, and seven of them are one thing.** A Unix
+daemon that a client attaches to has to rebuild the interface for the terminal
+that just connected, and the interface is not the terminal's to build:
+`InitCore`, `InstallImageOverlay`, `OpenEditFile`, `ClientAttached`,
+`ClientDetached`, `EditFilePath`, `StartupDirs`. The eighth, `DecodeImage`, is
+the image decoders living with the viewer above. `VersionInfo` makes nine on
+the Windows path.
+
+**Nine files on the roster could not move**, and the plan's own gate says why
+for none of them:
+
+- `process_environment_shell.go` declares **eighteen `*PanelsFrame` methods**.
+  The task says `pty_interface.go` calls into it five times so nothing above
+  term can own it; Go says a method lives in its type's package, and that
+  settles it. It goes to `internal/panel`.
+- `terminal_workspace.go` declares two more.
+- `background_jobs_window.go` takes the panel frame.
+- `console_overlay_windows.go` and `console_overlay_other.go` needed
+  `consoleOverlayContent` from `console_passthrough.go`, which step 4 keeps
+  behind. Resolved the other way in the end: the content struct is plain data
+  the panel fills and the terminal draws, so it moved down and the two
+  backends came with it.
+
+**Four files the roster did not name had to come along**, each because a moved
+file could not compile without it: `child_env.go` (the terminal's child
+environment), `far2l_auth.go` (its clipboard authorisation),
+`pe_subsystem.go` (whether a Windows child is a GUI program) and
+`simple_exec_windows.go`'s console-buffer half, which became
+`console_buffer_windows.go` with a `!windows` twin.
+
+**Windows broke twice after the tree was green everywhere else.** The first
+time `xbuild.sh` caught it; the second time only `GOOS=windows go vet` did,
+because the breakage was in `_test.go` files. Both halves of the sweep earn
+their place on this wave.
+
+**The rewriting tools cost more than they saved here, twice.** A blanket
+`name:` → `Name:` repair rewrote three lines of a **YAML fixture** inside a raw
+string in `plugring_test.go`, and only a test failure found it — the first
+hazard on step 5's list, caused by the fix for the third. And the earlier
+splitter overwrote its own output file each round, silently dropping the first
+five splits until the sixth was the only one left. On a wave this size, check
+what a loop wrote before running it again.
+
+---
+
 ## Task 31: Extract `internal/media`
 
 ### Intent

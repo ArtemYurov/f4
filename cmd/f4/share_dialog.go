@@ -11,6 +11,7 @@ import (
 	"unicode"
 
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -711,7 +712,7 @@ func (d *shareLinkDialog) copyLinkToClipboard(link string) {
 		if current {
 			setClipboard := d.setClipboard
 			if setClipboard == nil {
-				setClipboard = setF4Clipboard
+				setClipboard = term.SetF4Clipboard
 			}
 			setClipboard(link)
 		}

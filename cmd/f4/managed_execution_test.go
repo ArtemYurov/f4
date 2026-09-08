@@ -46,7 +46,7 @@ func newExecutionTestFrame(t *testing.T) *PanelsFrame {
 // first D as a stale startup prompt left pf.executing stuck on forever after
 // the first command of the session. With a busy terminal the command line and
 // the keybar stay hidden, TerminalQuiet stays false so F3/F4 no longer open
-// the terminal log, and every keystroke is forwarded raw to the PTY.
+// the terminal log, and every keystroke is forwarded raw to the term.PTY.
 func TestWrappedCommandCompletionEndsExecution(t *testing.T) {
 	pf := newExecutionTestFrame(t)
 

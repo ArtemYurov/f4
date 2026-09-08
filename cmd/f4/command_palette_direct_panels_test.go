@@ -6,6 +6,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -46,7 +47,7 @@ func newDirectPalettePanelsFrame(left, right *FileSystemPanel) *PanelsFrame {
 		showLeftPanel:  true,
 		showRightPanel: true,
 		cmdLine:        NewCommandLine("$ "),
-		termView:       NewTerminalView(80, 24),
+		termView:       term.NewTerminalView(80, 24),
 	}
 }
 
@@ -60,7 +61,7 @@ func TestCommandPaletteRemoteInterruptHonorsPluginPriorityAndStalePTY(t *testing
 	right := &FileSystemPanel{vfs: vfs.NewNullVFS(0)}
 	pty := &directPalettePTY{}
 	pf := newDirectPalettePanelsFrame(left, right)
-	pf.remotePtys = map[vfs.VFS]PtyBackend{remote: pty}
+	pf.remotePtys = map[vfs.VFS]term.PtyBackend{remote: pty}
 	setDirectPaletteTopFrame(t, pf)
 
 	pluginCalls := 0
@@ -72,7 +73,7 @@ func TestCommandPaletteRemoteInterruptHonorsPluginPriorityAndStalePTY(t *testing
 		ControlKeyState: vtinput.LeftCtrlPressed,
 	}
 	if !pf.InterceptPluginKey(ctrlC) || pluginCalls != 1 || len(pty.writes) != 0 {
-		t.Fatalf("plugin priority = calls %d, PTY writes %v", pluginCalls, pty.writes)
+		t.Fatalf("plugin priority = calls %d, term.PTY writes %v", pluginCalls, pty.writes)
 	}
 	GlobalHotkeys = nil
 	if !pf.InterceptPluginKey(ctrlC) || string(pty.writes) != string([]byte{0x03}) {
@@ -81,12 +82,12 @@ func TestCommandPaletteRemoteInterruptHonorsPluginPriorityAndStalePTY(t *testing
 
 	entry, found := commandPaletteTestEntryByID(commandPalettePanelsContextEntries(pf), "Panel.InterruptRemoteCommand")
 	if !found {
-		t.Fatal("Panel.InterruptRemoteCommand is missing for a live remote PTY")
+		t.Fatal("Panel.InterruptRemoteCommand is missing for a live remote term.PTY")
 	}
 	replacement := &directPalettePTY{}
 	pf.remotePtys[remote] = replacement
 	if executeCommandPaletteEntry(entry) || len(replacement.writes) != 0 {
-		t.Fatal("stale remote interrupt targeted a replacement PTY")
+		t.Fatal("stale remote interrupt targeted a replacement term.PTY")
 	}
 	entry, _ = commandPaletteTestEntryByID(commandPalettePanelsContextEntries(pf), "Panel.InterruptRemoteCommand")
 	if !executeCommandPaletteEntry(entry) || string(replacement.writes) != string([]byte{0x03}) {

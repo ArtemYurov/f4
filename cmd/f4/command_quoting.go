@@ -78,7 +78,7 @@ func WrapCommandInDirectory(dialect vfs.CommandDialect, dir, command string) (st
 // which is also the convention understood by the overwhelming majority of
 // native commands launched through cmd.exe. Wrapping every value keeps cmd
 // metacharacters such as &, |, <, >, and parentheses inert. Delayed expansion
-// is disabled by the LocalCommandRunner, so exclamation marks remain literal.
+// is disabled by the term.LocalCommandRunner, so exclamation marks remain literal.
 func quoteCmdArgument(value string) string {
 	var b strings.Builder
 	b.Grow(len(value) + 2)

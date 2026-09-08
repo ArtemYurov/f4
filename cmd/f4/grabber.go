@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -105,7 +106,7 @@ func handleForcedMouseSelectionEvent(e *vtinput.InputEvent) bool {
 	return true
 }
 
-// actionScreenGrab is the context-aware App.ScreenGrab handler. Invoking the
+// actionScreenGrab is the context-aware term.App.ScreenGrab handler. Invoking the
 // action again while the grabber owns the screen has the same toggle semantics
 // as its native Alt+Ins key instead of stacking a second snapshot frame.
 func actionScreenGrab() bool {
@@ -120,7 +121,7 @@ func actionScreenGrab() bool {
 }
 
 // VetoActionKey leaves physical Alt+Ins to GrabberFrame.ProcessKey. macro.MacroManager
-// otherwise resolves the Common App.ScreenGrab action before a focused frame's
+// otherwise resolves the Common term.App.ScreenGrab action before a focused frame's
 // normal key handler gets a chance to close the grabber.
 func (g *GrabberFrame) VetoActionKey(e *vtinput.InputEvent) bool {
 	if e == nil || e.Type != vtinput.KeyEventType || !e.KeyDown || e.VirtualKeyCode != vtinput.VK_INSERT {
@@ -212,7 +213,7 @@ func (g *GrabberFrame) Show(scr *vtui.ScreenBuf) {
 	for y := t; y <= b; y++ {
 		for x := l; x <= r; x++ {
 			ci := g.snap[y][x]
-			ci.Attributes = invertAttrColors(ci.Attributes)
+			ci.Attributes = term.InvertAttrColors(ci.Attributes)
 			scr.Write(x, y, []vtui.CharInfo{ci})
 		}
 	}
@@ -296,7 +297,7 @@ func (g *GrabberFrame) copyAndExit() {
 		// the write off the UI goroutine so the grabber closes
 		// instantly and the app stays responsive; the clipboard
 		// eventually settles in the background.
-		setClipboardAsync(text)
+		term.SetClipboardAsync(text)
 	}
 	g.SetExitCode(1)
 }
@@ -465,42 +466,6 @@ func (g *GrabberFrame) HandleCommand(cmd int, args any) bool   { return false }
 func (g *GrabberFrame) HandleBroadcast(cmd int, args any) bool { return false }
 func (g *GrabberFrame) Valid(cmd int) bool                     { return true }
 func (g *GrabberFrame) GetKeyLabels() *vtui.KeySet             { return nil }
-
-// invertAttrColors swaps foreground and background colors in a cell
-// attribute word, preserving other flags (bold, dim, underline, …).
-// Physical swap instead of the CommonLvbReverse flag — GUI renderers
-// (X11, Wayland, gogpu) don't inspect that flag, so relying on it
-// leaves the selection invisible outside the tty backend.
-func invertAttrColors(attr uint64) uint64 {
-	fgIsRGB := attr&vtui.IsFgRGB != 0
-	bgIsRGB := attr&vtui.IsBgRGB != 0
-
-	var fgRGB, bgRGB uint32
-	var fgIdx, bgIdx uint8
-	if fgIsRGB {
-		fgRGB = vtui.GetRGBFore(attr)
-	} else {
-		fgIdx = vtui.GetIndexFore(attr)
-	}
-	if bgIsRGB {
-		bgRGB = vtui.GetRGBBack(attr)
-	} else {
-		bgIdx = vtui.GetIndexBack(attr)
-	}
-
-	result := attr
-	if bgIsRGB {
-		result = vtui.SetRGBFore(result, bgRGB)
-	} else {
-		result = vtui.SetIndexFore(result, bgIdx)
-	}
-	if fgIsRGB {
-		result = vtui.SetRGBBack(result, fgRGB)
-	} else {
-		result = vtui.SetIndexBack(result, fgIdx)
-	}
-	return result
-}
 
 func (g *GrabberFrame) ResizeConsole(w, h int) {
 	g.mu.Lock()

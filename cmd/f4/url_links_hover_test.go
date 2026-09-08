@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/viewer"
@@ -16,7 +17,7 @@ func TestEditorURLHoverAddsUnderlineOnlyToHoveredLink(t *testing.T) {
 	const text = "https://example.org"
 	links := viewer.FindURLLinks(text)
 	ev := &EditorView{hoverURL: links[0].URL, TabSize: 8}
-	cells := ev.fillCellsWithLinks(nil, []byte(text), DefaultTermAttr, DefaultTermAttr, 0, false, 0, 0, nil, links, 0, false, -1, 0, 0, 0)
+	cells := ev.fillCellsWithLinks(nil, []byte(text), term.DefaultTermAttr, term.DefaultTermAttr, 0, false, 0, 0, nil, links, 0, false, -1, 0, 0, 0)
 	if len(cells) != len(text) {
 		t.Fatalf("rendered %d cells, want %d", len(cells), len(text))
 	}
@@ -26,7 +27,7 @@ func TestEditorURLHoverAddsUnderlineOnlyToHoveredLink(t *testing.T) {
 		}
 	}
 	ev.hoverURL = "https://other.example"
-	cells = ev.fillCellsWithLinks(nil, []byte(text), DefaultTermAttr, DefaultTermAttr, 0, false, 0, 0, nil, links, 0, false, -1, 0, 0, 0)
+	cells = ev.fillCellsWithLinks(nil, []byte(text), term.DefaultTermAttr, term.DefaultTermAttr, 0, false, 0, 0, nil, links, 0, false, -1, 0, 0, 0)
 	for i, cell := range cells {
 		if cell.Attributes&vtui.CommonLvbUnderscore != 0 {
 			t.Errorf("cell %d was underlined for a different URL", i)
@@ -34,12 +35,12 @@ func TestEditorURLHoverAddsUnderlineOnlyToHoveredLink(t *testing.T) {
 	}
 }
 func TestTerminalURLHoverUnderlinesVisibleLink(t *testing.T) {
-	tv := NewTerminalView(40, 3)
+	tv := term.NewTerminalView(40, 3)
 	defer tv.Close()
 	tv.SetPosition(0, 0, 39, 2)
 	tv.SetVisible(true)
 	for i, r := range "https://example.org" {
-		tv.Lines[0][i] = vtui.CharInfo{Char: testutil.Uint64Rune(r), Attributes: DefaultTermAttr}
+		tv.Lines[0][i] = vtui.CharInfo{Char: testutil.Uint64Rune(r), Attributes: term.DefaultTermAttr}
 	}
 	if !tv.UpdateURLHover(4, 0) {
 		t.Fatal("hover state did not change")

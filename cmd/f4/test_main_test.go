@@ -68,7 +68,7 @@ func installTestSeams() {
 	defaultNativePropertiesOpener = func(string) error { return nil }
 
 	// Frames must not fork the user's shell during unit tests; the few
-	// tests that exercise the PTY path construct one explicitly.
+	// tests that exercise the term.PTY path construct one explicitly.
 	spawnLocalShellPTY = false
 
 	// Toast behavior is still exercised through vtui's real asynchronous

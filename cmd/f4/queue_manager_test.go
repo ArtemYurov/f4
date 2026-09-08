@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/dialog"
+	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
@@ -836,10 +837,10 @@ func TestCancelOperationsForShutdownCancelsQueueAndBackgroundJobs(t *testing.T) 
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
 	originalQueue := GlobalQueueManager
-	originalJobs := GlobalBackgroundJobs
+	originalJobs := term.GlobalBackgroundJobs
 	defer func() {
 		GlobalQueueManager = originalQueue
-		GlobalBackgroundJobs = originalJobs
+		term.GlobalBackgroundJobs = originalJobs
 	}()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -848,10 +849,10 @@ func TestCancelOperationsForShutdownCancelsQueueAndBackgroundJobs(t *testing.T) 
 		tasks:      []*QueueTask{queued},
 		activeKeys: make(map[string]bool),
 	}
-	GlobalBackgroundJobs = NewBackgroundJobRegistry()
+	term.GlobalBackgroundJobs = term.NewBackgroundJobRegistry()
 	backgroundCancelled := false
-	var background *BackgroundJob
-	background = GlobalBackgroundJobs.Start("test job", func() {
+	var background *term.BackgroundJob
+	background = term.GlobalBackgroundJobs.Start("test job", func() {
 		backgroundCancelled = true
 		background.Finish()
 	})

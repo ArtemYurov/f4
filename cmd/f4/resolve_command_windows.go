@@ -11,7 +11,7 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-const appPathsKeyPath = `Software\Microsoft\Windows\CurrentVersion\App Paths`
+const appPathsKeyPath = `Software\Microsoft\Windows\CurrentVersion\term.App Paths`
 
 // resolveWindowsCommand rewrites the first token of cmd to the full path
 // registered in the "App Paths" registry key, but only when the program is
@@ -35,7 +35,7 @@ func resolveWindowsCommand(cmd string) string {
 		return cmd
 	}
 
-	// Fallback: cmd.exe ignores App Paths, so try it ourselves. Wrap in
+	// Fallback: cmd.exe ignores term.App Paths, so try it ourselves. Wrap in
 	// double quotes verbatim (no escaping) so the path reaches cmd unchanged.
 	if full := appPathLookup(name); full != "" {
 		return cmd[:start] + `"` + full + `"` + cmd[end:]
@@ -80,7 +80,7 @@ func findCmdToken(cmd string) (start, end int, name string, ok bool) {
 	return start, end, cmd[start:end], true
 }
 
-// appPathLookup searches the App Paths registry (HKCU first, then HKLM) for
+// appPathLookup searches the term.App Paths registry (HKCU first, then HKLM) for
 // name, trying each PATHEXT variant. It returns the (default) value of the
 // matching subkey, i.e. the full path to the executable.
 func appPathLookup(name string) string {

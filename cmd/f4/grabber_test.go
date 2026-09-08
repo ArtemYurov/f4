@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtinput"
@@ -23,12 +24,12 @@ func waitForClipboard(t *testing.T, want string) string {
 			// reading other global state. Join it before the next test changes
 			// those globals, otherwise the race detector can report a false
 			// cross-test failure.
-			waitForAsyncClipboard()
+			term.WaitForAsyncClipboard()
 			return got
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
-	waitForAsyncClipboard()
+	term.WaitForAsyncClipboard()
 	return vtui.GetClipboard()
 }
 
@@ -360,7 +361,7 @@ func TestGrabber_ShowHighlightsSelectionRect(t *testing.T) {
 func TestGrabber_InvertAttrColorsRGB(t *testing.T) {
 	// White on black → black on white, other flags preserved.
 	src := vtui.SetRGBBoth(vtui.ForegroundIntensity, 0xFFFFFF, 0x000000)
-	got := invertAttrColors(src)
+	got := term.InvertAttrColors(src)
 	if vtui.GetRGBFore(got) != 0x000000 {
 		t.Errorf("fg after swap = %06x, want 000000", vtui.GetRGBFore(got))
 	}

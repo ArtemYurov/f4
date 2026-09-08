@@ -17,6 +17,7 @@ import (
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/ini"
+	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/f4/internal/viewer"
@@ -659,7 +660,7 @@ func TestActionExecute_PtyCommandFormatting(t *testing.T) {
 
 	v := vfs.NewOSVFS(tmp)
 
-	// Очищаем буфер PTY перед тестом
+	// Очищаем буфер term.PTY перед тестом
 	pty.written = nil
 
 	actionExecute(pf, v, tmp, fileName, filePath)
@@ -675,7 +676,7 @@ func TestActionExecute_PtyCommandFormatting(t *testing.T) {
 		}
 	}
 
-	// В реальном приложении данные из PTY проходят через AnsiParser, который
+	// В реальном приложении данные из term.PTY проходят через term.AnsiParser, который
 	// вырезает технические команды (cd /d) перед отображением. Эмулируем это:
 	pf.parser.Process(pty.written)
 	result := string(pf.termView.GetAllLogBytes())
@@ -1973,8 +1974,8 @@ func TestActionRename_CacheAndSelection(t *testing.T) {
 func TestActionExecute_WindowsFormatSimulation(t *testing.T) {
 	// Тестируем, что формат команды, который мы выбрали для Windows,
 	// корректно «проглатывается» парсером.
-	tv := NewTerminalView(80, 24)
-	p := NewAnsiParser(tv, nil)
+	tv := term.NewTerminalView(80, 24)
+	p := term.NewAnsiParser(tv, nil)
 
 	dir := "C:\\Users\\f4\\Desktop"
 	cmd := "echo \"hello world\""

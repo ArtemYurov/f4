@@ -42,7 +42,7 @@ func statTextEditorTarget(filesystem vfs.VFS, path string, timeout time.Duration
 }
 
 // OpenTextEditor opens supplied UTF-8 content in f4's non-modal editor. It is
-// an optional plugin UI capability rather than part of the baseline App
+// an optional plugin UI capability rather than part of the baseline term.App
 // interface, so existing hosts remain source compatible.
 func (pf *PanelsFrame) OpenTextEditor(request vfs.TextEditorRequest) error {
 	if pf == nil {

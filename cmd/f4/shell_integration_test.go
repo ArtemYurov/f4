@@ -163,21 +163,21 @@ func TestPanelsFrame_PTY_SyncEscaping(t *testing.T) {
 	written := string(pty.written)
 	if runtime.GOOS == "windows" {
 		if !strings.Contains(written, "cd /d") {
-			t.Errorf("Windows PTY sync failed. Expected 'cd /d', got: %q", written)
+			t.Errorf("Windows term.PTY sync failed. Expected 'cd /d', got: %q", written)
 		}
 	} else {
-		// Проверяем, что в PTY ушла команда с одинарными кавычками и экранированием.
+		// Проверяем, что в term.PTY ушла команда с одинарными кавычками и экранированием.
 		// Так как путь абсолютный, проверяем наличие экранированного фрагмента имени.
 		expectedPiece := "space '\\''n'\\'' quotes'"
 		if !strings.Contains(written, " cd '") || !strings.Contains(written, expectedPiece) {
-			t.Errorf("Unix PTY sync escaping failed.\nExpected to contain escaped name: %q\nFull output: %q", expectedPiece, written)
+			t.Errorf("Unix term.PTY sync escaping failed.\nExpected to contain escaped name: %q\nFull output: %q", expectedPiece, written)
 		}
 	}
 }
 
 func TestPanelsFrame_LocalUnixCommandKeepsPersistentShellDirectory(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("Unix PTY command composition")
+		t.Skip("Unix term.PTY command composition")
 	}
 
 	pf := setupMockPanelsFrame(t)
@@ -208,6 +208,6 @@ func TestPanelsFrame_LocalUnixCommandKeepsPersistentShellDirectory(t *testing.T)
 		t.Fatalf("local Unix command re-imposed panel directory %q: %q", tmp, written)
 	}
 	if !strings.Contains(written, "cd:home") {
-		t.Fatalf("alias command did not reach the persistent PTY shell: %q", written)
+		t.Fatalf("alias command did not reach the persistent term.PTY shell: %q", written)
 	}
 }

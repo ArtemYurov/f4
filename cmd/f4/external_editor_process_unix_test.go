@@ -4,6 +4,7 @@ package main
 
 import (
 	"github.com/unxed/f4/internal/gui"
+	"github.com/unxed/f4/internal/term"
 	"os/exec"
 	"testing"
 )
@@ -40,7 +41,7 @@ func TestConfigureExternalEditorProcessCanOpenDevTTY(t *testing.T) {
 	gui.Running = false
 	t.Cleanup(func() { gui.Running = oldRunningGUI })
 
-	pty, err := NewPTY()
+	pty, err := term.NewPTY()
 	if err != nil {
 		t.Skipf("pseudo-terminal unavailable: %v", err)
 	}

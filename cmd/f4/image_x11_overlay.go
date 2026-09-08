@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/f4/internal/ttyx"
 	"github.com/unxed/vtui"
 )
@@ -83,7 +84,7 @@ func newX11ImageOverlay() *x11ImageOverlay {
 	if !config.App.ImageOverlay {
 		return nil
 	}
-	sess := sharedTTYXSession()
+	sess := term.SharedTTYXSession()
 	if sess == nil {
 		return nil
 	}
@@ -229,8 +230,8 @@ func (x *x11ImageOverlay) showMany(cols, rows int, list []vtui.ImagePlacement) e
 	}
 	// The window is not the grid: the top of it may be a menu bar and the
 	// right of it a scroll bar. See ttyx_probe.go.
-	tw, th, known := hostTextSize(cols, rows)
-	term := hostGridRect(win, tw, th, known)
+	tw, th, known := term.HostTextSize(cols, rows)
+	term := term.HostGridRect(win, tw, th, known)
 	term = x.refineGrid(term)
 
 	// One window over everything that has to be drawn, so the placements

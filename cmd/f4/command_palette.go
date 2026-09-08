@@ -148,7 +148,7 @@ func buildCommandPaletteEntries(area string, pf *PanelsFrame) []commandPaletteEn
 		entries = append(entries, commandPaletteDriveEntries(pf)...)
 		entries = append(entries, commandPalettePrefixEntries(area, pf)...)
 		// User-menu execution feeds the underlying command line. It is safe in
-		// every primary area except a terminal currently owned by a busy PTY.
+		// every primary area except a terminal currently owned by a busy term.PTY.
 		if commandPaletteCanIncludeUserMenu(area) {
 			entries = append(entries, commandPaletteUserMenuEntries(pf)...)
 		}

@@ -34,7 +34,7 @@ func userMenuInterpreter(commands []string) (interpreter string, scriptStart boo
 // userMenuCommandDialect selects the shell syntax used by the command window.
 // Remote command runners can advertise their dialect; ordinary local panels
 // use the native shell. The POSIX path deliberately does not create a local
-// temporary file, so the same menu item also works through a remote POSIX PTY.
+// temporary file, so the same menu item also works through a remote POSIX term.PTY.
 func userMenuCommandDialect(pf *PanelsFrame) vfs.CommandDialect {
 	if pf != nil {
 		if fsp := pf.getActivePanel(); fsp != nil {
@@ -54,7 +54,7 @@ func userMenuCommandDialect(pf *PanelsFrame) vfs.CommandDialect {
 // buildUserMenuScriptCommand turns a shebang-selected script into one command
 // line suitable for the existing command-window path. POSIX interpreters read
 // the decoded script from stdin; this avoids assuming that /tmp is visible to
-// a remote PTY. Windows uses a temporary script file because cmd.exe has no
+// a remote term.PTY. Windows uses a temporary script file because cmd.exe has no
 // portable equivalent of a binary-safe stdin pipeline for arbitrary scripts.
 func buildUserMenuScriptCommand(interpreter, script string, dialect vfs.CommandDialect) (string, error) {
 	interpreter = strings.TrimSpace(interpreter)

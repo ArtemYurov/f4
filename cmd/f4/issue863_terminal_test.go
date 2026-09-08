@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -36,7 +37,7 @@ func issue863CountRow(rows []string, want string) int {
 // issue863RunCommand drives the Unix own-terminal command path for a command
 // whose output arrives as the given chunks, then renders the frame. It returns
 // the trimmed screen rows and the prompt text f4 paints itself, which is also
-// the text the mock shell writes into the PTY as its native prompt: a native
+// the text the mock shell writes into the term.PTY as its native prompt: a native
 // prompt that stays visible therefore shows up as a second matching row.
 func issue863RunCommand(t *testing.T, chunks ...string) (*PanelsFrame, []string, string) {
 	t.Helper()
@@ -46,16 +47,16 @@ func issue863RunCommand(t *testing.T, chunks ...string) (*PanelsFrame, []string,
 
 	pf := NewPanelsFrame()
 	t.Cleanup(pf.Close)
-	pf.shellMode = ShellModeOwn
+	pf.shellMode = term.ShellModeOwn
 	pf.showPanels = false
 	pf.showKeyBar = true
 	pty := &mockPty{}
 	pf.pty = pty
-	pf.termView.pty = pty
-	pf.parser = NewAnsiParser(pf.termView, pty)
+	pf.termView.Pty = pty
+	pf.parser = term.NewAnsiParser(pf.termView, pty)
 	pf.ResizeConsole(80, 25)
 
-	prompt := cellsText(pf.buildPrompt())
+	prompt := term.CellsText(pf.buildPrompt())
 	pf.consumeLocalOutput(pty, []byte(prompt))
 
 	pf.cmdLine.Edit.SetText("cat cat_tst")
@@ -115,7 +116,7 @@ func TestIssue863OwnTerminalNoDuplicatePromptWithoutTrailingNewline(t *testing.T
 }
 
 // TestIssue863OwnTerminalFinalNewlineKeepsSinglePrompt follows the Unix own-
-// terminal command path for a file containing "1\n2\n". The PTY must not be
+// terminal command path for a file containing "1\n2\n". The term.PTY must not be
 // resized when the command line and keybar temporarily disappear, both output
 // rows must remain visible, and the native prompt must occupy the same screen
 // row as f4's editable prompt rather than appearing as a duplicate above it.
@@ -126,17 +127,17 @@ func TestIssue863OwnTerminalFinalNewlineKeepsSinglePrompt(t *testing.T) {
 
 	pf := NewPanelsFrame()
 	t.Cleanup(pf.Close)
-	pf.shellMode = ShellModeOwn
+	pf.shellMode = term.ShellModeOwn
 	pf.showPanels = false
 	pf.showKeyBar = true
 	pty := &mockPty{}
 	pf.pty = pty
-	pf.termView.pty = pty
-	pf.parser = NewAnsiParser(pf.termView, pty)
+	pf.termView.Pty = pty
+	pf.parser = term.NewAnsiParser(pf.termView, pty)
 	pf.ResizeConsole(80, 25)
 
 	idleHeight := pf.termView.Height
-	prompt := cellsText(pf.buildPrompt())
+	prompt := term.CellsText(pf.buildPrompt())
 	pf.consumeLocalOutput(pty, []byte(prompt))
 
 	pf.cmdLine.Edit.SetText("cat cat_tst")
@@ -148,7 +149,7 @@ func TestIssue863OwnTerminalFinalNewlineKeepsSinglePrompt(t *testing.T) {
 		t.Fatal("f4 command line did not handle Enter")
 	}
 	if wire := pty.String(); !strings.Contains(wire, "eval 'cat cat_tst'") {
-		t.Fatalf("f4 did not send the managed cat command to its PTY: %q", wire)
+		t.Fatalf("f4 did not send the managed cat command to its term.PTY: %q", wire)
 	}
 	pf.ResizeConsole(80, 25)
 	busyHeight := pf.termView.Height

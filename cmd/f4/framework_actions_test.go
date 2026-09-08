@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -153,7 +154,7 @@ func TestNativeFrameworkShortcutMetadataRespectsTerminalOwnership(t *testing.T) 
 	// Ctrl+N workspace handling.
 	panels := &PanelsFrame{
 		showPanels: false,
-		termView:   &TerminalView{UseAltScreen: true},
+		termView:   &term.TerminalView{UseAltScreen: true},
 	}
 	vtui.FrameManager.Push(panels)
 
@@ -224,7 +225,7 @@ func TestPaletteMainMenuMatchesPanelsF9ActiveSide(t *testing.T) {
 		showPanels: true,
 		menuBar:    vtui.NewMenuBar(nil),
 		cmdLine:    NewCommandLine(">"),
-		termView:   NewTerminalView(100, 30),
+		termView:   term.NewTerminalView(100, 30),
 	}
 	panels.menuBar.SetOwner(panels)
 	vtui.FrameManager.Push(panels)

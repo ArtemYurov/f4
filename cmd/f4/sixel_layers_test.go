@@ -1,15 +1,39 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/term"
+	"strconv"
 	"strings"
 	"testing"
 )
+
+// internal/term keeps its own; this copy goes with the image tests when they
+// leave for internal/media.
+type sixelEnv struct {
+	tv  *term.TerminalView
+	p   *term.AnsiParser
+	Pty *mockPty
+}
+
+func newSixelEnv(t *testing.T) *sixelEnv {
+	t.Helper()
+	tv := term.NewTerminalView(80, 24)
+	Pty := &mockPty{}
+	tv.Pty = Pty
+	// A known cell keeps the arithmetic in the tests explicit.
+	tv.CellW, tv.CellH = 10, 20
+	return &sixelEnv{tv: tv, p: term.NewAnsiParser(tv, Pty), Pty: Pty}
+}
+
+func (e *sixelEnv) send(params, body string) {
+	e.p.Process([]byte("\x1bP" + params + "q" + body + "\x1b\\"))
+}
 
 // The receiving half of full colour over sixel.
 //
 // A picture with more colours than 256 registers reaches a terminal one of two
 // ways. Either the sender redefines a register between bands, which
-// TestSixelRegisterRedefinitionIsImmediate covers, or it sends the picture
+// term.TestSixelRegisterRedefinitionIsImmediate covers, or it sends the picture
 // several times at the same cell with P2=1 and a palette each, and the
 // terminal composes them. f4 has to take both: the second is what vtui sends
 // to Windows Terminal, so f4 running inside f4 there is a stack of layers
@@ -20,9 +44,9 @@ import (
 func sixelHalfBody(w, h int, colour string, left bool) string {
 	var sb strings.Builder
 	sb.WriteString(`"1;1;`)
-	sb.WriteString(itoa(w))
+	sb.WriteString(strconv.Itoa(w))
 	sb.WriteByte(';')
-	sb.WriteString(itoa(h))
+	sb.WriteString(strconv.Itoa(h))
 	sb.WriteString("#0")
 	sb.WriteString(colour)
 	for band := 0; band < (h+5)/6; band++ {
@@ -34,8 +58,8 @@ func sixelHalfBody(w, h int, colour string, left bool) string {
 		if !left {
 			painted, blank = "?", "~"
 		}
-		sb.WriteString("!" + itoa(w/2) + painted)
-		sb.WriteString("!" + itoa(w-w/2) + blank)
+		sb.WriteString("!" + strconv.Itoa(w/2) + painted)
+		sb.WriteString("!" + strconv.Itoa(w-w/2) + blank)
 	}
 	return sb.String()
 }
@@ -50,10 +74,10 @@ func TestSixelLayersStackAtTheSameCell(t *testing.T) {
 	e.tv.SetCursor(4, 6)
 	e.send("0;1;0", sixelHalfBody(30, 40, ";2;0;100;0", false))
 
-	if len(e.tv.images) != 2 {
-		t.Fatalf("got %d placement(s), want both layers kept", len(e.tv.images))
+	if len(e.tv.Images) != 2 {
+		t.Fatalf("got %d placement(s), want both layers kept", len(e.tv.Images))
 	}
-	for i, p := range e.tv.images {
+	for i, p := range e.tv.Images {
 		if p.Col != 4 || p.Row != 6 {
 			t.Errorf("layer %d at %d,%d, want both at 4,6", i, p.Col, p.Row)
 		}
@@ -74,10 +98,10 @@ func TestSixelLayerLeavesUnpaintedPixelsAlone(t *testing.T) {
 	e.tv.SetCursor(0, 0)
 	e.send("0;1;0", sixelHalfBody(30, 6, ";2;0;100;0", false))
 
-	if len(e.tv.images) != 1 {
-		t.Fatalf("got %d placement(s), want one", len(e.tv.images))
+	if len(e.tv.Images) != 1 {
+		t.Fatalf("got %d placement(s), want one", len(e.tv.Images))
 	}
-	surf := e.tv.images[0].Surface
+	surf := e.tv.Images[0].Surface
 	if surf.Opaque {
 		t.Fatal("a P2=1 image came out opaque")
 	}

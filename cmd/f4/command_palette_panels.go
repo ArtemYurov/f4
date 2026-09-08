@@ -86,7 +86,7 @@ func commandPalettePanelsContextEntries(pf *PanelsFrame) []commandPaletteEntry {
 			"CommandPalette.Panel.InterruptRemoteCommand",
 			"Interrupt remote command",
 			"CommandPalette.Panel.InterruptRemoteCommand.Desc",
-			"Send the remote shell's interrupt sequence to the active panel PTY",
+			"Send the remote shell's interrupt sequence to the active panel term.PTY",
 			"Ctrl+C",
 			"CtrlC",
 			category,

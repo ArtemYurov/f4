@@ -68,7 +68,7 @@ func TestHotkeys_ShellActions_TerminalArea_GatedByAltScreen_Issue354(t *testing.
 	}
 
 	// With AltScreen active the condition NoAltScreenApp is false, so
-	// the Terminal-area binding must resolve to "" (fall-through to PTY).
+	// the Terminal-area binding must resolve to "" (fall-through to term.PTY).
 	if got := GlobalHotkeysMgr.GetAction("Terminal", "F2"); got != "" {
 		t.Errorf("Terminal F2 with AltScreen active: got %q, want empty (must fall through to app)", got)
 	}
@@ -82,7 +82,7 @@ func TestHotkeys_ShellActions_TerminalArea_GatedByAltScreen_Issue354(t *testing.
 		t.Errorf("Terminal F2 without AltScreen: got %q, want Panel.UserMenu", got)
 	}
 	if got := GlobalHotkeysMgr.GetAction("Terminal", "F10"); got != "App.Quit" {
-		t.Errorf("Terminal F10 without AltScreen: got %q, want App.Quit", got)
+		t.Errorf("Terminal F10 without AltScreen: got %q, want term.App.Quit", got)
 	}
 }
 

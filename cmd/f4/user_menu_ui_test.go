@@ -212,7 +212,7 @@ func TestUserMenu_ExecuteCommands(t *testing.T) {
 	pf.ResizeConsole(80, 25)
 	pty := pf.pty.(*mockPty)
 
-	// Очищаем буфер вывода в PTY
+	// Очищаем буфер вывода в term.PTY
 	pty.written = nil
 
 	// Создаем временную папку и файл на панели
@@ -239,14 +239,14 @@ func TestUserMenu_ExecuteCommands(t *testing.T) {
 
 	written := string(pty.written)
 
-	// Проверяем, что в PTY ушла сформированная команда c "cat file.go"
+	// Проверяем, что в term.PTY ушла сформированная команда c "cat file.go"
 	if !strings.Contains(written, "cat file.go") {
 		t.Errorf("executeMenuCommands failed to translate or dispatch. Expected to contain %q, got: %q", "cat file.go", written)
 	}
 
 	// Комментарии не должны уйти в выполнение
 	if strings.Contains(written, "ignored") {
-		t.Error("Comments (REM / ::) were erroneously sent to PTY execution")
+		t.Error("Comments (REM / ::) were erroneously sent to term.PTY execution")
 	}
 }
 func TestUserMenu_ExecuteMultipleCommands(t *testing.T) {
@@ -603,7 +603,7 @@ func TestUserMenu_MiddleCdRunsRemainingCommandsInNewDir(t *testing.T) {
 	})
 
 	// The cd completes synchronously, so the shell lines follow at once,
-	// with the PTY synced to the new panel directory first.
+	// with the term.PTY synced to the new panel directory first.
 	if got := fsp.vfs.GetPath(); filepath.Clean(got) != filepath.Clean(subDir) {
 		t.Fatalf("panel must follow the leading cd; path = %q, want %q", got, subDir)
 	}

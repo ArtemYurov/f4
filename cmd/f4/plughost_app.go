@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/unxed/f4/internal/plughost"
+	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -42,7 +43,7 @@ func (hostApplication) IsStale(app vfs.App) bool {
 
 func (hostApplication) SetupUI() { SetupUI() }
 
-func (hostApplication) SetClipboard(text string) { setF4Clipboard(text) }
+func (hostApplication) SetClipboard(text string) { term.SetF4Clipboard(text) }
 
 func (hostApplication) RunSemanticAction(action map[string]any) bool {
 	return HandleSemanticAction(action)

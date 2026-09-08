@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/vtui"
 )
 
@@ -27,14 +28,14 @@ var waitForAnyKey = func() {
 func modMsvcrtProc() interface {
 	Call(...uintptr) (uintptr, uintptr, error)
 } {
-	return modMsvcrtProcImpl()
+	return term.MsvcrtProc()
 }
 
-// runSimpleInlineCommand executes a command directly in the host console without a PTY
+// runSimpleInlineCommand executes a command directly in the host console without a term.PTY
 // by suspending vtui, running the command with inherited stdio, waiting for a keypress,
 // and restoring vtui.
 func (pf *PanelsFrame) runSimpleInlineCommand(dir, command string) {
-	shell := GetSystemShell()
+	shell := term.GetSystemShell()
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
 		cmd = exec.Command(shell, "/c", command)
@@ -56,15 +57,15 @@ func (pf *PanelsFrame) runSimpleInlineCommand(dir, command string) {
 	// -- the console's real cursor position from before f4 ever drew an
 	// overlay over it, e.g. wherever an earlier shell prompt happened to
 	// end. That column is almost never 0. The row it's on was just blanked
-	// by clearConsoleOverlay() (winClearConsoleOverlay), so a bare "\r"
+	// by clearConsoleOverlay() (term.WinClearConsoleOverlay), so a bare "\r"
 	// (no newline, no scroll, nothing consumed) is enough to put the
 	// child's own first output character at the start of that already-
 	// blank row instead of wherever a previous, unrelated line of text
 	// used to end.
 	os.Stdout.WriteString("\r")
 
-	inConsoleView := !pf.showPanels && pf.shellMode == ShellModeSimpleInline &&
-		pf.consoleStyle() == ConsoleViewFar
+	inConsoleView := !pf.showPanels && pf.shellMode == term.ShellModeSimpleInline &&
+		pf.consoleStyle() == term.ConsoleViewFar
 
 	vtui.Suspend()
 	_ = cmd.Run()
@@ -94,7 +95,7 @@ func (pf *PanelsFrame) runSimpleInlineCommand(dir, command string) {
 		}
 
 		// Snapshot the console now, while the command's output is still the
-		// visible content of hStdOut. Without this, clearConsoleViewBackground()
+		// visible content of hStdOut. Without this, term.ClearConsoleViewBackground()
 		// finds no saved buffer on the next Ctrl+O round-trip and blanks the
 		// whole window instead of restoring it (the exact bug this comment
 		// used to sit next to, minus the missing capture).
@@ -127,12 +128,12 @@ func (pf *PanelsFrame) runSimpleInlineCommand(dir, command string) {
 }
 
 func captureHostConsoleBuffer(w, h int) {
-	captureHostConsoleBufferImpl(w, h)
+	term.CaptureHostConsoleBuffer(w, h)
 }
 
-// runSimpleCapturedCommand executes a command via LocalCommandRunner and displays
+// runSimpleCapturedCommand executes a command via term.LocalCommandRunner and displays
 // the streaming output in a scrollable f4 window.
 func (pf *PanelsFrame) runSimpleCapturedCommand(dir, command string) {
-	runner := NewLocalCommandRunner()
+	runner := term.NewLocalCommandRunner()
 	showRemoteCommandOutput(pf, runner, dir, command)
 }

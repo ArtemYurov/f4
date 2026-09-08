@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -38,7 +39,7 @@ func TestHostConsole_Transitions(t *testing.T) {
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
-	pf.shellMode = ShellModeHost
+	pf.shellMode = term.ShellModeHost
 	pf.ResizeConsole(80, 25)
 
 	// 1. Enter host console
@@ -80,7 +81,7 @@ func TestHostConsole_OverlaySuppressesRegisteredKeyBar(t *testing.T) {
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
-	pf.shellMode = ShellModeHost
+	pf.shellMode = term.ShellModeHost
 	pf.showPanels = false
 	pf.ResizeConsole(80, 25)
 	vtui.FrameManager.KeyBar = pf.keyBar
@@ -94,18 +95,18 @@ func TestHostConsole_OverlaySuppressesRegisteredKeyBar(t *testing.T) {
 }
 
 func TestChildEnv_HostModeLeavesTERMUntouched(t *testing.T) {
-	oldProbeGUI := probeGUIBackend
-	oldProbeTTY := probeHostTTY
-	oldProbePTY := probePTYUsable
+	oldProbeGUI := term.ProbeGUIBackend
+	oldProbeTTY := term.ProbeHostTTY
+	oldProbePTY := term.ProbePTYUsable
 	defer func() {
-		probeGUIBackend = oldProbeGUI
-		probeHostTTY = oldProbeTTY
-		probePTYUsable = oldProbePTY
+		term.ProbeGUIBackend = oldProbeGUI
+		term.ProbeHostTTY = oldProbeTTY
+		term.ProbePTYUsable = oldProbePTY
 	}()
 
-	probeGUIBackend = func() string { return "" }
-	probeHostTTY = func() bool { return true }
-	probePTYUsable = func() bool { return true }
+	term.ProbeGUIBackend = func() string { return "" }
+	term.ProbeHostTTY = func() bool { return true }
+	term.ProbePTYUsable = func() bool { return true }
 
 	oldCfg := config.App
 	defer func() { config.App = oldCfg }()
@@ -113,7 +114,7 @@ func TestChildEnv_HostModeLeavesTERMUntouched(t *testing.T) {
 
 	t.Setenv("TERM", "xterm-256color")
 
-	env := terminalChildEnv()
+	env := term.TerminalChildEnv()
 	if envHasKey(env, "KITTY_WINDOW_ID") {
 		t.Errorf("host mode must not advertise KITTY_WINDOW_ID: %v", env)
 	}
@@ -134,7 +135,7 @@ func TestHostConsole_PanelToggleAction(t *testing.T) {
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
-	pf.shellMode = ShellModeHost
+	pf.shellMode = term.ShellModeHost
 	pf.ResizeConsole(80, 25)
 	vtui.FrameManager.Push(pf)
 
@@ -168,7 +169,7 @@ func TestHostConsole_PanelToggleAction(t *testing.T) {
 func TestHostConsole_InputForwardingWhenIdle(t *testing.T) {
 	pf := setupMockPanelsFrame(t)
 	defer pf.Close()
-	pf.shellMode = ShellModeHost
+	pf.shellMode = term.ShellModeHost
 	pf.showPanels = false
 	pf.enterHostConsole()
 
@@ -195,7 +196,7 @@ func TestHostConsole_CloseLeavesHostConsole(t *testing.T) {
 	vtui.FrameManager.Init(scr)
 
 	pf := NewPanelsFrame()
-	pf.shellMode = ShellModeHost
+	pf.shellMode = term.ShellModeHost
 	pf.enterHostConsole()
 	if !pf.isHostConsoleActive() {
 		t.Fatal("host console must be active before Close")
@@ -248,7 +249,7 @@ func TestHostConsole_FarStyleScrollRegion(t *testing.T) {
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
-	pf.shellMode = ShellModeHost
+	pf.shellMode = term.ShellModeHost
 	pf.showKeyBar = true
 	pf.ResizeConsole(80, 25)
 
@@ -280,12 +281,12 @@ func TestHostConsole_FarStylePTYSizing(t *testing.T) {
 
 	pf := setupMockPanelsFrame(t)
 	defer pf.Close()
-	pf.shellMode = ShellModeHost
+	pf.shellMode = term.ShellModeHost
 	pf.showKeyBar = true
 
 	pf.ResizeConsole(80, 25)
 
-	// PTY should receive height 25 - 2 = 23
+	// term.PTY should receive height 25 - 2 = 23
 	if pf.termView.Height != 23 {
 		t.Errorf("termView height in Far-style host mode = %d, want 23", pf.termView.Height)
 	}
@@ -297,7 +298,7 @@ func TestHostConsole_DetachCleanupSimulation(t *testing.T) {
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
-	pf.shellMode = ShellModeHost
+	pf.shellMode = term.ShellModeHost
 	vtui.FrameManager.Push(pf)
 	pf.enterHostConsole()
 
@@ -312,7 +313,7 @@ func TestHostConsole_DetachCleanupSimulation(t *testing.T) {
 		}
 		for _, f := range s.Frames {
 			if frame, ok := f.(*PanelsFrame); ok && frame != nil {
-				if frame.shellMode == ShellModeHost && frame.isHostConsoleActive() {
+				if frame.shellMode == term.ShellModeHost && frame.isHostConsoleActive() {
 					frame.leaveHostConsole()
 				}
 			}

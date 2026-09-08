@@ -12,7 +12,7 @@ import (
 // actionContextHelp resolves the same contextual topic as FrameManager's F1
 // fallback. It deliberately does not synthesize another F1 event: frames may
 // route synthesized keys back through configured hotkeys, where a user binding
-// of F1 to App.Help would recursively invoke this action.
+// of F1 to term.App.Help would recursively invoke this action.
 func actionContextHelp() bool {
 	if !contextHelpActionAvailable() {
 		return false

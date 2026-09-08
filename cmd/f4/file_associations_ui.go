@@ -61,7 +61,7 @@ func tryFileAssociation(pf *PanelsFrame, kind AssocKind) bool {
 // runAssociationCommand hands the command from a single matched slot
 // to executeMenuCommands. That gives us token substitution (!.!, !\!,
 // !?prompt?…!, everything user_menu_subst already supports), history,
-// PTY wiring, OSC 133, panel hiding, and terminal muting for free.
+// term.PTY wiring, OSC 133, panel hiding, and terminal muting for free.
 func runAssociationCommand(pf *PanelsFrame, a FileAssoc, kind AssocKind) {
 	cmd := strings.TrimSpace(a.Commands[kind])
 	if cmd == "" {

@@ -91,7 +91,7 @@ func TestPanelsFrameCommandPrefixIsConsumedBeforePTY(t *testing.T) {
 		t.Fatalf("command line was not cleared: %q", got)
 	}
 	if len(pty.written) != 0 {
-		t.Fatalf("prefix leaked to PTY: %q", pty.written)
+		t.Fatalf("prefix leaked to term.PTY: %q", pty.written)
 	}
 	if !pf.showPanels {
 		t.Fatal("prefix command unexpectedly hid panels")

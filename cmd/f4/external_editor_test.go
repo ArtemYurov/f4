@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/gui"
+	"github.com/unxed/f4/internal/term"
 	"os"
 	"path/filepath"
 	"testing"
@@ -46,17 +47,17 @@ func TestConfiguredExternalEditorCommand(t *testing.T) {
 func TestConfiguredExternalEditorCommandIgnoresDisplayBackendInTTY(t *testing.T) {
 	oldConfig := config.App
 	oldRunningGUI := gui.Running
-	oldProbe := probeGUIBackend
+	oldProbe := term.ProbeGUIBackend
 	t.Cleanup(func() {
 		config.App = oldConfig
 		gui.Running = oldRunningGUI
-		probeGUIBackend = oldProbe
+		term.ProbeGUIBackend = oldProbe
 	})
 
 	config.App.ExternalEditorConsole = "micro"
 	config.App.ExternalEditorGUI = "gedit"
 	gui.Running = false
-	probeGUIBackend = func() string { return "x11" }
+	term.ProbeGUIBackend = func() string { return "x11" }
 
 	if got := configuredExternalEditorCommand(); got != "micro" {
 		t.Fatalf("TTY editor with an available display = %q, want micro", got)

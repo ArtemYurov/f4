@@ -12,7 +12,7 @@ import (
 // the same area claiming the same default shortcut.
 //
 // Only one of them can win the binding, and the loser silently ends up with no
-// shortcut at all. That is how App.Spreadsheet took Shift+F11 from
+// shortcut at all. That is how term.App.Spreadsheet took Shift+F11 from
 // Settings.PluginConfiguration: nothing complained at registration, and the
 // first sign of it was a menu test noticing an empty shortcut two areas away
 // from the action that had actually changed.

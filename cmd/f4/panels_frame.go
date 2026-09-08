@@ -27,6 +27,7 @@ import (
 	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/plughost"
+	"github.com/unxed/f4/internal/term"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/f4/vfs/hostmode"
@@ -290,12 +291,12 @@ type PanelsFrame struct {
 	rightHeightDecrement int
 
 	// Integrated Terminal
-	pty            PtyBackend
-	remotePtys     map[vfs.VFS]PtyBackend
+	pty            term.PtyBackend
+	remotePtys     map[vfs.VFS]term.PtyBackend
 	ptyMutex       sync.Mutex
-	termView       *TerminalView
-	parser         *AnsiParser
-	terminalRedraw *terminalRedrawScheduler
+	termView       *term.TerminalView
+	parser         *term.AnsiParser
+	terminalRedraw *term.TerminalRedrawScheduler
 
 	// Process-environment updates use their own locks so an Apply from a
 	// plugin cannot interleave a private assignment script with user input.
@@ -324,14 +325,14 @@ type PanelsFrame struct {
 	lastPtyVFS  vfs.VFS
 	closed      bool
 
-	shellMode         ShellMode
+	shellMode         term.ShellMode
 	hostConsoleActive bool
 	hostConsoleMu     sync.Mutex
 	lastOverlayDraw   time.Time
 
 	// Terminal mouse-selection state. Kept in PanelsFrame because
 	// mouse routing lives here; the highlight and text extraction
-	// live on the TerminalView itself.
+	// live on the term.TerminalView itself.
 	termSelDragging bool      // LMB gesture is waiting for its release
 	termSelEscHeld  bool      // Esc key-down dismissed a highlight; swallow its key-up
 	termSelClickN   int       // 1 / 2 / 3 for triple-click detection
@@ -399,7 +400,7 @@ func (pf *PanelsFrame) Passive() Panel { return pf.panels[1-pf.activeIdx] }
 
 func NewPanelsFrame() *PanelsFrame {
 	pf := &PanelsFrame{activeIdx: 1, widePanel: -1, folderHistoryPos: [2]int{-1, -1}}
-	pf.terminalRedraw = newTerminalRedrawScheduler(func() { vtui.FrameManager.Redraw() })
+	pf.terminalRedraw = term.NewTerminalRedrawScheduler(func() { vtui.FrameManager.Redraw() })
 	pf.SetHelp("Panels")
 	pf.showKeyBar = true
 	pf.showPanels = true
@@ -409,13 +410,13 @@ func NewPanelsFrame() *PanelsFrame {
 	pf.widthDecrement = config.App.WidthDecrement
 	pf.leftHeightDecrement = config.App.LeftHeightDecrement
 	pf.rightHeightDecrement = config.App.RightHeightDecrement
-	pf.shellMode = resolveShellMode(ShellModeConfig{
+	pf.shellMode = term.ResolveShellMode(term.ShellModeConfig{
 		ConsoleMode:      config.App.ConsoleMode,
 		ConsoleOverlayUI: config.App.ConsoleOverlayUI,
 	})
 	vtui.DebugLog("SHELL: mode=%s cfg.ConsoleMode=%q cfg.ConsoleOverlayUI=%v view=%s backend=%q",
 		pf.shellMode, config.App.ConsoleMode, config.App.ConsoleOverlayUI,
-		consoleViewStyleFor(pf.shellMode), SelectedTTYBackend)
+		term.ConsoleViewStyleFor(pf.shellMode), term.SelectedTTYBackend)
 
 	pf.menuBar = vtui.NewMenuBar(nil)
 	pf.menuBar.SetOwner(pf)
@@ -432,7 +433,7 @@ func NewPanelsFrame() *PanelsFrame {
 	pf.keyBar = vtui.NewKeyBar()
 	pf.keyBar.SetOwner(pf)
 
-	pf.termView = NewTerminalView(80, 24)
+	pf.termView = term.NewTerminalView(80, 24)
 	pf.termView.OnBusyChange = func(busy bool) {
 		localShell := pf.localShellIsActive()
 		if localShell {
@@ -464,7 +465,7 @@ func NewPanelsFrame() *PanelsFrame {
 	}
 	if runtime.GOOS == "windows" {
 		pf.cmdSession = newCmdShellSession(pf)
-		pf.termView.OnShellMark = func(mark string, snap promptSnapshot) {
+		pf.termView.OnShellMark = func(mark string, snap term.PromptSnapshot) {
 			if pf.localShellIsActive() {
 				pf.cmdSession.handleMark(mark, snap)
 			}
@@ -473,7 +474,7 @@ func NewPanelsFrame() *PanelsFrame {
 	}
 	// Parser will be fully initialized in initPTY once pty is ready
 	pf.initPTY()
-	pf.termView.pty = pf.pty
+	pf.termView.Pty = pf.pty
 	installPanelDropTarget(pf)
 
 	return pf
@@ -975,23 +976,23 @@ func (pf *PanelsFrame) buildPrompt() []vtui.CharInfo {
 	return prompt
 }
 
-// localPTY reads the local PTY under the mutex initPTY publishes it with.
+// localPTY reads the local term.PTY under the mutex initPTY publishes it with.
 // The read has to be locked and not merely nil checked: an interface value
-// is two words wide, and a racing reader can see the type word of a *PTY
+// is two words wide, and a racing reader can see the type word of a *term.PTY
 // with the data word still zero. Such a value passes an "!= nil" guard and
 // then calls the method on a nil receiver, which is how F10 pressed in the
-// first milliseconds of a session used to crash inside PTY.Close while the
+// first milliseconds of a session used to crash inside term.PTY.Close while the
 // shell was still being spawned.
-func (pf *PanelsFrame) localPTY() PtyBackend {
+func (pf *PanelsFrame) localPTY() term.PtyBackend {
 	pf.ptyMutex.Lock()
 	defer pf.ptyMutex.Unlock()
 	return pf.pty
 }
 
-// takeLocalPTY hands the local PTY to the caller and clears the field, so a
+// takeLocalPTY hands the local term.PTY to the caller and clears the field, so a
 // shutdown path owns it outright: whoever gets it closes it, and a second
 // path finds nothing left to close twice.
-func (pf *PanelsFrame) takeLocalPTY() PtyBackend {
+func (pf *PanelsFrame) takeLocalPTY() term.PtyBackend {
 	pf.ptyMutex.Lock()
 	defer pf.ptyMutex.Unlock()
 	pty := pf.pty
@@ -1002,14 +1003,14 @@ func (pf *PanelsFrame) takeLocalPTY() PtyBackend {
 // spawnLocalShellPTY gates initPTY's fork of the user's shell. Tests turn
 // it off in TestMain: 185 frames spawned per test run each forked a real
 // shell, and the leaked ptys exhausted macOS's ptmx_max (511), killing
-// unrelated PTY tests with ENXIO ("device not configured").
+// unrelated term.PTY tests with ENXIO ("device not configured").
 var spawnLocalShellPTY = true
 
 // newLocalPTY is a seam for the session lifecycle tests. Production always
-// uses the platform PTY implementation; tests can provide a controllable
+// uses the platform term.PTY implementation; tests can provide a controllable
 // backend without allocating a real terminal.
-var newLocalPTY = func() (PtyBackend, error) {
-	return NewPTY()
+var newLocalPTY = func() (term.PtyBackend, error) {
+	return term.NewPTY()
 }
 
 // resetLocalShell tears down the current local shell and starts a fresh one.
@@ -1030,9 +1031,9 @@ func (pf *PanelsFrame) resetLocalShell() bool {
 // screen left as the old one left it, so the batch's output stays readable.
 //
 // Runs on the UI goroutine. A shell that was replaced deliberately
-// (resetLocalShell) or taken by shutdown is no longer the local PTY by the
+// (resetLocalShell) or taken by shutdown is no longer the local term.PTY by the
 // time its read loop ends, and is left alone.
-func (pf *PanelsFrame) localShellGone(p PtyBackend) {
+func (pf *PanelsFrame) localShellGone(p term.PtyBackend) {
 	if !pf.isLocalPTY(p) {
 		return
 	}
@@ -1079,8 +1080,8 @@ func (pf *PanelsFrame) restartLocalShell(keepScreen bool) bool {
 		if inFlight.timeout != nil {
 			inFlight.timeout.Stop()
 		}
-		pf.pendingProcessEnvironment = coalesceProcessEnvironmentChanges(append(
-			cloneProcessEnvironmentChanges(inFlight.changes),
+		pf.pendingProcessEnvironment = term.CoalesceProcessEnvironmentChanges(append(
+			term.CloneProcessEnvironmentChanges(inFlight.changes),
 			pf.pendingProcessEnvironment...,
 		))
 		if inFlight.generation > pf.pendingProcessEnvironmentGeneration {
@@ -1116,28 +1117,28 @@ func (pf *PanelsFrame) restartLocalShell(keepScreen bool) bool {
 	pf.lastPtyVFS = nil
 	if pf.termView != nil {
 		pf.termView.SetMuted(false)
-		pf.termView.pty = nil
+		pf.termView.Pty = nil
 		if keepScreen {
 			if pf.termView.UseAltScreen {
 				pf.termView.ResetBuffer(pf.termView.Width, pf.termView.Height)
 			} else if pf.termView.CursorX != 0 {
-				parser := NewAnsiParser(pf.termView, nil)
+				parser := term.NewAnsiParser(pf.termView, nil)
 				parser.Process([]byte("\r\n"))
 			}
 		} else {
 			pf.termView.ResetBuffer(pf.termView.Width, pf.termView.Height)
 		}
 	}
-	pf.parser = NewAnsiParser(pf.termView, nil)
-	pf.parser.replyTo = pf.activeReplyPTY
+	pf.parser = term.NewAnsiParser(pf.termView, nil)
+	pf.parser.ReplyTo = pf.activeReplyPTY
 	pf.initPTY()
 	return true
 }
 
 func (pf *PanelsFrame) initPTY() {
 	// Always initialize the parser to prevent nil dereference
-	pf.parser = NewAnsiParser(pf.termView, nil)
-	pf.parser.replyTo = pf.activeReplyPTY
+	pf.parser = term.NewAnsiParser(pf.termView, nil)
+	pf.parser.ReplyTo = pf.activeReplyPTY
 
 	if !spawnLocalShellPTY {
 		return
@@ -1160,8 +1161,8 @@ func (pf *PanelsFrame) initPTY() {
 			var err error
 			p, err = newLocalPTY()
 			if err != nil {
-				vtui.DebugLog("PTY: Failed to allocate local PTY: %v", err)
-				logPTYDiagnostics()
+				vtui.DebugLog("PTY: Failed to allocate local term.PTY: %v", err)
+				term.LogPTYDiagnostics()
 				pf.reportLocalPTYFailure(err)
 				return
 			}
@@ -1169,9 +1170,9 @@ func (pf *PanelsFrame) initPTY() {
 			if runtime.GOOS == "windows" {
 				os.Setenv("PROMPT", windowsShellPrompt)
 			}
-			inheritedEnvironmentGeneration := globalProcessEnvironment.currentGeneration()
+			inheritedEnvironmentGeneration := term.GlobalProcessEnvironment.CurrentGeneration()
 
-			shell := GetSystemShell()
+			shell := term.GetSystemShell()
 			if err := p.Run(shell); err != nil {
 				vtui.DebugLog("PTY: Failed to run shell: %v", err)
 				p.Close()
@@ -1186,13 +1187,13 @@ func (pf *PanelsFrame) initPTY() {
 			}
 			pf.pty = p
 			serializedPTY := &processEnvironmentSerializedPTY{owner: pf, backend: p}
-			if pf.shellMode == ShellModeHost {
+			if pf.shellMode == term.ShellModeHost {
 				muted := mutedPTY{backend: serializedPTY}
-				pf.parser.pty = muted
-				pf.termView.pty = muted
+				pf.parser.Pty = muted
+				pf.termView.Pty = muted
 			} else {
-				pf.parser.pty = serializedPTY
-				pf.termView.pty = serializedPTY
+				pf.parser.Pty = serializedPTY
+				pf.termView.Pty = serializedPTY
 			}
 			pf.ptyMutex.Unlock()
 			pf.localShellStarted(inheritedEnvironmentGeneration)
@@ -1204,7 +1205,7 @@ func (pf *PanelsFrame) initPTY() {
 			})
 		}
 
-		// Local PTY has its own dedicated read loop.
+		// Local term.PTY has its own dedicated read loop.
 		buf := make([]byte, 32768)
 		for {
 			n, err := p.Read(buf)
@@ -1220,12 +1221,12 @@ func (pf *PanelsFrame) initPTY() {
 	}()
 }
 
-// consumeLocalOutput routes one read from the local PTY: to the reflow
+// consumeLocalOutput routes one read from the local term.PTY: to the reflow
 // oracle's scratch parser while one of its passes is in flight, otherwise to
 // the display's parser (and the host console in passthrough mode). Tests
-// drive it directly with a fake PTY, so it must contain everything the read
+// drive it directly with a fake term.PTY, so it must contain everything the read
 // loop does with the bytes.
-func (pf *PanelsFrame) consumeLocalOutput(p PtyBackend, data []byte) {
+func (pf *PanelsFrame) consumeLocalOutput(p term.PtyBackend, data []byte) {
 	pf.processEnvironmentShellOutput(data)
 
 	pf.ptyMutex.Lock()
@@ -1241,7 +1242,7 @@ func (pf *PanelsFrame) displayLocalOutput(shouldProcess bool, data []byte) {
 	if !shouldProcess {
 		return
 	}
-	if pf.shellMode == ShellModeHost && pf.isHostConsoleActive() {
+	if pf.shellMode == term.ShellModeHost && pf.isHostConsoleActive() {
 		vtui.WritePassthrough(data)
 		pf.parser.Process(data)
 		if pf.overlayLines() > 0 && time.Since(pf.lastOverlayDraw) > 30*time.Millisecond {
@@ -1251,15 +1252,15 @@ func (pf *PanelsFrame) displayLocalOutput(shouldProcess bool, data []byte) {
 		return
 	}
 	pf.parser.Process(data)
-	pf.terminalRedraw.request()
+	pf.terminalRedraw.Request()
 }
 
-// reportLocalPTYFailure surfaces a NewPTY() failure to the person instead of
-// leaving it only in the debug log. Without this, a platform where PTY
+// reportLocalPTYFailure surfaces a term.NewPTY() failure to the person instead of
+// leaving it only in the debug log. Without this, a platform where term.PTY
 // allocation fails (see issue #444, FreeBSD and illumos before their
 // backends were fixed) looked identical to a healthy f4 whose terminal
 // silently ignores every keystroke: panels, menus and the viewer all work,
-// because none of them touch the PTY, so the only visible symptom was an
+// because none of them touch the term.PTY, so the only visible symptom was an
 // empty terminal and no error anywhere the person could see without
 // starting f4 with --debug.
 func localPTYFailureMessage(err error) string {
@@ -1267,7 +1268,7 @@ func localPTYFailureMessage(err error) string {
 }
 
 func (pf *PanelsFrame) reportLocalPTYFailure(err error) {
-	if vtui.FrameManager == nil || pf.shellMode == ShellModeSimpleInline || pf.shellMode == ShellModeSimpleCaptured {
+	if vtui.FrameManager == nil || pf.shellMode == term.ShellModeSimpleInline || pf.shellMode == term.ShellModeSimpleCaptured {
 		return
 	}
 	vtui.FrameManager.PostTask(func() {
@@ -1306,10 +1307,10 @@ func workspaceContainsPanelsFrame(screen *vtui.AppScreen, target *PanelsFrame) b
 
 func (pf *PanelsFrame) Close() {
 	if pf.terminalRedraw != nil {
-		pf.terminalRedraw.stop()
+		pf.terminalRedraw.Stop()
 	}
 	pf.cmdSession.close()
-	if pf.shellMode == ShellModeHost && pf.isHostConsoleActive() {
+	if pf.shellMode == term.ShellModeHost && pf.isHostConsoleActive() {
 		pf.leaveHostConsole()
 	}
 	if pf.wide && pf.widePanel >= 0 && pf.widePanel < 2 {
@@ -1395,7 +1396,7 @@ func (pf *PanelsFrame) ResizeConsole(w, h int) {
 
 	// 1. Terminal Area: Fills everything except KeyBar
 	termY2 := h - 1
-	if pf.shellMode == ShellModeHost {
+	if pf.shellMode == term.ShellModeHost {
 		// The host console keeps its overlay rows *below* the mirrored grid,
 		// so nothing of the child's output is ever painted over.
 		pf.termView.SetPromptOverlaysLastRow(false)
@@ -1405,9 +1406,9 @@ func (pf *PanelsFrame) ResizeConsole(w, h int) {
 			termH = 1
 		}
 		if pty := pf.localPTY(); pty != nil {
-			// Resize the parser's grid before asking a PTY to emit its resize
+			// Resize the parser's grid before asking a term.PTY to emit its resize
 			// frame. A fast ConPTY can otherwise deliver new-width absolute
-			// coordinates while TerminalView still has the old width.
+			// coordinates while term.TerminalView still has the old width.
 			pf.termView.SetPosition(0, 0, w-1, termH-1)
 			pf.termView.Resize(w, termH)
 			pf.ptyMutex.Lock()
@@ -1417,9 +1418,9 @@ func (pf *PanelsFrame) ResizeConsole(w, h int) {
 				// that later declares a different size (REFLOW_FRAME STALE) is
 				// only explicable next to this line.
 				vtui.DebugLog("REFLOW_PTY: outer %dx%d -> child %dx%d (cell %dx%d, host mode, overlay rows %d)", w, h, w, termH, cw, ch, n)
-				setPtySize(pty, w, termH, cw, ch)
+				term.SetPtySize(pty, w, termH, cw, ch)
 				for _, remotePty := range pf.remotePtys {
-					setPtySize(remotePty, w, termH, cw, ch)
+					term.SetPtySize(remotePty, w, termH, cw, ch)
 				}
 			}
 			pf.ptyMutex.Unlock()
@@ -1429,16 +1430,16 @@ func (pf *PanelsFrame) ResizeConsole(w, h int) {
 			pf.drawHostConsoleOverlay()
 		}
 	} else {
-		// Keep the configured keybar row out of the own-terminal PTY even while
+		// Keep the configured keybar row out of the own-terminal term.PTY even while
 		// a command is running. The keybar and command line are hidden then, but
-		// temporarily growing the PTY makes bash redraw its prompt on SIGWINCH.
-		// The command line intentionally still overlaps the PTY's bottom row so
+		// temporarily growing the term.PTY makes bash redraw its prompt on SIGWINCH.
+		// The command line intentionally still overlaps the term.PTY's bottom row so
 		// it paints over, rather than duplicates, the native shell prompt. The
 		// view is told, because a command that ends without a newline would
 		// otherwise leave its last output line on that hidden row (#863).
 		pf.termView.SetPromptOverlaysLastRow(true)
 		if pf.showKeyBar && !pf.termView.OnAltScreen() &&
-			(pf.shellMode == ShellModeOwn || !pf.isPtyBusy()) {
+			(pf.shellMode == term.ShellModeOwn || !pf.isPtyBusy()) {
 			termY2 = h - 2
 		}
 		termH := termY2 - contentY1 + 1
@@ -1453,9 +1454,9 @@ func (pf *PanelsFrame) ResizeConsole(w, h int) {
 			cw, ch := pf.termView.CellSize()
 			{
 				vtui.DebugLog("REFLOW_PTY: outer %dx%d -> child %dx%d (cell %dx%d, rows %d..%d)", w, h, w, termH, cw, ch, contentY1, termY2)
-				setPtySize(pty, w, termH, cw, ch)
+				term.SetPtySize(pty, w, termH, cw, ch)
 				for _, remotePty := range pf.remotePtys {
-					setPtySize(remotePty, w, termH, cw, ch)
+					term.SetPtySize(remotePty, w, termH, cw, ch)
 				}
 			}
 			pf.ptyMutex.Unlock()
@@ -1632,7 +1633,7 @@ func (pf *PanelsFrame) endExecution() {
 			pf.showRightPanel = true
 		}
 		pf.returnToPanels = false
-		if pf.shellMode == ShellModeHost {
+		if pf.shellMode == term.ShellModeHost {
 			pf.leaveHostConsole()
 		}
 		pf.RefreshAll()
@@ -1653,14 +1654,14 @@ func logWindowsReflowRemoved() {
 
 // noteLocalShellLineSent tells the cmd session that a line was typed into
 // the local shell, so that only a prompt printed after it can end it.
-func (pf *PanelsFrame) noteLocalShellLineSent(pty PtyBackend) {
+func (pf *PanelsFrame) noteLocalShellLineSent(pty term.PtyBackend) {
 	if pf.cmdSession != nil && pf.isLocalPTY(pty) {
 		pf.cmdSession.noteSent()
 	}
 }
 
 func (pf *PanelsFrame) Show(scr *vtui.ScreenBuf) {
-	if pf.shellMode == ShellModeHost && pf.isHostConsoleActive() {
+	if pf.shellMode == term.ShellModeHost && pf.isHostConsoleActive() {
 		return
 	}
 	isBusy := pf.isPtyBusy()
@@ -2037,7 +2038,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 	// Workspace switching is global and must remain reachable while a child
 	// process owns the terminal. Returning false lets FrameManager handle both
 	// directions instead of forwarding the key to an AltScreen application or
-	// to a busy ordinary PTY such as the Python REPL.
+	// to a busy ordinary term.PTY such as the Python REPL.
 	if e.Type == vtinput.KeyEventType && e.VirtualKeyCode == vtinput.VK_TAB && ctrl && !alt {
 		return false
 	}
@@ -2050,7 +2051,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 	}
 
 	// Raw input mode check at the very top. If an interactive AltScreen app is active (e.g. mc, htop),
-	// we forward all non-global keys to PTY.
+	// we forward all non-global keys to term.PTY.
 	if !pf.showPanels && pf.termView.OnAltScreen() {
 		if e.KeyDown || pf.termView.Win32InputMode || pf.termView.KittyFlags != 0 {
 			active := pf.getActivePTY()
@@ -2108,7 +2109,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 		panic("Manual safe crash triggered by user (Ctrl+Alt+C) for testing!")
 	}
 
-	// Ctrl+C on a remote panel that carries a PTY-integration hint
+	// Ctrl+C on a remote panel that carries a term.PTY-integration hint
 	// interrupts whatever is running on the far side, ahead of the
 	// Panel.SplitReset action bound to Ctrl+C globally. A user driving
 	// a remote command from the panel cmdline reaches for Ctrl+C to
@@ -2166,9 +2167,9 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 	// immediately flips panels back on — a hide/show flicker on every
 	// single Ctrl+O press, most visible under Wine where KeyUp events are
 	// reliably delivered as separate events.
-	if pf.shellMode == ShellModeSimpleInline && !pf.showPanels &&
+	if pf.shellMode == term.ShellModeSimpleInline && !pf.showPanels &&
 		e.Type == vtinput.KeyEventType && e.KeyDown {
-		if pf.consoleStyle() == ConsoleViewFar {
+		if pf.consoleStyle() == term.ConsoleViewFar {
 			vtui.DebugLog("FARKEY: char=%q vk=0x%X before cmdLine.ProcessKey", e.Char, e.VirtualKeyCode)
 			if e.VirtualKeyCode != vtinput.VK_RETURN && pf.cmdLine != nil && pf.cmdLine.ProcessKey(e) {
 				vtui.DebugLog("FARKEY: cmdLine.ProcessKey handled it, drawing overlay")
@@ -2188,7 +2189,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 	}
 
 	// In Far-style host console with an overlay, route editing keys to CommandLine first
-	if !pf.showPanels && pf.shellMode == ShellModeHost && pf.overlayLines() > 0 {
+	if !pf.showPanels && pf.shellMode == term.ShellModeHost && pf.overlayLines() > 0 {
 		if pf.handleHostConsoleTab(e) {
 			return true
 		}
@@ -2202,8 +2203,8 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 
 	// Raw input mode fallback for active shell commands (non-AltScreen, e.g. ping),
 	// and for any interactive shell session when host console mode is active.
-	// We forward text and navigation to PTY, but let global shortcuts (Ctrl+O) fall through.
-	if !pf.showPanels && (pf.isPtyBusy() || pf.shellMode == ShellModeHost) {
+	// We forward text and navigation to term.PTY, but let global shortcuts (Ctrl+O) fall through.
+	if !pf.showPanels && (pf.isPtyBusy() || pf.shellMode == term.ShellModeHost) {
 		if e.KeyDown || pf.termView.Win32InputMode || pf.termView.KittyFlags != 0 {
 			active := pf.getActivePTY()
 			if active != nil {
@@ -2289,7 +2290,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 	}
 
 	// F9 opens the main menu (other F-keys are action bindings now).
-	// Alt+F9 is App.ToggleWindowSize and must not fall through to this.
+	// Alt+F9 is term.App.ToggleWindowSize and must not fall through to this.
 	if e.VirtualKeyCode == vtinput.VK_F9 && !alt {
 		pos := 0 // Left
 		if pf.activeIdx == 1 {
@@ -2384,7 +2385,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 		// can bypass that filter; under no circumstances should a modified
 		// Enter become plain Enter and enter the selected directory or run
 		// the command line. Hidden panels are included: an AltScreen app or
-		// a busy PTY has already been served by the raw-forwarding returns
+		// a busy term.PTY has already been served by the raw-forwarding returns
 		// at the top of this function, so reaching this point means f4
 		// itself owns the keyboard and the panel cursor is still live.
 		if ctrl && !alt && !shift {
@@ -2459,7 +2460,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 							pf.setCommandLineFocus(false)
 						}
 
-						// Sync the background PTY synchronously to satisfy tests and provide immediate state
+						// Sync the background term.PTY synchronously to satisfy tests and provide immediate state
 						if pf.syncPTYDirectory(fsp.vfs.GetPath(), fsp.vfs) {
 							pf.lastPtyPath = fsp.vfs.GetPath()
 							pf.lastPtyVFS = fsp.vfs
@@ -2471,10 +2472,10 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 			}
 
 			// A remote filesystem may support commands without exposing an
-			// interactive PTY. Android FISH+ deliberately uses this shape over ADB
+			// interactive term.PTY. Android FISH+ deliberately uses this shape over ADB
 			// shell_v2: route the typed command to its job runner instead of falling
 			// through to the local Windows shell. SSH-backed FISH+ keeps using its
-			// PTY below, preserving the full interactive terminal experience.
+			// term.PTY below, preserving the full interactive terminal experience.
 			if fsp := pf.getActivePanel(); fsp != nil && !isLocalOSVFS(fsp.vfs) && !vfsHasRemotePTY(fsp.vfs) {
 				if runner, ok := fsp.vfs.(vfs.CommandRunner); ok {
 					pf.cmdLine.Clear()
@@ -2488,7 +2489,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 			}
 
 			// Fallthrough for regular commands or if directory change failed
-			if pf.shellMode == ShellModeSimpleInline {
+			if pf.shellMode == term.ShellModeSimpleInline {
 				pf.cmdLine.Clear()
 				if pf.searchFirstMode() && !config.App.SearchCommandStayFocused {
 					pf.setCommandLineFocus(false)
@@ -2501,7 +2502,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 				return true
 			}
 
-			if pf.shellMode == ShellModeSimpleCaptured {
+			if pf.shellMode == term.ShellModeSimpleCaptured {
 				pf.cmdLine.Clear()
 				if pf.searchFirstMode() && !config.App.SearchCommandStayFocused {
 					pf.setCommandLineFocus(false)
@@ -2528,10 +2529,10 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 						path = fsp.vfs.GetPath()
 						isWindowsShell = false
 					}
-					// A VFS that carries its own PTY-shell templates
+					// A VFS that carries its own term.PTY-shell templates
 					// takes over the wire-command composition. FISH+
 					// against a Windows peer takes this branch so the
-					// PTY (cmd.exe by default) gets syntax cmd actually
+					// term.PTY (cmd.exe by default) gets syntax cmd actually
 					// parses — the bash-shaped OSC-133-wrapped template
 					// below would come through as literal noise.
 					if integ, ok2 := fsp.vfs.(vfs.PtyShellIntegration); ok2 {
@@ -2549,7 +2550,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 					cmd = resolveWindowsCommand(cmd)
 				}
 
-				// The local Unix PTY is a persistent shell session. Its current
+				// The local Unix term.PTY is a persistent shell session. Its current
 				// directory must not be reset to the panel path before every
 				// command: doing that discards a `cd` performed by an alias. The
 				// panel still synchronizes the shell when the panel itself moves;
@@ -2572,7 +2573,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 						pf.returnToPanels = pf.showPanels
 					}
 				} else if isWindowsShell {
-					// Use a combined command for reliable excision in AnsiParser: cd /d "path" & command
+					// Use a combined command for reliable excision in term.AnsiParser: cd /d "path" & command
 					if path != "" {
 						fullWireCmd = fmt.Sprintf("cd /d \"%s\" & %s\r", path, cmd)
 					} else {
@@ -2645,7 +2646,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 				pf.setCommandLineFocus(false)
 			}
 			pf.showPanels = false
-			if pf.shellMode == ShellModeHost {
+			if pf.shellMode == term.ShellModeHost {
 				pf.enterHostConsole()
 			}
 			return true
@@ -2850,7 +2851,7 @@ func (pf *PanelsFrame) hitAltPanel(mx, my int) int {
 // a selection, dbl/triple-click selects word / line, Alt+LMB drag
 // switches to a rectangular block, releasing LMB auto-copies to the
 // clipboard, RMB pastes clipboard content into the f4 command line when it
-// owns the visible input, or into the PTY otherwise. Returns true when it
+// owns the visible input, or into the term.PTY otherwise. Returns true when it
 // consumed the event.
 func (pf *PanelsFrame) hiddenConsoleCommandLineOwnsInput() bool {
 	if pf.showPanels || pf.cmdLine == nil || !pf.cmdLine.IsVisible() {
@@ -2860,10 +2861,10 @@ func (pf *PanelsFrame) hiddenConsoleCommandLineOwnsInput() bool {
 	// zoin-bot: a visible f4 command line must receive mouse paste through
 	// the edit control, otherwise Enter can execute text that was never drawn.
 	switch pf.shellMode {
-	case ShellModeHost:
-		return pf.consoleStyle() == ConsoleViewFar && pf.isHostConsoleActive()
-	case ShellModeSimpleInline:
-		return pf.consoleStyle() == ConsoleViewFar && pf.consoleViewActive()
+	case term.ShellModeHost:
+		return pf.consoleStyle() == term.ConsoleViewFar && pf.isHostConsoleActive()
+	case term.ShellModeSimpleInline:
+		return pf.consoleStyle() == term.ConsoleViewFar && pf.consoleViewActive()
 	default:
 		return pf.termView != nil && !pf.termView.OnAltScreen() && !pf.isPtyBusy()
 	}
@@ -2875,7 +2876,7 @@ func (pf *PanelsFrame) pasteHiddenConsoleText(text string) {
 	}
 	pf.cmdLine.InsertString(text)
 	pf.cmdLine.SetFocus(true)
-	if pf.shellMode == ShellModeHost {
+	if pf.shellMode == term.ShellModeHost {
 		pf.drawHostConsoleOverlay()
 	} else if vtui.FrameManager != nil {
 		vtui.FrameManager.Redraw()
@@ -2896,14 +2897,14 @@ func (pf *PanelsFrame) handleTerminalMouseSelection(e *vtinput.InputEvent) bool 
 	// time. The visible command line is handled before terminal hit testing.
 	if e.ButtonState == vtinput.RightmostButtonPressed && e.KeyDown {
 		if pf.hiddenConsoleCommandLineOwnsInput() {
-			pf.pasteHiddenConsoleText(tv.readClipboard())
+			pf.pasteHiddenConsoleText(tv.ReadClipboard())
 			return true
 		}
 		if !tv.InTerminalArea(mx, my) {
 			return false
 		}
 		if pty := pf.getActivePTY(); pty != nil {
-			text := tv.readClipboard()
+			text := tv.ReadClipboard()
 			if text != "" {
 				if tv.BracketedPasteMode {
 					pf.writePTY(pty, []byte("\x1b[200~"+text+"\x1b[201~"))
@@ -2988,7 +2989,7 @@ func (pf *PanelsFrame) handleTerminalMouseSelection(e *vtinput.InputEvent) bool 
 			if text != "" {
 				// SetClipboard can hang for seconds behind far2l IPC
 				// or xclip/wl-copy — same treatment as the grabber.
-				go tv.copySelectionToClipboard(text)
+				go tv.CopySelectionToClipboard(text)
 			}
 		}
 		vtui.FrameManager.Redraw()
@@ -3049,7 +3050,7 @@ func terminalWantsMouseEvent(mode int, e *vtinput.InputEvent) bool {
 }
 
 func (pf *PanelsFrame) ProcessMouse(e *vtinput.InputEvent) bool {
-	// If panels are hidden, route relevant mouse events to PTY immediately
+	// If panels are hidden, route relevant mouse events to term.PTY immediately
 	if !pf.showPanels {
 		mx, my := int(e.MouseX), int(e.MouseY)
 		if pf.termView != nil && e.WheelDirection == 0 {
@@ -4206,9 +4207,9 @@ func (pf *PanelsFrame) syncPTYDirectory(path string, v vfs.VFS) bool {
 		return false
 	}
 
-	// A VFS that knows what its own PTY speaks composes the sync line
+	// A VFS that knows what its own term.PTY speaks composes the sync line
 	// itself. FISH+ against a Windows peer takes this branch so the
-	// PTY (cmd.exe by default) sees a "cd /d \"C:\\...\" & rem f4_sync"
+	// term.PTY (cmd.exe by default) sees a "cd /d \"C:\\...\" & rem f4_sync"
 	// instead of the bash-shaped one, which cmd treats as a broken
 	// argument and complains about at every step.
 	if integ, ok := v.(vfs.PtyShellIntegration); ok {
@@ -4242,9 +4243,9 @@ func vfsHasRemotePTY(v vfs.VFS) bool {
 	return true
 }
 
-func (pf *PanelsFrame) getActivePTYUnsafe() PtyBackend {
+func (pf *PanelsFrame) getActivePTYUnsafe() term.PtyBackend {
 	if pf.remotePtys == nil {
-		pf.remotePtys = make(map[vfs.VFS]PtyBackend)
+		pf.remotePtys = make(map[vfs.VFS]term.PtyBackend)
 	}
 
 	var activeVfs vfs.VFS
@@ -4259,12 +4260,12 @@ func (pf *PanelsFrame) getActivePTYUnsafe() PtyBackend {
 
 		res, err := pp.OpenPty(pf.termView.Width, pf.termView.Height)
 		if err == nil {
-			pty := res.(PtyBackend)
-			vtui.DebugLog("Created new remote PTY background session for VFS")
+			pty := res.(term.PtyBackend)
+			vtui.DebugLog("Created new remote term.PTY background session for VFS")
 			pf.remotePtys[activeVfs] = pty
 
 			// Give the VFS one chance to install shell settings before
-			// anyone else writes to the PTY. FISH+ against a Windows
+			// anyone else writes to the term.PTY. FISH+ against a Windows
 			// peer sends "prompt $E]133;D$E\$P$G" so cmd's own prompt
 			// embeds an OSC 133 D marker on every command completion —
 			// otherwise the panel frame never sees "command done" and
@@ -4294,7 +4295,7 @@ func (pf *PanelsFrame) getActivePTYUnsafe() PtyBackend {
 						if elapsed > 10*time.Millisecond {
 							vtui.DebugLog("PTY_PROFILE(Remote): Parsed %d bytes in %v", n, elapsed)
 						}
-						pf.terminalRedraw.request()
+						pf.terminalRedraw.Request()
 					}
 				}
 				pty.Close()
@@ -4315,7 +4316,7 @@ func (pf *PanelsFrame) getActivePTYUnsafe() PtyBackend {
 // into. Unlike getActivePTY it never opens a connection: a query arriving
 // for a host we have no session with is dropped rather than made to dial
 // one, and it must stay callable from the parser's read goroutines.
-func (pf *PanelsFrame) activeReplyPTY() PtyBackend {
+func (pf *PanelsFrame) activeReplyPTY() term.PtyBackend {
 	pf.ptyMutex.Lock()
 	defer pf.ptyMutex.Unlock()
 	var activeVfs vfs.VFS
@@ -4330,7 +4331,7 @@ func (pf *PanelsFrame) activeReplyPTY() PtyBackend {
 	return nil
 }
 
-func (pf *PanelsFrame) getActivePTY() PtyBackend {
+func (pf *PanelsFrame) getActivePTY() term.PtyBackend {
 	pf.ptyMutex.Lock()
 	defer pf.ptyMutex.Unlock()
 	return pf.getActivePTYUnsafe()
@@ -4338,10 +4339,10 @@ func (pf *PanelsFrame) getActivePTY() PtyBackend {
 
 // remotePTYInterruptTarget is a side-effect-free snapshot of the remote shell
 // that currently owns Ctrl+C. In particular, discovering palette commands must
-// not create a remote PTY merely to decide whether Interrupt is available.
+// not create a remote term.PTY merely to decide whether Interrupt is available.
 type remotePTYInterruptTarget struct {
 	panel    *FileSystemPanel
-	pty      PtyBackend
+	pty      term.PtyBackend
 	sequence string
 }
 
@@ -4351,7 +4352,7 @@ func (target *remotePTYInterruptTarget) matches(other *remotePTYInterruptTarget)
 		target.sequence == other.sequence
 }
 
-func sameRemotePTYBackend(left, right PtyBackend) bool {
+func sameRemotePTYBackend(left, right term.PtyBackend) bool {
 	typeOfLeft := reflect.TypeOf(left)
 	return typeOfLeft != nil && typeOfLeft == reflect.TypeOf(right) && typeOfLeft.Comparable() && left == right
 }
@@ -4387,7 +4388,7 @@ func (pf *PanelsFrame) currentRemotePTYInterruptTarget() *remotePTYInterruptTarg
 }
 
 // interruptRemotePTY writes the integration-defined interrupt sequence only
-// when the same panel, VFS and live PTY still own the command. expected is nil
+// when the same panel, VFS and live term.PTY still own the command. expected is nil
 // for the physical Ctrl+C path and a discovery snapshot for palette callbacks.
 func (pf *PanelsFrame) interruptRemotePTY(expected *remotePTYInterruptTarget) bool {
 	target := pf.currentRemotePTYInterruptTarget()
@@ -4575,7 +4576,7 @@ func executeCapturedCommand(pf *PanelsFrame, action string, cmdStr string) {
 					vtui.ShowMessage(" Error ", fmt.Sprintf("Execution failed:\n%v", err), []string{"&Ok"})
 					return
 				}
-				setF4Clipboard(string(out))
+				term.SetF4Clipboard(string(out))
 				toast.Show("Command output copied to clipboard", 3*time.Second)
 				pf.RefreshAll()
 			})
