@@ -4007,3 +4007,61 @@ func (fp *FileSystemPanel) GetSuccessorName() string {
 	// 3. Fallback to parent directory entry
 	return ".."
 }
+
+// GetPredecessorName returns the first remaining entry before the item (or
+// selected range) that an action is about to remove. If there is no such
+// entry, it falls back to the first remaining entry after it. The fallback
+// keeps the cursor on a useful row when the first item is removed.
+func (fp *FileSystemPanel) GetPredecessorName() string {
+	if len(fp.entries) <= 1 {
+		return ".."
+	}
+
+	anySelected := false
+	for _, e := range fp.entries {
+		if e.Selected && e.Name != ".." {
+			anySelected = true
+			break
+		}
+	}
+
+	var firstIdx, lastIdx int
+	if anySelected {
+		firstIdx = len(fp.entries)
+		lastIdx = -1
+		for i, e := range fp.entries {
+			if e.Selected && e.Name != ".." {
+				if i < firstIdx {
+					firstIdx = i
+				}
+				if i > lastIdx {
+					lastIdx = i
+				}
+			}
+		}
+	} else {
+		firstIdx = fp.cursorIdx
+		lastIdx = fp.cursorIdx
+	}
+
+	isToBeRemoved := func(i int) bool {
+		if anySelected {
+			return fp.entries[i].Selected && fp.entries[i].Name != ".."
+		}
+		return i == fp.cursorIdx
+	}
+
+	for i := firstIdx - 1; i >= 0; i-- {
+		if !isToBeRemoved(i) && fp.entries[i].Name != ".." {
+			return fp.entries[i].Name
+		}
+	}
+
+	for i := lastIdx + 1; i < len(fp.entries); i++ {
+		if !isToBeRemoved(i) && fp.entries[i].Name != ".." {
+			return fp.entries[i].Name
+		}
+	}
+
+	return ".."
+}
