@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -25,12 +25,12 @@ func waitForMarkedClipboard(t *testing.T, want string) string {
 		if got := vtui.GetClipboard(); got == want {
 			// The worker may update the clipboard before it finishes reading
 			// shared f4 state. Join it before the next test replaces that state.
-			term.WaitForAsyncClipboard()
+			terminal.WaitForAsyncClipboard()
 			return got
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
-	term.WaitForAsyncClipboard()
+	terminal.WaitForAsyncClipboard()
 	return vtui.GetClipboard()
 }
 

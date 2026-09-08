@@ -792,8 +792,8 @@ violation. Added after the migration it would only confirm what already happened
    already places all of them at layer 0:
    ```go
    "internal/netproxy": 0,   // 22 importers today
-   "internal/ttyx":     0,   // 9;  internal/term imports it (Task 30)
-   "internal/wincon":   0,   // 3;  internal/term imports it (Task 30)
+   "internal/ttyx":     0,   // 9;  internal/terminal imports it (Task 30)
+   "internal/wincon":   0,   // 3;  internal/terminal imports it (Task 30)
    ```
    `internal/hideconsole` is **not** in the map: it is a vendored fork with its own
    `go.mod` (`replace` at `go.mod:187`), so `go list ./...` never returns it. Say so
@@ -896,7 +896,7 @@ of call shape.
    in Task 21.
 2. Break the two production drains out of `SwapFrameManager` and make them
    parameters. Today it calls `waitForAsyncClipboard` (`clipboard_async.go:27`,
-   production, lands in `internal/term`) and `waitForDirectoryLoads`
+   production, lands in `internal/terminal`) and `waitForDirectoryLoads`
    (`frame_manager_test_helpers_test.go:83`, which waits on the
    `directoryLoadWorkers` production global that lands in `internal/panel`).
    Reaching down into two layer-1/3 packages is exactly the cycle this task
@@ -938,7 +938,7 @@ of call shape.
    they are not call sites.
 5. Create `internal/paneltest` with a `doc.go` only. Document its contract: it
    will hold `SetupMockPanelsFrame`, it may import `internal/panel`,
-   `internal/cmdline` and `internal/term`, and any test *inside* those three
+   `internal/cmdline` and `internal/terminal`, and any test *inside* those three
    packages that uses it must be an external test package (`package panel_test`).
    It is filled in Task 34, when those packages exist.
 6. Leave `setupMockPanelsFrame` in `cmd/f4/panels_frame_test.go` unchanged for
@@ -1061,11 +1061,11 @@ comes from the graph's edges out of each test file, not from filenames.
 
    | Files | Wave |
    |---|---|
-   | `ttyx_probe.go`, `ttyx_probe_parse.go`, `ttyx_probe_unix.go`, `ttyx_probe_windows.go`, `ttyx_session.go` | Task 30 — `internal/term`; they decide what the terminal supports |
-   | `terminal_log_console_other.go`, `terminal_log_console_windows.go`, `terminal_log_vfs.go` | Task 30 — `internal/term` |
-   | `console_host_windows.go`, `console_overlay_other.go`, `console_overlay_windows.go` | Task 30 — `internal/term`; the overlays score only on `TerminalView`, the wave's own type |
-   | `process_environment.go` (gate 4), `process_environment_shell.go`, `process_environment_runtime_unix.go`, `process_environment_runtime_windows.go` | Task 30 — `internal/term`. `pty_interface.go` calls into `process_environment_shell.go` five times and `panels_frame.go` twenty-five; term is the lowest package that can hold them without inverting a layer. The four `PanelsFrame` references in `process_environment.go` stay with the panel per the gate rule |
-   | `terminal_redraw.go` | Task 30 — `internal/term`; gate 0, called only from `panels_frame.go`, a legal panel → term edge |
+   | `ttyx_probe.go`, `ttyx_probe_parse.go`, `ttyx_probe_unix.go`, `ttyx_probe_windows.go`, `ttyx_session.go` | Task 30 — `internal/terminal`; they decide what the terminal supports |
+   | `terminal_log_console_other.go`, `terminal_log_console_windows.go`, `terminal_log_vfs.go` | Task 30 — `internal/terminal` |
+   | `console_host_windows.go`, `console_overlay_other.go`, `console_overlay_windows.go` | Task 30 — `internal/terminal`; the overlays score only on `TerminalView`, the wave's own type |
+   | `process_environment.go` (gate 4), `process_environment_shell.go`, `process_environment_runtime_unix.go`, `process_environment_runtime_windows.go` | Task 30 — `internal/terminal`. `pty_interface.go` calls into `process_environment_shell.go` five times and `panels_frame.go` twenty-five; term is the lowest package that can hold them without inverting a layer. The four `PanelsFrame` references in `process_environment.go` stay with the panel per the gate rule |
+   | `terminal_redraw.go` | Task 30 — `internal/terminal`; gate 0, called only from `panels_frame.go`, a legal panel → term edge |
    | `plugring.go`, `plugring_meta.go`, `plugring_ui.go` | Task 26 — `internal/plughost`. Task 15 only edits `plugring.go`'s catalogue URL; it never assigns it a package |
    | `compare_folders_ui.go` (gate 4, `Msg` ×28) | Task 25 — `internal/dialog`, beside the other settings dialogs |
    | `colorer_downloader.go` | Task 33 — `internal/editor`, with `colorer_plugin.go` |
@@ -1383,7 +1383,7 @@ comes from the graph's edges out of each test file, not from filenames.
    different packages — is resolved by the rosters: both examples the previous
    draft gave, `ttyx_probe_test.go` over `ttyx_probe_parse.go` and
    `process_environment_test.go` over `process_environment_shell.go`, land in
-   `internal/term` together with every source they cover. The remaining cases are
+   `internal/terminal` together with every source they cover. The remaining cases are
    the split-out column above.
 
 6. Tests that read a resource directory from disk by a CWD-relative path. No

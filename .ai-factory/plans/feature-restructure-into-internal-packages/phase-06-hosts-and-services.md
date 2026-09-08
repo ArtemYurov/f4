@@ -20,7 +20,7 @@ to types whose own package is extracted **later** than this file's destination:
 |---|---|---|
 | `coreAPI` | `internal/plughost` | Task 26 |
 | `ViewerView` | `internal/viewer` | Task 29 |
-| `TerminalView` | `internal/term` | Task 30 |
+| `TerminalView` | `internal/terminal` | Task 30 |
 | `EditorView` | `internal/editor` | Task 33 |
 | `PanelsFrame`, `FileSystemPanel`, `pluginPanelInstance` | `internal/panel` | Task 34 |
 | `CommandLine` | `internal/cmdline` | Task 35 |
@@ -193,7 +193,7 @@ Did not move, with the reason each time:
 | `startup_settings.go` | the startup backend tables in `startup_backend.go` |
 | `compare_folders_ui.go` | `captureComparePanel` takes a `*FileSystemPanel`; `runCompareFolders` takes the frame |
 | `share_dialog.go`, `find_file.go`, `bookmarks_dialog.go` | each keeps a `*PanelsFrame` in a struct field. They belong to Task 34. |
-| `grabber.go` | its gate score of 1 is a **comment**; the real blocker is `setClipboardAsync`, which Task 30 takes to `internal/term`. Deferred to that wave, where the import becomes legal at 3 to 1. |
+| `grabber.go` | its gate score of 1 is a **comment**; the real blocker is `setClipboardAsync`, which Task 30 takes to `internal/terminal`. Deferred to that wave, where the import becomes legal at 3 to 1. |
 
 Two of the four gate scores this task quoted were false positives — `grabber.go`
 (a comment) and `colors.go` in Task 24 (string literals). The gate counts names,
@@ -210,7 +210,7 @@ step 5 exists to prevent.
   `internal/theme`, `internal/keymap`, `internal/history`, `internal/toast`,
   `internal/action`, `vfs` and the vtui libraries. It must not import
   `internal/panel`, `internal/editor`, `internal/viewer`, `internal/cmdline`,
-  `internal/term` or `internal/app`.
+  `internal/terminal` or `internal/app`.
 - Dialog error strings are user-visible text; `ST1005` is disabled for that
   reason. Do not reword any of them during the move.
 - The `help/en.hlf` format and the help topic keys are unchanged.
@@ -412,7 +412,7 @@ go test -race ./internal/plughost/...
 ### Intent
 
 GUI backends, font handling, window position and the application icon. Seven
-outbound edges. This package is often confused with `internal/term`: the
+outbound edges. This package is often confused with `internal/terminal`: the
 distinction the graph draws is that anything deciding *what the terminal supports*
 is term, and anything drawing *a window* is gui.
 

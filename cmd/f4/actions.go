@@ -23,7 +23,7 @@ import (
 	"github.com/unxed/f4/internal/media"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/plughost"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/internal/viewer"
@@ -261,7 +261,7 @@ func actionFoldersHistory(pf *PanelsFrame) {
 
 		// Ctrl+C / Ctrl+Ins: copy the selected entry to the clipboard.
 		if (e.VirtualKeyCode == vtinput.VK_C || e.VirtualKeyCode == vtinput.VK_INSERT) && ctrl && !alt && !shift {
-			term.SetClipboardAsync(path)
+			terminal.SetClipboardAsync(path)
 			return true
 		}
 		return false
@@ -432,7 +432,7 @@ func actionCommandHistory(pf *PanelsFrame) {
 
 		// Ctrl+C / Ctrl+Ins: copy the selected entry to the clipboard.
 		if (e.VirtualKeyCode == vtinput.VK_C || e.VirtualKeyCode == vtinput.VK_INSERT) && ctrl && !alt && !shift {
-			term.SetClipboardAsync(rec.Name)
+			terminal.SetClipboardAsync(rec.Name)
 			return true
 		}
 		return false
@@ -1474,7 +1474,7 @@ func tryOpenVideoPlayer(pf *PanelsFrame, v vfs.VFS, path string) bool {
 	// Video is a local business: the frames of it never fit down a
 	// terminal, and the player draws into a window of f4's own on the
 	// screen the terminal is on.
-	if term.SharedTTYXSession() == nil {
+	if terminal.SharedTTYXSession() == nil {
 		return false
 	}
 	if !media.ToolMPV.Available() {
@@ -1887,11 +1887,11 @@ func actionExecute(pf *PanelsFrame, v vfs.VFS, dir, name, path string) {
 					actualDir = dir
 				}
 
-				if pf.shellMode == term.ShellModeSimpleInline {
+				if pf.shellMode == terminal.ShellModeSimpleInline {
 					pf.runSimpleInlineCommand(actualDir, historyCmd)
 					return
 				}
-				if pf.shellMode == term.ShellModeSimpleCaptured {
+				if pf.shellMode == terminal.ShellModeSimpleCaptured {
 					pf.runSimpleCapturedCommand(actualDir, historyCmd)
 					return
 				}
@@ -2014,28 +2014,28 @@ func actionNewFile(pf *PanelsFrame) {
 }
 
 func actionViewTerminalLog(pf *PanelsFrame) {
-	v := term.NewTerminalLogVFS(pf.termView, pf.hostConsoleLogFallback())
+	v := terminal.NewTerminalLogVFS(pf.termView, pf.hostConsoleLogFallback())
 	actionOpenViewer(pf, v, "Terminal Log")
 }
 
 func actionEditTerminalLog(pf *PanelsFrame) {
-	v := term.NewTerminalLogVFS(pf.termView, pf.hostConsoleLogFallback())
+	v := terminal.NewTerminalLogVFS(pf.termView, pf.hostConsoleLogFallback())
 	actionOpenEditor(pf, v, "Terminal Log")
 }
 
 // hostConsoleLogFallback selects the data source for F3/F4 (Terminal.ViewLog/
-// EditLog). pf.termView only ever sees bytes that came through a real term.PTY;
-// under term.ShellModeSimpleInline (issue #513 / WINE.md -- Wine has no usable
+// EditLog). pf.termView only ever sees bytes that came through a real terminal.PTY;
+// under terminal.ShellModeSimpleInline (issue #513 / WINE.md -- Wine has no usable
 // ConPTY) commands run with inherited stdio straight into the host console
 // buffer, never touching termView, so its log is permanently empty there.
 // Read the host console buffer itself instead. Every other shell mode keeps
 // using termView exactly as before (nil here).
 func (pf *PanelsFrame) hostConsoleLogFallback() func() []byte {
-	if pf.shellMode != term.ShellModeSimpleInline || !consoleOverlayUsesWinAPI() {
+	if pf.shellMode != terminal.ShellModeSimpleInline || !consoleOverlayUsesWinAPI() {
 		return nil
 	}
 	lines := pf.overlayLines()
-	return func() []byte { return term.ReadHostConsoleFullText(lines) }
+	return func() []byte { return terminal.ReadHostConsoleFullText(lines) }
 }
 
 func actionViewFile(pf *PanelsFrame) {
@@ -3210,7 +3210,7 @@ func actionFindDuplicates(pf *PanelsFrame) {
 		// Started against the connection it runs on, so that a session
 		// rebuilt from another panel takes this job off the list instead of
 		// leaving it there waiting for an answer that cannot come.
-		job := term.GlobalBackgroundJobs.StartOn(sessionKeyOf(v), "Duplicates in "+root, ctx.Cancel)
+		job := terminal.GlobalBackgroundJobs.StartOn(sessionKeyOf(v), "Duplicates in "+root, ctx.Cancel)
 		finished := false
 		defer func() {
 			if !finished {
@@ -3711,7 +3711,7 @@ func actionPanelAdditionalSettings(pf *PanelsFrame) {
 	// This page contains the options that are changed less often than the
 	// panel/navigation controls. Keep it below 25 rows even when the host
 	// console notice needs a separate line.
-	consoleModeUnavailable := term.ProbeGUIBackend() != "" || !term.ProbeHostTTY()
+	consoleModeUnavailable := terminal.ProbeGUIBackend() != "" || !terminal.ProbeHostTTY()
 	dlg := vtui.NewCenteredDialog(60, 24, i18n.Msg("PanelSettings.AdvancedTitle"))
 	dlg.ShowClose = true
 

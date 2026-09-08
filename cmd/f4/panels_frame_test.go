@@ -9,7 +9,7 @@ import (
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/sysinfo"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/plugins/archive"
@@ -108,7 +108,7 @@ func TestPanelsFrame_WorkspaceTabTitleTracksTerminalTitle(t *testing.T) {
 		showPanels:            false,
 		executing:             true,
 		workspaceCommandTitle: workspaceCommandName("python script.py"),
-		termView:              &term.TerminalView{Title: "Administrator: C:\\Windows\\System32\\cmd.exe - Python"},
+		termView:              &terminal.TerminalView{Title: "Administrator: C:\\Windows\\System32\\cmd.exe - Python"},
 	}
 	if got := pf.GetWorkspaceTabTitle(); got != "Python" {
 		t.Fatalf("terminal workspace tab title = %q, want %q", got, "Python")
@@ -749,7 +749,7 @@ func TestPanelsFrame_GetActivePTY(t *testing.T) {
 	pf := NewPanelsFrame()
 	defer pf.Close()
 
-	// Default panels use OSVFS, so active term.PTY should be the local one
+	// Default panels use OSVFS, so active terminal.PTY should be the local one
 	active := pf.getActivePTY()
 	if active != pf.pty {
 		t.Errorf("Expected active term.PTY to be the local term.PTY for OSVFS")
@@ -807,7 +807,7 @@ func setupMockPanelsFrame(t *testing.T) *PanelsFrame {
 	}
 	pf := &PanelsFrame{activeIdx: 1, showPanels: true, showKeyBar: true, showLeftPanel: true, showRightPanel: true}
 	pf.pty = &mockPty{}
-	pf.termView = term.NewTerminalView(80, 24)
+	pf.termView = terminal.NewTerminalView(80, 24)
 	// Initialize MenuBar with enough items to satisfy updateMenuCheckmarks (needs index 0 and 4)
 	pf.menuBar = vtui.NewMenuBar(nil)
 	pf.menuBar.Items = make([]vtui.MenuBarItem, 5)
@@ -1057,7 +1057,7 @@ func TestPanelsFrame_EscTogglesPanels(t *testing.T) {
 		t.Error("ESC should hide panels when cmdLine is empty")
 	}
 
-	// Panels hidden, quiet term.PTY → ESC brings them back.
+	// Panels hidden, quiet terminal.PTY → ESC brings them back.
 	if !sendEsc() {
 		t.Error("ESC on hidden panels + quiet term.PTY should be handled")
 	}
@@ -1150,10 +1150,10 @@ func TestPanelsFrame_KeyHandling(t *testing.T) {
 		t.Errorf("Ctrl+Enter failed: expected '%s', got '%s'", expectedName, pf.cmdLine.Edit.GetText())
 	}
 
-	// 4. Test Ctrl+O to toggle panels even when term.PTY is busy (Issue #50)
+	// 4. Test Ctrl+O to toggle panels even when terminal.PTY is busy (Issue #50)
 	pf.showPanels = false
 	pf.pty = &mockPty{}
-	pf.executing = true // term.PTY is busy
+	pf.executing = true // terminal.PTY is busy
 
 	pressKey(pf, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_O, ControlKeyState: vtinput.LeftCtrlPressed})
 	if !pf.showPanels {
@@ -1938,7 +1938,7 @@ func TestPanelsFrame_AltScreenTerminalHeight(t *testing.T) {
 	pf := NewPanelsFrame()
 	defer pf.Close()
 	pf.pty = &mockPty{}
-	pf.parser = term.NewAnsiParser(pf.termView, pf.pty)
+	pf.parser = terminal.NewAnsiParser(pf.termView, pf.pty)
 	height := 25
 	pf.showKeyBar = true
 
@@ -1995,7 +1995,7 @@ func TestPanelsFrame_KeyBarSuppression(t *testing.T) {
 	// 3. Busy mode but panels visible: KeyBar should be registered (Issue #50)
 	pf.termView.UseAltScreen = false
 	pf.showPanels = true
-	pf.pty = &mockPty{} // Ensure active term.PTY is not nil
+	pf.pty = &mockPty{} // Ensure active terminal.PTY is not nil
 	pf.executing = true
 	pf.Show(scr)
 	if vtui.FrameManager.KeyBar == nil {
@@ -2639,7 +2639,7 @@ func TestPanelsFrame_CtrlO_HardRedraw(t *testing.T) {
 	// but for now, we check the logic works.
 }
 func TestPanelsFrame_PTYLockContention(t *testing.T) {
-	// Этот тест проверяет, что тяжелый парсинг в term.PTY-потоке не блокирует
+	// Этот тест проверяет, что тяжелый парсинг в terminal.PTY-потоке не блокирует
 	// доступ UI-потока к методу getActivePTY (регрессия дедлока).
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	pf := setupMockPanelsFrame(t)
@@ -2685,7 +2685,7 @@ func TestPanelsFrame_PTYLockContention(t *testing.T) {
 func TestTerminalRedrawSchedulerCoalescesBurst(t *testing.T) {
 	var mu sync.Mutex
 	redraws := 0
-	scheduler := term.NewTerminalRedrawScheduler(func() {
+	scheduler := terminal.NewTerminalRedrawScheduler(func() {
 		mu.Lock()
 		redraws++
 		mu.Unlock()
@@ -2932,7 +2932,7 @@ func TestPanelsFrame_CommandLineEnter(t *testing.T) {
 	if pf.showPanels {
 		t.Error("Panels should hide after command execution from command line")
 	}
-	// term.PTY должен получить команду
+	// terminal.PTY должен получить команду
 	if !strings.Contains(string(pty.written), "ls -la") {
 		t.Errorf("PTY did not receive command. Got: %q", string(pty.written))
 	}
@@ -3073,7 +3073,7 @@ func TestPanelsFrame_CommandLineEnter_WhenBusy(t *testing.T) {
 	pty := pf.pty.(*mockPty)
 	defer pf.Close()
 
-	pf.executing = true // term.PTY is busy
+	pf.executing = true // terminal.PTY is busy
 
 	// Вводим команду в консоль
 	pf.cmdLine.Edit.SetText("ls -la")
@@ -3089,7 +3089,7 @@ func TestPanelsFrame_CommandLineEnter_WhenBusy(t *testing.T) {
 	if pf.showPanels {
 		t.Error("Panels should hide after command execution even when term.PTY is busy")
 	}
-	// term.PTY должен получить команду
+	// terminal.PTY должен получить команду
 	if !strings.Contains(string(pty.written), "ls -la") {
 		t.Errorf("PTY did not receive command when busy. Got: %q", string(pty.written))
 	}
@@ -3322,7 +3322,7 @@ func TestPanelsFrame_TerminalForwarding_Legacy(t *testing.T) {
 	pf.showPanels = false
 	pf.termView.UseAltScreen = true
 
-	// Mock term.PTY
+	// Mock terminal.PTY
 	pty := &mockPty{}
 	pf.pty = pty
 
@@ -4783,7 +4783,7 @@ func TestPanelsFrame_MouseForwarding_ToPTY(t *testing.T) {
 		t.Fatal("Mouse event should be handled by PanelsFrame when panels are hidden")
 	}
 
-	// term.PTY must receive SGR 1006 sequence: \x1b[<0;11;11M (1-based coords)
+	// terminal.PTY must receive SGR 1006 sequence: \x1b[<0;11;11M (1-based coords)
 	expected := "\x1b[<0;11;11M"
 	if !strings.Contains(pty.String(), expected) {
 		t.Errorf("PTY did not receive expected mouse sequence. Got: %q, want to contain: %q", pty.String(), expected)
@@ -4890,7 +4890,7 @@ func TestPanelsFrame_NoCtrlOInterception_InAltScreen(t *testing.T) {
 		t.Error("f4 erroneously intercepted Ctrl+O while terminal app was active")
 	}
 
-	// term.PTY must receive the Ctrl+O byte (\x0f)
+	// terminal.PTY must receive the Ctrl+O byte (\x0f)
 	if !strings.Contains(pty.String(), "\x0f") {
 		t.Errorf("PTY did not receive Ctrl+O byte. Got: %q", pty.String())
 	}

@@ -1,7 +1,7 @@
 package media
 
 import (
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"io"
 	"strconv"
 	"strings"
@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// cmd/f4 and internal/term keep their own; a mock is not worth sharing.
+// cmd/f4 and internal/terminal keep their own; a mock is not worth sharing.
 type mockPty struct {
 	mu      sync.Mutex
 	written []byte
@@ -51,22 +51,22 @@ func (m *mockPty) Wait() error                           { return nil }
 func (m *mockPty) Run(name string, args ...string) error { return nil }
 func (m *mockPty) IsBusy() bool                          { return false }
 
-// internal/term keeps its own; this copy goes with the image tests when they
+// internal/terminal keeps its own; this copy goes with the image tests when they
 // leave for internal/media.
 type sixelEnv struct {
-	tv  *term.TerminalView
-	p   *term.AnsiParser
+	tv  *terminal.TerminalView
+	p   *terminal.AnsiParser
 	Pty *mockPty
 }
 
 func newSixelEnv(t *testing.T) *sixelEnv {
 	t.Helper()
-	tv := term.NewTerminalView(80, 24)
+	tv := terminal.NewTerminalView(80, 24)
 	Pty := &mockPty{}
 	tv.Pty = Pty
 	// A known cell keeps the arithmetic in the tests explicit.
 	tv.CellW, tv.CellH = 10, 20
-	return &sixelEnv{tv: tv, p: term.NewAnsiParser(tv, Pty), Pty: Pty}
+	return &sixelEnv{tv: tv, p: terminal.NewAnsiParser(tv, Pty), Pty: Pty}
 }
 
 func (e *sixelEnv) send(params, body string) {
@@ -77,7 +77,7 @@ func (e *sixelEnv) send(params, body string) {
 //
 // A picture with more colours than 256 registers reaches a terminal one of two
 // ways. Either the sender redefines a register between bands, which
-// TestSixelRegisterRedefinitionIsImmediate in internal/term covers, or it sends the picture
+// TestSixelRegisterRedefinitionIsImmediate in internal/terminal covers, or it sends the picture
 // several times at the same cell with P2=1 and a palette each, and the
 // terminal composes them. f4 has to take both: the second is what vtui sends
 // to Windows Terminal, so f4 running inside f4 there is a stack of layers

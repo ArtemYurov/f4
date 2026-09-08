@@ -7,7 +7,7 @@ import (
 
 	"context"
 	"errors"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/vfs"
 	"os"
 	"strconv"
@@ -28,7 +28,7 @@ func TestLocalCommandRunnerCancellationKillsProcessGroup(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() {
-		_, runErr := term.NewLocalCommandRunner().RunCommand(
+		_, runErr := terminal.NewLocalCommandRunner().RunCommand(
 			ctx,
 			dir,
 			"sleep 30 & child=$!; printf '%s\\n' \"$child\" > "+quotedPIDPath+"; wait",

@@ -55,7 +55,7 @@ that all of them exist.
 
 1. Move `action_table.go` (Task 18). Its closures call into `internal/panel`,
    `internal/editor`, `internal/viewer`, `internal/dialog`, `internal/cmdline` and
-   `internal/term` — legal here and nowhere else, because `internal/app` is the
+   `internal/terminal` — legal here and nowhere else, because `internal/app` is the
    only package the dependency rules let import every layer 0-3 package.
 2. Move `framework_actions.go` whole. The graph shows its 18 dependency-free
    functions have no external callers; they are `Handler:` values, and the seven

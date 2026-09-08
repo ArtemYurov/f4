@@ -12,7 +12,7 @@ import (
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/sysinfo"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
@@ -523,7 +523,7 @@ func (ip *InfoPanel) setCursorToNearestCopyable(index int) bool {
 //   - Otherwise: copies the current row's raw value (no label),
 //     which is what single-row-copy has always done.
 //
-// term.SetF4Clipboard keeps vtui's far2l/OS integrations and mirrors the result to
+// terminal.SetF4Clipboard keeps vtui's far2l/OS integrations and mirrors the result to
 // OSC 52 when the application is attached to a Unix terminal.
 func (ip *InfoPanel) copyCurrent() {
 	var selRows []infoRow
@@ -540,7 +540,7 @@ func (ip *InfoPanel) copyCurrent() {
 		if !r.copyable || r.value == "" {
 			return
 		}
-		term.SetF4Clipboard(r.value)
+		terminal.SetF4Clipboard(r.value)
 		toast.Show(fmt.Sprintf("%s: %s", i18n.Msg("InfoPanel.Copied"), r.value), 2*time.Second)
 		return
 	}
@@ -549,7 +549,7 @@ func (ip *InfoPanel) copyCurrent() {
 		lines = append(lines, r.label+": "+r.value)
 	}
 	joined := strings.Join(lines, "\n")
-	term.SetF4Clipboard(joined)
+	terminal.SetF4Clipboard(joined)
 	toast.Show(fmt.Sprintf("%s: %d", i18n.Msg("InfoPanel.CopiedRows"), len(selRows)), 2*time.Second)
 }
 

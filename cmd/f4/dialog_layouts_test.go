@@ -14,7 +14,7 @@ import (
 	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/macro"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/f4/vfs"
@@ -87,8 +87,8 @@ func TestAllDialogs_LayoutValidation(t *testing.T) {
 		"file.new":                         true, // async launch
 		"file.attributes":                  true, // async launch
 		"file.findduplicates":              true, // async launch
-		"terminal.viewlog":                 true, // async launch
-		"terminal.editlog":                 true, // async launch
+		"term.viewlog":                     true, // async launch
+		"term.editlog":                     true, // async launch
 		"editor.switchtoviewer":            true, // async launch
 		"viewer.switchtoeditor":            true, // async launch
 		"editor.codepagenext":              true, // modifies config
@@ -365,7 +365,7 @@ func (rig *dialogLayoutRig) detach(t *testing.T) {
 	t.Helper()
 	// The next rig reinitializes the global manager. Clipboard workers read
 	// that global asynchronously, so join them at this lifecycle boundary.
-	term.WaitForAsyncClipboard()
+	terminal.WaitForAsyncClipboard()
 	rig.reset(t)
 }
 
@@ -377,7 +377,7 @@ func (rig *dialogLayoutRig) attach() {
 
 func (rig *dialogLayoutRig) close(t *testing.T) {
 	t.Helper()
-	term.WaitForAsyncClipboard()
+	terminal.WaitForAsyncClipboard()
 	waitForDirectoryLoads(t)
 	testutil.CloseFrameManagerFrames(rig.manager)
 }

@@ -12,7 +12,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/macro"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/vtui"
 )
@@ -226,7 +226,7 @@ func currentWindowTitle() string {
 }
 
 var copyWindowTitleToClipboard = func(title string) {
-	term.SetClipboardAsync(title)
+	terminal.SetClipboardAsync(title)
 }
 
 func actionCopyWindowTitle() bool {
@@ -242,7 +242,7 @@ func actionCopyWindowTitle() bool {
 
 // currentFrameIdentity returns the help topic identity of the frame currently
 // receiving input. Unlike currentWindowTitle, it intentionally includes modal
-// dialogs and menus: term.App.CopyWindowTitle is a debugging action for the UI
+// dialogs and menus: terminal.App.CopyWindowTitle is a debugging action for the UI
 // context the user is working in, not for the host terminal/workspace title.
 // zoin-bot: prefer the stable help ID because it can be fed directly into the
 // help translator; the visible title remains a compatibility fallback for

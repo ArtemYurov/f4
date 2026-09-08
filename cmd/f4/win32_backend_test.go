@@ -3,17 +3,17 @@ package main
 import (
 	"testing"
 
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/vtui"
 )
 
 func TestF4_ConsoleBackendSelection(t *testing.T) {
-	oldBackend := term.SelectedTTYBackend
-	defer func() { term.SelectedTTYBackend = oldBackend }()
+	oldBackend := terminal.SelectedTTYBackend
+	defer func() { terminal.SelectedTTYBackend = oldBackend }()
 
-	term.SelectedTTYBackend = "winapi"
+	terminal.SelectedTTYBackend = "winapi"
 	scr := vtui.NewScreenBuf()
-	if term.SelectedTTYBackend == "winapi" || term.SelectedTTYBackend == "win32" {
+	if terminal.SelectedTTYBackend == "winapi" || terminal.SelectedTTYBackend == "win32" {
 		scr.Renderer = vtui.NewWin32ConsoleRenderer(scr)
 	}
 	scr.AllocBuf(80, 25)
@@ -22,7 +22,7 @@ func TestF4_ConsoleBackendSelection(t *testing.T) {
 		t.Errorf("Expected Win32ConsoleRenderer for winapi backend, got %T", scr.Renderer)
 	}
 
-	term.SelectedTTYBackend = "ansi"
+	terminal.SelectedTTYBackend = "ansi"
 	scr2 := vtui.NewScreenBuf()
 	scr2.AllocBuf(80, 25)
 	if _, ok := scr2.Renderer.(*vtui.AnsiRenderer); !ok {

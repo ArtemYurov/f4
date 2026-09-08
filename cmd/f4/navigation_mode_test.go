@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
@@ -88,7 +88,7 @@ func newSearchFirstTestFrame(t *testing.T) (*PanelsFrame, *FileSystemPanel, *Fil
 		lastW:          80,
 		lastH:          25,
 		cmdLine:        NewCommandLine("$ "),
-		termView:       term.NewTerminalView(80, 24),
+		termView:       terminal.NewTerminalView(80, 24),
 	}
 	pf.cmdLine.SetPosition(0, 23, 79, 23)
 	pf.applyNavigationMode()

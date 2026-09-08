@@ -294,7 +294,7 @@ is the only place where everything is assembled. Layers, bottom up:
 
 **Layer 1 — subsystems over the kernel:** `internal/textlayout` →
 `internal/piecetable`; `internal/fusefs` → `vfs`; `internal/vtvibe` → `vfs`;
-`internal/luaplug`; `internal/term`, `internal/gui`, `internal/media`,
+`internal/luaplug`; `internal/terminal`, `internal/gui`, `internal/media`,
 `internal/fileops`, `internal/update` (self-update is a leaf with 3 outbound
 edges, not an interactive subsystem).
 

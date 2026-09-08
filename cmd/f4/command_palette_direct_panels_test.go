@@ -6,7 +6,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -47,7 +47,7 @@ func newDirectPalettePanelsFrame(left, right *FileSystemPanel) *PanelsFrame {
 		showLeftPanel:  true,
 		showRightPanel: true,
 		cmdLine:        NewCommandLine("$ "),
-		termView:       term.NewTerminalView(80, 24),
+		termView:       terminal.NewTerminalView(80, 24),
 	}
 }
 
@@ -61,7 +61,7 @@ func TestCommandPaletteRemoteInterruptHonorsPluginPriorityAndStalePTY(t *testing
 	right := &FileSystemPanel{vfs: vfs.NewNullVFS(0)}
 	pty := &directPalettePTY{}
 	pf := newDirectPalettePanelsFrame(left, right)
-	pf.remotePtys = map[vfs.VFS]term.PtyBackend{remote: pty}
+	pf.remotePtys = map[vfs.VFS]terminal.PtyBackend{remote: pty}
 	setDirectPaletteTopFrame(t, pf)
 
 	pluginCalls := 0

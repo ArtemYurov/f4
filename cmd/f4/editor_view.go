@@ -30,7 +30,7 @@ import (
 	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/piecetable"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/textlayout"
 	"github.com/unxed/f4/internal/textsearch"
 	"github.com/unxed/f4/internal/theme"
@@ -5770,7 +5770,7 @@ func (ev *EditorView) CopySelection() {
 		}
 
 		text := strings.Join(lines, "\n")
-		term.SetF4Clipboard(text)
+		terminal.SetF4Clipboard(text)
 		return
 	}
 
@@ -5780,7 +5780,7 @@ func (ev *EditorView) CopySelection() {
 		data, _ := ev.pt.GetRange(min, max-min)
 		if data != nil {
 			text := string(data)
-			term.SetF4Clipboard(text)
+			terminal.SetF4Clipboard(text)
 			vtui.DebugLog("EDITOR: Copied %d bytes to clipboard", max-min)
 		}
 	}

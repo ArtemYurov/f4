@@ -12,7 +12,7 @@ import (
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/media"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/vtui"
 )
 
@@ -71,8 +71,8 @@ var conditionRegistry = map[string]func() bool{
 			if pf.showPanels {
 				return true
 			}
-			if pf.shellMode == term.ShellModeSimpleInline {
-				// This mode has no term.PTY, so pf.termView is a leftover
+			if pf.shellMode == terminal.ShellModeSimpleInline {
+				// This mode has no terminal.PTY, so pf.termView is a leftover
 				// background object (kept around for cwd-sync passthrough,
 				// see PTY_WIN_TRACE in the debug log) that does not reflect
 				// what's on screen. Nothing it does can ever be a foreign
@@ -98,8 +98,8 @@ var conditionRegistry = map[string]func() bool{
 			if pf.showPanels {
 				return true
 			}
-			if pf.shellMode == term.ShellModeSimpleInline {
-				// Same reasoning as noaltscreenapp above: no term.PTY means no
+			if pf.shellMode == terminal.ShellModeSimpleInline {
+				// Same reasoning as noaltscreenapp above: no terminal.PTY means no
 				// foreign process can be busy on screen in this mode. A
 				// command f4 itself launched (runSimpleInlineCommand) still
 				// owns the keyboard while it runs, but that state already
@@ -112,7 +112,7 @@ var conditionRegistry = map[string]func() bool{
 		return false
 	},
 	// terminalquiet reports a hidden-panels terminal with no AltScreen app
-	// and no busy term.PTY, so F3/F4 may open the terminal log instead of
+	// and no busy terminal.PTY, so F3/F4 may open the terminal log instead of
 	// being forwarded to the running application.
 	"terminalquiet": func() bool {
 		if pf := findPanelsFrameAnyScreen(); pf != nil {

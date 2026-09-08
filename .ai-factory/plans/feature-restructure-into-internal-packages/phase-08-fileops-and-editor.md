@@ -91,7 +91,7 @@ gate alone will not settle it.
 Copy, move, delete, the background job queue, folder comparison and the
 attributes dialogs. Thirteen outbound edges. The `fileops ↔ term` cycle this wave
 would otherwise hit was pre-empted in Task 30, which pulled `clipboard.go`,
-`clipboard_async.go` and `background_jobs.go` into `internal/term`.
+`clipboard_async.go` and `background_jobs.go` into `internal/terminal`.
 
 ### Implementation Steps
 
@@ -131,7 +131,7 @@ would otherwise hit was pre-empted in Task 30, which pulled `clipboard.go`,
   `internal/theme`, `internal/toast`, `internal/action`, `internal/numeric`,
   `internal/fusefs`, `vfs`. Not `internal/panel`, `internal/editor`,
   `internal/viewer`, `internal/cmdline`, `internal/app`, and — after Task 30 —
-  not `internal/term` either.
+  not `internal/terminal` either.
 - The queue's public shape is unchanged: `GlobalQueueManager` plus
   `StartQueueWorker()` from Task 5. It stays a package-level value in a layer-1
   package; that is permitted, but the worker is started by the composition root.
@@ -273,7 +273,7 @@ ruling hosts it in `internal/app` — it drives `showEditor` and
 here, but its one case that touches `async_buffer.go`'s `prewarm` splits out to
 `internal/app`. Several call `testutil.SwapFrameManager`; verify the drains they
 pass are still correct now that `waitForAsyncClipboard` lives in
-`internal/term`.
+`internal/terminal`.
 
 ```
 go test ./internal/editor/...
@@ -326,7 +326,7 @@ done
 ## Phase Completion Checklist
 
 - Every Task 32-33 satisfies its acceptance criteria.
-- `internal/fileops` imports no interactive subsystem and no `internal/term`.
+- `internal/fileops` imports no interactive subsystem and no `internal/terminal`.
 - `internal/editor` and `internal/viewer` do not import each other.
 - `TestActionOrderIsStable` passes in both commits.
 - `go test -timeout 25m ./...` matches the Task 1 baseline.

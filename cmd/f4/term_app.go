@@ -2,11 +2,11 @@ package main
 
 import (
 	"github.com/unxed/f4/internal/media"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/vtui"
 )
 
-// termApplication is the application side of term.Application. Most of it is
+// termApplication is the application side of terminal.Application. Most of it is
 // what a Unix client attach needs: a daemon rebuilds the interface for the
 // terminal that just connected, and the interface is not the terminal's to
 // build.
@@ -26,7 +26,7 @@ func (termApplication) ClientAttached(startLeft, startRight, editPath string) {
 		return
 	}
 	// A workspace that had its panels hidden gets its host console back.
-	if pf.shellMode == term.ShellModeHost && !pf.showPanels {
+	if pf.shellMode == terminal.ShellModeHost && !pf.showPanels {
 		pf.enterHostConsole()
 	}
 	// A client that attached to a running daemon moves its workspace to its
@@ -46,7 +46,7 @@ func (termApplication) ClientDetached() {
 		}
 		for _, f := range s.Frames {
 			if pf, ok := f.(*PanelsFrame); ok && pf != nil {
-				if pf.shellMode == term.ShellModeHost && pf.isHostConsoleActive() {
+				if pf.shellMode == terminal.ShellModeHost && pf.isHostConsoleActive() {
 					pf.leaveHostConsole()
 				}
 			}
@@ -64,6 +64,6 @@ func (termApplication) EditFilePath() string { return editFilePath }
 
 func (termApplication) StartupDirs() (string, string) { return startupDirs() }
 
-var _ term.Application = termApplication{}
+var _ terminal.Application = termApplication{}
 
-func init() { term.App = termApplication{} }
+func init() { terminal.App = termApplication{} }

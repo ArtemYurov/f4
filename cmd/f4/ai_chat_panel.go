@@ -9,7 +9,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/i18n"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/internal/vtvibe"
@@ -179,7 +179,7 @@ func (cp *AIChatPanel) ProcessKey(e *vtinput.InputEvent) bool {
 		turns := session.Turns()
 		for i := len(turns) - 1; i >= 0; i-- {
 			if turns[i].Role != "user" && turns[i].Text != "RCtrl+A to hide" {
-				term.SetClipboardAsync(turns[i].Text)
+				terminal.SetClipboardAsync(turns[i].Text)
 				toast.Show("Copied last response to clipboard", 2*time.Second)
 				break
 			}

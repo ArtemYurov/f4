@@ -120,7 +120,7 @@ var architectureLayers = map[string]int{
 	// Layer 3, not the 1 the plan assigned: the terminal reads gui.Running to
 	// tell a window from a TTY, and the viewer's URL model to underline a link
 	// under the mouse. Nothing below layer 3 imports it.
-	"internal/term": 3,
+	"internal/terminal": 3,
 
 	// media reads the terminal's graphics protocols and the viewer's title bar,
 	// so it is layer 3 beside them, not the 1 the plan assigned.

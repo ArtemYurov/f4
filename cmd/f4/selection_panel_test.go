@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/macro"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtinput"
@@ -12,10 +12,10 @@ import (
 	"time"
 )
 
-// internal/term keeps its own copy.
+// internal/terminal keeps its own copy.
 type fakePTY struct {
 	writes []byte
-	busy   bool // reported by IsBusy; a busy term.PTY receives raw keys
+	busy   bool // reported by IsBusy; a busy terminal.PTY receives raw keys
 }
 
 func (p *fakePTY) Read(b []byte) (int, error)            { return 0, nil }
@@ -30,8 +30,8 @@ func (p *fakePTY) IsBusy() bool                          { return p.busy }
 
 // seedRow writes a plain ASCII string into tv.Lines[row] starting at
 // column 0. Preserves existing right-side padding.
-func seedRow(tv *term.TerminalView, row int, text string) {
-	attr := term.DefaultTermAttr
+func seedRow(tv *terminal.TerminalView, row int, text string) {
+	attr := terminal.DefaultTermAttr
 	for i, r := range text {
 		if i >= tv.Width {
 			return
@@ -124,7 +124,7 @@ func TestPanelsFrame_TerminalMouseSelect_KeyDownClearsHighlight(t *testing.T) {
 
 func TestPanelsFrame_TerminalMouseSelect_EscapeDismissesWithoutPTY(t *testing.T) {
 	pf, Pty := panelsFrameWithMouseSelect(t)
-	Pty.busy = true // raw keys go straight to the term.PTY, as with a running command
+	Pty.busy = true // raw keys go straight to the terminal.PTY, as with a running command
 	tv := pf.termView
 	tv.StartSelection(2, 0, false)
 	tv.ExtendSelection(6, 0)
@@ -492,7 +492,7 @@ func TestPanelsFrame_TerminalMouseSelect_RightClickPasteBracketed(t *testing.T) 
 func TestPanelsFrame_TerminalMouseSelect_RightClickPastesIntoVisibleCommandLine(t *testing.T) {
 	pf, Pty := panelsFrameWithMouseSelect(t)
 	pf.cmdLine.SetVisible(true)
-	pf.shellMode = term.ShellModeOwn
+	pf.shellMode = terminal.ShellModeOwn
 	pf.termView.ClipboardReader = func() string { return "echo pasted" }
 
 	pf.ProcessMouse(&vtinput.InputEvent{

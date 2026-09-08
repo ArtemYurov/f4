@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 
 	"github.com/unxed/f4/internal/config"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/ttyx"
 	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/f4/vfs"
@@ -85,7 +85,7 @@ func (vv *VideoView) start(scr *vtui.ScreenBuf) bool {
 // pictureRect is where the picture goes on the screen: the frame's own area,
 // in pixels, worked out exactly the way the image Overlay works it out.
 func (vv *VideoView) pictureRect(scr *vtui.ScreenBuf) (ttyx.Rect, bool) {
-	sess := term.SharedTTYXSession()
+	sess := terminal.SharedTTYXSession()
 	if sess == nil || scr == nil {
 		return ttyx.Rect{}, false
 	}
@@ -94,8 +94,8 @@ func (vv *VideoView) pictureRect(scr *vtui.ScreenBuf) (ttyx.Rect, bool) {
 		return ttyx.Rect{}, false
 	}
 	cols, rows := scr.Width(), scr.Height()
-	tw, th, known := term.HostTextSize(cols, rows)
-	grid := nudgeGrid(term.HostGridRect(win, tw, th, known))
+	tw, th, known := terminal.HostTextSize(cols, rows)
+	grid := nudgeGrid(terminal.HostGridRect(win, tw, th, known))
 
 	x1, y1, x2, y2 := vv.GetPosition()
 	top := y1
@@ -139,7 +139,7 @@ func (vv *VideoView) Show(scr *vtui.ScreenBuf) {
 	// The focus rule: playback carries on while the terminal is not on
 	// top, unless the reader asked otherwise.
 	if config.App.VideoPauseOnFocusLoss && !vv.paused {
-		if sess := term.SharedTTYXSession(); sess != nil {
+		if sess := terminal.SharedTTYXSession(); sess != nil {
 			vv.player.SetPaused(!sess.Focused())
 		}
 	}

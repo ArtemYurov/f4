@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/i18n"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/vtui"
 )
@@ -20,7 +20,7 @@ func (pf *PanelsFrame) togglePanelsVisibility() {
 		pf.showLeftPanel = true
 		pf.showRightPanel = true
 	}
-	// term.ShellModeSimpleInline manages its own geometry refresh below,
+	// terminal.ShellModeSimpleInline manages its own geometry refresh below,
 	// timed to when the real terminal screen is actually the one f4
 	// is about to draw on (see the two branches). Calling the full,
 	// layout-and-repaint-triggering ResizeConsole() here, before that
@@ -31,20 +31,20 @@ func (pf *PanelsFrame) togglePanelsVisibility() {
 	// a later Ctrl+O toggle would reveal stacked on top of the next
 	// one. Every other shell mode keeps the previous unconditional
 	// call.
-	if pf.shellMode == term.ShellModeSimpleInline {
+	if pf.shellMode == terminal.ShellModeSimpleInline {
 		pf.lastShowPanels = pf.showPanels
 	} else if pf.menuBar != nil && pf.lastW > 0 && pf.lastH > 0 {
 		pf.ResizeConsole(pf.lastW, pf.lastH)
 		pf.lastShowPanels = pf.showPanels
 	}
 	switch pf.shellMode {
-	case term.ShellModeHost:
+	case terminal.ShellModeHost:
 		if pf.showPanels {
 			pf.leaveHostConsole()
 		} else {
 			pf.enterHostConsole()
 		}
-	case term.ShellModeSimpleInline:
+	case terminal.ShellModeSimpleInline:
 		if !pf.showPanels {
 			vtui.SetAltScreen(false)
 			pf.SetBusy(true)
@@ -52,8 +52,8 @@ func (pf *PanelsFrame) togglePanelsVisibility() {
 			if w, h, err := vtui.GetTerminalSize(); err == nil && w > 0 && h > 0 {
 				pf.lastW, pf.lastH = w, h
 			}
-			term.ClearConsoleViewBackground(pf.lastW, pf.lastH)
-			if pf.consoleStyle() == term.ConsoleViewFar {
+			terminal.ClearConsoleViewBackground(pf.lastW, pf.lastH)
+			if pf.consoleStyle() == terminal.ConsoleViewFar {
 				pf.drawConsoleOverlay()
 			}
 		} else {
@@ -66,7 +66,7 @@ func (pf *PanelsFrame) togglePanelsVisibility() {
 			}
 			vtui.FrameManager.HardRefresh()
 		}
-	case term.ShellModeSimpleCaptured:
+	case terminal.ShellModeSimpleCaptured:
 		// Captured mode has no separate console view to switch to;
 		// output already went to a dialog, so panels stay visible.
 		pf.showPanels = true
@@ -88,7 +88,7 @@ func (pf *PanelsFrame) forkTerminalWorkspace() bool {
 	if vtui.FrameManager == nil {
 		return false
 	}
-	if pf.shellMode == term.ShellModeSimpleCaptured {
+	if pf.shellMode == terminal.ShellModeSimpleCaptured {
 		// This environment has no console view to switch to: command output
 		// goes to a dialog and Ctrl+O says so while staying on the panels.
 		// Forking first would leave the user with a second, identical copy of

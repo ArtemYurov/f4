@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/vfs"
 )
 
@@ -24,7 +24,7 @@ func newFakeSessionVFS() *fakeSessionVFS {
 func (f *fakeSessionVFS) SessionKey() any { return f.conn }
 
 func TestSessionLostEndsTheJobsThatRanOnIt(t *testing.T) {
-	r := term.NewBackgroundJobRegistry()
+	r := terminal.NewBackgroundJobRegistry()
 	here := r.Start("local work", nil)
 	otherConn := 0
 	cancelled := false
@@ -33,7 +33,7 @@ func TestSessionLostEndsTheJobsThatRanOnIt(t *testing.T) {
 	if got := r.SessionLost(&otherConn); got != 1 {
 		t.Fatalf("%d jobs lost, want 1", got)
 	}
-	states := map[int]term.BackgroundJobState{}
+	states := map[int]terminal.BackgroundJobState{}
 	for _, s := range r.List() {
 		states[s.ID] = s
 	}
@@ -55,7 +55,7 @@ func TestSessionLostEndsTheJobsThatRanOnIt(t *testing.T) {
 }
 
 func TestSessionLostLeavesAFinishedResultAlone(t *testing.T) {
-	r := term.NewBackgroundJobRegistry()
+	r := terminal.NewBackgroundJobRegistry()
 	conn := 0
 	job := r.StartOn(&conn, "elsewhere", nil)
 	job.FinishWith("42 duplicates", func() {})
@@ -70,7 +70,7 @@ func TestSessionLostLeavesAFinishedResultAlone(t *testing.T) {
 }
 
 func TestSessionLostIgnoresWorkWithNoConnection(t *testing.T) {
-	r := term.NewBackgroundJobRegistry()
+	r := terminal.NewBackgroundJobRegistry()
 	r.Start("local work", nil)
 	if got := r.SessionLost(nil); got != 0 {
 		t.Fatalf("%d jobs lost for a nil owner, want 0", got)
@@ -96,12 +96,12 @@ func TestSessionKeyOfSharesOneKeyPerConnection(t *testing.T) {
 func TestOfferReconnectTellsTheJobsTheyAreGone(t *testing.T) {
 	shown := withReconnectStubs(t, 1)
 
-	oldRegistry := term.GlobalBackgroundJobs
-	term.GlobalBackgroundJobs = term.NewBackgroundJobRegistry()
-	t.Cleanup(func() { term.GlobalBackgroundJobs = oldRegistry })
+	oldRegistry := terminal.GlobalBackgroundJobs
+	terminal.GlobalBackgroundJobs = terminal.NewBackgroundJobRegistry()
+	t.Cleanup(func() { terminal.GlobalBackgroundJobs = oldRegistry })
 
 	fs := newFakeSessionVFS()
-	job := term.GlobalBackgroundJobs.StartOn(fs.SessionKey(), "Duplicates in /var", func() {})
+	job := terminal.GlobalBackgroundJobs.StartOn(fs.SessionKey(), "Duplicates in /var", func() {})
 
 	ch := make(chan reconnectChoice, 1)
 	offerReconnect(fs, errors.New("session died"), "reading the directory", true, func(c reconnectChoice, err error) {
@@ -113,7 +113,7 @@ func TestOfferReconnectTellsTheJobsTheyAreGone(t *testing.T) {
 
 	// Working offline is the answer that changes the least, and even it must
 	// not leave a job waiting for an answer the far side cannot send.
-	for _, s := range term.GlobalBackgroundJobs.List() {
+	for _, s := range terminal.GlobalBackgroundJobs.List() {
 		if s.ID == job.ID() && !s.Done {
 			t.Fatal("the job survived the session it was running on")
 		}

@@ -7,7 +7,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 	"github.com/unxed/f4/internal/config"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -60,7 +60,7 @@ func handleTranslatorMouseEvent(e *vtinput.InputEvent) bool {
 		return false
 	}
 
-	term.SetF4Clipboard(formatTranslatorReport(target))
+	terminal.SetF4Clipboard(formatTranslatorReport(target))
 	vtui.ShowToast("Translator info copied to clipboard", 3*time.Second)
 	return true
 }

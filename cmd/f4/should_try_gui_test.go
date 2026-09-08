@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/vtui"
 	"runtime"
 	"testing"
@@ -24,9 +24,9 @@ func TestShouldTryGui_WindowsDefaultsToConsole(t *testing.T) {
 }
 
 func TestShouldTryGui_TTYTakesPrecedenceOverDisplay(t *testing.T) {
-	oldProbeTTY := term.ProbeHostTTY
-	t.Cleanup(func() { term.ProbeHostTTY = oldProbeTTY })
-	term.ProbeHostTTY = func() bool { return true }
+	oldProbeTTY := terminal.ProbeHostTTY
+	t.Cleanup(func() { terminal.ProbeHostTTY = oldProbeTTY })
+	terminal.ProbeHostTTY = func() bool { return true }
 	t.Setenv("WAYLAND_DISPLAY", "")
 	t.Setenv("DISPLAY", ":0")
 

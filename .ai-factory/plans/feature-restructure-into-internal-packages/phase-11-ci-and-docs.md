@@ -732,7 +732,7 @@ whole tree.
    If every caller uses all three, it is one package and stays one.
    Apply the same question to the largest results — `term`, `panel`, `app` — and
    to anything over roughly forty files.
-3. **Ask whether `internal/term` should be `internal/terminal`.** The short name
+3. **Ask whether `internal/terminal` should be `internal/terminal`.** The short name
    is taken: `golang.org/x/term` is used in five files, and where both are
    imported — `cmd/f4/main.go` — ours wins the bare name and the other needs an
    alias. The first alias tried was `xterm`, which names a real terminal

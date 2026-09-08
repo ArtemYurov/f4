@@ -13,7 +13,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -156,7 +156,7 @@ func resolveApplyCommandRunner(target vfs.VFS) (vfs.CommandRunner, vfs.CommandRu
 		return nil, vfs.CommandRunnerInfo{}, false
 	}
 	if _, local := target.(*vfs.OSVFS); local {
-		runner := term.NewLocalCommandRunner()
+		runner := terminal.NewLocalCommandRunner()
 		return runner, runner.CommandRunnerInfo(), true
 	}
 	runner, ok := target.(vfs.CommandRunner)

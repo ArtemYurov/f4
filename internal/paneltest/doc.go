@@ -3,7 +3,7 @@
 // It is separate from testutil because of what building a frame costs: the
 // mock frame constructs a terminal view, a command line and a file panel, so a
 // package holding it imports internal/panel, internal/cmdline and
-// internal/term. Those three cannot then import it back, which is why the
+// internal/terminal. Those three cannot then import it back, which is why the
 // harness that only needs vtui lives in testutil and can be imported by
 // everybody.
 //

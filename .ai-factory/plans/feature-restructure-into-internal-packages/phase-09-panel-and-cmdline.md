@@ -142,10 +142,10 @@ convention matters here more than anywhere else.
      `setupMockPanelsFrame` (`panels_frame_test.go:794`). It calls
      `term.NewTerminalView`, `cmdline.NewCommandLine`, `panel.NewFileSystemPanel`,
      `vfs.NewOSVFS` and `(*PanelsFrame).initPTY`, so the package imports
-     `internal/panel`, `internal/cmdline` and `internal/term`. That is why it is a
+     `internal/panel`, `internal/cmdline` and `internal/terminal`. That is why it is a
      separate package from `internal/testutil`.
    - `MockPty` — the fixture from `ansi_parser_test.go:22`, moved here per Task
-     30's decision, with a local copy left in `internal/term` for its own tests.
+     30's decision, with a local copy left in `internal/terminal` for its own tests.
    - `WaitForDirectoryLoads(t *testing.T)` — the drain that waits on the
      `directoryLoadWorkers` global, which now lives in `internal/panel`. Callers
      pass it to `testutil.SwapFrameManager`.
@@ -154,7 +154,7 @@ convention matters here more than anywhere else.
      `fp.isLoading`, so `FileSystemPanel` gains an exported `IsLoading()`
      accessor in this wave.
 7. **Convert the in-package tests that use the mock frame.** Any test file inside
-   `internal/panel`, `internal/cmdline` or `internal/term` that calls
+   `internal/panel`, `internal/cmdline` or `internal/terminal` that calls
    `paneltest.SetupMockPanelsFrame` must become an external test package —
    `package panel_test` in the same directory — because `internal/paneltest`
    imports those packages. Go allows an external test package to import a package
@@ -179,7 +179,7 @@ convention matters here more than anywhere else.
 - `internal/panel` may import `internal/config`, `internal/i18n`,
   `internal/theme`, `internal/keymap`, `internal/sysinfo` (the drive registry),
   `internal/numeric`, `internal/toast`, `internal/history`, `internal/action`,
-  `internal/dialog`, `internal/fileops`, `internal/term`, `internal/media`,
+  `internal/dialog`, `internal/fileops`, `internal/terminal`, `internal/media`,
   `internal/viewer`, `internal/editor`, `internal/plughost`, `vfs`. **Not**
   `internal/cmdline` (step 4) and not `internal/app`.
 - Lower layers talk to the panel through interfaces they define themselves. The
@@ -281,7 +281,7 @@ package, so the wave is a move rather than an excavation.
    `exec*.go`. There is no `history_hint*.go` source: `history_hint_test.go`
    drives `actionCommandHistory` and is an `internal/app` test.
 6. **`command_runner*.go`, `shell_mode.go` and `wine_probe*.go` are explicitly
-   NOT here.** They went to `internal/term` in Task 30 because their callers are
+   NOT here.** They went to `internal/terminal` in Task 30 because their callers are
    `pty_*`. Leaving them in cmdline inverts the layers.
 7. Take `semantic.go`'s single `*CommandLine` method as `line_semantic.go`, then
    `git rm cmd/f4/semantic.go` — it is now empty.
@@ -291,7 +291,7 @@ package, so the wave is a move rather than an excavation.
 ### Required Interfaces and Contracts
 
 - `internal/cmdline` may import every layer 0-2 package plus `internal/panel`,
-  `internal/dialog`, `internal/term`, `internal/editor`, `internal/viewer`,
+  `internal/dialog`, `internal/terminal`, `internal/editor`, `internal/viewer`,
   `internal/macro`, `vfs`. Not `internal/app`.
 - The apply-command syntax is a user-facing contract: `CompiledApplyCommand`,
   `ApplyCommandSyntaxError`, `ApplyCommandExpansion` and
@@ -337,7 +337,7 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build ./...
 
 - `ls cmd/f4/semantic.go` fails.
 - `grep -rln 'func (.*CommandLine)' cmd/f4/` returns nothing.
-- `ls cmd/f4/command_runner.go` fails **and** `ls internal/term/runner.go`
+- `ls cmd/f4/command_runner.go` fails **and** `ls internal/terminal/runner.go`
   succeeds — the reassignment from Task 30 held.
 - `go list -f '{{join .Imports "\n"}}' ./internal/cmdline | grep internal/app`
   returns nothing.

@@ -24,13 +24,13 @@ import (
 	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/plughost"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
-	goterm "golang.org/x/term"
+	"golang.org/x/term"
 )
 
 // startupDirEnv and startupDirRightEnv carry the panel directories of this
@@ -93,7 +93,7 @@ func rememberStartupDirs(args []string) {
 	if os.Getenv(startupDirEnv) != "" {
 		return
 	}
-	if !goterm.IsTerminal(int(os.Stdin.Fd())) {
+	if !term.IsTerminal(int(os.Stdin.Fd())) {
 		return
 	}
 	cwd, err := os.Getwd()
@@ -126,7 +126,7 @@ var editFilePath string
 // tty path on Windows (session_windows.go). The Unix tty path is the odd
 // one out: it daemonizes, so SetupUI() there runs inside a not-yet-
 // attached background process with nothing to draw to; session_unix.go's
-// term.RunServer() calls openEditFileIn directly instead, timed to the actual
+// terminal.RunServer() calls openEditFileIn directly instead, timed to the actual
 // client attach, not to this function.
 func openDashEFileIfRequested() {
 	if editFilePath == "" {
@@ -522,11 +522,11 @@ see in vtinput project: https://github.com/unxed/vtinput
 	}
 
 	if serverPath != "" {
-		term.RunServer(serverPath)
+		terminal.RunServer(serverPath)
 		return
 	}
 	if clientPath != "" {
-		term.RunClient(clientPath, 0)
+		terminal.RunClient(clientPath, 0)
 		return
 	}
 	if cpuprofile != "" {
@@ -557,9 +557,9 @@ see in vtinput project: https://github.com/unxed/vtinput
 		config.App.StartupMode, guiMode, ttyMode, guiBackend, ttyBackend)
 
 	if ttyBackend != "" {
-		term.SelectedTTYBackend = ttyBackend
+		terminal.SelectedTTYBackend = ttyBackend
 	} else {
-		term.SelectedTTYBackend = vtui.DefaultConsoleBackend()
+		terminal.SelectedTTYBackend = vtui.DefaultConsoleBackend()
 	}
 	configureNestedInputMode()
 
@@ -567,7 +567,7 @@ see in vtinput project: https://github.com/unxed/vtinput
 	// really use) and before any renderer exists (so it cannot disturb the
 	// console it is describing).
 	if wineProbe {
-		term.RunWineProbe()
+		terminal.RunWineProbe()
 		return
 	}
 
@@ -579,7 +579,7 @@ see in vtinput project: https://github.com/unxed/vtinput
 	}
 
 	if ttyMode {
-		term.ManageSessions()
+		terminal.ManageSessions()
 		return
 	}
 
@@ -603,7 +603,7 @@ see in vtinput project: https://github.com/unxed/vtinput
 	}
 
 	vtui.DebugLog("MAIN: Falling back to console mode")
-	term.ManageSessions()
+	terminal.ManageSessions()
 }
 
 // runGuiBackend starts the GUI on a named backend, or on the best available
@@ -645,7 +645,7 @@ func shouldTryGui() bool {
 	// display environment (for example, an SSH session into a desktop or a
 	// terminal opened under X11). The desktop launcher has no host TTY and can
 	// still select the GUI from the display variables below.
-	if term.ProbeHostTTY() {
+	if terminal.ProbeHostTTY() {
 		return false
 	}
 	if runtime.GOOS == "darwin" {
@@ -741,11 +741,11 @@ func InitCore() *vtui.ScreenBuf {
 	}
 	width, height, err := vtui.GetTerminalSize()
 	if err != nil {
-		vtui.DebugLog("CORE: goterm.GetSize(0) failed: %v", err)
+		vtui.DebugLog("CORE: term.GetSize(0) failed: %v", err)
 	}
-	if p := term.ProbeConsole(); true {
+	if p := terminal.ProbeConsole(); true {
 		vtui.DebugLog("ENV: wine=%v backend=%q size=%dx%d consoleBuffer=%v window=%dx%d",
-			vtui.IsWine(), term.SelectedTTYBackend, width, height, p.OK, p.WinCols(), p.WinRows())
+			vtui.IsWine(), terminal.SelectedTTYBackend, width, height, p.OK, p.WinCols(), p.WinRows())
 	}
 	if width <= 0 {
 		width = 80
@@ -755,7 +755,7 @@ func InitCore() *vtui.ScreenBuf {
 	}
 
 	scr := vtui.NewScreenBuf()
-	if term.SelectedTTYBackend == "winapi" || term.SelectedTTYBackend == "win32" {
+	if terminal.SelectedTTYBackend == "winapi" || terminal.SelectedTTYBackend == "win32" {
 		scr.Renderer = vtui.NewWin32ConsoleRenderer(scr)
 	}
 	scr.AllocBuf(width, height)
@@ -799,7 +799,7 @@ func SetupUI() {
 	// hands it the lookup. Moves to internal/i18n's i18n.Msg when that package exists.
 	action.Localize = i18n.Msg
 	vtinput.Logger = vtui.DebugLog // Pipe vtinput logs to vtui's debug logger
-	vtui.GlobalClipboardAccessManager = term.NewF4ClipboardAuth()
+	vtui.GlobalClipboardAccessManager = terminal.NewF4ClipboardAuth()
 	// sysinfo.RegisterDrive("Null VFS", func() vfs.VFS { return vfs.NewNullVFS(50 * 1024 * 1024) }) // 50 MB/s
 
 	configDir := config.GetF4ConfigDir()
@@ -924,7 +924,7 @@ func SetupUI() {
 		if dialog.HandleHelpSearchHotkey(e) {
 			return true
 		}
-		if panels.shellMode == term.ShellModeSimpleInline && panels.consoleViewActive() && panels.isTopFrame() {
+		if panels.shellMode == terminal.ShellModeSimpleInline && panels.consoleViewActive() && panels.isTopFrame() {
 			if e.Type == vtinput.KeyEventType && e.KeyDown {
 				vtui.FrameManager.PostTask(func() {
 					panels.drawConsoleOverlay()
@@ -945,7 +945,7 @@ func SetupUI() {
 	// what keeps the console view free of a full panels/keybar flush while
 	// some other frame owns the screen), so once panels is back on top,
 	// renderPhase()'s busy gate blocks any further full redraw -- without an
-	// explicit term.ClearConsoleViewBackground() here, whatever the foreign frame
+	// explicit terminal.ClearConsoleViewBackground() here, whatever the foreign frame
 	// last drew stays frozen under nothing but the two freshly-painted
 	// overlay rows.
 	consoleOverlayOwnedScreen := true
@@ -955,11 +955,11 @@ func SetupUI() {
 		}
 		UpdateWindowTitle(scr)
 		dialog.RenderHelpSearch(scr)
-		if panels.shellMode == term.ShellModeSimpleInline && panels.consoleViewActive() {
+		if panels.shellMode == terminal.ShellModeSimpleInline && panels.consoleViewActive() {
 			onTop := panels.isTopFrame()
 			if onTop {
 				if !consoleOverlayOwnedScreen {
-					term.ClearConsoleViewBackground(panels.lastW, panels.lastH)
+					terminal.ClearConsoleViewBackground(panels.lastW, panels.lastH)
 				}
 				panels.drawConsoleOverlay()
 			}

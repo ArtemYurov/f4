@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 	"os"
@@ -39,7 +39,7 @@ func drainFrameTasks() {
 
 func startLocalConPTY(t *testing.T) *PanelsFrame {
 	t.Helper()
-	if !term.ConPTYAvailable() {
+	if !terminal.ConPTYAvailable() {
 		t.Skip("ConPTY unavailable")
 	}
 
@@ -59,7 +59,7 @@ func startLocalConPTY(t *testing.T) *PanelsFrame {
 	return pf
 }
 
-func waitForLocalConPTYPrompt(t *testing.T, pf *PanelsFrame, previous term.PtyBackend) {
+func waitForLocalConPTYPrompt(t *testing.T, pf *PanelsFrame, previous terminal.PtyBackend) {
 	t.Helper()
 	deadline := time.Now().Add(5 * time.Second)
 	for pf.getActivePTY() == nil || pf.getActivePTY() == previous {

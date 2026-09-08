@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"strings"
 	"unicode"
 )
@@ -1018,7 +1018,7 @@ func isApplyCommandSafePowerShell(value string) bool {
 }
 
 func quoteApplyCommandWindowsArg(value string) string {
-	value = strings.ReplaceAll(value, "%", "%"+term.ApplyCommandLiteralPercentEnv+"%")
+	value = strings.ReplaceAll(value, "%", "%"+terminal.ApplyCommandLiteralPercentEnv+"%")
 	var out strings.Builder
 	out.WriteByte('"')
 	backslashes := 0

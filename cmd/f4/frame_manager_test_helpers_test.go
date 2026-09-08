@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/testutil"
 )
 
@@ -30,10 +30,10 @@ func waitForDirectoryLoads(t *testing.T) {
 	}
 }
 
-// drainAsyncClipboard is term.WaitForAsyncClipboard in the shape a frame-manager
+// drainAsyncClipboard is terminal.WaitForAsyncClipboard in the shape a frame-manager
 // drain takes. Clipboard writes run asynchronously because they may wait for
 // far2l IPC, and SetClipboard reads vtui.FrameManager.
-func drainAsyncClipboard(*testing.T) { term.WaitForAsyncClipboard() }
+func drainAsyncClipboard(*testing.T) { terminal.WaitForAsyncClipboard() }
 
 // swapFrameManager is testutil.SwapFrameManager carrying the two background
 // workers this package leaves running. Both read the global frame manager, so

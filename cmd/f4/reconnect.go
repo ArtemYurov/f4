@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -111,7 +111,7 @@ func offerReconnect(fs vfs.VFS, err error, what string, retryable bool, done fun
 	// after a successful reconnect: the work is equally dead if the user
 	// chooses to work offline, and a job left in the list waiting for an
 	// answer that cannot arrive is worse than one that says it was lost.
-	lost := term.GlobalBackgroundJobs.SessionLost(sessionKeyOf(fs))
+	lost := terminal.GlobalBackgroundJobs.SessionLost(sessionKeyOf(fs))
 
 	msg := fmt.Sprintf("The connection was lost while %s:\n%v", what, err)
 	if lost == 1 {

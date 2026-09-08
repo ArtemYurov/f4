@@ -242,7 +242,7 @@ and `TestMain` — the waves would otherwise strand.
   Every commit left unmerged gets more expensive as files scatter: a change to
   `cmd/f4/pty_windows.go` merges by itself while the file sits there, and becomes
   a manual reconstruction of somebody else's intent once the file has moved to
-  `internal/term` with a new package clause. Documentation-only arrivals
+  `internal/terminal` with a new package clause. Documentation-only arrivals
   (`docs/LUNOBOT/*` and the like) can wait for the next batch — they conflict
   with nothing.
 
@@ -312,7 +312,7 @@ titles, not the ordering.
   otherwise be `internal/app` from lower layers. Extracting in the other order
   makes every intermediate commit uncompilable.
 - **Task 31 depends on Task 30** — six of media's ten outbound edges point at
-  `internal/term`, which is why term precedes media despite the higher count.
+  `internal/terminal`, which is why term precedes media despite the higher count.
 - **Task 32 depends on Tasks 5 and 30** — `clipboard.go`, `clipboard_async.go` and
   `background_jobs.go` are pulled into the term wave specifically to prevent a
   `fileops ↔ term` cycle here; and `queue_manager.go` only becomes movable once
@@ -376,7 +376,7 @@ titles, not the ordering.
 
 ### Phase 7: Viewer, Terminal and Media
 - [x] Task 29: Extract `internal/viewer`, removing the `editor ↔ viewer` cycle ([details](phase-07-view-and-terminal.md#task-29-extract-internalviewer)) (depends on 28)
-- [x] Task 30: Extract `internal/term`, including eleven misfiled files ([details](phase-07-view-and-terminal.md#task-30-extract-internalterm)) (depends on 29)
+- [x] Task 30: Extract `internal/terminal`, including eleven misfiled files ([details](phase-07-view-and-terminal.md#task-30-extract-internalterm)) (depends on 29)
 - [x] Task 31: Extract `internal/media` ([details](phase-07-view-and-terminal.md#task-31-extract-internalmedia)) (depends on 30)
 
 ### Phase 8: File Operations and the Editor
@@ -517,7 +517,7 @@ caught it. A method list derived from another wave's is a guess with a
 plausible shape.
 
 **This decision covers the four waves after it.** `internal/gui`,
-`internal/macro`, `internal/viewer` and `internal/term` will each hit the same
+`internal/macro`, `internal/viewer` and `internal/terminal` will each hit the same
 wall, because each is a subsystem the application drives rather than a leaf it
 calls. Apply the same answer — the package declares what it needs from above,
 the root supplies it — instead of reopening the question per wave. What each

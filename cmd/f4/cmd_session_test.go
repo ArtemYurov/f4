@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtui"
 )
@@ -41,29 +41,29 @@ var windowsBuilds = []windowsBuild{
 // cmd returns from immediately; `start notepad` detaches and is not a child
 // at all.
 var (
-	childPing      = term.ChildProcess{Name: "PING.EXE", GUI: false}
-	childTimeout   = term.ChildProcess{Name: "timeout.exe", GUI: false}
-	childNestedCmd = term.ChildProcess{Name: "cmd.exe", GUI: false}
-	childNotepad   = term.ChildProcess{Name: "notepad.exe", GUI: true}
+	childPing      = terminal.ChildProcess{Name: "PING.EXE", GUI: false}
+	childTimeout   = terminal.ChildProcess{Name: "timeout.exe", GUI: false}
+	childNestedCmd = terminal.ChildProcess{Name: "cmd.exe", GUI: false}
+	childNotepad   = terminal.ChildProcess{Name: "notepad.exe", GUI: true}
 )
 
 const promptText = `C:\work>`
 
-// fakeWinPty stands in for the ConPTY-backed term.PTY: it reports whatever
+// fakeWinPty stands in for the ConPTY-backed terminal.PTY: it reports whatever
 // children the test says the shell has.
 type fakeWinPty struct {
 	mockPty
 	mu       sync.Mutex
-	children []term.ChildProcess
+	children []terminal.ChildProcess
 }
 
-func (p *fakeWinPty) ChildProcesses() []term.ChildProcess {
+func (p *fakeWinPty) ChildProcesses() []terminal.ChildProcess {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	return append([]term.ChildProcess(nil), p.children...)
+	return append([]terminal.ChildProcess(nil), p.children...)
 }
 
-func (p *fakeWinPty) setChildren(children ...term.ChildProcess) {
+func (p *fakeWinPty) setChildren(children ...terminal.ChildProcess) {
 	p.mu.Lock()
 	p.children = children
 	p.mu.Unlock()
@@ -91,8 +91,8 @@ func newCmdShellSim(t *testing.T, build windowsBuild) *cmdShellSim {
 	pty := &fakeWinPty{}
 	pf.pty = pty
 	pf.cmdSession = newCmdShellSession(pf)
-	pf.termView.OnShellMark = func(mark string, snap term.PromptSnapshot) { pf.cmdSession.handleMark(mark, snap) }
-	pf.parser = term.NewAnsiParser(pf.termView, nil)
+	pf.termView.OnShellMark = func(mark string, snap terminal.PromptSnapshot) { pf.cmdSession.handleMark(mark, snap) }
+	pf.parser = terminal.NewAnsiParser(pf.termView, nil)
 	return &cmdShellSim{t: t, pf: pf, pty: pty, build: build}
 }
 
@@ -337,17 +337,17 @@ func TestPromptShaped(t *testing.T) {
 
 func TestChildHoldsTerminal(t *testing.T) {
 	cases := []struct {
-		children []term.ChildProcess
+		children []terminal.ChildProcess
 		want     bool
 	}{
 		{nil, false},
-		{[]term.ChildProcess{childPing}, true},
-		{[]term.ChildProcess{childTimeout}, true},
-		{[]term.ChildProcess{childNestedCmd}, true}, // cmd.exe keeps the terminal until exit
-		{[]term.ChildProcess{childNotepad}, false},
-		{[]term.ChildProcess{childNestedCmd, childPing}, true}, // ping inside the nested cmd
-		{[]term.ChildProcess{{Name: "powershell.exe"}}, true},  // rejects cd /d: stays raw
-		{[]term.ChildProcess{{Name: "python.exe"}}, true},
+		{[]terminal.ChildProcess{childPing}, true},
+		{[]terminal.ChildProcess{childTimeout}, true},
+		{[]terminal.ChildProcess{childNestedCmd}, true}, // cmd.exe keeps the terminal until exit
+		{[]terminal.ChildProcess{childNotepad}, false},
+		{[]terminal.ChildProcess{childNestedCmd, childPing}, true}, // ping inside the nested cmd
+		{[]terminal.ChildProcess{{Name: "powershell.exe"}}, true},  // rejects cd /d: stays raw
+		{[]terminal.ChildProcess{{Name: "python.exe"}}, true},
 	}
 	for _, c := range cases {
 		if got := childHoldsTerminal(c.children); got != c.want {

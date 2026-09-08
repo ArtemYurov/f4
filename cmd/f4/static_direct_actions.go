@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/unxed/f4/internal/action"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/vtui"
 )
@@ -154,7 +154,7 @@ func runFixedAIView(index int, path string, isChat bool) bool {
 }
 
 func actionBackground() bool {
-	if !term.SupportsBackgrounding() {
+	if !terminal.SupportsBackgrounding() {
 		vtui.ShowMessage(" Background ", "Backgrounding is not supported on this OS.", []string{"&Ok"})
 		return true
 	}

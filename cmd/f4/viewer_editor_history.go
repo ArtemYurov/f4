@@ -10,7 +10,7 @@ import (
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -81,7 +81,7 @@ func rememberViewerEditorHistory(fs vfs.VFS, path string, mode viewerEditorHisto
 		return
 	}
 	// The terminal log is generated live and has no stable file to reopen.
-	if _, transient := fs.(*term.TerminalLogVFS); transient {
+	if _, transient := fs.(*terminal.TerminalLogVFS); transient {
 		return
 	}
 
@@ -287,7 +287,7 @@ func actionViewerEditorHistory(pf *PanelsFrame) {
 			return true
 		}
 		if (e.VirtualKeyCode == vtinput.VK_C || e.VirtualKeyCode == vtinput.VK_INSERT) && ctrl && !alt && !shift {
-			term.SetClipboardAsync(entries[idx].Path)
+			terminal.SetClipboardAsync(entries[idx].Path)
 			return true
 		}
 		return false

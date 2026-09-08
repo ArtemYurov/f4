@@ -9,7 +9,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/vtinput"
@@ -25,7 +25,7 @@ func TestSimpleInline_CommandExecution(t *testing.T) {
 
 	pf := setupMockPanelsFrame(t)
 	defer pf.Close()
-	pf.shellMode = term.ShellModeSimpleInline
+	pf.shellMode = terminal.ShellModeSimpleInline
 	pf.ResizeConsole(80, 25)
 
 	oldWait := waitForAnyKey
@@ -54,7 +54,7 @@ func TestSimpleCaptured_CommandExecution(t *testing.T) {
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
-	pf.shellMode = term.ShellModeSimpleCaptured
+	pf.shellMode = terminal.ShellModeSimpleCaptured
 	pf.ResizeConsole(80, 25)
 
 	pf.runSimpleCapturedCommand(t.TempDir(), "echo simple_captured_test")
@@ -100,11 +100,11 @@ func TestSimpleInline_ToggleAndAnyKeyReturn(t *testing.T) {
 
 	oldCfg := config.App
 	t.Cleanup(func() { config.App = oldCfg })
-	config.App.ConsoleMode = term.ConsoleViewMc
+	config.App.ConsoleMode = terminal.ConsoleViewMc
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
-	pf.shellMode = term.ShellModeSimpleInline
+	pf.shellMode = terminal.ShellModeSimpleInline
 	pf.ResizeConsole(80, 25)
 	vtui.FrameManager.Push(pf)
 
@@ -140,11 +140,11 @@ func TestSimpleInline_CtrlOKeyUpDoesNotRestorePanels(t *testing.T) {
 
 	oldCfg := config.App
 	t.Cleanup(func() { config.App = oldCfg })
-	config.App.ConsoleMode = term.ConsoleViewMc
+	config.App.ConsoleMode = terminal.ConsoleViewMc
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
-	pf.shellMode = term.ShellModeSimpleInline
+	pf.shellMode = terminal.ShellModeSimpleInline
 	pf.ResizeConsole(80, 25)
 	vtui.FrameManager.Push(pf)
 
@@ -185,7 +185,7 @@ func TestSimpleCaptured_ToggleShowsToast(t *testing.T) {
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
-	pf.shellMode = term.ShellModeSimpleCaptured
+	pf.shellMode = terminal.ShellModeSimpleCaptured
 	pf.ResizeConsole(80, 25)
 	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
 	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
@@ -233,14 +233,14 @@ func TestSimpleInline_FarStyleKeepsConsoleAndTypes(t *testing.T) {
 
 	oldCfg := config.App
 	t.Cleanup(func() { config.App = oldCfg })
-	config.App.ConsoleMode = term.ConsoleViewFar
+	config.App.ConsoleMode = terminal.ConsoleViewFar
 	oldGetTerminalSize := vtui.GetTerminalSize
 	vtui.GetTerminalSize = func() (int, int, error) { return 80, 25, nil }
 	t.Cleanup(func() { vtui.GetTerminalSize = oldGetTerminalSize })
 
 	pf := NewPanelsFrame()
 	defer pf.Close()
-	pf.shellMode = term.ShellModeSimpleInline
+	pf.shellMode = terminal.ShellModeSimpleInline
 	pf.showKeyBar = true
 	pf.ResizeConsole(80, 25)
 	vtui.FrameManager.Push(pf)

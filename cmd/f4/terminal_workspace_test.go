@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/vtui"
 )
 
@@ -17,7 +17,7 @@ func TestPanelsFrame_NewTerminalWorkspaceKeepsPanelsWhereTheyAre(t *testing.T) {
 	pf := NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	pf.shellMode = term.ShellModeOwn
+	pf.shellMode = terminal.ShellModeOwn
 	fm.Push(pf)
 
 	if !actionWorkspaceNewTerminal() {
@@ -60,7 +60,7 @@ func TestPanelsFrame_NewTerminalWorkspaceSkippedWithoutConsoleView(t *testing.T)
 	pf := NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	pf.shellMode = term.ShellModeSimpleCaptured
+	pf.shellMode = terminal.ShellModeSimpleCaptured
 	fm.Push(pf)
 
 	if !actionWorkspaceNewTerminal() {

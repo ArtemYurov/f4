@@ -2,7 +2,7 @@ package main
 
 import (
 	"errors"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"strings"
 	"testing"
 	"time"
@@ -15,18 +15,18 @@ func TestLocalPTYFailureMessageIncludesAllocationStep(t *testing.T) {
 	}
 }
 
-// The local term.PTY is published by the goroutine initPTY starts, so every other
+// The local terminal.PTY is published by the goroutine initPTY starts, so every other
 // goroutine has to read the field under ptyMutex. Reading it directly is not
 // merely stale prone: the field is an interface, two words wide, and a reader
-// can catch the type word of a *term.PTY with the data word still zero. That value
+// can catch the type word of a *terminal.PTY with the data word still zero. That value
 // passes an "!= nil" guard and calls the method on a nil receiver. F10 in the
-// first milliseconds of a session did exactly that and crashed in term.PTY.Close.
+// first milliseconds of a session did exactly that and crashed in terminal.PTY.Close.
 
 func TestPanelsFrame_LocalPTYWaitsForThePublisher(t *testing.T) {
 	pf := &PanelsFrame{}
 
 	pf.ptyMutex.Lock()
-	seen := make(chan term.PtyBackend, 1)
+	seen := make(chan terminal.PtyBackend, 1)
 	go func() { seen <- pf.localPTY() }()
 
 	select {
@@ -62,7 +62,7 @@ func TestPanelsFrame_TakeLocalPTYHandsOverOnce(t *testing.T) {
 }
 
 // TestPanelsFrame_PTYHandoverRacesThePublisher is the shape of the crash:
-// a frame is created, its term.PTY is published from another goroutine, and the
+// a frame is created, its terminal.PTY is published from another goroutine, and the
 // shutdown path reaches for it at the same moment. It passes trivially on its
 // own and earns its keep under -race, which reports the unsynchronized field
 // access the moment either accessor loses its lock again.

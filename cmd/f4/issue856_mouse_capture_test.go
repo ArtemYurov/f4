@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -21,7 +21,7 @@ func TestHostConsole_LeaveReleasesStaleMouseCapture_Issue856(t *testing.T) {
 
 	pf := setupMockPanelsFrame(t)
 	t.Cleanup(pf.Close)
-	pf.shellMode = term.ShellModeHost
+	pf.shellMode = terminal.ShellModeHost
 	pf.showPanels = false
 	pf.ResizeConsole(80, 25)
 	pf.termView.MouseTrackingMode = 1003

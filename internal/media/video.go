@@ -30,7 +30,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/ttyx"
 	"github.com/unxed/vtui"
 )
@@ -90,7 +90,7 @@ func startVideoPlayer(Path string, rect ttyx.Rect) (*videoPlayer, error) {
 	if !ok {
 		return nil, fmt.Errorf("%s", ToolMPV.MissingMessage())
 	}
-	sess := term.SharedTTYXSession()
+	sess := terminal.SharedTTYXSession()
 	if sess == nil {
 		return nil, fmt.Errorf("video needs a local X session, and there is none here")
 	}

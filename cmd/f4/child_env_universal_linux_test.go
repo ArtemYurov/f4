@@ -6,7 +6,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/update"
 )
 
@@ -17,7 +17,7 @@ import (
 // sets, and the child would go back to dying before main (issue #87).
 func TestPrivateEnvCoversWhatThisBuildReads(t *testing.T) {
 	for _, key := range []string{update.GoffiUniversalGuard, update.GoffiUniversalExe, update.F4ExeEnv} {
-		if !slices.Contains(term.PrivateToThisProcess, key) {
+		if !slices.Contains(terminal.PrivateToThisProcess, key) {
 			t.Errorf("%s is read here but still passed on to children", key)
 		}
 	}

@@ -6,7 +6,7 @@ Depends on: Phase 6
 
 ## Objective
 
-`internal/viewer` (9 outbound), `internal/term` (12) and `internal/media` (10)
+`internal/viewer` (9 outbound), `internal/terminal` (12) and `internal/media` (10)
 leave `cmd/f4`. Term goes **ahead of** media even though its outbound count is
 higher, because six of media's ten edges point at term.
 
@@ -22,7 +22,7 @@ extracted **later** than this file's destination:
 | Type | Lands in | Extracted at |
 |---|---|---|
 | `ViewerView` | `internal/viewer` | Task 29 |
-| `TerminalView` | `internal/term` | Task 30 |
+| `TerminalView` | `internal/terminal` | Task 30 |
 | `EditorView` | `internal/editor` | Task 33 |
 | `PanelsFrame`, `FileSystemPanel`, `pluginPanelInstance` | `internal/panel` | Task 34 |
 | `CommandLine` | `internal/cmdline` | Task 35 |
@@ -80,7 +80,7 @@ split on netbsd/openbsd, `session_unix.go` and `session_windows.go` split on
 | Path | Action | Required change |
 |---|---|---|
 | `internal/viewer/` | create | F3 viewer, hex, disasm, top bar, titles, URL links |
-| `internal/term/` | create | pty, console host, ANSI parser, kitty/sixel, clipboard |
+| `internal/terminal/` | create | pty, console host, ANSI parser, kitty/sixel, clipboard |
 | `internal/media/` | create | Image, audio and video decode and preview |
 | `cmd/f4/architecture_test.go` | modify | Three layer-map entries |
 | `docs/TERMINAL.md`, `docs/TTYX.md`, `docs/CONPTY_GATE_REQUIREMENTS.md`, `docs/WINCON_805_HANDOVER.md`, `docs/CONPTY_FUTURE_IDEAS.md`, `docs/PLAYER.md` | modify | The six pages that name a file this phase moves; re-derive with `grep -lE 'cmd/f4/(pty_\|terminal_\|ansi_parser\|kitty_\|sixel_\|clipboard\|background_jobs\|command_runner\|shell_mode\|wine_probe\|graphics_\|far2l_image\|session_\|console_host\|ttyx_\|viewer_\|disasm\|word_nav\|top_bar\|file_title\|url_links\|image_\|audio_\|video_\|player_panel)' docs/*.md` |
@@ -230,7 +230,7 @@ belongs to `VideoView` as well, and every `vv.path` rewrite hit it. And
 
 ---
 
-## Task 30: Extract `internal/term`
+## Task 30: Extract `internal/terminal`
 
 ### Intent
 
@@ -297,7 +297,7 @@ another package belong here because their *callers* are in `ansi_parser.go` and
    code that happens to mention the console. It travels with `internal/panel`
    (Task 34).
 5. Take `semantic.go`'s single `*TerminalView` method as
-   `internal/term/view_semantic.go`.
+   `internal/terminal/view_semantic.go`.
 6. `waitForAsyncClipboard` (`clipboard_async.go:27`) is one of the two drains Task
    9 turned into caller-supplied functions. Export it and update the
    `testutil.SwapFrameManager` call sites that pass it.
@@ -307,12 +307,12 @@ another package belong here because their *callers* are in `ansi_parser.go` and
    `runner.go`, `runner_unix.go`, `runner_windows.go`, `shellmode.go`,
    `wineprobe.go`, `clipboard.go`, `clipboard_async.go`, `jobs.go`,
    `view.go`, `view_semantic.go`, `session_unix.go`, `session_windows.go`.
-8. Add `"internal/term": 1` to the auditor's layer map, and `term` to the palette
+8. Add `"internal/terminal": 1` to the auditor's layer map, and `term` to the palette
    auditor's map.
 
 ### Required Interfaces and Contracts
 
-- `internal/term` may import `internal/config`, `internal/i18n`,
+- `internal/terminal` may import `internal/config`, `internal/i18n`,
   `internal/theme`, `internal/keymap`, `internal/numeric`, `internal/toast`,
   `internal/ttyx`, `internal/wincon`, `vfs`. Not `internal/panel`,
   `internal/cmdline`, `internal/editor`, `internal/viewer`, `internal/app`.
@@ -333,7 +333,7 @@ another package belong here because their *callers* are in `ansi_parser.go` and
 
 ### Tests
 
-Take the 37 files Task 43's roster lists for `internal/term`, among them
+Take the 37 files Task 43's roster lists for `internal/terminal`, among them
 `ansi_parser_test.go` (which contains one of the two test-file `init()`s and the
 `mockPty` fixture), `terminal_view_test.go` (the other), `clipboard_test.go`,
 `process_environment_test.go`, `terminal_selection_test.go` (as
@@ -348,14 +348,14 @@ tests and go in Task 34, with this wave exporting the one symbol they share,
 
 `ansi_parser_test.go`'s `mockPty` is used by `setupMockPanelsFrame`
 (`panels_frame_test.go:794`). Since `internal/paneltest` will import
-`internal/term`, export `mockPty` as `term.MockPty` in a `_test.go`-visible form —
+`internal/terminal`, export `mockPty` as `term.MockPty` in a `_test.go`-visible form —
 or, simpler, move the fixture into `internal/paneltest` when Task 34 fills it.
 Decide now and record it: **move `mockPty` to `internal/paneltest` in Task 34**,
 leaving a local copy for term's own tests.
 
 ```
-go test ./internal/term/...
-go test -race -shuffle=on -timeout 5m ./internal/term/...
+go test ./internal/terminal/...
+go test -race -shuffle=on -timeout 5m ./internal/terminal/...
 for t in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64 \
          freebsd/amd64 dragonfly/amd64 openbsd/amd64 netbsd/amd64 illumos/amd64 solaris/amd64; do
   extra=(); case $t in freebsd/*|netbsd/*) extra=(-gcflags=github.com/go-webgpu/goffi/internal/fakecgo=-std);; esac
@@ -368,15 +368,15 @@ done
 - The cross-compile loop prints no `FAIL` — twelve targets, the pty family's real
   audience.
 - `ls cmd/f4/console_passthrough.go` still succeeds (it is not part of this wave).
-- `grep -l '//go:build' internal/term/*.go | wc -l` matches the count of tagged
+- `grep -l '//go:build' internal/terminal/*.go | wc -l` matches the count of tagged
   files moved.
-- The race run is green: `internal/term` owns the clipboard workers.
+- The race run is green: `internal/terminal` owns the clipboard workers.
 
 ### Verification
 
 - The cross-compile loop above.
 - Expected result: no `FAIL` line.
-- `go test -race -shuffle=on -timeout 5m ./internal/term/...`
+- `go test -race -shuffle=on -timeout 5m ./internal/terminal/...`
 - Expected result: `ok`.
 - `go test -timeout 25m ./...`
 - Expected result: identical to the Task 1 baseline.
@@ -385,7 +385,7 @@ done
 
 ## What the terminal wave actually found
 
-**`internal/term` is layer 3, not the 1 the task assigns.** It reads
+**`internal/terminal` is layer 3, not the 1 the task assigns.** It reads
 `gui.Running` to tell a window from a TTY and the viewer's URL model to
 underline a link under the mouse. Nothing below layer 3 imports it, so the
 number is the honest one; a `1` fails the auditor outright.
@@ -440,7 +440,7 @@ what a loop wrote before running it again.
 ### Intent
 
 Image, audio and video decode and preview — twenty-one files. Ten outbound edges,
-six of which point at `internal/term`, which is why this wave follows Task 30
+six of which point at `internal/terminal`, which is why this wave follows Task 30
 rather than preceding it on the raw count.
 
 ### Implementation Steps
@@ -474,7 +474,7 @@ rather than preceding it on the raw count.
 
 ### Required Interfaces and Contracts
 
-- `internal/media` may import `internal/term` (six edges — image display goes
+- `internal/media` may import `internal/terminal` (six edges — image display goes
   through the terminal's graphics protocols), `internal/config`, `internal/i18n`,
   `internal/theme`, `internal/numeric`, `internal/toast`, `vfs`. Not
   `internal/panel`, `internal/editor`, `internal/viewer`, `internal/app`.
@@ -520,7 +520,7 @@ GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build ./internal/media/...
 ## What the media wave actually found
 
 **`internal/media` is layer 3, not the 1 the task assigns**, for the same
-reason `internal/term` is: it asks the terminal which graphics protocols work
+reason `internal/terminal` is: it asks the terminal which graphics protocols work
 and reads the viewer's title bar.
 
 **One interface method.** The image view forwards the workspace-fork command
@@ -565,7 +565,7 @@ string content before running the suite, not after.
   by importing `internal/panel`.
   **Mitigation:** Task 31 step 2 requires resolving the three `FileSystemPanel`
   references and recommends leaving the glue behind.
-- **Risk:** `mockPty` ends up needed by both `internal/term`'s own tests and
+- **Risk:** `mockPty` ends up needed by both `internal/terminal`'s own tests and
   `internal/paneltest`, and someone exports it from a `_test.go` file, which Go
   will not allow across packages.
   **Mitigation:** Task 30's Tests section fixes the decision now — the fixture goes
@@ -576,6 +576,6 @@ string content before running the suite, not after.
 - Every Task 29-31 satisfies its acceptance criteria.
 - The twelve-target cross-compile loop is clean.
 - `internal/viewer` does not import `internal/editor`, and vice versa.
-- `go test -race -shuffle=on ./internal/term/...` is green.
+- `go test -race -shuffle=on ./internal/terminal/...` is green.
 - `go test -timeout 25m ./...` matches the Task 1 baseline.
 - `index.md` task checkboxes 29-31 are ticked.

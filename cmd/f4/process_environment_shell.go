@@ -17,7 +17,7 @@ import (
 
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -32,11 +32,11 @@ type processEnvironmentShellPayload struct {
 
 // processEnvironmentSerializedPTY is given to the ANSI parser and terminal
 // view for their protocol replies. It delegates every operation to the real
-// local term.PTY, but serializes writes with private environment delivery and holds
+// local terminal.PTY, but serializes writes with private environment delivery and holds
 // replies while an update is awaiting acknowledgement.
 type processEnvironmentSerializedPTY struct {
 	owner   *PanelsFrame
-	backend term.PtyBackend
+	backend terminal.PtyBackend
 }
 
 func (p *processEnvironmentSerializedPTY) Read(data []byte) (int, error) {
@@ -57,7 +57,7 @@ func (p *processEnvironmentSerializedPTY) Run(name string, args ...string) error
 }
 func (p *processEnvironmentSerializedPTY) IsBusy() bool { return p.backend.IsBusy() }
 func (p *processEnvironmentSerializedPTY) SetSizePixels(cols, rows, xpixel, ypixel int) {
-	if sizer, ok := p.backend.(term.PtyPixelSizer); ok {
+	if sizer, ok := p.backend.(terminal.PtyPixelSizer); ok {
 		sizer.SetSizePixels(cols, rows, xpixel, ypixel)
 		return
 	}
@@ -211,7 +211,7 @@ func sweepStaleProcessEnvironmentRuntimeSessions(root string) {
 		if !ok {
 			continue
 		}
-		alive, known := term.ProcessEnvironmentProcessState(pid)
+		alive, known := terminal.ProcessEnvironmentProcessState(pid)
 		if !known || alive {
 			continue
 		}
@@ -249,15 +249,15 @@ func shutdownProcessEnvironmentRuntime() {
 	}
 }
 
-func broadcastProcessEnvironmentGenerations(generations []term.ProcessEnvironmentGeneration) {
+func broadcastProcessEnvironmentGenerations(generations []terminal.ProcessEnvironmentGeneration) {
 	if len(generations) == 0 || vtui.FrameManager == nil {
 		return
 	}
-	copyOfGenerations := make([]term.ProcessEnvironmentGeneration, len(generations))
+	copyOfGenerations := make([]terminal.ProcessEnvironmentGeneration, len(generations))
 	for i, generation := range generations {
-		copyOfGenerations[i] = term.ProcessEnvironmentGeneration{
+		copyOfGenerations[i] = terminal.ProcessEnvironmentGeneration{
 			Generation: generation.Generation,
-			Changes:    term.CloneProcessEnvironmentChanges(generation.Changes),
+			Changes:    terminal.CloneProcessEnvironmentChanges(generation.Changes),
 		}
 	}
 	// FrameManager owns workspace topology on the UI goroutine. Posting also
@@ -312,9 +312,9 @@ func (pf *PanelsFrame) queueProcessEnvironment(generation uint64, changes []vfs.
 		pf.processEnvironmentMu.Unlock()
 		return
 	}
-	pf.pendingProcessEnvironment = term.CoalesceProcessEnvironmentChanges(append(
+	pf.pendingProcessEnvironment = terminal.CoalesceProcessEnvironmentChanges(append(
 		pf.pendingProcessEnvironment,
-		term.CloneProcessEnvironmentChanges(changes)...,
+		terminal.CloneProcessEnvironmentChanges(changes)...,
 	))
 	if generation > pf.pendingProcessEnvironmentGeneration {
 		pf.pendingProcessEnvironmentGeneration = generation
@@ -336,7 +336,7 @@ func (pf *PanelsFrame) catchUpProcessEnvironment(flushIfIdle bool) {
 		after = pf.processEnvironmentInFlight.generation
 	}
 	pf.processEnvironmentMu.Unlock()
-	generation, changes := term.GlobalProcessEnvironment.ChangesSince(after)
+	generation, changes := terminal.GlobalProcessEnvironment.ChangesSince(after)
 	pf.queueProcessEnvironment(generation, changes, false)
 	// A prompt marker must also retry work that was already pending (for
 	// example after an earlier write failure), even when there is no newer
@@ -355,7 +355,7 @@ func (pf *PanelsFrame) localShellStarted(inheritedGeneration uint64) {
 	pf.catchUpProcessEnvironment(true)
 }
 
-func (pf *PanelsFrame) isLocalPTY(pty term.PtyBackend) bool {
+func (pf *PanelsFrame) isLocalPTY(pty terminal.PtyBackend) bool {
 	if pty == nil {
 		return false
 	}
@@ -370,7 +370,7 @@ func (pf *PanelsFrame) flushProcessEnvironment() {
 	pf.flushProcessEnvironmentLocked(pf.localPTY())
 }
 
-func (pf *PanelsFrame) flushProcessEnvironmentLocked(pty term.PtyBackend) bool {
+func (pf *PanelsFrame) flushProcessEnvironmentLocked(pty terminal.PtyBackend) bool {
 	if pty == nil {
 		return false
 	}
@@ -387,7 +387,7 @@ func (pf *PanelsFrame) flushProcessEnvironmentLocked(pty term.PtyBackend) bool {
 	}
 
 	pf.processEnvironmentMu.Lock()
-	changes := term.CloneProcessEnvironmentChanges(pf.pendingProcessEnvironment)
+	changes := terminal.CloneProcessEnvironmentChanges(pf.pendingProcessEnvironment)
 	generation := pf.pendingProcessEnvironmentGeneration
 	pf.pendingProcessEnvironment = nil
 	pf.pendingProcessEnvironmentGeneration = 0
@@ -408,7 +408,7 @@ func (pf *PanelsFrame) flushProcessEnvironmentLocked(pty term.PtyBackend) bool {
 	inFlightUpdate := &processEnvironmentShellInFlight{
 		token:      payload.token,
 		generation: generation,
-		changes:    term.CloneProcessEnvironmentChanges(changes),
+		changes:    terminal.CloneProcessEnvironmentChanges(changes),
 		cleanup:    payload.cleanup,
 		muted:      active,
 	}
@@ -451,8 +451,8 @@ func (pf *PanelsFrame) requeueProcessEnvironment(generation uint64, changes []vf
 	pf.processEnvironmentMu.Lock()
 	// These changes happened before anything queued while the write was in
 	// progress; coalescing keeps the newer assignment when names overlap.
-	pf.pendingProcessEnvironment = term.CoalesceProcessEnvironmentChanges(append(
-		term.CloneProcessEnvironmentChanges(changes),
+	pf.pendingProcessEnvironment = terminal.CoalesceProcessEnvironmentChanges(append(
+		terminal.CloneProcessEnvironmentChanges(changes),
 		pf.pendingProcessEnvironment...,
 	))
 	if generation > pf.pendingProcessEnvironmentGeneration {
@@ -501,7 +501,7 @@ func (pf *PanelsFrame) reportProcessEnvironmentShellFailure() {
 	})
 }
 
-func (pf *PanelsFrame) writePTY(pty term.PtyBackend, data []byte) (int, error) {
+func (pf *PanelsFrame) writePTY(pty terminal.PtyBackend, data []byte) (int, error) {
 	if !pf.isLocalPTY(pty) {
 		return pty.Write(data)
 	}
@@ -524,7 +524,7 @@ func (pf *PanelsFrame) writePTY(pty term.PtyBackend, data []byte) (int, error) {
 	return n, err
 }
 
-func (pf *PanelsFrame) writePTYAuxiliary(pty term.PtyBackend, data []byte) (int, error) {
+func (pf *PanelsFrame) writePTYAuxiliary(pty terminal.PtyBackend, data []byte) (int, error) {
 	if !pf.isLocalPTY(pty) {
 		return pty.Write(data)
 	}
@@ -631,8 +631,8 @@ func (pf *PanelsFrame) completeProcessEnvironmentShellUpdate(token string, succe
 	if !success {
 		// Restore the rejected update before publishing the idle state. Readers
 		// must never observe neither an in-flight nor a pending delivery.
-		pf.pendingProcessEnvironment = term.CoalesceProcessEnvironmentChanges(append(
-			term.CloneProcessEnvironmentChanges(inFlight.changes),
+		pf.pendingProcessEnvironment = terminal.CoalesceProcessEnvironmentChanges(append(
+			terminal.CloneProcessEnvironmentChanges(inFlight.changes),
 			pf.pendingProcessEnvironment...,
 		))
 		if inFlight.generation > pf.pendingProcessEnvironmentGeneration {

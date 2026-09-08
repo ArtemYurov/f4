@@ -16,7 +16,7 @@ import (
 	"github.com/unxed/f4/internal/history"
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/f4/internal/keymap"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/f4/vfs"
@@ -1002,7 +1002,7 @@ func init() {
 		Handler: withPF(func(pf *PanelsFrame) {
 			if fsp := pf.getActivePanel(); fsp != nil {
 				if path := currentPanelEntryPath(fsp); path != "" {
-					term.SetF4Clipboard(path)
+					terminal.SetF4Clipboard(path)
 				}
 			}
 		}),
@@ -1035,7 +1035,7 @@ func init() {
 		MenuSubPath: "Paths",
 		Handler: withPF(func(pf *PanelsFrame) {
 			if !pf.cmdLine.IsEmpty() {
-				term.SetF4Clipboard(pf.cmdLine.Edit.GetText())
+				terminal.SetF4Clipboard(pf.cmdLine.Edit.GetText())
 				return
 			}
 			if fsp := pf.getActivePanel(); fsp != nil {
@@ -1051,7 +1051,7 @@ func init() {
 					// in FileList::CopyNames() (FullPathName=false).
 					name = fsp.vfs.Base(fsp.vfs.GetPath())
 				}
-				term.SetF4Clipboard(name)
+				terminal.SetF4Clipboard(name)
 			}
 		}),
 	})
@@ -1071,7 +1071,7 @@ func init() {
 					// SetClipboard can block up to ~4s on far2l IPC or
 					// while shelling out to xclip/wl-copy — do it off the
 					// UI goroutine (matches Grabber's copyAndExit).
-					term.SetClipboardAsync(strings.Join(names, "\n"))
+					terminal.SetClipboardAsync(strings.Join(names, "\n"))
 				}
 			}
 		}),
@@ -1094,7 +1094,7 @@ func init() {
 					// far2l note: with the cursor on ".." this action
 					// treats it as the name of the current folder.
 					if cursorOnParent(fsp) {
-						term.SetClipboardAsync(base)
+						terminal.SetClipboardAsync(base)
 					}
 					return
 				}
@@ -1102,7 +1102,7 @@ func init() {
 				for _, n := range names {
 					paths = append(paths, fsp.vfs.Join(base, n))
 				}
-				term.SetClipboardAsync(strings.Join(paths, "\n"))
+				terminal.SetClipboardAsync(strings.Join(paths, "\n"))
 			}
 		}),
 	})
@@ -1133,7 +1133,7 @@ func init() {
 					// far2l note: with the cursor on ".." this action
 					// treats it as the name of the current folder.
 					if cursorOnParent(fsp) {
-						term.SetClipboardAsync(resolve(base))
+						terminal.SetClipboardAsync(resolve(base))
 					}
 					return
 				}
@@ -1141,7 +1141,7 @@ func init() {
 				for _, n := range names {
 					paths = append(paths, resolve(fsp.vfs.Join(base, n)))
 				}
-				term.SetClipboardAsync(strings.Join(paths, "\n"))
+				terminal.SetClipboardAsync(strings.Join(paths, "\n"))
 			}
 		}),
 	})

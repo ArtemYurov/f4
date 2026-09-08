@@ -7,7 +7,7 @@ import (
 	"io"
 )
 
-// A term.PTY that records what was written to it. internal/term has its own copy
+// A terminal.PTY that records what was written to it. internal/terminal has its own copy
 // for its own tests; a mock is not scaffolding worth sharing across a package
 // boundary, and the two are free to drift apart with their subjects.
 

@@ -5,7 +5,7 @@ import (
 
 	"bytes"
 	"errors"
-	"github.com/unxed/f4/internal/term"
+	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
@@ -21,10 +21,10 @@ import (
 	"time"
 )
 
-// internal/term keeps its own; the two doubles are free to drift with their
+// internal/terminal keeps its own; the two doubles are free to drift with their
 // subjects.
 type fakeProcessEnvironmentBackend struct {
-	entries map[string]term.ProcessEnvironmentEntry
+	entries map[string]terminal.ProcessEnvironmentEntry
 	order   []string
 	ops     []string
 	calls   int
@@ -32,14 +32,14 @@ type fakeProcessEnvironmentBackend struct {
 }
 
 func newFakeProcessEnvironmentBackend(values ...string) *fakeProcessEnvironmentBackend {
-	fake := &fakeProcessEnvironmentBackend{entries: make(map[string]term.ProcessEnvironmentEntry)}
+	fake := &fakeProcessEnvironmentBackend{entries: make(map[string]terminal.ProcessEnvironmentEntry)}
 	for _, raw := range values {
-		name, value, ok := term.SplitProcessEnvironmentEntry(raw)
+		name, value, ok := terminal.SplitProcessEnvironmentEntry(raw)
 		if !ok {
 			continue
 		}
-		key := term.ProcessEnvironmentKey(name)
-		fake.entries[key] = term.ProcessEnvironmentEntry{Name: name, Value: value}
+		key := terminal.ProcessEnvironmentKey(name)
+		fake.entries[key] = terminal.ProcessEnvironmentEntry{Name: name, Value: value}
 		fake.order = append(fake.order, key)
 	}
 	return fake
@@ -75,11 +75,11 @@ func (f *fakeProcessEnvironmentBackend) Setenv(name, value string) error {
 	if err := f.operationError(); err != nil {
 		return err
 	}
-	key := term.ProcessEnvironmentKey(name)
+	key := terminal.ProcessEnvironmentKey(name)
 	if _, exists := f.entries[key]; !exists {
 		f.order = append(f.order, key)
 	}
-	f.entries[key] = term.ProcessEnvironmentEntry{Name: name, Value: value}
+	f.entries[key] = terminal.ProcessEnvironmentEntry{Name: name, Value: value}
 	return nil
 }
 
@@ -88,14 +88,14 @@ func (f *fakeProcessEnvironmentBackend) Unsetenv(name string) error {
 	if err := f.operationError(); err != nil {
 		return err
 	}
-	delete(f.entries, term.ProcessEnvironmentKey(name))
+	delete(f.entries, terminal.ProcessEnvironmentKey(name))
 	return nil
 }
 
 func snapshotVariable(Snapshot vfs.ProcessEnvironmentSnapshot, name string) (string, bool) {
-	key := term.ProcessEnvironmentKey(name)
+	key := terminal.ProcessEnvironmentKey(name)
 	for _, variable := range Snapshot.Variables {
-		if term.ProcessEnvironmentKey(variable.Name) == key {
+		if terminal.ProcessEnvironmentKey(variable.Name) == key {
 			return variable.Value, true
 		}
 	}
@@ -108,9 +108,9 @@ func TestProcessEnvironmentRuntimeFailurePreventsMutation(t *testing.T) {
 		t.Fatal(err)
 	}
 	backend := newFakeProcessEnvironmentBackend("A=old")
-	manager := term.NewProcessEnvironmentManager(backend)
+	manager := terminal.NewProcessEnvironmentManager(backend)
 	manager.Snapshot()
-	snapshot, records, err := term.ApplyProcessEnvironmentWithRuntime(
+	snapshot, records, err := terminal.ApplyProcessEnvironmentWithRuntime(
 		manager,
 		func() error {
 			_, err := createProcessEnvironmentRuntimeSession(blockedRoot)
@@ -293,14 +293,14 @@ func TestProcessEnvironmentBroadcastReachesEveryLocalWorkspace(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	firstPTY := &processEnvironmentPTY{}
 	secondPTY := &processEnvironmentPTY{}
-	first := &PanelsFrame{pty: firstPTY, termView: term.NewTerminalView(80, 24)}
-	second := &PanelsFrame{pty: secondPTY, termView: term.NewTerminalView(80, 24)}
+	first := &PanelsFrame{pty: firstPTY, termView: terminal.NewTerminalView(80, 24)}
+	second := &PanelsFrame{pty: secondPTY, termView: terminal.NewTerminalView(80, 24)}
 	t.Cleanup(testutil.SetFrameManagerScreens(t, []*vtui.AppScreen{
 		{Number: 1, Frames: []vtui.Frame{first}},
 		{Number: 2, Frames: []vtui.Frame{second}},
 	}, 0))
 
-	broadcastProcessEnvironmentGenerations([]term.ProcessEnvironmentGeneration{{
+	broadcastProcessEnvironmentGenerations([]terminal.ProcessEnvironmentGeneration{{
 		Generation: 12,
 		Changes:    []vfs.ProcessEnvironmentChange{{Name: "BROADCAST_PRIVATE", Value: "workspace-value"}},
 	}})
@@ -326,11 +326,11 @@ func TestProcessEnvironmentBroadcastReachesEveryLocalWorkspace(t *testing.T) {
 }
 
 func TestPanelsFrameEnvironmentNewShellInheritanceAndSpawnCatchUp(t *testing.T) {
-	oldManager := term.GlobalProcessEnvironment
+	oldManager := terminal.GlobalProcessEnvironment
 	backend := newFakeProcessEnvironmentBackend("BASELINE=initial")
-	manager := term.NewProcessEnvironmentManager(backend)
-	term.GlobalProcessEnvironment = manager
-	defer func() { term.GlobalProcessEnvironment = oldManager }()
+	manager := terminal.NewProcessEnvironmentManager(backend)
+	terminal.GlobalProcessEnvironment = manager
+	defer func() { terminal.GlobalProcessEnvironment = oldManager }()
 
 	initial, _ := manager.Snapshot()
 	if initial.Generation != 0 {
@@ -342,7 +342,7 @@ func TestPanelsFrameEnvironmentNewShellInheritanceAndSpawnCatchUp(t *testing.T) 
 	}
 
 	upToDatePTY := &processEnvironmentPTY{}
-	upToDate := &PanelsFrame{pty: upToDatePTY, termView: term.NewTerminalView(80, 24)}
+	upToDate := &PanelsFrame{pty: upToDatePTY, termView: terminal.NewTerminalView(80, 24)}
 	defer upToDate.closeProcessEnvironmentShell()
 	upToDate.localShellStarted(applied.Generation)
 	if writes := upToDatePTY.snapshotWrites(); len(writes) != 0 {
@@ -350,7 +350,7 @@ func TestPanelsFrameEnvironmentNewShellInheritanceAndSpawnCatchUp(t *testing.T) 
 	}
 
 	catchUpPTY := &processEnvironmentPTY{}
-	catchUp := &PanelsFrame{pty: catchUpPTY, termView: term.NewTerminalView(80, 24)}
+	catchUp := &PanelsFrame{pty: catchUpPTY, termView: terminal.NewTerminalView(80, 24)}
 	defer catchUp.closeProcessEnvironmentShell()
 	catchUp.localShellStarted(initial.Generation)
 	if writes := catchUpPTY.snapshotWrites(); len(writes) != 1 {
@@ -367,7 +367,7 @@ func TestPanelsFrameEnvironmentNewShellInheritanceAndSpawnCatchUp(t *testing.T) 
 
 func TestPanelsFrameEnvironmentBusyDefersCoalescesAndAcknowledges(t *testing.T) {
 	pty := &processEnvironmentPTY{busy: true}
-	pf := &PanelsFrame{pty: pty, termView: term.NewTerminalView(80, 24)}
+	pf := &PanelsFrame{pty: pty, termView: terminal.NewTerminalView(80, 24)}
 	pf.queueProcessEnvironment(1, []vfs.ProcessEnvironmentChange{{Name: "SECRET", Value: "first"}}, true)
 	pf.queueProcessEnvironment(2, []vfs.ProcessEnvironmentChange{{Name: "SECRET", Value: "second"}}, true)
 	if writes := pty.snapshotWrites(); len(writes) != 0 {
@@ -448,7 +448,7 @@ func TestPanelsFrameEnvironmentGatesLocalInputAndLeavesRemoteUntouched(t *testin
 	runProcessEnvironmentUIInline(t)
 	local := &processEnvironmentPTY{}
 	remote := &processEnvironmentPTY{}
-	pf := &PanelsFrame{pty: local, termView: term.NewTerminalView(80, 24)}
+	pf := &PanelsFrame{pty: local, termView: terminal.NewTerminalView(80, 24)}
 	pf.queueProcessEnvironment(1, []vfs.ProcessEnvironmentChange{{Name: "LOCAL_ONLY", Value: "private"}}, true)
 	pf.processEnvironmentMu.Lock()
 	inFlight := pf.processEnvironmentInFlight
@@ -489,7 +489,7 @@ func TestPanelsFrameEnvironmentPrepareFailureGatesInputUntilRetry(t *testing.T) 
 	defer func() { processEnvironmentPayloadPreparer = originalPreparer }()
 
 	local := &processEnvironmentPTY{}
-	pf := &PanelsFrame{pty: local, termView: term.NewTerminalView(80, 24)}
+	pf := &PanelsFrame{pty: local, termView: terminal.NewTerminalView(80, 24)}
 	pf.queueProcessEnvironment(3, []vfs.ProcessEnvironmentChange{{Name: "PREPARE_RETRY", Value: "private"}}, true)
 	if n, err := pf.writePTY(local, []byte("held-after-prepare-failure\r")); err != nil || n != len("held-after-prepare-failure\r") {
 		t.Fatalf("gated write = %d, %v", n, err)
@@ -525,7 +525,7 @@ func TestPanelsFrameEnvironmentPrepareFailureGatesInputUntilRetry(t *testing.T) 
 func TestPanelsFrameEnvironmentWriteFailureGatesInputUntilRetry(t *testing.T) {
 	setupProcessEnvironmentFailureUI(t)
 	local := &processEnvironmentPTY{err: errors.New("injected term.PTY write failure")}
-	pf := &PanelsFrame{pty: local, termView: term.NewTerminalView(80, 24)}
+	pf := &PanelsFrame{pty: local, termView: terminal.NewTerminalView(80, 24)}
 	pf.queueProcessEnvironment(6, []vfs.ProcessEnvironmentChange{{Name: "WRITE_RETRY", Value: "private"}}, true)
 	if n, err := pf.writePTY(local, []byte("held-after-write-failure\r")); err != nil || n != len("held-after-write-failure\r") {
 		t.Fatalf("gated write = %d, %v", n, err)
@@ -555,7 +555,7 @@ func TestPanelsFrameEnvironmentSerializesParserReplies(t *testing.T) {
 	runProcessEnvironmentUIInline(t)
 	local := &processEnvironmentPTY{}
 	remote := &processEnvironmentPTY{}
-	pf := &PanelsFrame{pty: local, termView: term.NewTerminalView(80, 24)}
+	pf := &PanelsFrame{pty: local, termView: terminal.NewTerminalView(80, 24)}
 	pf.queueProcessEnvironment(8, []vfs.ProcessEnvironmentChange{{Name: "SERIALIZE_REPLY", Value: "private"}}, true)
 	pf.processEnvironmentMu.Lock()
 	inFlight := pf.processEnvironmentInFlight
@@ -586,7 +586,7 @@ func TestPanelsFrameEnvironmentSerializesParserReplies(t *testing.T) {
 func TestPanelsFrameEnvironmentFailureKeepsInputUntilSuccessfulRetry(t *testing.T) {
 	setupProcessEnvironmentFailureUI(t)
 	local := &processEnvironmentPTY{}
-	pf := &PanelsFrame{pty: local, termView: term.NewTerminalView(80, 24)}
+	pf := &PanelsFrame{pty: local, termView: terminal.NewTerminalView(80, 24)}
 	pf.queueProcessEnvironment(4, []vfs.ProcessEnvironmentChange{{Name: "RETRY_ME", Value: "private"}}, true)
 	pf.processEnvironmentMu.Lock()
 	first := pf.processEnvironmentInFlight
@@ -643,7 +643,7 @@ func TestPanelsFrameEnvironmentAcknowledgementTimeoutKeepsDeferredInput(t *testi
 	defer func() { processEnvironmentAcknowledgementTimeout = oldTimeout }()
 
 	local := &processEnvironmentPTY{}
-	pf := &PanelsFrame{pty: local, termView: term.NewTerminalView(80, 24)}
+	pf := &PanelsFrame{pty: local, termView: terminal.NewTerminalView(80, 24)}
 	pf.queueProcessEnvironment(5, []vfs.ProcessEnvironmentChange{{Name: "TIMEOUT_ME", Value: "private"}}, true)
 	if _, err := pf.writePTY(local, []byte("held-after-timeout\r")); err != nil {
 		t.Fatal(err)
@@ -672,7 +672,7 @@ func TestPanelsFrameEnvironmentAcknowledgementTimeoutKeepsDeferredInput(t *testi
 func TestPanelsFrameExplicitBusyNeverExpiresFromBackendIdle(t *testing.T) {
 	runProcessEnvironmentUIInline(t)
 	local := &processEnvironmentPTY{busy: false}
-	pf := &PanelsFrame{pty: local, termView: term.NewTerminalView(80, 24)}
+	pf := &PanelsFrame{pty: local, termView: terminal.NewTerminalView(80, 24)}
 	pf.noteLocalShellBusy(true)
 	// This exceeds the removed grace-period implementation. An interactive
 	// shell builtin such as `read VAR` has no child process, so IsBusy remains
@@ -732,7 +732,7 @@ func TestProcessEnvironmentRuntimeSessionsDoNotSweepEachOther(t *testing.T) {
 func TestProcessEnvironmentRuntimeSweepsOnlyConfirmedDeadSessions(t *testing.T) {
 	root := t.TempDir()
 	const deadPID = 2147483647
-	if alive, known := term.ProcessEnvironmentProcessState(deadPID); !known || alive {
+	if alive, known := terminal.ProcessEnvironmentProcessState(deadPID); !known || alive {
 		t.Skip("platform cannot positively identify the test PID as dead")
 	}
 	deadDir := filepath.Join(root, "2147483647-0123456789ABCDEF0123456789ABCDEF")
@@ -759,7 +759,7 @@ func TestPanelsFrameCloseCleansItsOwnedRuntimeFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	local := &processEnvironmentPTY{}
-	pf := &PanelsFrame{pty: local, termView: term.NewTerminalView(80, 24)}
+	pf := &PanelsFrame{pty: local, termView: terminal.NewTerminalView(80, 24)}
 	pf.queueProcessEnvironment(9, []vfs.ProcessEnvironmentChange{{Name: "CLEAN_ON_CLOSE", Value: "private"}}, true)
 	entries, err := os.ReadDir(processEnvironmentRuntimeDir)
 	if err != nil || len(entries) == 0 {
@@ -820,11 +820,11 @@ func TestWindowsProcessEnvironmentScriptRoundTrip(t *testing.T) {
 		t.Skip("cmd.exe transport")
 	}
 	const variableName = "F4_ENV_ROUNDTRIP"
-	middleLength := term.WindowsCmdEnvironmentAssignmentLimit - len(variableName) - term.WindowsEnvironmentUTF16Length("  €Ж  ")
+	middleLength := terminal.WindowsCmdEnvironmentAssignmentLimit - len(variableName) - terminal.WindowsEnvironmentUTF16Length("  €Ж  ")
 	pattern := `!%&^"Az09`
 	middle := strings.Repeat(pattern, (middleLength+len(pattern)-1)/len(pattern))[:middleLength]
 	value := "  €Ж" + middle + "  "
-	if got := len(variableName) + term.WindowsEnvironmentUTF16Length(value); got != term.WindowsCmdEnvironmentAssignmentLimit {
+	if got := len(variableName) + terminal.WindowsEnvironmentUTF16Length(value); got != terminal.WindowsCmdEnvironmentAssignmentLimit {
 		t.Fatalf("boundary fixture length = %d", got)
 	}
 	for _, delayed := range []string{"OFF", "ON"} {
