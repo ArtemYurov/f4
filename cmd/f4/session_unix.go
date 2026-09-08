@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 	"golang.org/x/sys/unix"
@@ -561,8 +562,8 @@ func runServer(sockPath string) {
 		// anything that reassigns vtui.FrameManager meanwhile.
 		frames := vtui.FrameManager
 		go func(pipeWriteFD int, inFD int) {
-			pipePollFD, pipeOK := boundedInt32(pipeWriteFD)
-			inputPollFD, inputOK := boundedInt32(inFD)
+			pipePollFD, pipeOK := numeric.BoundedInt32(pipeWriteFD)
+			inputPollFD, inputOK := numeric.BoundedInt32(inFD)
 			if !pipeOK || !inputOK {
 				frames.Stop()
 				return

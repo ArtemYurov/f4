@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 	"github.com/vmihailenco/msgpack/v5"
@@ -120,17 +121,17 @@ func extUiAnyInt(v any) (int, bool) {
 	case int32:
 		return int(n), true
 	case int64:
-		return boundedInt64ToInt(n)
+		return numeric.BoundedInt64ToInt(n)
 	case uint:
-		return boundedUint64ToInt(uint64(n))
+		return numeric.BoundedUint64ToInt(uint64(n))
 	case uint8:
 		return int(n), true
 	case uint16:
 		return int(n), true
 	case uint32:
-		return boundedUint64ToInt(uint64(n))
+		return numeric.BoundedUint64ToInt(uint64(n))
 	case uint64:
-		return boundedUint64ToInt(n)
+		return numeric.BoundedUint64ToInt(n)
 	}
 	return 0, false
 }
@@ -145,7 +146,7 @@ func extUiInt16(msg map[string]any, key string) (int16, bool) {
 	if !ok {
 		return 0, false
 	}
-	return boundedInt16(value)
+	return numeric.BoundedInt16(value)
 }
 
 func extUiUint16(msg map[string]any, key string) (uint16, bool) {
@@ -153,7 +154,7 @@ func extUiUint16(msg map[string]any, key string) (uint16, bool) {
 	if !ok {
 		return 0, false
 	}
-	return boundedUint16(value)
+	return numeric.BoundedUint16(value)
 }
 
 func extUiUint32(msg map[string]any, key string) (uint32, bool) {
@@ -161,7 +162,7 @@ func extUiUint32(msg map[string]any, key string) (uint32, bool) {
 	if !ok {
 		return 0, false
 	}
-	return boundedUint32(value)
+	return numeric.BoundedUint32(value)
 }
 
 func extUiRune(msg map[string]any, key string) (rune, bool) {
@@ -169,7 +170,7 @@ func extUiRune(msg map[string]any, key string) (rune, bool) {
 	if !ok {
 		return 0, false
 	}
-	return boundedRune(value)
+	return numeric.BoundedRune(value)
 }
 
 type ExtUiRenderer struct {

@@ -31,6 +31,9 @@ var architectureLayers = map[string]int{
 	"internal/ttyx":     0,
 	"internal/wincon":   0,
 
+	// Checked conversions, shared by seven packages. Zero imports of ours.
+	"internal/numeric": 0,
+
 	// Data with an embed directive beside it, nothing else.
 	"internal/colorer": 0,
 

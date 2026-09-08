@@ -9,6 +9,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/unxed/f4/internal/numeric"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -531,7 +532,7 @@ func (e *LuaMacroEngine) newMFTable(L *lua.LState) *lua.LTable {
 				L.ArgError(1, "Unicode code point out of range")
 				return 0
 			}
-			r, ok := boundedRune(int(value))
+			r, ok := numeric.BoundedRune(int(value))
 			if !ok {
 				L.ArgError(1, "invalid Unicode code point")
 				return 0

@@ -3,7 +3,6 @@ package main
 import (
 	"sort"
 	"strings"
-
 )
 
 // Action represents a bindable command in the application.

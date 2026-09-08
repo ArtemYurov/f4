@@ -334,7 +334,7 @@ titles, not the ordering.
 
 ### Phase 4: The Shared Primitives Leave cmd/f4
 - [x] Task 18: Split `action_registry.go` into mechanism and table, in place ([details](phase-04-shared-primitives.md#task-18-separate-the-action-registrys-mechanism-from-its-table)) (depends on 3, 17)
-- [ ] Task 19: Create `internal/numeric`; give sysinfo its private copy ([details](phase-04-shared-primitives.md#task-19-create-internalnumeric)) (depends on 9)
+- [x] Task 19: Create `internal/numeric`; give sysinfo its private copy ([details](phase-04-shared-primitives.md#task-19-create-internalnumeric)) (depends on 9)
 - [ ] Task 20: Create `internal/toast` and `internal/history` ([details](phase-04-shared-primitives.md#task-20-create-internaltoast-and-internalhistory))
 - [ ] Task 21: Create `internal/action` with a localizer hook ([details](phase-04-shared-primitives.md#task-21-create-internalaction)) (depends on 18)
 

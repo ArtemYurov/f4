@@ -12,6 +12,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
@@ -640,14 +641,14 @@ func (q *QuickViewPanel) renderDir(item *fileEntry, writeLine func(string)) {
 	if runtime.GOOS == "windows" {
 		logical = stats.Bytes
 	}
-	writeLine(fmt.Sprintf(" %-14s %s", Msg("QuickView.FilesSize"), formatBytes(nonNegativeUint64(logical))))
+	writeLine(fmt.Sprintf(" %-14s %s", Msg("QuickView.FilesSize"), formatBytes(numeric.NonNegativeUint64(logical))))
 	// Physical size + Ratio need per-item on-disk footprint. Stub /
 	// remote VFSes leave PhysicalBytes at 0 during the whole scan —
 	// hide the rows in that case. Ratio is also hidden when it would
 	// just read "100%" — on Unix that's every uncompressed tree, and
 	// a constant carries no information for the reader.
 	if stats.PhysicalBytes > 0 {
-		writeLine(fmt.Sprintf(" %-14s %s", Msg("QuickView.PhysicalSize"), formatBytes(nonNegativeUint64(stats.PhysicalBytes))))
+		writeLine(fmt.Sprintf(" %-14s %s", Msg("QuickView.PhysicalSize"), formatBytes(numeric.NonNegativeUint64(stats.PhysicalBytes))))
 		if stats.PhysicalBytes < logical {
 			// Ratio interpretation matches far/far2l — >100% means "on
 			// disk it takes less than the logical size", i.e. real

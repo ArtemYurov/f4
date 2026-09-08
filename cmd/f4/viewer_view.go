@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -1215,7 +1216,7 @@ func (vv *ViewerView) Close() {
 	if vv.OnClose != nil {
 		vv.OnClose()
 	}
-	ReleaseHeavyMemory(size)
+	numeric.ReleaseHeavyMemory(size)
 }
 
 func (vv *ViewerView) GetKeyLabels() *vtui.KeySet {

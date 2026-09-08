@@ -224,8 +224,9 @@ func RuneCodepoint(r rune) (uint, bool)
 func ReleaseHeavyMemory(sizeBytes int64)    // frees OS memory above 50 MB
 ```
 
-- `numeric.go` imports `strconv` and nothing else; `memory.go` imports
-  `runtime/debug` and nothing else. Any other import means something was moved
+- `numeric.go` imports `strconv` and `unicode/utf8` — `BoundedRune` and
+  `RuneCodepoint` reject surrogates through `utf8.ValidRune`, which a range check
+  alone does not; `memory.go` imports `runtime/debug` and nothing else. Any other import means something was moved
   here that does not belong.
 - The `strconv.IntSize == 32` branches are load-bearing on the exotic 32-bit
   targets (`linux/386`, `linux/mips`, `linux/mipsle`, `linux/arm`) and must be
@@ -258,8 +259,8 @@ only indirectly.
 ### Acceptance Criteria
 
 - `ls cmd/f4/misc.go` fails.
-- `go list -f '{{join .Imports "\n"}}' ./internal/numeric` lists only `strconv`
-  and `runtime/debug`.
+- `go list -f '{{join .Imports "\n"}}' ./internal/numeric` lists only `strconv`,
+  `unicode/utf8` and `runtime/debug`.
 - `grep -n 'boundedUint64ToInt' cmd/f4/cpu_info_darwin.go` shows a local
   definition plus its two call sites at `:39` and `:47`.
 - `grep -rn 'numeric\.' cmd/f4/cpu_info*.go cmd/f4/mem_info*.go cmd/f4/fs_info*.go cmd/f4/gpu_info*.go`

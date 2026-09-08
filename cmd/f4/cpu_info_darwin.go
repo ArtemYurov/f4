@@ -5,6 +5,7 @@ package main
 import (
 	"encoding/binary"
 	"runtime"
+	"strconv"
 	"sync"
 	"syscall"
 )
@@ -28,6 +29,17 @@ func cpuInfo() (CPUInfo, bool) {
 		return CPUInfo{}, false
 	}
 	return info, true
+}
+
+// boundedUint64ToInt is a private copy of internal/numeric's conversion.
+// internal/sysinfo, which this file becomes, imports no other internal package:
+// taking the shared helper would create the edge the rule exists to forbid.
+func boundedUint64ToInt(v uint64) (int, bool) {
+	if (strconv.IntSize == 32 && v > 1<<31-1) || (strconv.IntSize == 64 && v > 1<<63-1) {
+		return 0, false
+	}
+	// #nosec G115 -- v is bounded to the platform's maximum int above.
+	return int(v), true
 }
 
 func readStaticDarwinCPU() CPUInfo {

@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"golang.org/x/arch/x86/x86asm"
+
+	"github.com/unxed/f4/internal/numeric"
 )
 
 // The decode view of the viewer and of the editor share one x86 decoder,
@@ -80,7 +82,7 @@ func disasmInstruction(data []byte, mode int, pc int64) (text string, length int
 	if err != nil || inst.Len <= 0 {
 		return fmt.Sprintf("db 0x%02X", data[0]), 1
 	}
-	return x86asm.IntelSyntax(inst, nonNegativeUint64(pc), nil), inst.Len
+	return x86asm.IntelSyntax(inst, numeric.NonNegativeUint64(pc), nil), inst.Len
 }
 
 // disasmInstLen is the length half of disasmInstruction, for the callers

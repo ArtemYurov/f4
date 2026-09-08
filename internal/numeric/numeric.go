@@ -1,12 +1,17 @@
-package main
+// Package numeric holds the checked conversions the tree shares.
+//
+// They exist because a silent truncation on a 32-bit target is a bug nobody
+// reproduces, and because gosec's G115 has to be answered once per conversion
+// rather than once per copy of it: seven packages use these, and seven copies
+// would be seven places for a #nosec annotation to go missing.
+package numeric
 
 import (
-	"runtime/debug"
 	"strconv"
 	"unicode/utf8"
 )
 
-func boundedInt64ToInt(v int64) (int, bool) {
+func BoundedInt64ToInt(v int64) (int, bool) {
 	if strconv.IntSize == 32 && (v < -1<<31 || v > 1<<31-1) {
 		return 0, false
 	}
@@ -14,7 +19,7 @@ func boundedInt64ToInt(v int64) (int, bool) {
 	return int(v), true
 }
 
-func boundedUint64ToInt(v uint64) (int, bool) {
+func BoundedUint64ToInt(v uint64) (int, bool) {
 	if (strconv.IntSize == 32 && v > 1<<31-1) || (strconv.IntSize == 64 && v > 1<<63-1) {
 		return 0, false
 	}
@@ -22,7 +27,7 @@ func boundedUint64ToInt(v uint64) (int, bool) {
 	return int(v), true
 }
 
-func nonNegativeUint64(v int64) uint64 {
+func NonNegativeUint64(v int64) uint64 {
 	if v < 0 {
 		return 0
 	}
@@ -30,7 +35,7 @@ func nonNegativeUint64(v int64) uint64 {
 	return uint64(v)
 }
 
-func boundedInt16(v int) (int16, bool) {
+func BoundedInt16(v int) (int16, bool) {
 	if v < -1<<15 || v > 1<<15-1 {
 		return 0, false
 	}
@@ -38,7 +43,7 @@ func boundedInt16(v int) (int16, bool) {
 	return int16(v), true
 }
 
-func boundedInt32(v int) (int32, bool) {
+func BoundedInt32(v int) (int32, bool) {
 	if strconv.IntSize == 64 && (int64(v) < -1<<31 || int64(v) > 1<<31-1) {
 		return 0, false
 	}
@@ -46,7 +51,7 @@ func boundedInt32(v int) (int32, bool) {
 	return int32(v), true
 }
 
-func boundedUint16(v int) (uint16, bool) {
+func BoundedUint16(v int) (uint16, bool) {
 	if v < 0 || v > 1<<16-1 {
 		return 0, false
 	}
@@ -54,7 +59,7 @@ func boundedUint16(v int) (uint16, bool) {
 	return uint16(v), true
 }
 
-func boundedUint32(v int) (uint32, bool) {
+func BoundedUint32(v int) (uint32, bool) {
 	if v < 0 || (strconv.IntSize == 64 && int64(v) > 1<<32-1) {
 		return 0, false
 	}
@@ -62,7 +67,7 @@ func boundedUint32(v int) (uint32, bool) {
 	return uint32(v), true
 }
 
-func boundedRune(v int) (rune, bool) {
+func BoundedRune(v int) (rune, bool) {
 	if v < 0 || v > utf8.MaxRune {
 		return 0, false
 	}
@@ -71,17 +76,10 @@ func boundedRune(v int) (rune, bool) {
 	return r, utf8.ValidRune(r)
 }
 
-func runeCodepoint(r rune) (uint, bool) {
+func RuneCodepoint(r rune) (uint, bool) {
 	if !utf8.ValidRune(r) {
 		return 0, false
 	}
 	// #nosec G115 -- utf8.ValidRune rejects negative runes before conversion.
 	return uint(r), true
-}
-
-// ReleaseHeavyMemory forces GC and releases OS memory when heavy sessions (>50MB) close.
-func ReleaseHeavyMemory(sizeBytes int64) {
-	if sizeBytes > 50*1024*1024 {
-		debug.FreeOSMemory()
-	}
 }

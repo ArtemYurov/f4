@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/sdk/extui"
 	"github.com/unxed/vtinput"
@@ -771,20 +772,20 @@ func semanticInt(v any) int {
 	case int32:
 		return int(n)
 	case int64:
-		value, _ := boundedInt64ToInt(n)
+		value, _ := numeric.BoundedInt64ToInt(n)
 		return value
 	case uint:
-		value, _ := boundedUint64ToInt(uint64(n))
+		value, _ := numeric.BoundedUint64ToInt(uint64(n))
 		return value
 	case uint8:
 		return int(n)
 	case uint16:
 		return int(n)
 	case uint32:
-		value, _ := boundedUint64ToInt(uint64(n))
+		value, _ := numeric.BoundedUint64ToInt(uint64(n))
 		return value
 	case uint64:
-		value, _ := boundedUint64ToInt(n)
+		value, _ := numeric.BoundedUint64ToInt(n)
 		return value
 	case float32:
 		return int(n)

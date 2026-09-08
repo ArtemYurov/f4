@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/vtinput"
 )
 
@@ -315,7 +316,7 @@ func TranslateInput(e *vtinput.InputEvent, win32Mode bool, kittyFlags int, appCu
 	// child never receives Ctrl+C and e.g. `dir /s` cannot be interrupted.
 	if ctrl && e.Char == 0 {
 		if ch := ctrlCharFromVK(e.VirtualKeyCode); ch >= 0 {
-			controlRune, ok := boundedRune(ch)
+			controlRune, ok := numeric.BoundedRune(ch)
 			if !ok {
 				return ""
 			}

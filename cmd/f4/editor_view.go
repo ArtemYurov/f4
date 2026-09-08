@@ -23,6 +23,7 @@ import (
 
 	"github.com/charlievieth/strcase"
 	"github.com/coregx/coregex"
+	"github.com/unxed/f4/internal/numeric"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/textlayout"
 	"github.com/unxed/f4/vfs"
@@ -393,7 +394,7 @@ func (ev *EditorView) Close() {
 	if ev.OnClose != nil {
 		ev.OnClose()
 	}
-	ReleaseHeavyMemory(int64(size))
+	numeric.ReleaseHeavyMemory(int64(size))
 }
 
 func NewEditorView(pt *piecetable.PieceTable, v vfs.VFS, path string) *EditorView {
