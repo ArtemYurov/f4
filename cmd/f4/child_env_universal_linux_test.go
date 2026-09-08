@@ -5,6 +5,8 @@ package main
 import (
 	"slices"
 	"testing"
+
+	"github.com/unxed/f4/internal/update"
 )
 
 // The list of variables the terminal strips from a child's environment is
@@ -13,7 +15,7 @@ import (
 // rename on either side would leave the terminal stripping a name nobody
 // sets, and the child would go back to dying before main (issue #87).
 func TestPrivateEnvCoversWhatThisBuildReads(t *testing.T) {
-	for _, key := range []string{goffiUniversalGuard, goffiUniversalExe, f4ExeEnv} {
+	for _, key := range []string{update.GoffiUniversalGuard, update.GoffiUniversalExe, update.F4ExeEnv} {
 		if !slices.Contains(privateToThisProcess, key) {
 			t.Errorf("%s is read here but still passed on to children", key)
 		}

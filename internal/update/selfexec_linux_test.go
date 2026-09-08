@@ -12,7 +12,7 @@ import (
 // With the guard set, f4 must build the same argv goffi's bridge builds:
 // loader, --preload, host libc, the image argv[0] names, then our arguments.
 func TestSelfExecArgvUniversal(t *testing.T) {
-	t.Setenv(goffiUniversalGuard, "1")
+	t.Setenv(GoffiUniversalGuard, "1")
 
 	loader, libc, ok := universalHostLoader()
 	if !ok {
@@ -31,7 +31,7 @@ func TestSelfExecArgvUniversal(t *testing.T) {
 
 // No guard, no detour: an ordinary build must not be sent through a loader.
 func TestUniversalHostLoaderNeedsGuard(t *testing.T) {
-	t.Setenv(goffiUniversalGuard, "")
+	t.Setenv(GoffiUniversalGuard, "")
 	if loader, libc, ok := universalHostLoader(); ok {
 		t.Errorf("universalHostLoader() = %q, %q, true without the guard set", loader, libc)
 	}
@@ -42,9 +42,9 @@ func TestUniversalHostLoaderNeedsGuard(t *testing.T) {
 // the loader's own path -- which is what os.Executable() returns there, and
 // what would have sent the updater to /usr/lib.
 func TestF4ExecutableUnknownInUniversalBuild(t *testing.T) {
-	t.Setenv(goffiUniversalGuard, "1")
-	t.Setenv(goffiUniversalExe, "")
-	t.Setenv(f4ExeEnv, "")
+	t.Setenv(GoffiUniversalGuard, "1")
+	t.Setenv(GoffiUniversalExe, "")
+	t.Setenv(F4ExeEnv, "")
 
 	if got, err := executable(); err == nil {
 		t.Errorf("executable() = %q, nil; want an error", got)
@@ -52,9 +52,9 @@ func TestF4ExecutableUnknownInUniversalBuild(t *testing.T) {
 }
 
 func TestF4ExecutablePrefersGoffiRecord(t *testing.T) {
-	t.Setenv(goffiUniversalGuard, "1")
-	t.Setenv(goffiUniversalExe, strconv.Itoa(os.Getpid())+":/usr/bin/f4")
-	t.Setenv(f4ExeEnv, "/handed/down/f4")
+	t.Setenv(GoffiUniversalGuard, "1")
+	t.Setenv(GoffiUniversalExe, strconv.Itoa(os.Getpid())+":/usr/bin/f4")
+	t.Setenv(F4ExeEnv, "/handed/down/f4")
 
 	got, err := executable()
 	if err != nil {
@@ -68,9 +68,9 @@ func TestF4ExecutablePrefersGoffiRecord(t *testing.T) {
 // A record tagged with another pid was inherited from a parent. The parent
 // hands its answer down deliberately instead, through F4_EXE.
 func TestF4ExecutableIgnoresInheritedRecord(t *testing.T) {
-	t.Setenv(goffiUniversalGuard, "1")
-	t.Setenv(goffiUniversalExe, strconv.Itoa(os.Getpid()+1)+":/usr/bin/some-other-program")
-	t.Setenv(f4ExeEnv, "/usr/bin/f4")
+	t.Setenv(GoffiUniversalGuard, "1")
+	t.Setenv(GoffiUniversalExe, strconv.Itoa(os.Getpid()+1)+":/usr/bin/some-other-program")
+	t.Setenv(F4ExeEnv, "/usr/bin/f4")
 
 	got, err := executable()
 	if err != nil {
@@ -83,8 +83,8 @@ func TestF4ExecutableIgnoresInheritedRecord(t *testing.T) {
 
 // An ordinary build asks the operating system and is right.
 func TestF4ExecutableWithoutGuard(t *testing.T) {
-	t.Setenv(goffiUniversalGuard, "")
-	t.Setenv(f4ExeEnv, "/should/be/ignored")
+	t.Setenv(GoffiUniversalGuard, "")
+	t.Setenv(F4ExeEnv, "/should/be/ignored")
 
 	want, err := os.Executable()
 	if err != nil {
@@ -100,17 +100,17 @@ func TestF4ExecutableWithoutGuard(t *testing.T) {
 }
 
 func TestSelfExecEnvCarriesThePath(t *testing.T) {
-	t.Setenv(goffiUniversalGuard, "1")
-	t.Setenv(goffiUniversalExe, strconv.Itoa(os.Getpid())+":/usr/bin/f4")
-	t.Setenv(f4ExeEnv, "")
+	t.Setenv(GoffiUniversalGuard, "1")
+	t.Setenv(GoffiUniversalExe, strconv.Itoa(os.Getpid())+":/usr/bin/f4")
+	t.Setenv(F4ExeEnv, "")
 
 	var found bool
 	for _, e := range selfExecEnv() {
-		if e == f4ExeEnv+"=/usr/bin/f4" {
+		if e == F4ExeEnv+"=/usr/bin/f4" {
 			found = true
 		}
 	}
 	if !found {
-		t.Errorf("selfExecEnv() does not carry %s=/usr/bin/f4", f4ExeEnv)
+		t.Errorf("selfExecEnv() does not carry %s=/usr/bin/f4", F4ExeEnv)
 	}
 }

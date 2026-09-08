@@ -11,7 +11,7 @@ import (
 	"github.com/go-webgpu/goffi/ffi"
 )
 
-// goffiUniversalGuard is the variable goffi's universal ("Profile U") bridge
+// GoffiUniversalGuard is the variable goffi's universal ("Profile U") bridge
 // adds to the environment of the copy of the process it re-execs through the
 // host dynamic loader. Its presence says two things: this process reached a
 // libc that way, and a child that inherits the variable will not be given one,
@@ -21,9 +21,9 @@ import (
 // The name is goffi's, and a rename there would turn the check below into a
 // no-op rather than into a wrong answer: f4 would go back to starting children
 // by path, which is the behaviour that made them die before main.
-const goffiUniversalGuard = "GOFFI_UNIVERSAL_REEXEC"
+const GoffiUniversalGuard = "GOFFI_UNIVERSAL_REEXEC"
 
-// goffiUniversalExe is where goffi's universal bridge records the path of the
+// GoffiUniversalExe is where goffi's universal bridge records the path of the
 // binary it re-execed, as "<pid>:<path>". The pid is the process the record
 // describes; the environment it lives in is inherited, so a child (a new pid)
 // must not read it as being about itself.
@@ -32,13 +32,13 @@ const goffiUniversalGuard = "GOFFI_UNIVERSAL_REEXEC"
 // variable is simply absent, and executable answers "unknown" instead of
 // answering with the loader's path, which is the failure this is here to
 // prevent.
-const goffiUniversalExe = "GOFFI_UNIVERSAL_EXE"
+const GoffiUniversalExe = "GOFFI_UNIVERSAL_EXE"
 
-// f4ExeEnv passes this executable's path to the copies of f4 that SelfCommand
+// F4ExeEnv passes this executable's path to the copies of f4 that SelfCommand
 // starts. goffi's record cannot cover them: it is tagged with the pid of the
 // process the bridge re-execed, and a child has a different one -- but the
 // child is the same binary, so the parent's answer is the child's answer.
-const f4ExeEnv = "F4_EXE"
+const F4ExeEnv = "F4_EXE"
 
 var errExecutableUnknown = errors.New(
 	"f4 cannot tell where its own executable is: this build reached its libc by " +
@@ -64,13 +64,13 @@ func executable() (string, error) {
 	if p, ok := systemLinkerExecutable(); ok {
 		return p, nil
 	}
-	if os.Getenv(goffiUniversalGuard) == "" {
+	if os.Getenv(GoffiUniversalGuard) == "" {
 		return os.Executable()
 	}
-	if p, ok := recordedExecutable(os.Getenv(goffiUniversalExe)); ok {
+	if p, ok := recordedExecutable(os.Getenv(GoffiUniversalExe)); ok {
 		return p, nil
 	}
-	if p := os.Getenv(f4ExeEnv); p != "" {
+	if p := os.Getenv(F4ExeEnv); p != "" {
 		return p, nil
 	}
 	return "", errExecutableUnknown
@@ -95,7 +95,7 @@ func recordedExecutable(raw string) (string, bool) {
 func selfExecEnv() []string {
 	env := os.Environ()
 	if exe, err := executable(); err == nil && exe != "" {
-		env = append(env, f4ExeEnv+"="+exe)
+		env = append(env, F4ExeEnv+"="+exe)
 	}
 	return env
 }
@@ -105,7 +105,7 @@ func selfExecEnv() []string {
 // all. It does only when this process itself came up that way; an ordinary
 // dynamic or static build wants none of it.
 func universalHostLoader() (loader, libc string, ok bool) {
-	if os.Getenv(goffiUniversalGuard) == "" {
+	if os.Getenv(GoffiUniversalGuard) == "" {
 		return "", "", false
 	}
 	// The same table the bridge used, through goffi's public accessors: an
