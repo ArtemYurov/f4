@@ -7,6 +7,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/binary"
 	"errors"
 	"flag"
 	"fmt"
@@ -187,6 +188,7 @@ func WritePPM(w io.Writer, dump ScreenDump, cellWidth, cellHeight int) error {
 	if _, err := fmt.Fprintf(writer, "P6\n%d %d\n255\n", width, height); err != nil {
 		return err
 	}
+	var pixel [8]byte
 	for y := 0; y < dump.Height; y++ {
 		if len(dump.Attrs[y]) != dump.Width {
 			return fmt.Errorf("row %d has %d attributes, want %d", y, len(dump.Attrs[y]), dump.Width)
@@ -200,13 +202,8 @@ func WritePPM(w io.Writer, dump ScreenDump, cellWidth, cellHeight int) error {
 					if ink && isInkPixel(px, py, cellWidth, cellHeight) {
 						color = fg
 					}
-					if err := writer.WriteByte(byte(color >> 16)); err != nil {
-						return err
-					}
-					if err := writer.WriteByte(byte(color >> 8)); err != nil {
-						return err
-					}
-					if err := writer.WriteByte(byte(color)); err != nil {
+					binary.BigEndian.PutUint64(pixel[:], color)
+					if _, err := writer.Write(pixel[5:]); err != nil {
 						return err
 					}
 				}
@@ -231,16 +228,16 @@ func cellHasInk(row string, cell int) bool {
 	return runes[cell] != 0 && !unicode.IsSpace(runes[cell])
 }
 
-func attrColors(attr uint64) (fg, bg uint32) {
+func attrColors(attr uint64) (fg, bg uint64) {
 	if attr&isFgRGB != 0 {
-		fg = uint32(attr>>16) & 0xFFFFFF
+		fg = (attr >> 16) & 0xFFFFFF
 	} else {
-		fg = xtermColor(uint8(attr >> 16))
+		fg = xtermColor((attr >> 16) & 0xFF)
 	}
 	if attr&isBgRGB != 0 {
-		bg = uint32(attr>>40) & 0xFFFFFF
+		bg = (attr >> 40) & 0xFFFFFF
 	} else {
-		bg = xtermColor(uint8(attr >> 40))
+		bg = xtermColor((attr >> 40) & 0xFF)
 	}
 	if attr&foregroundDim != 0 {
 		if attr&isFgRGB != 0 {
@@ -255,9 +252,9 @@ func attrColors(attr uint64) (fg, bg uint32) {
 	return fg, bg
 }
 
-func xtermColor(index uint8) uint32 {
+func xtermColor(index uint64) uint64 {
 	if index < 16 {
-		return [16]uint32{
+		return [16]uint64{
 			0x000000, 0x800000, 0x008000, 0x808000,
 			0x000080, 0x800080, 0x008080, 0xC0C0C0,
 			0x808080, 0xFF0000, 0x00FF00, 0xFFFF00,
@@ -265,19 +262,19 @@ func xtermColor(index uint8) uint32 {
 		}[index]
 	}
 	if index < 232 {
-		value := int(index) - 16
+		value := index - 16
 		red := value / 36
 		green := (value / 6) % 6
 		blue := value % 6
-		component := func(value int) uint32 {
+		component := func(value uint64) uint64 {
 			if value == 0 {
 				return 0
 			}
-			return uint32(55 + value*40)
+			return 55 + value*40
 		}
 		return component(red)<<16 | component(green)<<8 | component(blue)
 	}
-	gray := uint32(8 + (int(index)-232)*10)
+	gray := 8 + (index-232)*10
 	return gray<<16 | gray<<8 | gray
 }
 
@@ -299,7 +296,7 @@ type nopWriteCloser struct{ io.Writer }
 
 func (nopWriteCloser) Close() error { return nil }
 
-func run(args []string, stderr io.Writer) error {
+func run(args []string, stderr io.Writer) (err error) {
 	flags := flag.NewFlagSet("vtui-screen", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	cellWidth := flags.Int("cell-width", 4, "bitmap pixels per terminal cell horizontally")
@@ -319,7 +316,11 @@ func run(args []string, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() {
+		if closeErr := in.Close(); err == nil {
+			err = closeErr
+		}
+	}()
 	dump, err := Parse(in)
 	if err != nil {
 		return err
@@ -328,11 +329,12 @@ func run(args []string, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	defer out.Close()
-	if err := WritePPM(out, dump, *cellWidth, *cellHeight); err != nil {
-		return err
-	}
-	return nil
+	defer func() {
+		if closeErr := out.Close(); err == nil {
+			err = closeErr
+		}
+	}()
+	return WritePPM(out, dump, *cellWidth, *cellHeight)
 }
 
 func main() {
