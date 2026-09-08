@@ -129,9 +129,20 @@ func copyProfileDir(src, dst string) error {
 }
 
 // transferProfileDir copies files under src into dst. When skipCrashes is
-// false, it is suitable for Move: every source file is transferred before the
-// caller removes the old profile. A failed transfer never changes src.
+// false, crash logs are included. It keeps existing destination files so that
+// Copy is non-destructive.
 func transferProfileDir(src, dst string, skipCrashes bool) error {
+	return transferProfileDirWithPolicy(src, dst, skipCrashes, false)
+}
+
+// moveProfileDir transfers every source file and rejects destination conflicts.
+// The caller can therefore remove src only after this function succeeds without
+// risking data loss from a non-overwriting copy.
+func moveProfileDir(src, dst string) error {
+	return transferProfileDirWithPolicy(src, dst, false, true)
+}
+
+func transferProfileDirWithPolicy(src, dst string, skipCrashes, failOnConflict bool) error {
 	src, dst = filepath.Clean(src), filepath.Clean(dst)
 	if src == dst {
 		return nil
@@ -148,6 +159,11 @@ func transferProfileDir(src, dst string, skipCrashes bool) error {
 	}
 	if !info.IsDir() {
 		return fmt.Errorf("%q is not a directory", src)
+	}
+	if failOnConflict {
+		if err := rejectTransferConflicts(src, dst, skipCrashes); err != nil {
+			return err
+		}
 	}
 	return filepath.WalkDir(src, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -171,9 +187,55 @@ func transferProfileDir(src, dst string, skipCrashes bool) error {
 			return nil
 		}
 		if _, err := os.Lstat(target); err == nil {
+			if failOnConflict {
+				return fmt.Errorf("cannot move profile: destination already contains %q", rel)
+			}
 			return nil
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return err
 		}
 		return copyFileNoClobber(path, target)
+	})
+}
+
+func rejectTransferConflicts(src, dst string, skipCrashes bool) error {
+	return filepath.WalkDir(src, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		if rel == "." {
+			if info, err := os.Lstat(dst); err == nil && !info.IsDir() {
+				return fmt.Errorf("cannot move profile: destination %q is not a directory", dst)
+			} else if err != nil && !errors.Is(err, os.ErrNotExist) {
+				return err
+			}
+			return nil
+		}
+		if skipCrashes && d.IsDir() && rel == "crashes" {
+			return filepath.SkipDir
+		}
+		target := filepath.Join(dst, rel)
+		if d.IsDir() {
+			if info, err := os.Lstat(target); err == nil && !info.IsDir() {
+				return fmt.Errorf("cannot move profile: destination %q is not a directory", rel)
+			} else if err != nil && !errors.Is(err, os.ErrNotExist) {
+				return err
+			}
+			return nil
+		}
+		if !d.Type().IsRegular() {
+			return nil
+		}
+		if _, err := os.Lstat(target); err == nil {
+			return fmt.Errorf("cannot move profile: destination already contains %q", rel)
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		return nil
 	})
 }
 
@@ -310,7 +372,7 @@ func applyPortableMode(iniPath string, enable, moveProfile bool) error {
 		dst = systemProfileDir()
 	}
 	if moveProfile {
-		if err := transferProfileDir(src, dst, false); err != nil {
+		if err := moveProfileDir(src, dst); err != nil {
 			return err
 		}
 	} else {
