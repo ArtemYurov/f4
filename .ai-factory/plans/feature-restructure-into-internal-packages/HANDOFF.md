@@ -102,28 +102,74 @@ so filter on the first letter instead; and struct fields are not in the model at
 all — `fsp.vfs` does not appear — so the query names candidates and grep
 confirms them.
 
-## Three mechanical traps, each hit once
+## Four mechanical traps, each hit once
 
-**`git commit --only $(git diff --cached --name-only)` builds a commit that does
-not compile.** With rename detection, `--name-only` prints only the new path;
-the old one stays in the tree and the commit holds both copies. For a wave of
-moves take the paths from `git status --short` instead. The point of the
-pointed-commit rule is a commit that builds and takes nothing of anyone else's,
-and this form quietly broke the first half of it.
+**Both obvious ways of listing paths for a pointed commit are wrong, in
+opposite directions.** `git diff --cached --name-only` prints only the *new*
+path of a rename, so the old one stays in the tree and the commit holds both
+copies — it does not compile. `git status --short | awk '{print $2}'` prints
+only the *old* path, so the new files are left out of the commit entirely. One
+wave hit each. The form that works:
+
+```
+git commit --only $(git status --short | sed 's/^...//' | sed 's/ -> /\n/' | tr '\n' ' ') -F <msg>
+```
+
+The rule exists so a commit builds and takes nothing of anyone else's; both
+shortcuts broke the first half of that silently. `git ls-tree HEAD <old path>`
+is what tells you afterwards, and `git commit --amend --only <all paths>` is the
+repair.
+
+**A compiler-driven rename loop must never rewrite bare identifiers.** Rewrite
+selectors (`.name`) and declarations bound to a named receiver; leave everything
+else alone. `qual2.py` and a loop written for Task 33 both ignored that and
+wrecked packages that merely shared a name — `closeOnce` became
+`fileops.CloseOnce` across four `internal/terminal` files, and `vfs`, the
+*package qualifier*, became `Vfs` in 217 files at once. `exportmethods2.py` is
+the shape that works, and it takes the receiver names for exactly this reason.
+
+Two tells are worth knowing because they are what actually bites. A loop that
+flips between two spellings has found two types sharing a field name — stop it
+and resolve by hand; that happened four times in one wave (`vfs`, `indexWG`,
+`showSearchDialog`, `showCodepageDialog`). And a loop keyed on `git ls-files`
+cannot see the files the wave just created, so it spins without converging:
+walk the tree instead.
+
+**Cut test functions with `go/parser`, not with a regexp.** A regexp that finds
+a function's start by scanning backwards for a blank line eats the previous
+function's closing brace, and the result is still valid Go — a test that
+silently moved to the wrong file, or vanished with its assertions. The compiler
+cannot see it. Task 33 lost three test tails and five whole tests that way, and
+only the literal-diff check plus a comparison against the previous revision
+found them. One parser costs less than that comparison did.
 
 **The palette auditor's target map empties itself, and a wave that forgets its
 line leaves litter.** `commandPaletteTargetPackage` forward-declares where each
 `cmd/f4` file will land so audit keys survive the move; the wave that moves a
 file deletes its entry, at which point the directory gives the same answer.
 Three entries were stale when Task 32 looked — `codepage_settings.go`,
-`macro.go` and its own `queue_manager.go` — so it is worth checking the whole
-map rather than only the file you moved:
+`macro.go` and its own `queue_manager.go` — so check the whole map rather than
+only the file you moved:
 
 ```
 sed -n '/^var commandPaletteTargetPackage/,/^}/p' cmd/f4/command_palette_coverage_test.go \
   | grep -oE '"[a-z_0-9]+\.go"' | tr -d '"' \
   | while read f; do [ -e "cmd/f4/$f" ] || echo "stale: $f"; done
 ```
+
+## A test whose subject is a binding belongs with the table
+
+`internal/editor` reaches the action layer through a seam, and the registry
+behind it is filled by `action_table.go`'s `init` in `cmd/f4`. Nineteen tests
+that press a key and expect an action would therefore have passed in the
+editor's package **by finding nothing to do** — green because the registry was
+empty. They stayed with the table.
+
+Checked against the waves already done, and the class had not fired before:
+`internal/*` holds two `RunAction` occurrences and both are mock methods, no
+test there names `LookupHotkey`, and `RegisterAction` is called only from
+`cmd/f4`. Every other key-pressing test drives the widget's own `ProcessKey`,
+which is local. Tasks 34 and 35 sit next to the table and will meet it again.
 
 ## Tools
 

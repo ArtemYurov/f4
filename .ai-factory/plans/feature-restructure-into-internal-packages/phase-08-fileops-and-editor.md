@@ -418,10 +418,16 @@ the hotkey manager, the panels frame, or a mock this package declares.
 - `internal/editor` may import `internal/piecetable`, `internal/textlayout`,
   `internal/colorer`, `internal/config`, `internal/i18n`, `internal/theme`,
   `internal/keymap`, `internal/numeric`, `internal/toast`, `internal/history`,
-  `internal/action`, `internal/dialog`, `internal/fileops`, `vfs`. Not
-  `internal/viewer` — that cycle was removed in Task 29 by moving `top_bar.go`,
-  `file_title.go` and `url_links.go` to the viewer. Not `internal/panel`,
-  `internal/cmdline`, `internal/app`.
+  `internal/action`, `internal/dialog`, `internal/fileops`, `internal/appcmd`,
+  `vfs`, and `internal/viewer`. Not `internal/panel`, `internal/cmdline`,
+  `internal/app`.
+
+  The viewer edge is deliberate. Task 29 moved `top_bar.go`, `file_title.go`
+  and `url_links.go` there, and the editor reads 22 symbols from them —
+  `UrlLink` ×8, the disassembly helpers, the word-category helpers, `TopBar`.
+  Five imports one way, none back; same layer, no cycle, and
+  `architecture_test.go` passes. An earlier version of this line forbade the
+  edge on the strength of a cycle that Task 29 had already removed.
 - `EditorView`'s method set and names are unchanged; Far-derived names stay.
 - `(*EditorView).ProcessKey` is an audited symbol: its palette-auditor key becomes
   `editor.(*EditorView).ProcessKey`.
@@ -507,7 +513,8 @@ done
 
 - Every Task 32-33 satisfies its acceptance criteria.
 - `internal/fileops` imports no interactive subsystem and no `internal/terminal`.
-- `internal/editor` and `internal/viewer` do not import each other.
+- `internal/viewer` does not import `internal/editor`. The reverse edge exists
+  and is legal; `architecture_test.go` is the check.
 - `TestActionOrderIsStable` passes in both commits.
 - `go test -timeout 25m ./...` matches the Task 1 baseline.
 - `index.md` task checkboxes 32-33 are ticked.
