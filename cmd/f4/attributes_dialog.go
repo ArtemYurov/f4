@@ -92,6 +92,42 @@ func setUnixAttributesForTargets(ctx context.Context, v vfs.VFS, targets []attri
 	return nil
 }
 
+// replaceSymlinkTarget changes the link itself, never the object it points at.
+// The new link is created only after the old one has been removed because the
+// optional VFS API does not promise replace semantics. If creation fails, put
+// the original link back before returning the error so a failed edit cannot
+// silently delete the user's link.
+func replaceSymlinkTarget(ctx context.Context, v vfs.VFS, path, newTarget string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if newTarget == "" {
+		return fmt.Errorf("symlink target cannot be empty")
+	}
+	symVFS, ok := v.(vfs.SymlinkVFS)
+	if !ok {
+		return fmt.Errorf("VFS does not support symbolic links")
+	}
+	oldTarget, err := symVFS.Readlink(ctx, path)
+	if err != nil {
+		return fmt.Errorf("read symlink %q: %w", path, err)
+	}
+	if oldTarget == newTarget {
+		return nil
+	}
+	if err := v.Remove(ctx, path); err != nil {
+		return fmt.Errorf("remove symlink %q: %w", path, err)
+	}
+	createErr := symVFS.Symlink(ctx, newTarget, path)
+	if createErr == nil {
+		return nil
+	}
+	if restoreErr := symVFS.Symlink(ctx, oldTarget, path); restoreErr != nil {
+		return fmt.Errorf("create symlink %q: %w; restore original target %q: %v", path, createErr, oldTarget, restoreErr)
+	}
+	return fmt.Errorf("create symlink %q: %w (original target restored)", path, createErr)
+}
+
 func setWindowsAttributesForTargets(ctx context.Context, v vfs.VFS, targets []attributesTarget, edited vfs.VFSItem) error {
 	const editableWinAttrs = uint32(1 | 2 | 4 | 32)
 	for _, target := range targets {
@@ -315,18 +351,13 @@ func showAttributesUnixForTargets(pf *PanelsFrame, v vfs.VFS, targets []attribut
 		vtui.FrameManager.Redraw()
 	}
 
-	btnSet.OnClick = func() {
-		if item.IsSymlink && editTarget != nil && len(targets) == 1 {
-			newTarget := editTarget.GetText()
-			oldTarget, _ := vfs.Readlink(context.Background(), v, path)
-			if newTarget != "" && newTarget != oldTarget {
-				if symVFS, ok := v.(vfs.SymlinkVFS); ok {
-					_ = v.Remove(context.Background(), path)
-					_ = symVFS.Symlink(context.Background(), newTarget, path)
-				}
-			}
-		}
+	targetEdited := item.IsSymlink && editTarget != nil && len(targets) == 1
 
+	btnSet.OnClick = func() {
+		newTarget := ""
+		if targetEdited {
+			newTarget = editTarget.GetText()
+		}
 		uidStr := editOwner.GetText()
 		if u, err := user.Lookup(uidStr); err == nil {
 			item.Uid, _ = strconv.Atoi(u.Uid)
@@ -351,6 +382,14 @@ func showAttributesUnixForTargets(pf *PanelsFrame, v vfs.VFS, targets []attribut
 			item.MTime = t
 		}
 		vtui.RunAsync(func(ctx *vtui.TaskContext) {
+			if targetEdited {
+				if err := replaceSymlinkTarget(ctx.Context, v, path, newTarget); err != nil {
+					ctx.RunOnUI(func() {
+						vtui.ShowMessage(" Error ", err.Error(), []string{"&Ok"})
+					})
+					return
+				}
+			}
 			err := setUnixAttributesForTargets(ctx.Context, v, targets, item)
 			ctx.RunOnUI(func() {
 				if err != nil {
