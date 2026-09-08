@@ -50,7 +50,15 @@ func TestPortableSettingsHelpTopicIsRegistered(t *testing.T) {
 		t.Fatal("PortableSettings help topic is missing")
 	}
 	content := strings.Join(topic.Lines, "\n")
-	for _, want := range []string{"UseSystemProfiles=0", "f4.exe.ini", "Restart f4"} {
+	for _, want := range []string{
+		"UseSystemProfiles=0",
+		"f4.exe.ini",
+		"f4.example.ini",
+		"Macros/scripts",
+		"logs/",
+		"crashes/",
+		"Restart f4",
+	} {
 		if !strings.Contains(content, want) {
 			t.Errorf("PortableSettings help does not mention %q", want)
 		}
