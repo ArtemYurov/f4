@@ -12,6 +12,13 @@ import (
 	"github.com/unxed/vtui"
 )
 
+func init() {
+	// The Go test executable is placed in a temporary build directory, while
+	// CI installs the same ConPTY pair into this package directory. Production
+	// binaries do not use this hook: they resolve the pair next to f4.exe.
+	conPTYBundleDirectoryOverride = os.Getwd
+}
+
 func TestConPTYAvailable_DoesNotPanic(t *testing.T) {
 	avail := conPTYAvailable()
 	if !avail {
@@ -22,6 +29,23 @@ func TestConPTYAvailable_DoesNotPanic(t *testing.T) {
 			}
 			t.Fatal("NewPTY succeeded when conPTYAvailable() reported false")
 		}
+	}
+}
+
+func TestBundledConPTYIsSelected(t *testing.T) {
+	if vtui.IsWine() {
+		t.Skip("Wine does not run the native ConPTY bundle")
+	}
+	api, err := bundledConPTY()
+	if err != nil {
+		t.Fatalf("bundled ConPTY: %v", err)
+	}
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := filepath.Clean(filepath.Dir(api.path)); got != filepath.Clean(dir) {
+		t.Fatalf("ConPTY loaded from %q, want the test-installed pair in %q", got, dir)
 	}
 }
 
