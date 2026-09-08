@@ -228,8 +228,27 @@ updating a path.
      identifiers it should not" — was true and is now false. The graph is still the
      right tool for symbol questions; the *reason* changed.
 3. `.ai-factory/rules/base.md`'s Module Structure section lists the pre-move tree
-   and tells new code where to go. Update the list, and re-derive the counts it
-   quotes.
+   and tells new code where to go. Update the list, re-derive the counts it
+   quotes, and drop the transitional wording — after this branch the tree is not
+   "being split", it is split.
+   Then give the section a **File Placement** part, because this is the file the
+   AI Factory skills read as project rules and it currently answers "what exists"
+   without answering "where does mine go":
+   - the package that owns the subject; no package owns it, create one; never
+     `internal/app`, which wires and does not implement;
+   - nothing new in `cmd/f4` — it holds `main.go`, the wiring tests, the four
+     module-wide auditors and the Windows `.syso` files;
+   - inside a package, `<topic>.go` and `<topic>_<aspect>.go`, prefix naming the
+     topic and not the package (`panel/frame.go`, never `panel/panel_frame.go`),
+     platform suffix last;
+   - a test lives with its subject; a test spanning packages is hosted by the
+     latest one and splits or uses `package X_test` — the rule Task 43 applied to
+     61 of them;
+   - resources travel with the package that embeds them, and a test reading them
+     from disk guards against the empty set.
+   Keep it short and point at `ARCHITECTURE.md` for the reasoning: `base.md` is
+   the rule, the architecture document is the argument. Duplicating the argument
+   in both guarantees they drift.
 4. Walk the 13 of 48 top-level `docs/*.md` pages that mention `cmd/f4` and check
    each for a claim about *structure* rather than a path (`grep -rl 'cmd/f4' docs/`
    returns 20 because it also walks `docs/ISSUES/`, which is a historical record
