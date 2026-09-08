@@ -5676,6 +5676,7 @@ func parseDirChangeCommand(trimmedCmd string) (targetPath string, ok bool) {
 // excluded here as well so the two forms cannot drift into one another.
 func parsePlainEditCommand(trimmedCmd string) (path string, ok bool) {
 	const prefix = "edit:"
+	trimmedCmd = strings.TrimSpace(trimmedCmd)
 	if len(trimmedCmd) <= len(prefix) || !strings.EqualFold(trimmedCmd[:len(prefix)], prefix) {
 		return "", false
 	}
