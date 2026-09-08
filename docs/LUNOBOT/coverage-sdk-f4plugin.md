@@ -10,3 +10,7 @@ by the SDK.
 
 Local builds and tests were not run. GitHub Actions is the authoritative
 verification for this change.
+
+The initial PR commit `dd613c3917004a8ee30c301a6a7a1f2e394a295f` passed the
+full GitHub Actions run [34291449131](https://github.com/unxed/f4/actions/runs/34291449131),
+including build, test, race, lint, vet, and quality checks.
