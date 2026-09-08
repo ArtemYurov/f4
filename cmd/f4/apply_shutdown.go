@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"github.com/unxed/f4/fusefs"
+	"github.com/unxed/f4/internal/fusefs"
 )
 
 func cancelOperationsForShutdown() {

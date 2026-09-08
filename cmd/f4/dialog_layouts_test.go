@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/unxed/f4/fusefs"
+	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"

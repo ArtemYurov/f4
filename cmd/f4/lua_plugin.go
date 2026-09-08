@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/unxed/f4/luaplug"
+	"github.com/unxed/f4/internal/luaplug"
 	"github.com/unxed/f4/sdk/f4rpc"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/ffibridge"

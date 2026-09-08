@@ -321,7 +321,7 @@ titles, not the ordering.
 
 ### Phase 3: Self-Contained Subsystems Under internal/
 - [x] Task 16: Move `piecetable`, `textlayout` and `sheet` under `internal/` ([details](phase-03-subsystems.md#task-16-move-piecetable-textlayout-and-sheet)) (depends on 15)
-- [ ] Task 17: Move `fusefs`, `vtvibe` and `luaplug` under `internal/` ([details](phase-03-subsystems.md#task-17-move-fusefs-vtvibe-and-luaplug))
+- [x] Task 17: Move `fusefs`, `vtvibe` and `luaplug` under `internal/` ([details](phase-03-subsystems.md#task-17-move-fusefs-vtvibe-and-luaplug))
 
 ### Phase 4: The Shared Primitives Leave cmd/f4
 - [ ] Task 18: Split `action_registry.go` into mechanism and table, in place ([details](phase-04-shared-primitives.md#task-18-separate-the-action-registrys-mechanism-from-its-table)) (depends on 3, 17)

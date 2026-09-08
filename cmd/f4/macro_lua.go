@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/unxed/f4/luaplug"
+	"github.com/unxed/f4/internal/luaplug"
 	"github.com/unxed/vtinput"
 	lua "github.com/yuin/gopher-lua"
 )

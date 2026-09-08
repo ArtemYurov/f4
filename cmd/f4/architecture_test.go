@@ -38,7 +38,12 @@ var architectureLayers = map[string]int{
 	// reads the piece table it lays out.
 	"internal/piecetable": 0,
 	"internal/sheet":      0,
+	"internal/luaplug":    0,
 	"internal/textlayout": 1,
+
+	// These two sit on vfs, which stays public.
+	"internal/fusefs": 1,
+	"internal/vtvibe": 1,
 
 	// Test scaffolding, placed by what it may import: testutil imports no
 	// package of ours, paneltest sits above the three it builds a frame from.

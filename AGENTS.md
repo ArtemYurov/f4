@@ -32,10 +32,6 @@ plugins/         # one package per plugin: archive, cloudfox, netfox, mediainfo,
                  # envman, ios, android, sqlite, visren, id3editor, chroma
                  # dummy_internal / dummy_rpc / dummy_lua are transport fixtures
 sdk/             # plugin API: f4plugin, f4rpc, lua, extui
-luaplug/         # Lua plugin engine
-
-fusefs/          # FUSE mounting
-vtvibe/          # vtvibe session/provider layer
 internal/        # module-private platform helpers
   wincon/        #   Windows console
   ttyx/          #   tty extensions
@@ -46,6 +42,9 @@ internal/        # module-private platform helpers
   piecetable/    #   piece table backing the editor
   textlayout/    #   text layout and wrapping over it
   sheet/         #   spreadsheet mode
+  fusefs/        #   FUSE mounting
+  vtvibe/        #   vtvibe session/provider layer
+  luaplug/       #   Lua plugin engine
   hideconsole/   #   console hiding on Windows
 tools/           # developer tooling, incl. the ttytest terminal harness
 docs/            # 48 subsystem documents — read the relevant one before editing

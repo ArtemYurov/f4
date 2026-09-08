@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/unxed/f4/fusefs"
+	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/vtui"
 )
 
