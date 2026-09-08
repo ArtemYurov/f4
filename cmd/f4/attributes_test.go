@@ -33,7 +33,7 @@ type lstatMetadataVFS struct {
 
 type symlinkTargetVFS struct {
 	*vfs.OSVFS
-	failTarget string
+	failTarget  string
 	removeCalls int
 	symlinkArgs []string
 }
