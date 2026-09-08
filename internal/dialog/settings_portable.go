@@ -81,11 +81,28 @@ func EnsureProfileLayout(dir string) error {
 	return nil
 }
 
-// CopyProfileDir copies every file under src into dst, keeping files that
-// already exist in dst and skipping crash logs. It never deletes anything, so
-// switching modes twice cannot lose data: the user ends up with two copies
-// rather than none.
+// CopyProfileDir copies every non-crash file under src into dst, keeping files
+// that already exist in dst. It never deletes anything, so switching modes
+// twice cannot lose data: the user ends up with two copies rather than none.
 func CopyProfileDir(src, dst string) error {
+	return transferProfileDir(src, dst, true)
+}
+
+// transferProfileDir copies files under src into dst. When skipCrashes is
+// false, crash logs are included. It keeps existing destination files so that
+// Copy is non-destructive.
+func transferProfileDir(src, dst string, skipCrashes bool) error {
+	return transferProfileDirWithPolicy(src, dst, skipCrashes, false)
+}
+
+// MoveProfileDir transfers every source file and rejects destination conflicts.
+// The caller can therefore remove src only after this function succeeds without
+// risking data loss from a non-overwriting copy.
+func MoveProfileDir(src, dst string) error {
+	return transferProfileDirWithPolicy(src, dst, false, true)
+}
+
+func transferProfileDirWithPolicy(src, dst string, skipCrashes, failOnConflict bool) error {
 	src, dst = filepath.Clean(src), filepath.Clean(dst)
 	if src == dst {
 		return nil
@@ -103,6 +120,11 @@ func CopyProfileDir(src, dst string) error {
 	if !info.IsDir() {
 		return fmt.Errorf("%q is not a directory", src)
 	}
+	if failOnConflict {
+		if err := rejectTransferConflicts(src, dst, skipCrashes); err != nil {
+			return err
+		}
+	}
 	return filepath.WalkDir(src, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -114,7 +136,7 @@ func CopyProfileDir(src, dst string) error {
 		if rel == "." {
 			return os.MkdirAll(dst, 0700)
 		}
-		if d.IsDir() && rel == "crashes" {
+		if skipCrashes && d.IsDir() && rel == "crashes" {
 			return filepath.SkipDir
 		}
 		target := filepath.Join(dst, rel)
@@ -125,9 +147,55 @@ func CopyProfileDir(src, dst string) error {
 			return nil
 		}
 		if _, err := os.Lstat(target); err == nil {
+			if failOnConflict {
+				return fmt.Errorf("cannot move profile: destination already contains %q", rel)
+			}
 			return nil
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return err
 		}
 		return copyFileNoClobber(path, target)
+	})
+}
+
+func rejectTransferConflicts(src, dst string, skipCrashes bool) error {
+	return filepath.WalkDir(src, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		if rel == "." {
+			if info, err := os.Lstat(dst); err == nil && !info.IsDir() {
+				return fmt.Errorf("cannot move profile: destination %q is not a directory", dst)
+			} else if err != nil && !errors.Is(err, os.ErrNotExist) {
+				return err
+			}
+			return nil
+		}
+		if skipCrashes && d.IsDir() && rel == "crashes" {
+			return filepath.SkipDir
+		}
+		target := filepath.Join(dst, rel)
+		if d.IsDir() {
+			if info, err := os.Lstat(target); err == nil && !info.IsDir() {
+				return fmt.Errorf("cannot move profile: destination %q is not a directory", rel)
+			} else if err != nil && !errors.Is(err, os.ErrNotExist) {
+				return err
+			}
+			return nil
+		}
+		if !d.Type().IsRegular() {
+			return nil
+		}
+		if _, err := os.Lstat(target); err == nil {
+			return fmt.Errorf("cannot move profile: destination already contains %q", rel)
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		return nil
 	})
 }
 
@@ -183,8 +251,12 @@ func ShowPortableSettings() {
 	if wasPortable {
 		chkPortable.State = 1
 	}
-	chkCopy := vtui.NewCheckbox(0, 0, i18n.Msg("PortableSettings.CopyProfile"), false)
-	chkCopy.State = 1
+	transferModes := []string{i18n.Msg("PortableSettings.Copy"), i18n.Msg("PortableSettings.Move")}
+	comboTransfer := vtui.NewComboBox(0, 0, 18, transferModes)
+	comboTransfer.DropdownOnly = true
+	comboTransfer.Menu.SetSelectPos(0)
+	comboTransfer.Edit.SetText(transferModes[0])
+	lblTransfer := vtui.NewLabel(0, 0, i18n.Msg("PortableSettings.Transfer"), comboTransfer)
 
 	// Both paths can be long (a deep %APPDATA% or a build sandbox); keep the
 	// tail, which is the part that tells the two locations apart.
@@ -204,7 +276,8 @@ func ShowPortableSettings() {
 	dlg.AddItem(current)
 	dlg.AddItem(iniInfo)
 	dlg.AddItem(chkPortable)
-	dlg.AddItem(chkCopy)
+	dlg.AddItem(lblTransfer)
+	dlg.AddItem(comboTransfer)
 	dlg.AddItem(note)
 	dlg.AddItem(note2)
 	dlg.AddItem(btnOk)
@@ -214,7 +287,10 @@ func ShowPortableSettings() {
 	vbox.Add(current, vtui.Margins{}, vtui.AlignLeft)
 	vbox.Add(iniInfo, vtui.Margins{}, vtui.AlignLeft)
 	vbox.Add(chkPortable, vtui.Margins{Top: 1}, vtui.AlignLeft)
-	vbox.Add(chkCopy, vtui.Margins{Left: 3}, vtui.AlignLeft)
+	transferRow := vtui.NewHBoxLayout(0, 0, width-4, 1)
+	transferRow.Add(lblTransfer, vtui.Margins{Left: 3, Right: 1}, vtui.AlignLeft)
+	transferRow.Add(comboTransfer, vtui.Margins{}, vtui.AlignLeft)
+	vbox.Add(transferRow, vtui.Margins{}, vtui.AlignFill)
 	vbox.Add(note, vtui.Margins{Top: 1}, vtui.AlignLeft)
 	vbox.Add(note2, vtui.Margins{}, vtui.AlignLeft)
 
@@ -233,7 +309,7 @@ func ShowPortableSettings() {
 			dlg.Close()
 			return
 		}
-		if err := applyPortableMode(iniPath, enable, chkCopy.State == 1); err != nil {
+		if err := applyPortableMode(iniPath, enable, comboTransfer.Menu.SelectPos == 1); err != nil {
 			vtui.ShowMessage(i18n.Msg("Error.Title"), err.Error(), []string{i18n.Msg("vtui.Ok")})
 			return
 		}

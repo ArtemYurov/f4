@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/f4/internal/macro"
@@ -848,6 +849,52 @@ func TestMacro_CharTrigger(t *testing.T) {
 		t.Error("Manager failed to enter recording state via Char trigger")
 	}
 }
+
+func TestMacro_BoundActionConsumesEventWhenHandlerFails_Issue983(t *testing.T) {
+	t.Cleanup(swapFrameManager(t))
+	preserveActionRegistry(t)
+	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
+
+	calls := 0
+	action.RegisterAction(action.Action{
+		Name: "Test.FailedHotkey",
+		Area: "Common",
+		Handler: func() bool {
+			calls++
+			return false
+		},
+	})
+	previousHotkeys := GlobalHotkeysMgr
+	GlobalHotkeysMgr = &HotkeyManager{
+		Bindings: map[string]map[string]string{
+			"Common": {"CtrlF9": "Test.FailedHotkey"},
+		},
+		Defaults: map[string]map[string]string{},
+	}
+	t.Cleanup(func() { GlobalHotkeysMgr = previousHotkeys })
+
+	mgr := &macro.MacroManager{Macros: make(map[string]map[string][]*vtinput.InputEvent)}
+	event := &vtinput.InputEvent{
+		Type:            vtinput.KeyEventType,
+		KeyDown:         true,
+		VirtualKeyCode:  vtinput.VK_F9,
+		ControlKeyState: vtinput.LeftCtrlPressed,
+	}
+	if !macroFilter(mgr, event) {
+		t.Fatal("Filter passed through a configured action whose handler failed")
+	}
+	if calls != 1 {
+		t.Fatalf("failed action calls after Filter = %d, want 1", calls)
+	}
+
+	if !macroLookupHotkey(mgr, event) {
+		t.Fatal("LookupHotkey passed through a configured action whose handler failed")
+	}
+	if calls != 2 {
+		t.Fatalf("failed action calls after LookupHotkey = %d, want 2", calls)
+	}
+}
+
 func TestMacro_AssignFrame_Structure(t *testing.T) {
 	t.Cleanup(swapFrameManager(t))
 	scr := vtui.NewSilentScreenBuf()
