@@ -138,7 +138,7 @@ func TestArchiveProviderOpensZipSFXMultiVolume(t *testing.T) {
 		t.Fatal(err)
 	}
 	sfxPath := filepath.Join(root, "bundle.exe")
-	if err := os.WriteFile(sfxPath, append([]byte("stub bytes before the archive\n"), archiveBytes...), 0600); err != nil {
+	if err := os.WriteFile(sfxPath, append([]byte("stub bytes before the archive\n"), archiveBytes...), 0600); err != nil { // #nosec G703 -- sfxPath is inside the per-test directory created by testing.T.TempDir.
 		t.Fatal(err)
 	}
 
@@ -241,7 +241,7 @@ func TestMaterializeEmbeddedArchiveCopiesZipVolumes(t *testing.T) {
 	if err := os.WriteFile(filename, []byte("stubarchive"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "bundle.z01"), []byte("volume one"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "bundle.z01"), []byte("volume one"), 0600); err != nil { // #nosec G703 -- root is the per-test directory created by testing.T.TempDir.
 		t.Fatal(err)
 	}
 
