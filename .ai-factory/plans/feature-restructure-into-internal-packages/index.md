@@ -29,7 +29,9 @@ left). Every count in this bundle is verified against `0cda22a7`.
 
 ## Settings
 
-- Testing: yes — the 346 `cmd/f4/*_test.go` files move with their subjects; a
+- Testing: yes — the `cmd/f4/*_test.go` files (346 at the base revision, 343 once
+  Phase 1 has moved five helper-only files out and added three tests) move with
+  their subjects; a
   module boundary auditor is added in Task 8; `internal/numeric` gets the one new
   test suite in the plan.
 - Logging: project convention, nothing added. Diagnostics stay on `VTUI_DEBUG`
@@ -125,8 +127,11 @@ re-run nowhere — a green build with a missing test.
 already lives in an extracted package, in itself, or outside the module. The
 mechanical form is per **(file, destination)**: count references to types whose
 own package is extracted *later*, and resolve each non-zero before moving.
-Measured over all 345 non-test files: **235 score zero on every type** and are a
-pure `git mv`; 58 score 1-3; 52 score 4 or more.
+Measured over all 345 non-test files at the base revision: **235 score zero on
+every type** and are a pure `git mv`; 58 score 1-3; 52 score 4 or more. Phase 1
+leaves 346: `navigation_mode.go` is deleted, `drive_registry.go` and
+`action_order.go` are created, and all three score zero, so the zero bucket
+becomes 236.
 
 **The eight-type grep is necessary, not sufficient.** It finds view types only. A
 file also may not reference any *other* symbol still in `cmd/f4`, and the gate is
@@ -256,7 +261,7 @@ titles, not the ordering.
 - [x] Task 7: Remove sysinfo's last localization call (`gpu_info_linux.go:113`) ([details](phase-01-baseline-and-barriers.md#task-7-remove-sysinfos-last-localization-call))
 - [x] Task 8: Add the module boundary auditor `cmd/f4/architecture_test.go` ([details](phase-01-baseline-and-barriers.md#task-8-add-the-module-boundary-auditor))
 - [x] Task 9: Split the shared frame harness into `internal/testutil` + `internal/paneltest` ([details](phase-01-baseline-and-barriers.md#task-9-give-the-shared-frame-harness-a-home))
-- [ ] Task 43: Assign every `cmd/f4` file to a wave — 23 stray sources, 154 subject-less tests, 61 multi-package tests, 48 shared helpers ([details](phase-01-baseline-and-barriers.md#task-43-assign-every-cmdf4-file-to-a-wave)) (depends on 8)
+- [x] Task 43: Assign every `cmd/f4` file to a wave — 23 stray sources, 154 subject-less tests, 61 multi-package tests, 48 shared helpers ([details](phase-01-baseline-and-barriers.md#task-43-assign-every-cmdf4-file-to-a-wave)) (depends on 8)
 
 ### Phase 2: Clear the Repository Root
 - [ ] Task 10: Move the three shell scripts to `scripts/` ([details](phase-02-repository-root.md#task-10-move-the-shell-scripts-to-scripts)) (depends on 1)

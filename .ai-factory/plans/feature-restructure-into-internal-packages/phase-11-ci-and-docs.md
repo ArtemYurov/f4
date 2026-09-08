@@ -492,3 +492,79 @@ None.
 - `go test -timeout 25m ./...` plus the five other module runs match the Task 1
   baseline's green set.
 - `index.md` task checkboxes 38-42 are ticked.
+
+---
+
+## Task 44: Review the finished tree before calling it done
+
+### Intent
+
+Every package in the target layout was chosen from a call graph measured while
+the code still lived in one flat package. That measurement was good enough to
+order the work, but a package only reveals its real shape once it exists and has
+callers. This task looks at the result and asks whether the split went far
+enough, not far enough, or in the wrong place — and records the answer instead of
+leaving it to whoever notices first.
+
+It changes no code. Splitting a package further is a separate pull request with
+its own evidence; doing it here would enlarge a change that already touches the
+whole tree.
+
+### Implementation Steps
+
+1. **Measure every extracted package as it now stands.** File count, and for each
+   one the list of packages that import it:
+   `go list -f '{{.ImportPath}} {{join .Imports " "}}' ./... | grep internal/`.
+   A package nobody imports but `internal/app` is a candidate for merging back;
+   a package imported by everything is a candidate for splitting.
+2. **Ask the split question where the parts have different callers.** The named
+   candidate is `internal/media`: its `image_*`, `audio_*` and `video_*` families
+   were measured as effectively unconnected before the move — one reference in
+   total, `imageViewBackAttr`, which is a colour attribute and by then may live in
+   `internal/theme`. If after extraction `panel` reaches only the image half and
+   something else only the audio half, the boundary is real and worth a follow-up.
+   If every caller uses all three, it is one package and stays one.
+   Apply the same question to the largest results — `term`, `panel`, `app` — and
+   to anything over roughly forty files.
+3. **Decide the two files whose home is genuinely arguable** rather than leaving
+   them where the wave put them by default: `player_panel.go` (a panel over the
+   media engine — media or panel?) and `sixel_layers.go` (graphics — media or
+   term?). State the reason, not just the choice.
+4. **Check that no new flat package appeared.** The failure this whole branch
+   exists to undo is one package accumulating unrelated code. Verify no extracted
+   package holds files from two unrelated subjects, and that `internal/app` holds
+   wiring rather than features that found no other home.
+5. **Verify the tree against `ARCHITECTURE.md` as rewritten in Task 41** — the
+   layer table, the dependency rules, the file-naming convention. Where the code
+   and the document disagree, one of them is wrong; say which.
+6. **Write the outcome into the PR body**, in a short section: what was reviewed,
+   what stays as is, and what is proposed as a follow-up with the evidence behind
+   it. A reviewer should not have to ask whether the structure was thought about
+   after it was built.
+
+### Required Interfaces and Contracts
+
+None. Read-only review.
+
+### Error Handling and Logging
+
+Not applicable.
+
+### Tests
+
+None added. `cmd/f4/architecture_test.go` (Task 6) already asserts the layer
+rules; this task reads its result rather than extending it.
+
+### Acceptance Criteria
+
+- Every extracted package has a recorded file count and caller list.
+- `internal/media` has an explicit keep-or-split decision with the caller
+  evidence behind it.
+- `player_panel.go` and `sixel_layers.go` have a stated home and a reason.
+- No package outside the composition root holds two unrelated subjects.
+- The PR body carries the review outcome and any follow-up proposals.
+
+### Verification
+
+- `go list -f '{{.ImportPath}} {{join .Imports " "}}' ./...`
+- `go test ./cmd/f4 -run TestArchitecture`

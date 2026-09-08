@@ -1018,7 +1018,9 @@ lists as its own top risk.
   package. Two more are named only where nothing is assigned:
   `navigation_mode.go` (Task 4 empties it) and `terminal_redraw.go` (an evidence
   table).
-- **154 of the 346 `_test.go` files** have no same-named source — they are named
+- **154 of the 346 `_test.go` files** (152 of 343 once Phase 1 has run: five
+  helper-only files are deleted and three tests are created) have no same-named
+  source — they are named
   for the scenario they exercise. Wave-procedure step 3 says "take every
   `_test.go` neighbour", which is a filename rule, so it strands 45% of the suite:
   those tests stay in `cmd/f4` while their subjects leave, and either stop
@@ -1046,7 +1048,7 @@ comes from the graph's edges out of each test file, not from filenames.
             <(grep -rhoE '[a-z0-9_]+_test\.go' .ai-factory/plans/feature-restructure-into-internal-packages/*.md | sort -u)
    # the size of the table in step 3 — a property of the tree, not a check
    comm -23 <(ls cmd/f4/*_test.go | sed 's|cmd/f4/||;s|_test\.go$||' | sort) \
-            <(ls cmd/f4/*.go | grep -v '_test\.go$' | sed 's|cmd/f4/||;s|\.go$||' | sort) | wc -l   # 154
+            <(ls cmd/f4/*.go | grep -v '_test\.go$' | sed 's|cmd/f4/||;s|\.go$||' | sort) | wc -l   # 154 before Phase 1, 152 after
    ```
    The third command compares the tree with itself and never reads the bundle;
    it reports 154 whatever the tables say. Only the first two are checks.
@@ -1067,6 +1069,7 @@ comes from the graph's edges out of each test file, not from filenames.
    | `action_menu.go`, `external_ui.go` | Task 25 — `internal/dialog`: `BuildMenuBarItems` and the external-UI command runner are dialog code |
    | `info_usage.go` | Task 34 — `internal/panel` |
    | `navigation_mode.go` | deleted in Task 4: its type, constants and `ParsePanelNavigationMode` all move into `config.go` |
+| `action_order.go` | Task 21 — `internal/action`; created by Task 3, it is the presentation order the registry mechanism reads, so it travels with the mechanism and not with the table |
    | `command_palette.go`, `command_palette_drives.go`, `command_palette_frames.go`, `command_palette_help.go`, `command_palette_macros.go`, `command_palette_modal.go`, `command_palette_panels.go`, `command_palette_prefixes.go`, `command_palette_search.go`, `command_palette_workspace.go` | Task 25 — `internal/dialog`; the ten `command_palette*.go` files named nowhere else (the other four are in Tasks 24 and 25) |
    | `drive_bookmarks.go`, `drive_menu_options_unix.go`, `drive_menu_options_windows.go`, `file_associations.go`, `user_menu.go`, `user_menu_ini.go`, `user_menu_script.go`, `user_menu_subst.go` | Task 34 — `internal/panel`; the members of four glob families named nowhere else |
    | `host_input_modes.go`, `host_input_modes_other.go`, `host_input_modes_windows.go` | Task 36 — `internal/app` |

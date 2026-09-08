@@ -257,6 +257,23 @@ table places it at layer 1 rather than 3.
 3. Rename to the topic convention: `update.go`, `cli.go`, `helper_args.go`,
    `elevation_other.go`, `elevation_windows.go`, `selfexec.go`,
    `selfexec_linux.go`, `selfexec_other.go`, `selfexec_termux.go`.
+
+   **Issue-numbered tests are renamed here too, and the tree already shows the
+   right shape.** Three schemes coexist today: `issue54_test.go` (number only),
+   `issue856_mouse_capture_test.go` (number then topic) and
+   `codepage_issue875_sticky_test.go` (topic, then number, then qualifier). The
+   third one is the file-naming convention this project already uses —
+   `<topic>_<aspect>.go` — and it sorts the test beside its subject instead of
+   into an `issue*` block at the top of the directory. Rename to it:
+   `<topic>_issue<N>[_<qualifier>]_test.go`.
+   The topic never has to be invented: the test function already carries it.
+   `issue54_test.go` holds `TestIssue54_History`, `issue631_test.go` holds
+   `TestIssue631TrashSettingIsInPanelSettings`, `issue821_test.go` holds
+   `TestIssue821CommandHistoryEnterPastesSelectedEntry`. Take the topic from the
+   function name, keep the number as the aspect — the issue stays traceable, and
+   the file stops hiding what it covers. Leave the function names alone; renaming
+   those breaks nothing but buys nothing either, and a move commit does not
+   rewrite code.
 4. Move the eight `_test.go` files Task 43's roster lists for `internal/update`:
    `manual_uac_validation_windows_test.go`, `self_exec_linux_test.go`,
    `self_exec_test.go`, `update_cli_test.go`, `updater_libc_test.go`,
