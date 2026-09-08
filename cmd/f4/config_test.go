@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/unxed/f4/internal/inifile"
+	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/testutil"
 	"github.com/unxed/vtui"
 )
@@ -212,14 +212,14 @@ func TestSaveSettingsGroupsKeepUnselectedValues(t *testing.T) {
 	AppConfig.GuiCols = 120
 	AppConfig.GuiRows = 40
 	saveSettingsGroups(true, false, false)
-	ini := inifile.Load(settingsPath)
-	if got := ini.GetString("Interface", "ColorStyle", ""); got != "Pending" {
+	saved := ini.Load(settingsPath)
+	if got := saved.GetString("Interface", "ColorStyle", ""); got != "Pending" {
 		t.Fatalf("general settings were not saved: ColorStyle = %q", got)
 	}
-	if got := ini.GetString("Appearance", "GuiCols", ""); got != "80" {
+	if got := saved.GetString("Appearance", "GuiCols", ""); got != "80" {
 		t.Fatalf("unselected GUI width changed: %q", got)
 	}
-	if got := ini.GetString("Appearance", "GuiRows", ""); got != "25" {
+	if got := saved.GetString("Appearance", "GuiRows", ""); got != "25" {
 		t.Fatalf("unselected GUI height changed: %q", got)
 	}
 
@@ -235,17 +235,17 @@ func TestSaveSettingsGroupsKeepUnselectedValues(t *testing.T) {
 	AppConfig.GuiCols = 140
 	AppConfig.GuiRows = 50
 	saveSettingsGroups(false, false, true)
-	ini = inifile.Load(settingsPath)
-	if got := ini.GetString("Interface", "ColorStyle", ""); got != "Pending" {
+	saved = ini.Load(settingsPath)
+	if got := saved.GetString("Interface", "ColorStyle", ""); got != "Pending" {
 		t.Fatalf("window-only save changed general settings: %q", got)
 	}
-	if got := ini.GetString("Appearance", "GuiCols", ""); got != "140" {
+	if got := saved.GetString("Appearance", "GuiCols", ""); got != "140" {
 		t.Fatalf("window-only save did not save width: %q", got)
 	}
-	if got := ini.GetString("Appearance", "GuiRows", ""); got != "50" {
+	if got := saved.GetString("Appearance", "GuiRows", ""); got != "50" {
 		t.Fatalf("window-only save did not save height: %q", got)
 	}
-	if got := ini.GetString("ThirdParty", "Keep", ""); got != "1" {
+	if got := saved.GetString("ThirdParty", "Keep", ""); got != "1" {
 		t.Fatalf("window-only save discarded unknown settings: %q", got)
 	}
 
@@ -874,7 +874,7 @@ func TestConfig_LayoutRoundTrip(t *testing.T) {
 }
 
 func TestLoadWheelLines(t *testing.T) {
-	ini := inifile.Parse(strings.NewReader("[Mouse]\nPanelUp = 5\nPanelDown = -2\n"))
+	ini := ini.Parse(strings.NewReader("[Mouse]\nPanelUp = 5\nPanelDown = -2\n"))
 	if got := loadWheelLines(ini, "PanelUp"); got != 5 {
 		t.Errorf("Expected 5, got %d", got)
 	}

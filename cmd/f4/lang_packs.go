@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/unxed/f4/internal/inifile"
+	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/vtui"
 )
 
@@ -32,7 +32,7 @@ func LoadAllLanguagePacks() []vtui.LanguagePack {
 			continue
 		}
 
-		ini := inifile.Parse(strings.NewReader(string(data)))
+		ini := ini.Parse(strings.NewReader(string(data)))
 		name := strings.TrimSuffix(entry.Name(), ".lng")
 		if sec, ok := ini.Sections()["Language"]; ok {
 			if code := strings.TrimSpace(sec["Code"]); code != "" {

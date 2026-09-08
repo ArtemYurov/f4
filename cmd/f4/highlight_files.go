@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/unxed/f4/internal/inifile"
+	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -73,16 +73,16 @@ func init() {
 	GlobalFileHighlighter = &FileHighlighter{}
 }
 
-func (fh *FileHighlighter) LoadFromIni(ini *inifile.File) {
+func (fh *FileHighlighter) LoadFromIni(ini *ini.File) {
 	fh.LoadUserRules(ini)
 }
 
-func (fh *FileHighlighter) LoadUserRules(ini *inifile.File) {
+func (fh *FileHighlighter) LoadUserRules(ini *ini.File) {
 	fh.UserRules = parseHighlightRules(ini)
 	fh.CombineRules()
 }
 
-func (fh *FileHighlighter) LoadThemeRules(ini *inifile.File) {
+func (fh *FileHighlighter) LoadThemeRules(ini *ini.File) {
 	fh.ThemeRules = parseHighlightRules(ini)
 	fh.CombineRules()
 }
@@ -106,7 +106,7 @@ type ruleSection struct {
 	Rule    HighlightRule
 }
 
-func parseHighlightRules(ini *inifile.File) []HighlightRule {
+func parseHighlightRules(ini *ini.File) []HighlightRule {
 	sections := parseRuleSections(ini, "highlight_")
 	rules := make([]HighlightRule, 0, len(sections))
 	for _, section := range sections {
@@ -119,7 +119,7 @@ func parseHighlightRules(ini *inifile.File) []HighlightRule {
 // ordered by the numeric suffix. Highlighting and sort groups share this
 // parser so both accept the same mask, attribute, size and date keys; the
 // colour keys are simply left empty for rules that do not use them.
-func parseRuleSections(ini *inifile.File, prefix string) []ruleSection {
+func parseRuleSections(ini *ini.File, prefix string) []ruleSection {
 	var rules []ruleSection
 	var sections []string
 	for secName := range ini.Sections() {
@@ -243,7 +243,7 @@ func parseRuleSections(ini *inifile.File, prefix string) []ruleSection {
 // section actually sets, so one setting can be written under any of its
 // accepted names. Keys are tried in order, the earlier name winning when a
 // section spells the same colour twice.
-func firstIniValue(ini *inifile.File, section string, keys ...string) string {
+func firstIniValue(ini *ini.File, section string, keys ...string) string {
 	for _, key := range keys {
 		if val := ini.GetString(section, key, ""); val != "" {
 			return val

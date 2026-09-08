@@ -392,11 +392,17 @@ so that whoever picks this up does not re-derive it.
 Both were forced by the dependency rules rather than chosen, and both import
 nothing of ours, which is what makes them shareable by the layer-0 leaves.
 
-- **`internal/inifile`** (Task 24 groundwork). `config`, `i18n`, `theme` and
+- **`internal/ini`** (Task 24 groundwork). `config`, `i18n`, `theme` and
   `keymap` all parse ini files and none of them may import another of ours, so
-  the parser cannot live in `internal/config` as the task text says. The package
-  name is `inifile` and not `ini` because nine files call a local variable `ini`,
-  and a package a local shadows is the mistake that compiles.
+  the parser cannot live in `internal/config` as the task text says.
+
+  It was called `inifile` for a day, on the argument that fifty locals named
+  `ini` would shadow it. Measured properly the shadowing is real but harmless:
+  of 73 call sites, six sit in a scope where `ini` is already bound, and every
+  one of those is a compile error rather than a silent misread — `ini.Load` is
+  not a method on `*ini.File`. Six locals were renamed and the package took the
+  short name Go convention asks for, the same way `net/url` keeps its name
+  against `url := url.Parse(...)`.
 - **`internal/unpack`** (Task 23 follow-up). Archive extraction has three
   callers — the updater, the plugin catalogue, the colorer downloader — and
   `SanitizePath` is the zip-slip guard for all three.

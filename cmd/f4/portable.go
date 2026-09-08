@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/unxed/f4/internal/inifile"
+	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/vtui"
 )
@@ -203,7 +203,7 @@ func systemProfileDir() string {
 // current <exe>.ini (honoring Profile= when present).
 func portableProfileDir() string {
 	iniPath := currentPortableIniPath()
-	return portableProfileDirFor(filepath.Dir(iniPath), inifile.Load(iniPath))
+	return portableProfileDirFor(filepath.Dir(iniPath), ini.Load(iniPath))
 }
 
 // actionPortableSettings is Options → Portable mode. It shows where the
@@ -234,7 +234,7 @@ func actionPortableSettings(pf *PanelsFrame) {
 		return label + truncPathLeft(path, width-4-vtui.StringWidth(label))
 	}
 	current := vtui.NewText(0, 0, pathLine("PortableSettings.Current", GetF4ConfigDir()), 0)
-	iniInfo := vtui.NewText(0, 0, pathLine("PortableSettings.inifile.File", iniPath), 0)
+	iniInfo := vtui.NewText(0, 0, pathLine("PortableSettings.ini.File", iniPath), 0)
 	note := vtui.NewText(0, 0, Msg("PortableSettings.Note"), 0)
 	note2 := vtui.NewText(0, 0, Msg("PortableSettings.Note2"), 0)
 

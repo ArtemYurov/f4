@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/unxed/f4/internal/inifile"
+	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/vtui"
 )
@@ -123,7 +123,7 @@ func TestResolveProfileDir_ProfileKey(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, portable := resolveProfileDir(exeDir, inifile.Parse(strings.NewReader(tc.ini)))
+			got, portable := resolveProfileDir(exeDir, ini.Parse(strings.NewReader(tc.ini)))
 			if portable != tc.portable {
 				t.Fatalf("portable = %v, want %v", portable, tc.portable)
 			}
@@ -166,7 +166,7 @@ func TestSetPortableMode_RoundTripKeepsOtherKeys(t *testing.T) {
 	if err := setPortableMode(iniPath, true); err != nil {
 		t.Fatal(err)
 	}
-	if got := inifile.Load(iniPath).GetString("General", "UseSystemProfiles", ""); got != "0" {
+	if got := ini.Load(iniPath).GetString("General", "UseSystemProfiles", ""); got != "0" {
 		t.Fatalf("fresh file: UseSystemProfiles = %q, want 0", got)
 	}
 	data, _ := os.ReadFile(iniPath)
@@ -184,7 +184,7 @@ func TestSetPortableMode_RoundTripKeepsOtherKeys(t *testing.T) {
 	}
 	data, _ = os.ReadFile(iniPath)
 	text := string(data)
-	ini := inifile.Load(iniPath)
+	ini := ini.Load(iniPath)
 	if got := ini.GetString("General", "UseSystemProfiles", ""); got != "1" {
 		t.Errorf("UseSystemProfiles = %q, want 1", got)
 	}

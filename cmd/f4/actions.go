@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/history"
-	"github.com/unxed/f4/internal/inifile"
+	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/piecetable"
 	"github.com/unxed/f4/internal/toast"
 	"github.com/unxed/f4/vfs"
@@ -4436,7 +4436,7 @@ func actionImportFar2lHistory(pf *PanelsFrame) {
 			return
 		}
 		vtui.RunAsync(func(ctx *vtui.TaskContext) {
-			recs, err := history.ImportFar2lHistory(inifile.Load(far2lConfig), far2lConfig)
+			recs, err := history.ImportFar2lHistory(ini.Load(far2lConfig), far2lConfig)
 			ctx.RunOnUI(func() {
 				if err != nil {
 					vtui.ShowMessage(" Error ", fmt.Sprintf("Failed to import history:\n%v", err), []string{"&Ok"})
@@ -5069,7 +5069,7 @@ func listAvailableUILanguages() []langInfo {
 			if err != nil {
 				continue
 			}
-			ini := inifile.Parse(strings.NewReader(string(data)))
+			ini := ini.Parse(strings.NewReader(string(data)))
 			langs = append(langs, langInfo{code: code, name: ini.GetString("Language", "Name", code)})
 			seen[code] = true
 		}
@@ -5089,7 +5089,7 @@ func listAvailableUILanguages() []langInfo {
 			if !e.IsDir() && strings.HasSuffix(e.Name(), ".lng") {
 				code := strings.TrimSuffix(e.Name(), ".lng")
 				if !seen[code] {
-					ini := inifile.Load(filepath.Join(d, e.Name()))
+					ini := ini.Load(filepath.Join(d, e.Name()))
 					name := ini.GetString("Language", "Name", code)
 					langs = append(langs, langInfo{code: code, name: name})
 					seen[code] = true
@@ -5252,7 +5252,7 @@ func getLanguageName(code string) string {
 	for _, cand := range candidates {
 		// #nosec G703 -- safeLanguageCode rejects separators and ".." before code is used as a path component.
 		if _, err := os.Stat(cand); err == nil {
-			ini := inifile.Load(cand)
+			ini := ini.Load(cand)
 			if name := ini.GetString("Language", "Name", ""); name != "" {
 				return name
 			}

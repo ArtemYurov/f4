@@ -1,4 +1,4 @@
-package inifile
+package ini
 
 import (
 	"bufio"

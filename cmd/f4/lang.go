@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/unxed/f4/internal/inifile"
+	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/vtui"
 )
 
@@ -36,7 +36,7 @@ func init() {
 	InitLang()
 }
 
-func loadLangMapFromINI(ini *inifile.File) map[string]string {
+func loadLangMapFromINI(ini *ini.File) map[string]string {
 	m := make(map[string]string)
 	if sec, ok := ini.Sections()["Strings"]; ok {
 		for k, v := range sec {
@@ -52,7 +52,7 @@ func loadEmbeddedLanguageMap(code string) map[string]string {
 	if err != nil {
 		return nil
 	}
-	return loadLangMapFromINI(inifile.Parse(strings.NewReader(string(data))))
+	return loadLangMapFromINI(ini.Parse(strings.NewReader(string(data))))
 }
 
 func safeLanguageCode(code string) bool {
@@ -89,7 +89,7 @@ func InitLang() {
 	}
 
 	// 1. Always load embedded English as absolute fallback (Tier 1)
-	embedIni := inifile.Parse(strings.NewReader(defaultLangData))
+	embedIni := ini.Parse(strings.NewReader(defaultLangData))
 	baseMap := loadLangMapFromINI(embedIni)
 	allBaseStrings := make(map[string]string, len(vtuiBuiltInStrings)+len(baseMap))
 	for key, value := range vtuiBuiltInStrings {
@@ -119,11 +119,11 @@ func InitLang() {
 			filepath.Join(exeDir, "lang", code+".lng"),
 			filepath.Join("lang", code+".lng"), // Fallback for "go run ." development
 		}
-		var langIni *inifile.File
+		var langIni *ini.File
 		for _, cand := range candidates {
 			// #nosec G703 -- safeLanguageCode rejects separators and ".." before code is used as a path component.
 			if _, err := os.Stat(cand); err == nil {
-				langIni = inifile.Load(cand)
+				langIni = ini.Load(cand)
 				vtui.DebugLog("LANG: Loaded language file from disk: %s", cand)
 				break
 			}

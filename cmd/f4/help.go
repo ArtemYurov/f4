@@ -13,7 +13,7 @@ import (
 	"github.com/mattn/go-runewidth"
 	embedded "github.com/unxed/f4"
 	"github.com/unxed/f4/internal/action"
-	"github.com/unxed/f4/internal/inifile"
+	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/vtui"
 )
 
@@ -131,7 +131,7 @@ func loadHelpLangStrings(code string) map[string]string {
 	for _, cand := range candidates {
 		// #nosec G703 -- safeLanguageCode rejects separators and ".." before code is used as a path component.
 		if _, err := os.Stat(cand); err == nil {
-			return loadLangMapFromINI(inifile.Load(cand))
+			return loadLangMapFromINI(ini.Load(cand))
 		}
 	}
 	return nil

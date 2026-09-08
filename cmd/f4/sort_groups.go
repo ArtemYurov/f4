@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/unxed/f4/internal/inifile"
+	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/vfs"
 )
 
@@ -39,7 +39,7 @@ func init() {
 	GlobalSortGroups = &SortGroupSet{}
 }
 
-func (s *SortGroupSet) LoadFromIni(ini *inifile.File) {
+func (s *SortGroupSet) LoadFromIni(ini *ini.File) {
 	if s == nil {
 		return
 	}
@@ -71,7 +71,7 @@ func (s *SortGroupSet) GroupOf(item *vfs.VFSItem) int {
 // parseSortGroups reads the [SortGroup_N] sections. The section number decides
 // the default order, so the plain case — SortGroup_1, SortGroup_2, … — needs no
 // Group key at all.
-func parseSortGroups(ini *inifile.File) []SortGroupRule {
+func parseSortGroups(ini *ini.File) []SortGroupRule {
 	sections := parseRuleSections(ini, "sortgroup_")
 	groups := make([]SortGroupRule, 0, len(sections))
 	for i, section := range sections {

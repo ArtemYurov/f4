@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/unxed/f4/internal/inifile"
+	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -26,11 +26,11 @@ Mask = *.txt
 Group = 5
 `
 
-func useTestSortGroups(t *testing.T, ini string) {
+func useTestSortGroups(t *testing.T, text string) {
 	t.Helper()
 	previous := GlobalSortGroups
 	GlobalSortGroups = &SortGroupSet{}
-	GlobalSortGroups.LoadFromIni(inifile.Parse(strings.NewReader(ini)))
+	GlobalSortGroups.LoadFromIni(ini.Parse(strings.NewReader(text)))
 	t.Cleanup(func() { GlobalSortGroups = previous })
 }
 
@@ -45,7 +45,7 @@ func newSortGroupPanel(t *testing.T) *FileSystemPanel {
 }
 
 func TestParseSortGroupsOrdersSectionsNumericallyAndHonoursGroupKey(t *testing.T) {
-	groups := parseSortGroups(inifile.Parse(strings.NewReader(testSortGroupsIni)))
+	groups := parseSortGroups(ini.Parse(strings.NewReader(testSortGroupsIni)))
 	if len(groups) != 3 {
 		t.Fatalf("parsed %d groups, want 3", len(groups))
 	}
@@ -196,7 +196,7 @@ func TestWorkspaceSessionRoundTripsSortGroupFlag(t *testing.T) {
 
 	var encoded strings.Builder
 	writeWorkspaceSessions(&encoded, states, 0)
-	got, _ := loadWorkspaceSessions(inifile.Parse(strings.NewReader(encoded.String())))
+	got, _ := loadWorkspaceSessions(ini.Parse(strings.NewReader(encoded.String())))
 	if !reflect.DeepEqual(got, states) {
 		t.Fatalf("sort-group flag did not survive the session round trip:\n got: %#v\nwant: %#v", got, states)
 	}

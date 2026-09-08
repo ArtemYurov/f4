@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/unxed/f4/internal/inifile"
+	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/vtui"
 )
 
@@ -301,14 +301,14 @@ func resetColorSources() {
 // It is the whole chain in one call: use it when a single ini is the only
 // source. Layering several inis goes through ApplyColorIni + FinishColors, so
 // that the contrast pass runs once at the end rather than after every layer.
-func InitColors(ini *inifile.File) {
+func InitColors(ini *ini.File) {
 	ApplyColorIni(ini)
 	FinishColors()
 }
 
 // ApplyColorIni overlays one farcolors section onto the current palette.
 // Aliases are applied first so that a canonical key in the same file wins.
-func ApplyColorIni(ini *inifile.File) {
+func ApplyColorIni(ini *ini.File) {
 	for _, slot := range ColorSlots {
 		var sourceExpr string
 		for _, alias := range slot.Aliases {

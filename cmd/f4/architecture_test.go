@@ -39,7 +39,7 @@ var architectureLayers = map[string]int{
 	// config, i18n, theme, keymap — all parse ini files and none of them may
 	// import another of ours; a package that imports nothing can be shared by
 	// all four without putting one of them under another.
-	"internal/inifile": 0,
+	"internal/ini": 0,
 
 	// The shared primitives: a notification channel and the history store.
 	// Both are leaves and both take what they cannot reach as a seam —

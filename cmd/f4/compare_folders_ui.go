@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/unxed/f4/internal/action"
-	"github.com/unxed/f4/internal/inifile"
+	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
 )
@@ -422,7 +422,7 @@ func runCompareFolders(pf *PanelsFrame, opts compareOptions) {
 
 // loadCompareOptions reads the [Compare] section, falling back to Far's
 // built-in comparison for a profile that has never opened the dialog.
-func loadCompareOptions(ini *inifile.File) compareOptions {
+func loadCompareOptions(ini *ini.File) compareOptions {
 	defaults := defaultCompareOptions()
 	flag := func(key string, def bool) bool {
 		fallback := "0"

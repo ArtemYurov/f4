@@ -15,7 +15,7 @@ import (
 	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/fusefs"
 	"github.com/unxed/f4/internal/history"
-	"github.com/unxed/f4/internal/inifile"
+	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/update"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtinput"
@@ -791,7 +791,7 @@ func SetupUI() {
 		createDefaultHighlightIni(highlightPath)
 	}
 	if _, err := os.Stat(highlightPath); err == nil {
-		highlightIni := inifile.Load(highlightPath)
+		highlightIni := ini.Load(highlightPath)
 		GlobalFileHighlighter.LoadFromIni(highlightIni)
 		// Sort groups share the file (and the rule syntax) with highlighting,
 		// the way far keeps both in one dialog. Themes may not define them.
@@ -1005,7 +1005,7 @@ func LoadSession() {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return
 	}
-	ini := inifile.Load(path)
+	ini := ini.Load(path)
 
 	LastEditorSearch = ini.GetString("EditorSearch", "Pattern", "")
 	LastEditorReplace = ini.GetString("EditorSearch", "Replace", "")

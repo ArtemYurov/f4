@@ -12,7 +12,7 @@ import (
 	"sync"
 
 	"github.com/unxed/f4/internal/action"
-	"github.com/unxed/f4/internal/inifile"
+	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/vtvibe"
 	"github.com/unxed/f4/vfs"
@@ -48,7 +48,7 @@ func vtvibeIniPath() string {
 // vtvibeConfig re-reads the settings on every use, so editing vtvibe.ini or
 // exporting a key does not need a restart.
 func vtvibeConfig() (vtvibe.Config, string) {
-	ini := inifile.Load(vtvibeIniPath())
+	ini := ini.Load(vtvibeIniPath())
 	cfg := vtvibe.Config{
 		BaseURL: ini.GetString("general", "base_url", vtvibeDefaultBaseURL),
 		Model:   ini.GetString("general", "model", vtvibeDefaultModel),
@@ -72,7 +72,7 @@ func vtvibeConfig() (vtvibe.Config, string) {
 // vtvibeSaveSetting rewrites one key of vtvibe.ini, keeping the rest.
 func vtvibeSaveSetting(key, value string) error {
 	path := vtvibeIniPath()
-	ini := inifile.Load(path)
+	ini := ini.Load(path)
 	if ini.Sections()["general"] == nil {
 		ini.Sections()["general"] = map[string]string{}
 	}

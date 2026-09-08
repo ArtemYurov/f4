@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/unxed/f4/internal/inifile"
+	"github.com/unxed/f4/internal/ini"
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
@@ -92,7 +92,7 @@ func (kr *KeyRemap) Load() {
 	if kr.iniPath == "" {
 		return
 	}
-	ini := inifile.Load(kr.iniPath)
+	ini := ini.Load(kr.iniPath)
 	for area, rules := range ini.Sections() {
 		for source, target := range rules {
 			kr.addRule(area, source, target)

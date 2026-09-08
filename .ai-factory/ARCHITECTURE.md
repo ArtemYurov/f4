@@ -95,7 +95,7 @@ f4/
 │   ├── update/       (extract)    # self-update, elevation, helper args
 │   ├── unpack/       (extract)    # zip / tar.gz / 7z over a directory, and the
 │   │                              # path guard its three callers share
-│   ├── inifile/      (extract)    # the ini parser the four leaves below share;
+│   ├── ini/          (extract)    # the ini parser the four leaves below share;
 │   │                              # its own package because none of them may
 │   │                              # import another of ours
 │   ├── config/       (extract)    # F4Config, ini parsing, config overlay
@@ -290,7 +290,7 @@ is the only place where everything is assembled. Layers, bottom up:
 `internal/piecetable`, `internal/sheet`, `internal/wincon`, `internal/ttyx`,
 `internal/netproxy`, `internal/hideconsole`, `internal/config`, `internal/i18n`,
 `internal/theme`, `internal/keymap`, `internal/sysinfo`, `internal/numeric`,
-`internal/inifile`, `internal/unpack`.
+`internal/ini`, `internal/unpack`.
 
 **Layer 1 — subsystems over the kernel:** `internal/textlayout` →
 `internal/piecetable`; `internal/fusefs` → `vfs`; `internal/vtvibe` → `vfs`;
