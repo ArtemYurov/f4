@@ -357,7 +357,7 @@ titles, not the ordering.
 - [x] Task 24: Extract `internal/config`, `internal/i18n`, `internal/theme`, `internal/keymap` ([details](phase-05-leaf-packages.md#task-24-extract-internalconfig-internali18n-internaltheme-internalkeymap)) (depends on 4, 23)
 
 ### Phase 6: Hosts and Services
-- [ ] Task 25: Extract `internal/dialog`, and fix the silent dialog-test drop ([details](phase-06-hosts-and-services.md#task-25-extract-internaldialog)) (depends on 24)
+- [x] Task 25: Extract `internal/dialog`, and fix the silent dialog-test drop ([details](phase-06-hosts-and-services.md#task-25-extract-internaldialog)) (depends on 24)
 - [ ] Task 26: Extract `internal/plughost`; cut `panel_plugins.go`'s `coreAPI` method ([details](phase-06-hosts-and-services.md#task-26-extract-internalplughost)) (depends on 25)
 - [ ] Task 27: Extract `internal/gui`; move two of three `tools/icons` paths ([details](phase-06-hosts-and-services.md#task-27-extract-internalgui)) (depends on 26)
 - [ ] Task 28: Extract `internal/macro` ([details](phase-06-hosts-and-services.md#task-28-extract-internalmacro)) (depends on 27)

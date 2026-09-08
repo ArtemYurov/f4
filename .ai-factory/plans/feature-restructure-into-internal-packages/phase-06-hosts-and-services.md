@@ -173,6 +173,37 @@ This wave also collects the eight dialog helpers stranded in `actions.go`
    `settings_hotkeys.go`, `settings_proxy.go`.
 7. Add `"internal/dialog": 3` to the auditor's layer map.
 
+### What the wave actually found
+
+`internal/dialog` came out far smaller than the roster promised, and the reason
+is uniform: most of what is called a dialog in this tree is a view over a panel,
+an editor or the action registry, and the eight-type gate cannot see that.
+
+Moved: `help.go` (split), `help_search.go`, `help/`, `table.go`, `buttons.go`,
+`file.go`, `goto.go`, `settings_proxy.go`, `settings_portable.go`,
+`settings_codepage.go`, `path.go`.
+
+Did not move, with the reason each time:
+
+| file | why |
+|---|---|
+| the thirteen `command_palette*.go` | every one builds `commandPaletteEntry` values whose closures reach `ArkanoidFrame`, `GrabberFrame`, `ImageView`, `QueueFrame`, `MacroMgr` and the action functions. The palette is a view over the whole application. It goes with `internal/app`. |
+| `hotkeys_ui.go` | `HotkeyManager`, `GlobalHotkeysMgr`, `FormatKeyForUI`, `configuredHotkeyBinding` and four plugin hotkey helpers |
+| `colorer_settings.go` | the colorer engine's scheme and region calls, and `DownloadColorerSchemas`, which takes the panel frame for its progress task |
+| `startup_settings.go` | the startup backend tables in `startup_backend.go` |
+| `compare_folders_ui.go` | `captureComparePanel` takes a `*FileSystemPanel`; `runCompareFolders` takes the frame |
+| `share_dialog.go`, `find_file.go`, `bookmarks_dialog.go` | each keeps a `*PanelsFrame` in a struct field. They belong to Task 34. |
+| `grabber.go` | its gate score of 1 is a **comment**; the real blocker is `setClipboardAsync`, which Task 30 takes to `internal/term`. Deferred to that wave, where the import becomes legal at 3 to 1. |
+
+Two of the four gate scores this task quoted were false positives — `grabber.go`
+(a comment) and `colors.go` in Task 24 (string literals). The gate counts names,
+and a name can be a string or a comment.
+
+`dialog_layouts_test.go` took the task's "defer the whole file" option and stays
+in `cmd/f4`, so the CI re-run of `TestAllDialogs_LayoutValidation` keeps naming
+`./cmd/f4` — repointing it at `./internal/dialog` now is exactly the silent skip
+step 5 exists to prevent.
+
 ### Required Interfaces and Contracts
 
 - `internal/dialog` may import `internal/config`, `internal/i18n`,
