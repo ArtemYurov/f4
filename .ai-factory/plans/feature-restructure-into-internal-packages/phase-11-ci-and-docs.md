@@ -516,6 +516,123 @@ None.
 
 ---
 
+---
+
+## Task 45: Write the pull request
+
+### Intent
+
+Six earlier tasks each end with "call this out in the PR body" and none of them
+owns the body. A requirement everybody references and nobody writes is a
+requirement that does not happen. This is where it is written, together with the
+context a maintainer needs to judge a 300-file change he did not plan.
+
+### Implementation Steps
+
+1. **What and why**, in three or four sentences. `cmd/f4` held 345 non-test
+   files in one flat `package main`; the compiler enforced no boundary anywhere
+   in the application. Now it does.
+
+2. **`Closes #505`.** The issue asked to tidy the repository root, which is
+   Phase 2 of this branch. Say plainly that the PR does more than the issue
+   asked, and why the rest belongs in the same change: the root cannot be tidied
+   meaningfully while everything above it lives in one package.
+
+3. **Answer the refusal in the issue thread on its own terms.** The bot
+   maintainer declined it as "a broad repository-reorganization proposal without
+   a narrowly defined bug or testable acceptance criteria", adding that doing it
+   autonomously "would require a maintainer-approved project structure and
+   migration plan". That is not "no", it is a list of what was missing — and the
+   PR brings exactly those two things: `ARCHITECTURE.md` is the structure, and
+   the archived bundle is the migration plan, with acceptance criteria on every
+   task. Say so in one paragraph. It moves the PR from "here is my vision" to
+   "here are the missing inputs; the decision is yours".
+
+4. **Answer the `external/` question the issue asks.** No, and briefly why:
+   `internal/` in Go is a compiler rule rather than a naming convention, and it
+   has no counterpart. The public surface is whatever sits *outside* it — here
+   `sdk/` and `vfs/`, which third-party plugins compile against. An `external/`
+   would restate in a directory name something the language already enforces.
+
+5. **Explain where the tree differs from the one sketched in the issue**, rather
+   than diverging in silence. The sketch was the right direction; the boundaries
+   came from measurement.
+   - `tui/` (buffer, driver, event) — not created. The terminal engine lives
+     outside this repository, in `vtui` and `vtinput`; there is nothing to put
+     in it.
+   - `desktop/` (screen manager, modal stack) — not created. No such thing
+     exists in the code; `vtui` owns the window stack.
+   - `vfs/` stayed in the root instead of moving under `internal/`: third-party
+     plugins compile against it, and `internal/` would forbid that import.
+   - `job/` became `fileops` and `keybind/` became `keymap`, named for what they
+     actually hold.
+   - Packages the sketch did not have — `term`, `media`, `plughost`, `sysinfo`,
+     `i18n`, `theme`, `colorer`, `numeric`, `action`, `toast`, `history` — came
+     out of the call graph over 345 files, not out of general principle.
+
+6. **Where the reasoning lives.** `ARCHITECTURE.md` is the contract: layers,
+   dependency rules, file naming, package ownership. The archived bundle is the
+   plan that produced it. Both ship in this PR deliberately — a maintainer
+   inheriting a restructuring needs to know why a file went where it went, and
+   git history alone does not answer that.
+
+7. **How it was built**, as a recommendation rather than a pitch. The chain is
+   explore → plan (ultra) → improve → implement → verify → review →
+   security-checklist → archive, from the AI Factory skills vendored in
+   `.claude/skills/`. Two things are worth saying because they are what adopting
+   it would actually buy: every artefact has one known location instead of loose
+   markdown in the repository root — which is what #505 complains about — and the
+   plan outlives the session that wrote it, so work continues across context
+   resets and across people. Add that the bundle was verified four times and each
+   pass disproved the previous one: routes measured by filename were wrong, the
+   ordering criterion was inverted, `actions.go` could not move as a file, and
+   154 tests had no assignment at all. That is the case for the method, and it is
+   stronger than any claim about it.
+
+8. **The graph tooling.** CodeGraph is wired in `.mcp.json` and answers
+   caller/callee/impact questions over a package where grep is both slow and
+   imprecise. Note that a fresh clone needs one `init` and that the index is
+   git-ignored.
+
+9. **Everything the earlier tasks asked to surface**, one line each: the README
+   screenshot URL 404s until this merges into `main` (Task 11); the
+   incremental-lint backlog number, if rename detection surfaced it (Task 39);
+   the three pre-existing failures recorded in the baseline (Task 42); the
+   structural review outcome and any follow-up proposals (Task 44).
+
+10. **What was deliberately not done**: no behaviour change inside a move commit,
+    no renamed Far-derived type, no further splitting of packages — that is
+    proposed as follow-up with evidence rather than smuggled in.
+
+### Required Interfaces and Contracts
+
+- The body is **prepared, not sent**. No `git push` and no `gh pr create`: when
+  the work goes out is the user's decision and this task does not take it.
+
+### Error Handling and Logging
+
+Not applicable.
+
+### Tests
+
+None. The body is prose.
+
+### Acceptance Criteria
+
+- `Closes #505` is present.
+- The refusal in the thread is answered, and the `external/` question with it.
+- Every divergence from the issue's sketch is named and explained.
+- All four carried-over items from step 9 appear.
+- The workflow recommendation is concrete and says what the maintainer gains.
+- Somebody who did not plan this change can read the body and know what to
+  review first.
+
+### Verification
+
+- Preview the body (`gh pr create --dry-run`, or read the file).
+- Expected result: a body a maintainer can act on. Nothing is pushed and no pull
+  request is opened.
+
 ## Phase Risks and Mitigations
 
 - **Risk:** the computed CI shards drop a package and a whole area stops being

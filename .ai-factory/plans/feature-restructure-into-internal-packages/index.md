@@ -373,6 +373,7 @@ titles, not the ordering.
 - [ ] Task 41: Rewrite `ARCHITECTURE.md` from target to fact ([details](phase-11-ci-and-docs.md#task-41-rewrite-architecturemd-from-target-to-fact)) (depends on 40)
 - [ ] Task 42: Drop the migration baseline ([details](phase-11-ci-and-docs.md#task-42-drop-the-migration-baseline)) (depends on 41)
 - [ ] Task 44: Review the finished tree before calling it done ([details](phase-11-ci-and-docs.md#task-44-review-the-finished-tree-before-calling-it-done)) (depends on 42)
+- [ ] Task 45: Write the pull request ([details](phase-11-ci-and-docs.md#task-45-write-the-pull-request)) (depends on 44)
 
 ## Commit Plan
 
