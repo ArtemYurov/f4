@@ -1538,7 +1538,7 @@ func init() {
 			// Terminal writes here are best effort: if stdout is gone there is
 			// nothing left to resize and the next write reports it anyway.
 			_, _ = fmt.Fprintf(os.Stdout, "\x1b[8;%d;%dt", targetRows, targetCols)
-			os.Stdout.Sync()
+			_ = os.Stdout.Sync()
 			// Forced OS window resize for GUI mode
 			if vtui.FrameManager != nil {
 				vtui.FrameManager.ResizeWindow(targetCols, targetRows)
