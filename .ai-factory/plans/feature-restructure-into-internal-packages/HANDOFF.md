@@ -234,6 +234,15 @@ sed -n '/^var commandPaletteTargetPackage/,/^}/p' cmd/f4/command_palette_coverag
   | while read f; do [ -e "cmd/f4/$f" ] || echo "stale: $f"; done
 ```
 
+**Copying a type with a regexp takes the struct and leaves its methods, and
+the result compiles.** Moving upstream's attributes tests into `internal/dialog`
+needed a copy of `mockMetadataVFS`; the pattern matched the `type` block and not
+the two methods below it. `mockMetadataVFS` embeds `vfs.VFS`, so `Stat` and
+`SetAttributes` fell through to the embedded interface, the package built, and
+the test reached the real filesystem and hung on a two-second timeout instead of
+failing on a missing method. The compiler cannot see this one; only the test did.
+Copy a type with the parser, the way declarations are cut.
+
 **`gofmt -w` is not the check CI runs.** CI runs `gofmt -s -l .` and fails on
 any output; `-s` is the simplify pass, and a file it would rewrite is a file
 `gofmt -w` leaves alone. Two files sat misformatted from the day they were
