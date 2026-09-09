@@ -15,7 +15,7 @@ func (r *rpcCoverageRegistration) Unregister() {
 	r.called++
 }
 
-func TestRPCPluginConstructorsAndIdentity(t *testing.T) {
+func TestRPCPluginTransportConstructorsAndIdentity(t *testing.T) {
 	plugin := NewRPCPlugin("plugin --flag")
 	if plugin.path != "plugin --flag" || plugin.dir != "" {
 		t.Fatalf("NewRPCPlugin = %#v", plugin)
