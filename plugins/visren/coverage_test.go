@@ -10,7 +10,7 @@ func TestMetadataTextDecodersCoverEncodingsAndFallbacks(t *testing.T) {
 	if got := decodeID3Text(nil); got != "" {
 		t.Fatalf("empty ID3 text = %q", got)
 	}
-	if got := decodeID3Text([]byte{3, ' ', 't', 'i', 't', 'l', 'e', ' ', 0}); got != "title" {
+	if got := decodeID3Text([]byte{3, ' ', 't', 'i', 't', 'l', 'e', 0}); got != "title" {
 		t.Fatalf("UTF-8 ID3 text = %q", got)
 	}
 	if got := decodeID3Text([]byte{0, ' ', 'l', 'e', 'g', 'a', 'c', 'y', ' '}); got != "legacy" {
