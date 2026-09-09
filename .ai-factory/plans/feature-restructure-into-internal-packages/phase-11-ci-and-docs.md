@@ -919,6 +919,14 @@ whole tree.
    comm -13 /tmp/base.txt /tmp/up.txt
    ```
 
+   The comparison is of names, so it sees only what upstream **added**. A file
+   upstream *renamed* would not appear: the new name is absent from the base
+   list, but this branch has renamed the same file too, differently, and the two
+   would drift apart in silence. On this tree that cannot happen —
+   `git diff --name-status -M 0cda22a7 upstream/main | grep '^R'` returns
+   nothing over the whole distance — but that is a property of this upstream,
+   not of the method. Check it before trusting the inventory again.
+
    Nineteen files at the time of writing. Fifteen are outside the restructured
    tree — `internal/ttyx` (3), `plugins/archive`, `plugins/id3editor`,
    `sdk/f4plugin`, `vfs/hostfs`, `vfs/registry_vfs_windows`,
