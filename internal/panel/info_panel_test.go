@@ -643,6 +643,9 @@ func TestInfoPanel_RendersUsageAsTwoLineMeter(t *testing.T) {
 	scr.AllocBuf(60, 20)
 	vtui.FrameManager.Init(scr)
 	vtui.SetDefaultPalette()
+	// theme.ColPanelCursor is past vtui's last colour, and this test reads that
+	// slot below: vtui.SetDefaultPalette sizes the palette to vtui's range only.
+	theme.SetDefaultF4Palette()
 
 	provider := newTestPanelInfoVFS()
 	provider.cached["device"] = vfs.PanelInfoSnapshot{

@@ -1259,6 +1259,13 @@ helper. It carried private copies of `mockPty`, `sixelEnv`, `newSixelEnv` and
 goes with the image tests when they leave for internal/media." The image tests
 never left, because they were never image tests.
 
+It is the same silhouette as `ParsePlainEditCommand` in step 1a, and the pair
+is worth reading together: a separation papered over by copying instead of
+moving. There, a function was exported so a test in another package could
+reach it; here, a test carried private copies of four fixtures the target
+package already declares. A test that needs a private copy of another
+package's fixtures is saying where it belongs.
+
 Split along the subjects: the two sixel tests and `sixelHalfBody` are
 `internal/terminal/sixel_layers_test.go`, using the `sixelEnv` that package
 already has, and the four helper copies are gone; the two `blitInto` tests are
@@ -1289,9 +1296,18 @@ against the tree returns nothing. The document was rewritten from the tree in
 Task 41, which is why: it describes a fact, and it carries the check that says
 so.
 
-**Step 7 — the 63 suppressions.** Compared as sets of lines between the two
-trees, the branch adds 168 suppression *lines* over `upstream/main`, of which
-**14 are `#nosec`** and the rest are `_ =`. The largest groups are ten
+**Step 7 — the 63 suppressions.** Counted on the two finished trees with the
+grep this step names: `upstream/main` holds 601 suppressions and this branch
+664, so **63 added**, of which **15 are `#nosec`** (216 against 231). Both
+halves of the method matter. Counting on the trees rather than on the diff,
+because a diff between two points of history shows a line that was added and
+later removed, and the question is what stands in the tree now. And counting
+the *net*, because a line-by-line set difference of the same two trees reports
+168 added lines: a suppression that travelled with its file and had a renamed
+symbol in it reads as one removal and one addition, and neither is a decision
+anybody took.
+
+The largest groups are ten
 `_ = File.Close()`, nine `_ = config.GetF4ConfigDir()`, and six `#nosec G204`
 in `internal/panel/process_environment_panel_test.go`, all six on
 `exec.Command` with the test's own fixture path. Reviewed: the `#nosec` lines

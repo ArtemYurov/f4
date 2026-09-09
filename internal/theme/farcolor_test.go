@@ -7,6 +7,10 @@ import (
 
 func TestParseFarColor(t *testing.T) {
 	vtui.SetDefaultPalette()
+	// The f4 slots live past vtui's own last colour, so the palette has to be
+	// grown before ColPanelText can be written below. vtui.SetDefaultPalette
+	// sizes it to vtui's range and no further.
+	SetDefaultF4Palette()
 
 	// 1. Test named colors
 	// F_WHITE is index 15 (0xFFFFFF), B_BLUE is index 1 (0x0028A0)

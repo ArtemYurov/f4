@@ -227,6 +227,13 @@ func TestQueueManager_ConflictDetection(t *testing.T) {
 }
 
 func TestQueueManager_ResourceIndependence(t *testing.T) {
+	// The completion callback is posted to whatever frame manager is current
+	// when the task finishes, and the loop below drains that manager's
+	// TaskChan. Without a manager of its own the test only completes when some
+	// earlier test in the package left one initialised.
+	t.Cleanup(testutil.SwapFrameManager(t))
+	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
+
 	qm := GlobalQueueManager
 	StartQueueWorker()
 	qm.mu.Lock()
