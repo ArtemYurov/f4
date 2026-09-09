@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
 	"path/filepath"
 	"time"
 
@@ -64,28 +65,28 @@ func (f4MacroHost) Panel(active bool) macro.MacroPanelInfo {
 			}
 		}()
 
-		frame := findPanelsFrame()
+		frame := panel.FindPanelsFrame()
 		if frame == nil {
 			return macro.MacroPanelInfo{}
 		}
 
-		index := frame.activeIdx
+		index := frame.ActiveIdx
 		if !active {
 			index = 1 - index
 		}
 
 		info = macro.MacroPanelInfo{
 			Left:    index == 0,
-			Visible: frame.showPanels,
+			Visible: frame.ShowPanels,
 		}
 
-		panel, ok := frame.panels[index].(*FileSystemPanel)
+		pnl, ok := frame.Panels[index].(*panel.FileSystemPanel)
 		if !ok {
 			return info
 		}
 
-		info.Path = panel.vfs.GetPath()
-		if panel.isLoading {
+		info.Path = pnl.Vfs.GetPath()
+		if pnl.IsLoading {
 			// Mid-read the entry list means nothing: its length and its
 			// contents belong to different directories.
 			return info
@@ -93,13 +94,13 @@ func (f4MacroHost) Panel(active bool) macro.MacroPanelInfo {
 
 		// One read of the slice header, so length and indexing below cannot
 		// disagree even if the field is reassigned underneath.
-		entries := panel.entries
+		entries := pnl.Entries
 
 		info.ItemCount = len(entries)
-		info.SelCount = len(panel.GetSelectedNames())
-		info.Current = panel.GetSelectedName()
+		info.SelCount = len(pnl.GetSelectedNames())
+		info.Current = pnl.GetSelectedName()
 
-		cursor := panel.GetCursorIndex()
+		cursor := pnl.GetCursorIndex()
 		info.CurPos = cursor + 1
 		if cursor >= 0 && cursor < len(entries) && entries[cursor] != nil {
 			info.IsFolder = entries[cursor].IsDir
@@ -115,22 +116,22 @@ func (f4MacroHost) Panel(active bool) macro.MacroPanelInfo {
 
 func (f4MacroHost) CommandLine() string {
 	return onUI(func() string {
-		frame := findPanelsFrame()
-		if frame == nil || frame.cmdLine == nil {
+		frame := panel.FindPanelsFrame()
+		if frame == nil || frame.CmdLine == nil {
 			return ""
 		}
-		return frame.cmdLine.Edit.GetText()
+		return frame.CmdLine.Edit.GetText()
 	})
 }
 
 func (f4MacroHost) ScreenSize() (int, int) {
 	type size struct{ width, height int }
 	got := onUI(func() size {
-		frame := findPanelsFrame()
+		frame := panel.FindPanelsFrame()
 		if frame == nil {
 			return size{}
 		}
-		return size{frame.lastW, frame.lastH}
+		return size{frame.LastW, frame.LastH}
 	})
 	return got.width, got.height
 }
@@ -172,21 +173,21 @@ func (f4MacroHost) RunAction(name string) bool {
 
 func (f4MacroHost) CallPlugin(ctx context.Context, id string, args []any) ([]any, error) {
 	callContext := onUI(func() (snapshot vfs.MacroCallContext) {
-		frame := findPanelsFrame()
+		frame := panel.FindPanelsFrame()
 		if frame == nil {
 			return snapshot
 		}
-		panel := frame.getActivePanel()
-		if panel == nil || panel.vfs == nil {
+		pnl := frame.GetActivePanel()
+		if pnl == nil || pnl.Vfs == nil {
 			return snapshot
 		}
-		dir := panel.vfs.GetPath()
-		name := panel.GetSelectedName()
+		dir := pnl.Vfs.GetPath()
+		name := pnl.GetSelectedName()
 		path := ""
 		if name != "" && name != ".." {
-			path = panel.vfs.Join(dir, name)
+			path = pnl.Vfs.Join(dir, name)
 		}
-		snapshot.Current = vfs.FileRef{VFS: panel.vfs, Dir: dir, Name: name, Path: path}
+		snapshot.Current = vfs.FileRef{VFS: pnl.Vfs, Dir: dir, Name: name, Path: path}
 		return snapshot
 	})
 	return macro.DispatchMacroPluginCall(ctx, id, callContext, args)

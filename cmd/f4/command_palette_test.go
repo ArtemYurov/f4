@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"reflect"
 	"strings"
 	"testing"
@@ -28,24 +30,24 @@ func TestCommandPaletteActionIsRegistered(t *testing.T) {
 }
 
 func TestCommandPaletteLegacyShortcutHonorsExplicitHotkeyOverrides(t *testing.T) {
-	previous := GlobalHotkeysMgr
-	GlobalHotkeysMgr = &HotkeyManager{
+	previous := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = &keymap.HotkeyManager{
 		Bindings: map[string]map[string]string{},
 		Defaults: map[string]map[string]string{},
 	}
-	t.Cleanup(func() { GlobalHotkeysMgr = previous })
+	t.Cleanup(func() { keymap.GlobalHotkeysMgr = previous })
 
 	e := keymap.ParseFarKey(commandPaletteLegacyKey)
 	if !commandPaletteLegacyShortcut("Shell", e) {
 		t.Fatal("unclaimed Ctrl+Alt+P did not remain available as the legacy fallback")
 	}
 
-	GlobalHotkeysMgr.Bindings["Common"] = map[string]string{commandPaletteLegacyKey: "None"}
+	keymap.GlobalHotkeysMgr.Bindings["Common"] = map[string]string{commandPaletteLegacyKey: "None"}
 	if commandPaletteLegacyShortcut("Shell", e) {
 		t.Fatal("explicitly silenced Ctrl+Alt+P was reclaimed by the legacy fallback")
 	}
 
-	GlobalHotkeysMgr.Bindings["Common"][commandPaletteLegacyKey] = "Panel.TogglePassivePanel"
+	keymap.GlobalHotkeysMgr.Bindings["Common"][commandPaletteLegacyKey] = "Panel.TogglePassivePanel"
 	if commandPaletteLegacyShortcut("Shell", e) {
 		t.Fatal("explicit Ctrl+Alt+P binding was reclaimed by the legacy fallback")
 	}
@@ -68,13 +70,12 @@ func TestCommandPaletteActionApplicability(t *testing.T) {
 
 	const conditionName = "commandPaletteTestUnavailable"
 	conditionKey := strings.ToLower(conditionName)
-	previous, existed := conditionRegistry[conditionKey]
-	conditionRegistry[conditionKey] = func() bool { return false }
+	previous, existed := keymap.SetCondition(conditionKey, func() bool { return false })
 	t.Cleanup(func() {
 		if existed {
-			conditionRegistry[conditionKey] = previous
+			keymap.SetCondition(conditionKey, previous)
 		} else {
-			delete(conditionRegistry, conditionKey)
+			keymap.SetCondition(conditionKey, nil)
 		}
 	})
 
@@ -94,9 +95,8 @@ func TestCommandPaletteActionApplicability(t *testing.T) {
 
 func TestCommandPaletteHidesUserMenuFromBusyTerminal(t *testing.T) {
 	const condition = "terminalquiet"
-	previous := conditionRegistry[condition]
-	conditionRegistry[condition] = func() bool { return false }
-	t.Cleanup(func() { conditionRegistry[condition] = previous })
+	previous, _ := keymap.SetCondition(condition, func() bool { return false })
+	t.Cleanup(func() { keymap.SetCondition(condition, previous) })
 
 	if commandPaletteCanIncludeUserMenu("Terminal") {
 		t.Fatal("busy terminal exposes user-menu commands that would send Enter to its term.PTY")
@@ -108,10 +108,10 @@ func TestCommandPaletteHidesUserMenuFromBusyTerminal(t *testing.T) {
 
 func TestCommandPaletteActionShortcutsAreDeterministic(t *testing.T) {
 	const falseCondition = "commandpaletteshortcutfalse"
-	conditionRegistry[falseCondition] = func() bool { return false }
-	t.Cleanup(func() { delete(conditionRegistry, falseCondition) })
-	previous := GlobalHotkeysMgr
-	GlobalHotkeysMgr = &HotkeyManager{
+	keymap.SetCondition(falseCondition, func() bool { return false })
+	t.Cleanup(func() { keymap.SetCondition(falseCondition, nil) })
+	previous := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = &keymap.HotkeyManager{
 		Defaults: map[string]map[string]string{},
 		Bindings: map[string]map[string]string{
 			"Shell": {
@@ -122,7 +122,7 @@ func TestCommandPaletteActionShortcutsAreDeterministic(t *testing.T) {
 			"Common": {"AltZ": "Test.PaletteAction"},
 		},
 	}
-	t.Cleanup(func() { GlobalHotkeysMgr = previous })
+	t.Cleanup(func() { keymap.GlobalHotkeysMgr = previous })
 
 	want := []string{"Alt+Z", "Ctrl+A", "Ctrl+B"}
 	if got := commandPaletteActionShortcuts("Shell", "test.paletteaction"); !reflect.DeepEqual(got, want) {
@@ -132,13 +132,13 @@ func TestCommandPaletteActionShortcutsAreDeterministic(t *testing.T) {
 
 func TestCommandPaletteActionShortcutsIgnoreUnrelatedConditions(t *testing.T) {
 	const unrelatedCondition = "commandpaletteunrelatedpanic"
-	conditionRegistry[unrelatedCondition] = func() bool {
+	keymap.SetCondition(unrelatedCondition, func() bool {
 		panic("an unrelated shortcut condition was evaluated")
-	}
-	t.Cleanup(func() { delete(conditionRegistry, unrelatedCondition) })
+	})
+	t.Cleanup(func() { keymap.SetCondition(unrelatedCondition, nil) })
 
-	previous := GlobalHotkeysMgr
-	GlobalHotkeysMgr = &HotkeyManager{
+	previous := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = &keymap.HotkeyManager{
 		Defaults: map[string]map[string]string{},
 		Bindings: map[string]map[string]string{
 			"Shell": {
@@ -147,7 +147,7 @@ func TestCommandPaletteActionShortcutsIgnoreUnrelatedConditions(t *testing.T) {
 			},
 		},
 	}
-	t.Cleanup(func() { GlobalHotkeysMgr = previous })
+	t.Cleanup(func() { keymap.GlobalHotkeysMgr = previous })
 
 	want := []string{"Ctrl+P"}
 	if got := commandPaletteActionShortcuts("Shell", "test.paletteaction"); !reflect.DeepEqual(got, want) {
@@ -175,33 +175,33 @@ func TestCommandPaletteIncludesBothPluginLocationsAndReResolves(t *testing.T) {
 		}
 	})
 
-	pf := &PanelsFrame{}
+	pf := &panel.PanelsFrame{}
 	entries := commandPalettePluginEntries(pf)
 	byID := make(map[string]commandPaletteEntry)
 	for _, entry := range entries {
 		byID[entry.ID] = entry
 	}
-	panel, panelOK := byID["test.command-palette.panel"]
+	pnl, panelOK := byID["test.command-palette.panel"]
 	config, configOK := byID["test.command-palette.config"]
 	if !panelOK || !configOK {
 		t.Fatalf("plugin entries missing: panel=%v config=%v", panelOK, configOK)
 	}
-	if panel.Category == config.Category {
-		t.Fatalf("panel and configuration commands have the same category %q", panel.Category)
+	if pnl.Category == config.Category {
+		t.Fatalf("panel and configuration commands have the same category %q", pnl.Category)
 	}
 	func() {
-		// Install the deliberately minimal PanelsFrame in an isolated manager so
+		// Install the deliberately minimal panel.PanelsFrame in an isolated manager so
 		// workspace validation stays meaningful without borrowing another test's
 		// active screen.
-		restoreFrameManager := swapFrameManager(t)
+		restoreFrameManager := paneltest.SwapFrameManager(t)
 		defer restoreFrameManager()
 		defer testutil.SetFrameManagerScreens(t, []*vtui.AppScreen{{Number: 1, Frames: []vtui.Frame{pf}}}, 0)()
 
-		if !executeCommandPaletteEntry(panel) || runs != 1 {
+		if !executeCommandPaletteEntry(pnl) || runs != 1 {
 			t.Fatalf("live plugin command ran %d times", runs)
 		}
 		registrations[0].Unregister()
-		if executeCommandPaletteEntry(panel) || runs != 1 {
+		if executeCommandPaletteEntry(pnl) || runs != 1 {
 			t.Fatal("unregistered plugin command was invoked from a stale palette entry")
 		}
 	}()
@@ -240,7 +240,7 @@ func TestCommandPalettePluginMetadataUsesCurrentLanguageAndAllLanguageAliases(t 
 	t.Cleanup(registration.Unregister)
 
 	findEntry := func() commandPaletteEntry {
-		for _, entry := range commandPalettePluginEntries(&PanelsFrame{}) {
+		for _, entry := range commandPalettePluginEntries(&panel.PanelsFrame{}) {
 			if entry.ID == "test.command-palette.localized-plugin" {
 				return entry
 			}
@@ -280,18 +280,18 @@ func TestCommandPalettePluginMetadataUsesCurrentLanguageAndAllLanguageAliases(t 
 
 func TestCommandPaletteFlattensExecutableUserMenuLeaves(t *testing.T) {
 	source := commandPaletteUserMenuSource{
-		mode:  MenuModeLocal,
+		mode:  panel.MenuModeLocal,
 		title: "Local menu",
 		path:  `C:\work\FarMenu.ini`,
-		items: []UserMenuItem{
+		items: []panel.UserMenuItem{
 			{HotKey: "--"},
-			{Label: "&Tools", Submenu: []UserMenuItem{
+			{Label: "&Tools", Submenu: []panel.UserMenuItem{
 				{HotKey: "R", Label: "&Run checks", Commands: []string{"REM ignored", "go test ./..."}},
 				{HotKey: "C", Label: "Comments", Commands: []string{":: ignored"}},
 			}},
 		},
 	}
-	entries := flattenCommandPaletteUserMenu(source, &PanelsFrame{})
+	entries := flattenCommandPaletteUserMenu(source, &panel.PanelsFrame{})
 	if len(entries) != 1 {
 		t.Fatalf("flattened entries = %#v, want one executable leaf", entries)
 	}
@@ -352,22 +352,22 @@ func (frame *commandPalettePrimaryFrame) InterceptPluginKey(*vtinput.InputEvent)
 }
 
 func TestCommandPaletteHotkeyPrecedesPluginsAndDoesNotStack(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	screen := vtui.NewSilentScreenBuf()
 	screen.AllocBuf(100, 30)
 	vtui.FrameManager.Init(screen)
 
 	host := &commandPalettePrimaryFrame{}
 	vtui.FrameManager.Push(host)
-	previousHotkeys, previousMacro := GlobalHotkeysMgr, macro.MacroMgr
-	GlobalHotkeysMgr = &HotkeyManager{
+	previousHotkeys, previousMacro := keymap.GlobalHotkeysMgr, macro.MacroMgr
+	keymap.GlobalHotkeysMgr = &keymap.HotkeyManager{
 		Defaults: map[string]map[string]string{"Common": {"CtrlShiftP": commandPaletteActionName}},
 		Bindings: map[string]map[string]string{"Common": {"CtrlShiftP": commandPaletteActionName}},
 	}
 	manager := &macro.MacroManager{Macros: make(map[string]map[string][]*vtinput.InputEvent)}
 	macro.MacroMgr = manager
 	t.Cleanup(func() {
-		GlobalHotkeysMgr = previousHotkeys
+		keymap.GlobalHotkeysMgr = previousHotkeys
 		macro.MacroMgr = previousMacro
 	})
 
@@ -395,10 +395,10 @@ func TestCommandPaletteHotkeyPrecedesPluginsAndDoesNotStack(t *testing.T) {
 }
 
 func TestFastFindDoesNotVetoModifiedPrintablePaletteKey(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 
-	panel := &FileSystemPanel{fastFindMode: true}
-	frame := &PanelsFrame{showPanels: true, panels: [2]Panel{panel, nil}}
+	pnl := &panel.FileSystemPanel{FastFindMode: true}
+	frame := &panel.PanelsFrame{ShowPanels: true, Panels: [2]panel.Panel{pnl, nil}}
 	Modified := &vtinput.InputEvent{
 		Type: vtinput.KeyEventType, KeyDown: true,
 		VirtualKeyCode: vtinput.VK_P, Char: 'P',

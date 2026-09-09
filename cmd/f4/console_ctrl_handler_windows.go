@@ -6,6 +6,8 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/unxed/f4/internal/panel"
+
 	"github.com/unxed/vtui"
 )
 
@@ -62,11 +64,11 @@ func interruptActivePTY() {
 		return
 	}
 	for _, fr := range screens[idx].Frames {
-		if pf, ok := fr.(*PanelsFrame); ok {
-			if active := pf.getActivePTY(); active != nil {
+		if pf, ok := fr.(*panel.PanelsFrame); ok {
+			if active := pf.GetActivePTY(); active != nil {
 				// Treat the interrupt as user input so it cannot interleave a
 				// private environment update. Remote PTYs remain passthrough.
-				_, _ = pf.writePTY(active, []byte{3}) // ETX = Ctrl+C
+				_, _ = pf.WritePTY(active, []byte{3}) // ETX = Ctrl+C
 			}
 			return
 		}

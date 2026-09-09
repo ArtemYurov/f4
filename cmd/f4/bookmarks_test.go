@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/unxed/f4/internal/dialog"
+	"github.com/unxed/f4/internal/panel"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -21,11 +22,11 @@ func writeTempBookmarks(t *testing.T, content string) string {
 }
 
 func TestLoadBookmarks_MissingFile(t *testing.T) {
-	set, err := LoadBookmarks(filepath.Join(t.TempDir(), "does_not_exist.ini"))
+	set, err := panel.LoadBookmarks(filepath.Join(t.TempDir(), "does_not_exist.ini"))
 	if err != nil {
 		t.Fatalf("expected nil error for missing file, got %v", err)
 	}
-	if set != (BookmarkSet{}) {
+	if set != (panel.BookmarkSet{}) {
 		t.Fatalf("expected empty set for missing file, got %#v", set)
 	}
 }
@@ -53,7 +54,7 @@ PluginFile=
 
 func TestLoadBookmarks_RealFar2lFile(t *testing.T) {
 	p := writeTempBookmarks(t, realFar2lBookmarksFixture)
-	set, err := LoadBookmarks(p)
+	set, err := panel.LoadBookmarks(p)
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}
@@ -75,11 +76,11 @@ func TestLoadBookmarks_RealFar2lFile(t *testing.T) {
 }
 
 func TestSaveBookmarks_OmitsEmptySlots(t *testing.T) {
-	var set BookmarkSet
-	set[4] = Bookmark{Path: "/tmp/only"}
+	var set panel.BookmarkSet
+	set[4] = panel.Bookmark{Path: "/tmp/only"}
 
 	p := filepath.Join(t.TempDir(), "out.ini")
-	if err := SaveBookmarks(p, set); err != nil {
+	if err := panel.SaveBookmarks(p, set); err != nil {
 		t.Fatalf("save: %v", err)
 	}
 	data, err := os.ReadFile(p)
@@ -101,13 +102,13 @@ func TestSaveBookmarks_OmitsEmptySlots(t *testing.T) {
 }
 
 func TestSaveBookmarks_AscendingOrder(t *testing.T) {
-	var set BookmarkSet
-	set[9] = Bookmark{Path: "/nine"}
-	set[6] = Bookmark{Path: "/six"}
-	set[8] = Bookmark{Path: "/eight"}
+	var set panel.BookmarkSet
+	set[9] = panel.Bookmark{Path: "/nine"}
+	set[6] = panel.Bookmark{Path: "/six"}
+	set[8] = panel.Bookmark{Path: "/eight"}
 
 	p := filepath.Join(t.TempDir(), "order.ini")
-	if err := SaveBookmarks(p, set); err != nil {
+	if err := panel.SaveBookmarks(p, set); err != nil {
 		t.Fatalf("save: %v", err)
 	}
 	data, _ := os.ReadFile(p)
@@ -123,11 +124,11 @@ func TestSaveBookmarks_AscendingOrder(t *testing.T) {
 }
 
 func TestSaveBookmarks_AlphabeticalKeys(t *testing.T) {
-	var set BookmarkSet
-	set[1] = Bookmark{Path: "/home/user"}
+	var set panel.BookmarkSet
+	set[1] = panel.Bookmark{Path: "/home/user"}
 
 	p := filepath.Join(t.TempDir(), "keys.ini")
-	if err := SaveBookmarks(p, set); err != nil {
+	if err := panel.SaveBookmarks(p, set); err != nil {
 		t.Fatalf("save: %v", err)
 	}
 	data, _ := os.ReadFile(p)
@@ -143,12 +144,12 @@ PluginFile=
 }
 
 func TestSaveBookmarks_TrailingNewlineAndBlankSeparator(t *testing.T) {
-	var set BookmarkSet
-	set[0] = Bookmark{Path: "/zero"}
-	set[3] = Bookmark{Path: "/three"}
+	var set panel.BookmarkSet
+	set[0] = panel.Bookmark{Path: "/zero"}
+	set[3] = panel.Bookmark{Path: "/three"}
 
 	p := filepath.Join(t.TempDir(), "sep.ini")
-	if err := SaveBookmarks(p, set); err != nil {
+	if err := panel.SaveBookmarks(p, set); err != nil {
 		t.Fatalf("save: %v", err)
 	}
 	data, _ := os.ReadFile(p)
@@ -164,10 +165,10 @@ func TestSaveBookmarks_TrailingNewlineAndBlankSeparator(t *testing.T) {
 }
 
 func TestBookmarks_RoundTrip(t *testing.T) {
-	var in BookmarkSet
-	in[0] = Bookmark{Path: "/home/sogonov/f4"}
-	in[2] = Bookmark{Path: "/mnt/d/!!wrkstk/данные"}
-	in[7] = Bookmark{
+	var in panel.BookmarkSet
+	in[0] = panel.Bookmark{Path: "/home/sogonov/f4"}
+	in[2] = panel.Bookmark{Path: "/mnt/d/!!wrkstk/данные"}
+	in[7] = panel.Bookmark{
 		Path:       "/some/mount",
 		Plugin:     "NetRocks",
 		PluginData: "sftp://host/dir",
@@ -175,10 +176,10 @@ func TestBookmarks_RoundTrip(t *testing.T) {
 	}
 
 	p := filepath.Join(t.TempDir(), "rt.ini")
-	if err := SaveBookmarks(p, in); err != nil {
+	if err := panel.SaveBookmarks(p, in); err != nil {
 		t.Fatalf("save: %v", err)
 	}
-	out, err := LoadBookmarks(p)
+	out, err := panel.LoadBookmarks(p)
 	if err != nil {
 		t.Fatalf("reload: %v", err)
 	}
@@ -200,7 +201,7 @@ PluginFile=
 [UserMenu/Whatever]
 Label=nope
 `)
-	set, err := LoadBookmarks(p)
+	set, err := panel.LoadBookmarks(p)
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}
@@ -219,12 +220,12 @@ Label=nope
 
 func TestBookmark_IsEmpty(t *testing.T) {
 	cases := []struct {
-		b    Bookmark
+		b    panel.Bookmark
 		want bool
 	}{
-		{Bookmark{}, true},
-		{Bookmark{Path: "x"}, false},
-		{Bookmark{Plugin: "x"}, false},
+		{panel.Bookmark{}, true},
+		{panel.Bookmark{Path: "x"}, false},
+		{panel.Bookmark{Plugin: "x"}, false},
 	}
 	for _, c := range cases {
 		if got := c.b.IsEmpty(); got != c.want {
@@ -270,7 +271,7 @@ func TestExpandPathEnv_BookmarkPaths(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := expandPathEnv(tc.path); got != tc.want {
+			if got := panel.ExpandPathEnv(tc.path); got != tc.want {
 				t.Errorf("expandPathEnv(%q) = %q, want %q", tc.path, got, tc.want)
 			}
 		})
@@ -278,14 +279,14 @@ func TestExpandPathEnv_BookmarkPaths(t *testing.T) {
 }
 
 func TestBookmarks_RoundTripPreservesExpandablePath(t *testing.T) {
-	var in BookmarkSet
-	in[4] = Bookmark{Path: filepath.Join("$HOME", "portable")}
+	var in panel.BookmarkSet
+	in[4] = panel.Bookmark{Path: filepath.Join("$HOME", "portable")}
 	p := filepath.Join(t.TempDir(), "bookmarks.ini")
 
-	if err := SaveBookmarks(p, in); err != nil {
+	if err := panel.SaveBookmarks(p, in); err != nil {
 		t.Fatal(err)
 	}
-	out, err := LoadBookmarks(p)
+	out, err := panel.LoadBookmarks(p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -323,7 +324,7 @@ func TestTruncPathLeft(t *testing.T) {
 }
 
 func TestBookmarksFilePath_HasExpectedSuffix(t *testing.T) {
-	p := BookmarksFilePath()
+	p := panel.BookmarksFilePath()
 	want := filepath.Join("f4", "settings", "bookmarks.ini")
 	if !strings.HasSuffix(p, want) {
 		t.Errorf("BookmarksFilePath()=%q, want suffix %q", p, want)

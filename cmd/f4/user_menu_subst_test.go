@@ -1,19 +1,20 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
 	"os"
 	"strings"
 	"testing"
 )
 
-func baseCtx() *SubstContext {
-	return &SubstContext{
-		Active: PanelSnapshot{
+func baseCtx() *panel.SubstContext {
+	return &panel.SubstContext{
+		Active: panel.PanelSnapshot{
 			CurDir:      "/home/me/work",
 			CurrentFile: "main.go",
 			Marked:      []string{"main.go", "util.go"},
 		},
-		Passive: PanelSnapshot{
+		Passive: panel.PanelSnapshot{
 			CurDir:      "/tmp",
 			CurrentFile: "report.txt",
 			Marked:      []string{"report.txt"},
@@ -21,9 +22,9 @@ func baseCtx() *SubstContext {
 	}
 }
 
-func subst(t *testing.T, cmd string, ctx *SubstContext) SubstResult {
+func subst(t *testing.T, cmd string, ctx *panel.SubstContext) panel.SubstResult {
 	t.Helper()
-	return SubstFileName(cmd, ctx)
+	return panel.SubstFileName(cmd, ctx)
 }
 
 func TestSubst_DotFile(t *testing.T) {
@@ -229,7 +230,7 @@ func TestSubst_UnrecognizedTokenPassesThrough(t *testing.T) {
 }
 
 func TestSubst_NilContext(t *testing.T) {
-	r := SubstFileName(`echo !.!`, nil)
+	r := panel.SubstFileName(`echo !.!`, nil)
 	if r.Command != "echo !.!" {
 		t.Fatalf("nil context should return command unchanged, got %q", r.Command)
 	}

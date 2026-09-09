@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"testing"
 
 	"github.com/unxed/f4/internal/plughost"
@@ -32,7 +34,7 @@ func (p *panelPluginTestController) GetSelectedName() string { return "plugin-ro
 
 func TestPanelProviderOpensInActiveSlotAndReceivesContext(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	pf.ResizeConsole(80, 25)
 	defer pf.Close()
 
@@ -50,12 +52,12 @@ func TestPanelProviderOpensInActiveSlotAndReceivesContext(t *testing.T) {
 	}
 	defer registration.Unregister()
 
-	openRegisteredPanelProvider(pf, "test.panel.active-slot")
-	instance, ok := pf.altPanels[1].(*pluginPanelInstance)
+	panel.OpenRegisteredPanelProvider(pf, "test.panel.active-slot")
+	instance, ok := pf.AltPanels[1].(*panel.PluginPanelInstance)
 	if !ok {
-		t.Fatalf("active slot contains %T, want pluginPanelInstance", pf.altPanels[1])
+		t.Fatalf("active slot contains %T, want pluginPanelInstance", pf.AltPanels[1])
 	}
-	if pf.panels[1] == nil {
+	if pf.Panels[1] == nil {
 		t.Fatal("logical file panel was removed")
 	}
 	pf.Show(vtui.NewSilentScreenBuf())
@@ -73,7 +75,7 @@ func TestPanelProviderOpensInActiveSlotAndReceivesContext(t *testing.T) {
 		t.Fatalf("panel key count = %d, want 1", controller.keys)
 	}
 	instance.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_ESCAPE})
-	if pf.altPanels[1] != nil || !controller.closed {
+	if pf.AltPanels[1] != nil || !controller.closed {
 		t.Fatal("Escape did not close an unhandled plugin panel")
 	}
 }
@@ -117,15 +119,15 @@ func TestRPCPanelProviderOpensVUIAndForwardsEvent(t *testing.T) {
 	if !ok {
 		t.Fatal("RPC panel was not registered")
 	}
-	panel, err := provider.Open(vfs.PanelContext{Side: 1, ActiveSide: 1})
+	pnl, err := provider.Open(vfs.PanelContext{Side: 1, ActiveSide: 1})
 	if err != nil {
 		t.Fatal(err)
 	}
-	panel.SetPosition(0, 0, 39, 19)
-	if !panel.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_F4}) {
+	pnl.SetPosition(0, 0, 39, 19)
+	if !pnl.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_F4}) {
 		t.Fatal("RPC panel did not return handled=true")
 	}
-	if err := panel.Close(); err != nil {
+	if err := pnl.Close(); err != nil {
 		t.Fatal(err)
 	}
 }

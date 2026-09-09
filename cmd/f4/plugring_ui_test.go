@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"path/filepath"
 	"testing"
 
@@ -8,11 +10,11 @@ import (
 )
 
 func TestPlugRingDialog_Layout(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.SetDefaultPalette()
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	t.Cleanup(pf.Close)
 
 	actionPlugRing(pf)

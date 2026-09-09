@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/keymap"
 	"reflect"
 	"strings"
 	"testing"
@@ -21,11 +22,11 @@ func helpPaletteEntriesByID(entries []commandPaletteEntry) map[string]commandPal
 func TestCommandPaletteHelpProviderFiltersFrameworkFallbacks(t *testing.T) {
 	initFrameworkActionTestScreen(t)
 	previousHelp := vtui.GlobalHelpEngine
-	previousHotkeys := GlobalHotkeysMgr
-	GlobalHotkeysMgr = nil
+	previousHotkeys := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = nil
 	t.Cleanup(func() {
 		vtui.GlobalHelpEngine = previousHelp
-		GlobalHotkeysMgr = previousHotkeys
+		keymap.GlobalHotkeysMgr = previousHotkeys
 		dialog.ResetHelpState()
 	})
 
@@ -67,7 +68,7 @@ func TestCommandPaletteHelpProviderFiltersFrameworkFallbacks(t *testing.T) {
 	}
 	for _, actionName := range []string{"App.Help", "App.MainMenu", "Workspace.New", "Workspace.Close", "Workspace.List"} {
 		action, _ := GetAction(actionName)
-		if got := NativeShortcutsForAction("Other", action); len(got) != 0 {
+		if got := keymap.NativeShortcutsForAction("Other", action); len(got) != 0 {
 			t.Errorf("modal Help advertised native %s shortcut: %v", actionName, got)
 		}
 	}

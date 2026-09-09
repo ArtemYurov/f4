@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"github.com/unxed/f4/internal/paneltest"
 	"strings"
 	"testing"
 
@@ -27,7 +28,7 @@ func TestUpdateWindowTitle(t *testing.T) {
 
 	// Keep the test's FrameManager isolated so Init's task pump cannot race
 	// with teardown of the shared test-global manager.
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 
 	// Инициализируем чистый стек окон во фреймворке
 	vtui.FrameManager.Init(scr)
@@ -104,7 +105,7 @@ func TestCurrentWindowTitleMatchesRenderedTitle(t *testing.T) {
 	origTemplate := config.App.ConsoleTitleTemplate
 	defer func() { config.App.ConsoleTitleTemplate = origTemplate }()
 
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	scr := vtui.NewScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)

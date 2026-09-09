@@ -6,6 +6,7 @@ package main
 // look into an empty one and pass by finding nothing.
 
 import (
+	"github.com/unxed/f4/internal/keymap"
 	"testing"
 
 	"github.com/unxed/f4/internal/editor"
@@ -126,7 +127,7 @@ func TestEditor_MultiCursor_OccurrenceActionsAreRegistered(t *testing.T) {
 // Every name the backends can produce for a Del key must resolve to the same
 // action as its counterpart, so a rebound key keeps working too.
 func TestHotkeyDelAliasesResolve(t *testing.T) {
-	hm := NewHotkeyManager("")
+	hm := keymap.NewHotkeyManager("")
 
 	cases := []struct{ area, key, want string }{
 		{"Editor", "ShiftDel", "Editor.Cut"},

@@ -1,6 +1,9 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -9,37 +12,37 @@ import (
 	"github.com/unxed/vtui"
 )
 
-// seedPanelForRestore wires up a PanelsFrame whose active panel shows the
+// seedPanelForRestore wires up a panel.PanelsFrame whose active panel shows the
 // given entries and pushes it onto FrameManager so withPF handlers find it.
-func seedPanelForRestore(t *testing.T, names []string) *PanelsFrame {
+func seedPanelForRestore(t *testing.T, names []string) *panel.PanelsFrame {
 	t.Helper()
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	t.Cleanup(func() { pf.Close() })
 	pf.ResizeConsole(80, 25)
 
-	fsp := pf.getActivePanel()
-	fsp.vfs = vfs.NewOSVFS(".")
-	// NewFileSystemPanel starts an asynchronous directory read. Let it finish
+	fsp := pf.GetActivePanel()
+	fsp.Vfs = vfs.NewOSVFS(".")
+	// panel.NewFileSystemPanel starts an asynchronous directory read. Let it finish
 	// before returning, otherwise its completion task leaks into the shared
 	// FrameManager queue and corrupts the next test that drains it (and, if
 	// this test swaps the VFS, the late callback panics against the new VFS).
-	waitForLoad(t, fsp)
+	paneltest.WaitForLoad(t, fsp)
 
-	entries := []*fileEntry{{VFSItem: vfs.VFSItem{Name: "..", IsDir: true}}}
+	entries := []*panel.FileEntry{{VFSItem: vfs.VFSItem{Name: "..", IsDir: true}}}
 	for _, n := range names {
-		entries = append(entries, &fileEntry{VFSItem: vfs.VFSItem{Name: n}})
+		entries = append(entries, &panel.FileEntry{VFSItem: vfs.VFSItem{Name: n}})
 	}
-	fsp.entries = entries
+	fsp.Entries = entries
 	fsp.Refresh()
 
 	vtui.FrameManager.Push(pf)
 	return pf
 }
 
-func collectSelected(fsp *FileSystemPanel) []string {
+func collectSelected(fsp *panel.FileSystemPanel) []string {
 	var out []string
-	for _, e := range fsp.entries {
+	for _, e := range fsp.Entries {
 		if e.Selected {
 			out = append(out, e.Name)
 		}
@@ -49,7 +52,7 @@ func collectSelected(fsp *FileSystemPanel) []string {
 
 func TestFileSystemPanel_SaveRestoreSelection_Swaps(t *testing.T) {
 	pf := seedPanelForRestore(t, []string{"a.txt", "b.txt", "c.txt"})
-	fsp := pf.getActivePanel()
+	fsp := pf.GetActivePanel()
 
 	// Initial state: mark a.txt.
 	fsp.SetItemSelected(1, true)
@@ -75,15 +78,15 @@ func TestFileSystemPanel_SaveRestoreSelection_Swaps(t *testing.T) {
 
 func TestFileSystemPanel_RestoreSelection_LeavesParentAlone(t *testing.T) {
 	pf := seedPanelForRestore(t, []string{"a.txt"})
-	fsp := pf.getActivePanel()
+	fsp := pf.GetActivePanel()
 
 	// Force ".." into an impossible "PrevSelected=true" state — RestoreSelection
 	// must not resurrect it into Selected. Guards against a regression where
 	// far2l's Select() skip for parent-dir entries would not be honoured.
-	fsp.entries[0].PrevSelected = true
+	fsp.Entries[0].PrevSelected = true
 
 	fsp.RestoreSelection()
-	if fsp.entries[0].Selected {
+	if fsp.Entries[0].Selected {
 		t.Error("RestoreSelection propagated selection to the '..' entry")
 	}
 }
@@ -101,21 +104,21 @@ func TestFileSystemPanel_PreviousSelectionIsDirectoryScoped(t *testing.T) {
 		}
 	}
 	pf := seedPanelForRestore(t, nil)
-	fsp := pf.getActivePanel()
-	fsp.vfs = vfs.NewOSVFS(first)
+	fsp := pf.GetActivePanel()
+	fsp.Vfs = vfs.NewOSVFS(first)
 	fsp.ReadDirectory()
-	waitForLoad(t, fsp)
+	paneltest.WaitForLoad(t, fsp)
 	if !fsp.SetSelectedByName("same.txt", true) {
 		t.Fatal("first directory entry missing")
 	}
 	fsp.SaveSelection()
 	fsp.SetSelectedByName("same.txt", false)
 
-	if err := fsp.vfs.SetPath(second); err != nil {
+	if err := fsp.Vfs.SetPath(second); err != nil {
 		t.Fatal(err)
 	}
 	fsp.ReadDirectory()
-	waitForLoad(t, fsp)
+	paneltest.WaitForLoad(t, fsp)
 	fsp.RestoreSelection()
 	if fsp.IsNameSelected("same.txt") {
 		t.Fatal("Ctrl+M applied the prior directory's same-named selection")
@@ -124,7 +127,7 @@ func TestFileSystemPanel_PreviousSelectionIsDirectoryScoped(t *testing.T) {
 
 func TestAction_PanelRestoreSelection_InvertRoundtrip(t *testing.T) {
 	pf := seedPanelForRestore(t, []string{"a.txt", "b.txt", "c.txt"})
-	fsp := pf.getActivePanel()
+	fsp := pf.GetActivePanel()
 
 	// Mark just a.txt.
 	fsp.SetItemSelected(1, true)
@@ -150,7 +153,7 @@ func TestAction_PanelRestoreSelection_InvertRoundtrip(t *testing.T) {
 
 func TestFileSystemPanel_ApplyMaskSelection_SnapshotsBeforeMutating(t *testing.T) {
 	pf := seedPanelForRestore(t, []string{"a.txt", "b.txt", "c.log"})
-	fsp := pf.getActivePanel()
+	fsp := pf.GetActivePanel()
 
 	// Mark a.txt as the starting state.
 	fsp.SetItemSelected(1, true)
@@ -171,8 +174,8 @@ func TestFileSystemPanel_ApplyMaskSelection_SnapshotsBeforeMutating(t *testing.T
 }
 
 func TestHotkeyManager_RestoreSelectionDefault_Issue289(t *testing.T) {
-	hm := NewHotkeyManager("")
-	hm.initDefaults()
+	hm := keymap.NewHotkeyManager("")
+	hm.InitDefaults()
 	if got := hm.GetAction("Shell", "CtrlM"); got != "Panel.RestoreSelection" {
 		t.Errorf("Shell/CtrlM: got %q, want %q", got, "Panel.RestoreSelection")
 	}

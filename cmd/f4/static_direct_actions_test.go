@@ -1,6 +1,9 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"strings"
 	"testing"
 
@@ -80,7 +83,7 @@ func TestStaticDirectActionsRegistered(t *testing.T) {
 	if viewerGoTo.Area != "Viewer" || viewerGoTo.LabelKey != "KeyBar.ViewerAltF8" || len(viewerGoTo.DefaultKeys) != 1 || viewerGoTo.DefaultKeys[0] != "AltF8" {
 		t.Errorf("Viewer.GoTo metadata = %#v", viewerGoTo)
 	}
-	if got := NewHotkeyManager("").GetAction("Viewer", "AltF8"); got != "Viewer.GoTo" {
+	if got := keymap.NewHotkeyManager("").GetAction("Viewer", "AltF8"); got != "Viewer.GoTo" {
 		t.Errorf("Viewer AltF8 binding = %q, want Viewer.GoTo", got)
 	}
 
@@ -91,7 +94,7 @@ func TestStaticDirectActionsRegistered(t *testing.T) {
 	if editorGoTo.Area != "Editor" || editorGoTo.LabelKey != "KeyBar.EditorAltF8" || len(editorGoTo.DefaultKeys) != 1 || editorGoTo.DefaultKeys[0] != "AltF8" {
 		t.Errorf("Editor.GoTo metadata = %#v", editorGoTo)
 	}
-	if got := NewHotkeyManager("").GetAction("Editor", "AltF8"); got != "Editor.GoTo" {
+	if got := keymap.NewHotkeyManager("").GetAction("Editor", "AltF8"); got != "Editor.GoTo" {
 		t.Errorf("Editor AltF8 binding = %q, want Editor.GoTo", got)
 	}
 
@@ -117,31 +120,31 @@ func TestStaticDirectActionsRegistered(t *testing.T) {
 }
 
 func TestArkanoidActionKeepsPhysicalShortcutFrameworkOwned(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
-	previous := GlobalHotkeysMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	t.Cleanup(func() { GlobalHotkeysMgr = previous })
+	previous := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	t.Cleanup(func() { keymap.GlobalHotkeysMgr = previous })
 
 	arkanoid, ok := GetAction("App.Arkanoid")
 	if !ok {
 		t.Fatal("App.Arkanoid is not registered")
 	}
-	if got := GlobalHotkeysMgr.GetAction("Shell", "CtrlAltA"); got != "" {
+	if got := keymap.GlobalHotkeysMgr.GetAction("Shell", "CtrlAltA"); got != "" {
 		t.Fatalf("CtrlAltA was installed into configurable defaults as %q", got)
 	}
-	if got := NativeShortcutsForAction("Shell", arkanoid); len(got) != 1 || got[0] != "Ctrl+Alt+A" {
+	if got := keymap.NativeShortcutsForAction("Shell", arkanoid); len(got) != 1 || got[0] != "Ctrl+Alt+A" {
 		t.Fatalf("App.Arkanoid native shortcuts = %v", got)
 	}
 }
 
 func TestFixedSideActionsUseTheAddressedPanelState(t *testing.T) {
-	left := &FileSystemPanel{viewMode: ViewModeBrief, sortMode: SortTime}
-	right := &FileSystemPanel{
-		vfs: &staticDirectActionsAITestVFS{VFS: vfs.NewNullVFS(0)},
+	left := &panel.FileSystemPanel{ViewMode: panel.ViewModeBrief, SortMode: panel.SortTime}
+	right := &panel.FileSystemPanel{
+		Vfs: &staticDirectActionsAITestVFS{VFS: vfs.NewNullVFS(0)},
 	}
-	pf := &PanelsFrame{panels: [2]Panel{left, right}}
+	pf := &panel.PanelsFrame{Panels: [2]panel.Panel{left, right}}
 	t.Cleanup(testutil.SetFrameManagerScreens(t, []*vtui.AppScreen{{Number: 1, Frames: []vtui.Frame{pf}}}, 0))
 
 	leftBrief, _ := GetAction("Panel.Left.ViewBrief")
@@ -161,32 +164,32 @@ func TestFixedSideActionsUseTheAddressedPanelState(t *testing.T) {
 		t.Error("fixed AI action visibility did not follow its addressed side")
 	}
 
-	pf.wide, pf.widePanel = true, 0
+	pf.Wide, pf.WidePanel = true, 0
 	if leftBrief.Checked() || !leftWide.Checked() {
 		t.Error("wide mode did not replace the left panel's ordinary view checkmark")
 	}
 }
 
 func TestCustomSideMenuCommandsResolveToRegisteredActions(t *testing.T) {
-	regular := &PanelsFrame{panels: [2]Panel{&FileSystemPanel{}, &FileSystemPanel{}}}
+	regular := &panel.PanelsFrame{Panels: [2]panel.Panel{&panel.FileSystemPanel{}, &panel.FileSystemPanel{}}}
 	aiVFS := func() vfs.VFS {
 		return &staticDirectActionsAITestVFS{VFS: vfs.NewNullVFS(0)}
 	}
-	ai := &PanelsFrame{panels: [2]Panel{
-		&FileSystemPanel{vfs: aiVFS()},
-		&FileSystemPanel{vfs: aiVFS()},
+	ai := &panel.PanelsFrame{Panels: [2]panel.Panel{
+		&panel.FileSystemPanel{Vfs: aiVFS()},
+		&panel.FileSystemPanel{Vfs: aiVFS()},
 	}}
 
 	menus := []vtui.MenuBarItem{
-		regular.leftMenu(), regular.rightMenu(),
-		ai.leftMenu(), ai.rightMenu(),
+		regular.LeftMenu(), regular.RightMenu(),
+		ai.LeftMenu(), ai.RightMenu(),
 	}
 	for _, menu := range menus {
 		for _, item := range menu.SubItems {
 			if item.Separator {
 				continue
 			}
-			actionName, ok := commandToActionName[item.Command]
+			actionName, ok := panel.CommandToActionName[item.Command]
 			if !ok {
 				t.Errorf("menu %q command %d (%q) has no action mapping", menu.Label, item.Command, item.Text)
 				continue
@@ -210,28 +213,28 @@ func TestCustomSideMenuCommandsResolveToRegisteredActions(t *testing.T) {
 		appcmd.CmWorkspaceClose: "Workspace.Close",
 	}
 	for command, want := range wantExact {
-		if got := commandToActionName[command]; got != want {
+		if got := panel.CommandToActionName[command]; got != want {
 			t.Errorf("command %d maps to %q, want %q", command, got, want)
 		}
 	}
 }
 
 func TestFixedSideMenuKeepsActivePanelShortcutHints(t *testing.T) {
-	oldHotkeys := GlobalHotkeysMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	defer func() { GlobalHotkeysMgr = oldHotkeys }()
+	oldHotkeys := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	defer func() { keymap.GlobalHotkeysMgr = oldHotkeys }()
 
-	pf := &PanelsFrame{
-		panels:     [2]Panel{&FileSystemPanel{}, &FileSystemPanel{}},
-		showPanels: true,
-		menuBar:    vtui.NewMenuBar(nil),
+	pf := &panel.PanelsFrame{
+		Panels:     [2]panel.Panel{&panel.FileSystemPanel{}, &panel.FileSystemPanel{}},
+		ShowPanels: true,
+		MenuBar:    vtui.NewMenuBar(nil),
 	}
-	pf.menuBar.Items = pf.buildMenuItems()
-	pf.updateMenuCheckmarks()
+	pf.MenuBar.Items = pf.BuildMenuItems()
+	pf.UpdateMenuCheckmarks()
 
-	for _, menuIndex := range []int{0, len(pf.menuBar.Items) - 1} {
+	for _, menuIndex := range []int{0, len(pf.MenuBar.Items) - 1} {
 		for itemIndex, want := range []string{"Ctrl+1", "Ctrl+2", "Ctrl+3", "Ctrl+4"} {
-			if got := pf.menuBar.Items[menuIndex].SubItems[itemIndex].Shortcut; got != want {
+			if got := pf.MenuBar.Items[menuIndex].SubItems[itemIndex].Shortcut; got != want {
 				t.Errorf("menu %d view item %d shortcut = %q, want %q", menuIndex, itemIndex, got, want)
 			}
 		}
@@ -239,13 +242,13 @@ func TestFixedSideMenuKeepsActivePanelShortcutHints(t *testing.T) {
 }
 
 func TestFixedSidePaletteEntriesUseLocalizedSideCategories(t *testing.T) {
-	oldHotkeys := GlobalHotkeysMgr
+	oldHotkeys := keymap.GlobalHotkeysMgr
 	defer func() {
-		GlobalHotkeysMgr = oldHotkeys
+		keymap.GlobalHotkeysMgr = oldHotkeys
 	}()
-	GlobalHotkeysMgr = NewHotkeyManager("")
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
 
-	pf := &PanelsFrame{cmdLine: cmdline.NewCommandLine(""), panels: [2]Panel{&FileSystemPanel{}, &FileSystemPanel{}}}
+	pf := &panel.PanelsFrame{CmdLine: cmdline.NewCommandLine(""), Panels: [2]panel.Panel{&panel.FileSystemPanel{}, &panel.FileSystemPanel{}}}
 	t.Cleanup(testutil.SetFrameManagerScreens(t, []*vtui.AppScreen{{Number: 1, Frames: []vtui.Frame{pf}}}, 0))
 
 	want := map[string]string{

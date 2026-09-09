@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
@@ -18,7 +19,7 @@ func TestIssue631TrashSettingIsInPanelSettings(t *testing.T) {
 	theme.SetDefaultF4Palette()
 
 	config.App.UseTrash = true
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 

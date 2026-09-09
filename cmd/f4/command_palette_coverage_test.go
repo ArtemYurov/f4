@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"github.com/unxed/f4/internal/paneltest"
 	"go/ast"
 	"go/format"
 	"go/parser"
@@ -143,7 +144,7 @@ var commandPaletteProcessKeyAudit = map[string]commandPaletteSurfaceAudit{
 	"dialog.(*HotkeyAssignFrame).ProcessKey": {
 		class: paletteAuditModalLocal, rationale: "the hotkey-capture dialog must consume the next key locally and is not a global command surface",
 	},
-	"app.(*PluginHotkeyAssignFrame).ProcessKey": {
+	"panel.(*PluginHotkeyAssignFrame).ProcessKey": {
 		class: paletteAuditModalLocal, rationale: "the plugin hotkey assignment dialog captures its next key locally and is not a global command surface",
 	},
 	"media.(*ImageView).ProcessKey": {
@@ -170,10 +171,10 @@ var commandPaletteProcessKeyAudit = map[string]commandPaletteSurfaceAudit{
 	"panel.(*driveBookmarkEditDialog).ProcessKey": {
 		class: paletteAuditModalLocal, rationale: "the drive-bookmark editor captures its optional hotkey and delegates the remaining field and button handling locally",
 	},
-	"panel.(*driveMenuFrame).ProcessKey": {
+	"panel.(*DriveMenuFrame).ProcessKey": {
 		class: paletteAuditDynamicProvider, rationale: "the drive menu wrapper preserves local menu handling while its runtime drive and bookmark entries come from dynamic providers",
 	},
-	"panel.(*pluginPanelInstance).ProcessKey": {
+	"panel.(*PluginPanelInstance).ProcessKey": {
 		class: paletteAuditPanelProvider, rationale: "native panel plugins receive raw input inside their registered panel surface; their semantic commands are plugin-owned",
 	},
 	"panel.(*QuickViewPanel).ProcessKey": {
@@ -227,7 +228,7 @@ var commandPaletteNewVMenuAudit = map[string]commandPaletteSurfaceAudit{
 	"app.actionSortMenuForPanel#1": {
 		class: paletteAuditDynamicAction, rationale: "the registered sort-menu action opens choices that are also backed by sort actions",
 	},
-	"dialog.(*bookmarksDialog).open#1": {
+	"panel.(*BookmarksDialog).open#1": {
 		class: paletteAuditDynamicProvider, rationale: "bookmark slots are runtime data and live slots are exposed by commandPaletteBookmarkEntries",
 	},
 	"editor.(*EditorView).showFindAllMenu#1": {
@@ -239,7 +240,7 @@ var commandPaletteNewVMenuAudit = map[string]commandPaletteSurfaceAudit{
 	"editor.(*EditorView).ShowBase64Menu#1": {
 		class: paletteAuditDynamicAction, rationale: "the registered editor Base64 action opens its two fixed transformations",
 	},
-	"panel.(*assocEditorState).openList#1": {
+	"panel.(*AssocEditorState).openList#1": {
 		class: paletteAuditModalLocal, rationale: "association rows are edited inside the file-association settings workflow",
 	},
 	"panel.showAssociationPicker#1": {
@@ -257,7 +258,7 @@ var commandPaletteNewVMenuAudit = map[string]commandPaletteSurfaceAudit{
 	"panel.(*userMenuState).pushLevel#1": {
 		class: paletteAuditDynamicProvider, rationale: "executable user-menu leaves are flattened by commandPaletteUserMenuEntries",
 	},
-	"panel.actionViewerEditorHistory#1": {
+	"f4.actionViewerEditorHistory#1": {
 		class: paletteAuditDynamicAction, rationale: "the registered viewer/editor history action opens runtime history entries",
 	},
 	"panel.(*QuickViewPanel).showCodepageDialog#1": {
@@ -269,7 +270,7 @@ var commandPaletteNewVMenuAudit = map[string]commandPaletteSurfaceAudit{
 }
 
 func TestCommandPaletteResolvesEveryActionGeneratedMenuLeafByID(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
 	areas := make(map[string]bool)

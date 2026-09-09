@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/paneltest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -23,7 +25,7 @@ CtrlU=None
 		t.Fatal(err)
 	}
 
-	hm := NewHotkeyManager(iniPath)
+	hm := keymap.NewHotkeyManager(iniPath)
 
 	// Test default existing
 	if action := hm.GetAction("Shell", "F3"); action != "File.View" {
@@ -50,7 +52,7 @@ CtrlU=None
 	hm.Save()
 
 	// Load into a new manager
-	hm2 := NewHotkeyManager(iniPath)
+	hm2 := keymap.NewHotkeyManager(iniPath)
 	if action := hm2.GetAction("Terminal", "AltF1"); action != "Terminal.ShowMenu" {
 		t.Errorf("Expected saved action Terminal.ShowMenu, got %q", action)
 	}
@@ -61,7 +63,7 @@ CtrlU=None
 
 func TestHotkeyManager_CloneForEditIsTransactional(t *testing.T) {
 	iniPath := filepath.Join(t.TempDir(), "hotkeys.ini")
-	original := NewHotkeyManager(iniPath)
+	original := keymap.NewHotkeyManager(iniPath)
 	draft := original.CloneForEdit()
 
 	draft.Bind("Shell", "F8", "None")
@@ -79,7 +81,7 @@ func TestHotkeyManager_CloneForEditIsTransactional(t *testing.T) {
 
 	original.ReplaceBindingsFrom(draft)
 	original.Save()
-	reloaded := NewHotkeyManager(iniPath)
+	reloaded := keymap.NewHotkeyManager(iniPath)
 	if got := reloaded.GetAction("Shell", "F8"); got != "None" {
 		t.Errorf("committed removal = %q, want None", got)
 	}
@@ -89,8 +91,8 @@ func TestHotkeyManager_CloneForEditIsTransactional(t *testing.T) {
 }
 
 func TestHotkeyManager_GetActiveBindings(t *testing.T) {
-	hm := NewHotkeyManager("")
-	hm.initDefaults()
+	hm := keymap.NewHotkeyManager("")
+	hm.InitDefaults()
 	hm.Bindings = map[string]map[string]string{
 		"Shell": {
 			"F5":    "My.Copy",
@@ -129,15 +131,15 @@ func TestFormatKeyForUI(t *testing.T) {
 		{"", ""},
 	}
 	for _, tc := range tests {
-		if got := FormatKeyForUI(tc.in); got != tc.out {
+		if got := keymap.FormatKeyForUI(tc.in); got != tc.out {
 			t.Errorf("FormatKeyForUI(%q) = %q, expected %q", tc.in, got, tc.out)
 		}
 	}
 }
 
 func TestHotkeyManager_GetKeyForAction(t *testing.T) {
-	hm := NewHotkeyManager("")
-	hm.initDefaults()
+	hm := keymap.NewHotkeyManager("")
+	hm.InitDefaults()
 	hm.Bind("Shell", "CtrlT", "Panel.Test")
 
 	if key := hm.GetKeyForAction("Shell", "Panel.Test"); key != "CtrlT" {
@@ -150,7 +152,7 @@ func TestHotkeyManager_GetKeyForAction(t *testing.T) {
 }
 
 func TestHotkeyManager_GetKeyForActionIsDeterministic(t *testing.T) {
-	hm := NewHotkeyManager("")
+	hm := keymap.NewHotkeyManager("")
 	hm.Bindings["Shell"]["CtrlShiftLeft"] = "Panel.LeftDriveMenu"
 	hm.Bindings["Shell"]["AltF1"] = "Panel.LeftDriveMenu"
 
@@ -162,8 +164,8 @@ func TestHotkeyManager_GetKeyForActionIsDeterministic(t *testing.T) {
 }
 
 func TestHotkeyManager_ShellDefaults_Issue289(t *testing.T) {
-	hm := NewHotkeyManager("")
-	hm.initDefaults()
+	hm := keymap.NewHotkeyManager("")
+	hm.InitDefaults()
 
 	cases := []struct {
 		key      string
@@ -187,12 +189,12 @@ func TestHotkeyManager_ShellDefaults_Issue289(t *testing.T) {
 }
 
 func TestHotkeyManager_Conditions(t *testing.T) {
-	hm := NewHotkeyManager("")
-	hm.initDefaults()
+	hm := keymap.NewHotkeyManager("")
+	hm.InitDefaults()
 
 	// Register a mock condition
 	condValue := true
-	conditionRegistry["testcond"] = func() bool { return condValue }
+	keymap.SetCondition("testcond", func() bool { return condValue })
 
 	hm.Bind("Shell", "F12", "Test.Action:TestCond")
 
@@ -223,32 +225,32 @@ func TestNoAltScreenApp_SimpleInline_IgnoresBackgroundTermView(t *testing.T) {
 	// keyboard": panels hidden, a terminal.PTY shell mode, UseAltScreen set. Every
 	// later test that expects a key substitution to happen then silently
 	// gets none. Take a manager of our own so the frame leaves with it.
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	pf.shellMode = terminal.ShellModeSimpleInline
-	pf.showPanels = false
-	pf.termView.UseAltScreen = true // the stray flip seen in the wild
+	pf.ShellMode = terminal.ShellModeSimpleInline
+	pf.ShowPanels = false
+	pf.TermView.UseAltScreen = true // the stray flip seen in the wild
 	vtui.FrameManager.Push(pf)
 
-	if GlobalHotkeysMgr == nil {
-		GlobalHotkeysMgr = NewHotkeyManager("")
+	if keymap.GlobalHotkeysMgr == nil {
+		keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
 	}
-	if got := GlobalHotkeysMgr.GetAction("Terminal", "CtrlO"); got != "Panel.Toggle" {
+	if got := keymap.GlobalHotkeysMgr.GetAction("Terminal", "CtrlO"); got != "Panel.Toggle" {
 		t.Errorf("Terminal CtrlO in SimpleInline with stray UseAltScreen=true: got %q, want Panel.Toggle", got)
 	}
 
 	// The same background flag must not swallow the other Terminal-area keys.
-	if got := GlobalHotkeysMgr.GetAction("Terminal", "F10"); got != "App.Quit" {
+	if got := keymap.GlobalHotkeysMgr.GetAction("Terminal", "F10"); got != "App.Quit" {
 		t.Errorf("Terminal F10 in SimpleInline with stray UseAltScreen=true: got %q, want term.App.Quit", got)
 	}
 
 	// terminal.ShellModeOwn keeps the original gating: a real AltScreen app must still
 	// win the key.
-	pf.shellMode = terminal.ShellModeOwn
-	if got := GlobalHotkeysMgr.GetAction("Terminal", "CtrlO"); got != "" {
+	pf.ShellMode = terminal.ShellModeOwn
+	if got := keymap.GlobalHotkeysMgr.GetAction("Terminal", "CtrlO"); got != "" {
 		t.Errorf("Terminal CtrlO in term.ShellModeOwn with AltScreen app active: got %q, want empty (must fall through to app)", got)
 	}
 }

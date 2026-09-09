@@ -1,5 +1,9 @@
 package main
 
+import (
+	"github.com/unxed/f4/internal/panel"
+)
+
 import "testing"
 
 func TestParsePlainEditCommand(t *testing.T) {
@@ -18,7 +22,7 @@ func TestParsePlainEditCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			path, ok := parsePlainEditCommand(tt.cmd)
+			path, ok := panel.ParsePlainEditCommand(tt.cmd)
 			if path != tt.path || ok != tt.ok {
 				t.Fatalf("parsePlainEditCommand(%q) = (%q, %v), want (%q, %v)", tt.cmd, path, ok, tt.path, tt.ok)
 			}

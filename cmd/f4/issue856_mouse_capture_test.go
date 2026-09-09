@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/paneltest"
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
@@ -10,7 +11,7 @@ import (
 )
 
 func TestHostConsole_LeaveReleasesStaleMouseCapture_Issue856(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	oldNavigationMode := config.App.NavigationMode
 	config.App.NavigationMode = config.NavigationClassic
 	t.Cleanup(func() { config.App.NavigationMode = oldNavigationMode })
@@ -19,13 +20,13 @@ func TestHostConsole_LeaveReleasesStaleMouseCapture_Issue856(t *testing.T) {
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
 
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	t.Cleanup(pf.Close)
-	pf.shellMode = terminal.ShellModeHost
-	pf.showPanels = false
+	pf.ShellMode = terminal.ShellModeHost
+	pf.ShowPanels = false
 	pf.ResizeConsole(80, 25)
-	pf.termView.MouseTrackingMode = 1003
-	pf.hostConsoleActive = true
+	pf.TermView.MouseTrackingMode = 1003
+	pf.HostConsoleActive = true
 	vtui.FrameManager.Push(pf)
 
 	// A console application with mouse tracking can leave f4 with a button
@@ -47,8 +48,8 @@ func TestHostConsole_LeaveReleasesStaleMouseCapture_Issue856(t *testing.T) {
 	}
 
 	// endExecution makes the panels visible before leaving the host console.
-	pf.showPanels = true
-	pf.leaveHostConsole()
+	pf.ShowPanels = true
+	pf.LeaveHostConsole()
 
 	// The queued neutral release must be processed before the next real click.
 	if !vtui.FrameManager.Step(0) {

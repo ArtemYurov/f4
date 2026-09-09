@@ -42,6 +42,9 @@ const (
 	conInLineInput      = 0x0002 // ENABLE_LINE_INPUT
 	conInEchoInput      = 0x0004 // ENABLE_ECHO_INPUT
 	conInVTInput        = 0x0200 // ENABLE_VIRTUAL_TERMINAL_INPUT
+	conInMouseInput     = 0x0010 // ENABLE_MOUSE_INPUT
+	conInQuickEdit      = 0x0040 // ENABLE_QUICK_EDIT_MODE
+	conInExtendedFlags  = 0x0080 // ENABLE_EXTENDED_FLAGS
 )
 
 // nestedConsoleInputMode is the mode the ANSI reader needs, given the one the

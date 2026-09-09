@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -67,20 +69,20 @@ func TestApplyCommandActionRegistered(t *testing.T) {
 }
 
 func TestApplyCommandActionUsesActivePanelWorkspace(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
-	pfA := setupMockPanelsFrame(t)
-	pfB := setupMockPanelsFrame(t)
+	pfA := paneltest.SetupMockPanelsFrame(t)
+	pfB := paneltest.SetupMockPanelsFrame(t)
 	defer pfA.Close()
 	defer pfB.Close()
 	pfA.ResizeConsole(80, 25)
 	pfB.ResizeConsole(80, 25)
-	panelA := pfA.getActivePanel()
-	panelB := pfB.getActivePanel()
-	panelA.vfs = vfs.NewNullVFS(0)
-	panelB.vfs = vfs.NewOSVFS(t.TempDir())
-	panelB.entries = []*fileEntry{
+	panelA := pfA.GetActivePanel()
+	panelB := pfB.GetActivePanel()
+	panelA.Vfs = vfs.NewNullVFS(0)
+	panelB.Vfs = vfs.NewOSVFS(t.TempDir())
+	panelB.Entries = []*panel.FileEntry{
 		{VFSItem: vfs.VFSItem{Name: "..", IsDir: true}},
 		{VFSItem: vfs.VFSItem{Name: "active.txt"}},
 	}
@@ -88,15 +90,15 @@ func TestApplyCommandActionUsesActivePanelWorkspace(t *testing.T) {
 
 	vtui.FrameManager.Push(pfA)
 	vtui.FrameManager.AddScreen(pfB)
-	if got := findPanelsFrame(); got != pfB {
+	if got := panel.FindPanelsFrame(); got != pfB {
 		t.Fatalf("active panels frame = %p, want workspace B %p", got, pfB)
 	}
-	if !panelCanApplyCommand() {
+	if !panel.PanelCanApplyCommand() {
 		t.Fatal("Apply visibility was taken from unsupported background workspace A")
 	}
 
-	panelA.vfs = vfs.NewOSVFS(t.TempDir())
-	panelA.entries = []*fileEntry{
+	panelA.Vfs = vfs.NewOSVFS(t.TempDir())
+	panelA.Entries = []*panel.FileEntry{
 		{VFSItem: vfs.VFSItem{Name: "..", IsDir: true}},
 		{VFSItem: vfs.VFSItem{Name: "background.txt"}},
 	}
@@ -105,7 +107,7 @@ func TestApplyCommandActionUsesActivePanelWorkspace(t *testing.T) {
 	if !ok || !action.Handler() {
 		t.Fatal("Apply action was not dispatched")
 	}
-	if got := findPanelsFrame(); got != pfB {
+	if got := panel.FindPanelsFrame(); got != pfB {
 		t.Fatalf("Apply switched to background workspace A; active frame = %p", got)
 	}
 	top, ok := vtui.FrameManager.GetTopFrame().(*vtui.Window)
@@ -118,14 +120,14 @@ func TestApplyCommandActionUsesActivePanelWorkspace(t *testing.T) {
 
 func TestResolveApplyCommandRunnerHonorsNegotiatedAvailability(t *testing.T) {
 	runner := &unavailableApplyCommandRunner{OSVFS: vfs.NewOSVFS(t.TempDir())}
-	if _, _, ok := resolveApplyCommandRunner(runner); ok {
+	if _, _, ok := panel.ResolveApplyCommandRunner(runner); ok {
 		t.Fatal("unavailable command provider was accepted")
 	}
 }
 
 func TestResolveApplyCommandRunnerNormalizesInvalidDialect(t *testing.T) {
 	runner := &invalidDialectApplyCommandRunner{OSVFS: vfs.NewOSVFS(t.TempDir())}
-	_, info, ok := resolveApplyCommandRunner(runner)
+	_, info, ok := panel.ResolveApplyCommandRunner(runner)
 	if !ok {
 		t.Fatal("command provider was unexpectedly rejected")
 	}
@@ -147,7 +149,7 @@ func TestEffectiveApplyCommandWorkers(t *testing.T) {
 		{cmdline.ApplyCommandParallel, 99, 7, 4, 4},
 	}
 	for _, tc := range tests {
-		if got := effectiveApplyCommandWorkers(tc.mode, tc.configured, tc.count, tc.provider); got != tc.want {
+		if got := panel.EffectiveApplyCommandWorkers(tc.mode, tc.configured, tc.count, tc.provider); got != tc.want {
 			t.Errorf("effective(%d,%d,%d,%d) = %d, want %d", tc.mode, tc.configured, tc.count, tc.provider, got, tc.want)
 		}
 	}
@@ -168,17 +170,17 @@ func TestApplyQueuePreconditionUsesStatSemanticsForSymlink(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	panel := &FileSystemPanel{
-		vfs: fs,
-		entries: []*fileEntry{{VFSItem: vfs.VFSItem{
+	pnl := &panel.FileSystemPanel{
+		Vfs: fs,
+		Entries: []*panel.FileEntry{{VFSItem: vfs.VFSItem{
 			Name: linkInfo.Name(), Size: linkInfo.Size(), MTime: linkInfo.ModTime(), IsSymlink: true,
 		}}},
 	}
-	session := &applyCommandSession{
-		active:  applyPanelCapture{panel: panel, panelVFS: fs, vfs: fs, dir: dir},
-		targets: []string{filepath.Base(link)},
+	session := &panel.ApplyCommandSession{
+		Active:  panel.ApplyPanelCapture{Panel: pnl, PanelVFS: fs, Vfs: fs, Dir: dir},
+		Targets: []string{filepath.Base(link)},
 	}
-	conditions := session.queuePreconditions()
+	conditions := session.QueuePreconditions()
 	if len(conditions) != 1 {
 		t.Fatalf("preconditions = %d, want 1", len(conditions))
 	}
@@ -194,44 +196,44 @@ func TestApplyQueuePreconditionUsesStatSemanticsForSymlink(t *testing.T) {
 
 func TestApplySelectionTokenDoesNotClearLaterRemark(t *testing.T) {
 	pf := seedPanelForRestore(t, []string{"one.txt"})
-	panel := pf.getActivePanel()
-	panel.SetItemSelected(1, true)
-	token, ok := panel.captureSelectionToken("one.txt")
+	pnl := pf.GetActivePanel()
+	pnl.SetItemSelected(1, true)
+	token, ok := pnl.CaptureSelectionToken("one.txt")
 	if !ok {
 		t.Fatal("selection token not captured")
 	}
-	panel.SetItemSelected(1, false)
-	panel.SetItemSelected(1, true)
-	if panel.clearSelectionIfUnchanged(token) {
+	pnl.SetItemSelected(1, false)
+	pnl.SetItemSelected(1, true)
+	if pnl.ClearSelectionIfUnchanged(token) {
 		t.Fatal("stale Apply completion cleared a later user selection")
 	}
-	if !panel.IsNameSelected("one.txt") {
+	if !pnl.IsNameSelected("one.txt") {
 		t.Fatal("later selection was lost")
 	}
 }
 
 func TestApplySelectionTokenClearsUnchangedMark(t *testing.T) {
 	pf := seedPanelForRestore(t, []string{"one.txt"})
-	panel := pf.getActivePanel()
-	panel.SetItemSelected(1, true)
-	token, ok := panel.captureSelectionToken("one.txt")
-	if !ok || !panel.clearSelectionIfUnchanged(token) || panel.IsNameSelected("one.txt") {
+	pnl := pf.GetActivePanel()
+	pnl.SetItemSelected(1, true)
+	token, ok := pnl.CaptureSelectionToken("one.txt")
+	if !ok || !pnl.ClearSelectionIfUnchanged(token) || pnl.IsNameSelected("one.txt") {
 		t.Fatalf("unchanged mark was not cleared: token=%+v ok=%v", token, ok)
 	}
 }
 
 func TestApplySelectionTokenDoesNotCrossVFSIdentity(t *testing.T) {
 	pf := seedPanelForRestore(t, []string{"one.txt"})
-	panel := pf.getActivePanel()
+	pnl := pf.GetActivePanel()
 	dir := t.TempDir()
-	panel.vfs = vfs.NewOSVFS(dir)
-	panel.SetItemSelected(1, true)
-	token, ok := panel.captureSelectionToken("one.txt")
+	pnl.Vfs = vfs.NewOSVFS(dir)
+	pnl.SetItemSelected(1, true)
+	token, ok := pnl.CaptureSelectionToken("one.txt")
 	if !ok {
 		t.Fatal("selection token not captured")
 	}
-	panel.vfs = vfs.NewOSVFS(dir)
-	if panel.clearSelectionIfUnchanged(token) || !panel.IsNameSelected("one.txt") {
+	pnl.Vfs = vfs.NewOSVFS(dir)
+	if pnl.ClearSelectionIfUnchanged(token) || !pnl.IsNameSelected("one.txt") {
 		t.Fatal("completion from the prior VFS cleared the new panel mark")
 	}
 }
@@ -244,54 +246,54 @@ func TestApplyFinalRefreshPreservesCtrlMSelection(t *testing.T) {
 		}
 	}
 	pf := seedPanelForRestore(t, nil)
-	panel := pf.getActivePanel()
-	panel.vfs = vfs.NewOSVFS(dir)
-	panel.ReadDirectory()
-	waitForLoad(t, panel)
-	if !panel.SetSelectedByName("one.txt", true) || !panel.SetSelectedByName("two.txt", true) {
-		t.Fatalf("test files missing after initial load: %+v", panel.entries)
+	pnl := pf.GetActivePanel()
+	pnl.Vfs = vfs.NewOSVFS(dir)
+	pnl.ReadDirectory()
+	paneltest.WaitForLoad(t, pnl)
+	if !pnl.SetSelectedByName("one.txt", true) || !pnl.SetSelectedByName("two.txt", true) {
+		t.Fatalf("test files missing after initial load: %+v", pnl.Entries)
 	}
-	panel.SaveSelection()
-	panel.SetSelectedByName("one.txt", false)
-	panel.SetSelectedByName("two.txt", false)
+	pnl.SaveSelection()
+	pnl.SetSelectedByName("one.txt", false)
+	pnl.SetSelectedByName("two.txt", false)
 
-	session := &applyCommandSession{
-		pf: pf,
-		active: applyPanelCapture{
-			panel: panel, panelVFS: panel.vfs, vfs: panel.vfs, dir: dir,
+	session := &panel.ApplyCommandSession{
+		Pf: pf,
+		Active: panel.ApplyPanelCapture{
+			Panel: pnl, PanelVFS: pnl.Vfs, Vfs: pnl.Vfs, Dir: dir,
 		},
 	}
-	session.refreshCapturedPanels()
-	waitForLoad(t, panel)
-	if got := collectSelected(panel); len(got) != 0 {
+	session.RefreshCapturedPanels()
+	paneltest.WaitForLoad(t, pnl)
+	if got := collectSelected(pnl); len(got) != 0 {
 		t.Fatalf("final refresh resurrected processed marks early: %v", got)
 	}
 
-	panel.RestoreSelection()
-	if got := collectSelected(panel); len(got) != 2 || got[0] != "one.txt" || got[1] != "two.txt" {
+	pnl.RestoreSelection()
+	if got := collectSelected(pnl); len(got) != 2 || got[0] != "one.txt" || got[1] != "two.txt" {
 		t.Fatalf("Ctrl+M after Apply refresh selected %v, want [one.txt two.txt]", got)
 	}
 }
 
 func TestApplyCompletionDoesNotTouchClosedWorkspace(t *testing.T) {
 	pf := seedPanelForRestore(t, []string{"one.txt"})
-	panel := pf.getActivePanel()
+	pnl := pf.GetActivePanel()
 	closedVFS := &panicPathApplyVFS{OSVFS: vfs.NewOSVFS(t.TempDir())}
-	panel.vfs = closedVFS
-	panel.SetItemSelected(1, true)
-	token, ok := panel.captureSelectionToken("one.txt")
+	pnl.Vfs = closedVFS
+	pnl.SetItemSelected(1, true)
+	token, ok := pnl.CaptureSelectionToken("one.txt")
 	if !ok {
 		t.Fatal("selection token not captured")
 	}
 	closedVFS.panicOnPath = true
-	pf.ptyMutex.Lock()
-	pf.closed = true
-	pf.ptyMutex.Unlock()
-	session := &applyCommandSession{
-		pf: pf, explicit: true, tokens: map[string]panelSelectionToken{"one.txt": token},
-		active: applyPanelCapture{panel: panel, panelVFS: closedVFS, vfs: closedVFS, dir: "/captured"},
+	pf.PtyMutex.Lock()
+	pf.Closed = true
+	pf.PtyMutex.Unlock()
+	session := &panel.ApplyCommandSession{
+		Pf: pf, Explicit: true, Tokens: map[string]panel.PanelSelectionToken{"one.txt": token},
+		Active: panel.ApplyPanelCapture{Panel: pnl, PanelVFS: closedVFS, Vfs: closedVFS, Dir: "/captured"},
 	}
-	session.postItemFinished(cmdline.ApplyBatchItemResult{AffectedNames: []string{"one.txt"}})
+	session.PostItemFinished(cmdline.ApplyBatchItemResult{AffectedNames: []string{"one.txt"}})
 	drained := make(chan struct{})
 	vtui.FrameManager.PostTask(func() { close(drained) })
 	deadline := time.After(time.Second)
@@ -300,10 +302,10 @@ func TestApplyCompletionDoesNotTouchClosedWorkspace(t *testing.T) {
 		case task := <-vtui.FrameManager.TaskChan:
 			task()
 		case <-drained:
-			if !panel.IsNameSelected("one.txt") {
+			if !pnl.IsNameSelected("one.txt") {
 				t.Fatal("completion cleared selection in a closed workspace")
 			}
-			session.refreshCapturedPanels()
+			session.RefreshCapturedPanels()
 			return
 		case <-deadline:
 			t.Fatal("timed out draining completion UI task")
@@ -313,9 +315,9 @@ func TestApplyCompletionDoesNotTouchClosedWorkspace(t *testing.T) {
 
 func TestCancelAllForegroundApplyCommands(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	unregister := registerForegroundApplyCommand(cancel)
+	unregister := panel.RegisterForegroundApplyCommand(cancel)
 	defer unregister()
-	cancelAllForegroundApplyCommands()
+	panel.CancelAllForegroundApplyCommands()
 	if !errors.Is(ctx.Err(), context.Canceled) {
 		t.Fatalf("foreground context = %v", ctx.Err())
 	}
@@ -338,11 +340,11 @@ func TestApplyQueueDetailsConsumesCtrlWAndClosesOnlyDialog(t *testing.T) {
 
 func TestApplyCommandCtrlGOpensHistoryDialogAndPreservesCommandLine(t *testing.T) {
 	pf := seedPanelForRestore(t, []string{"one.txt"})
-	panel := pf.getActivePanel()
-	panel.vfs = vfs.NewOSVFS(t.TempDir())
-	panel.entries = []*fileEntry{{VFSItem: vfs.VFSItem{Name: "..", IsDir: true}}, {VFSItem: vfs.VFSItem{Name: "one.txt"}}}
-	panel.SetCursorIndex(1)
-	pf.cmdLine.Edit.SetText("keep this command")
+	pnl := pf.GetActivePanel()
+	pnl.Vfs = vfs.NewOSVFS(t.TempDir())
+	pnl.Entries = []*panel.FileEntry{{VFSItem: vfs.VFSItem{Name: "..", IsDir: true}}, {VFSItem: vfs.VFSItem{Name: "one.txt"}}}
+	pnl.SetCursorIndex(1)
+	pf.CmdLine.Edit.SetText("keep this command")
 
 	handled := pressKey(pf, &vtinput.InputEvent{
 		Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_G,
@@ -364,7 +366,7 @@ func TestApplyCommandCtrlGOpensHistoryDialogAndPreservesCommandLine(t *testing.T
 	if !foundHistory {
 		t.Fatal("ApplyCmd history editor not found")
 	}
-	if got := pf.cmdLine.Edit.GetText(); got != "keep this command" {
+	if got := pf.CmdLine.Edit.GetText(); got != "keep this command" {
 		t.Fatalf("command line changed to %q", got)
 	}
 	top.Close()
@@ -372,19 +374,19 @@ func TestApplyCommandCtrlGOpensHistoryDialogAndPreservesCommandLine(t *testing.T
 
 func TestApplyCommandPromptCancellationKeepsHistoryAndSelection(t *testing.T) {
 	pf := seedPanelForRestore(t, []string{"one.txt"})
-	panel := pf.getActivePanel()
-	panel.vfs = vfs.NewOSVFS(t.TempDir())
-	panel.SetItemSelected(1, true)
+	pnl := pf.GetActivePanel()
+	pnl.Vfs = vfs.NewOSVFS(t.TempDir())
+	pnl.SetItemSelected(1, true)
 
 	oldProvider := vtui.GlobalHistoryProvider
 	provider := &applyTestHistoryProvider{values: make(map[string][]string)}
 	vtui.GlobalHistoryProvider = provider
 	defer func() { vtui.GlobalHistoryProvider = oldProvider }()
-	oldTemplate := lastApplyCommandTemplate
-	lastApplyCommandTemplate = ""
-	defer func() { lastApplyCommandTemplate = oldTemplate }()
+	oldTemplate := panel.LastApplyCommandTemplate
+	panel.LastApplyCommandTemplate = ""
+	defer func() { panel.LastApplyCommandTemplate = oldTemplate }()
 
-	actionApplyCommand(pf)
+	panel.ActionApplyCommand(pf)
 	applyDialog, ok := vtui.FrameManager.GetTopFrame().(*vtui.Window)
 	if !ok {
 		t.Fatalf("top frame = %T, want Apply dialog", vtui.FrameManager.GetTopFrame())
@@ -429,10 +431,10 @@ func TestApplyCommandPromptCancellationKeepsHistoryAndSelection(t *testing.T) {
 	if vtui.FrameManager.GetTopFrame() != applyDialog {
 		t.Fatal("prompt cancellation did not return to Apply dialog")
 	}
-	if len(provider.values["ApplyCmd"]) != 0 || lastApplyCommandTemplate != "" {
-		t.Fatalf("cancelled preflight changed history=%v template=%q", provider.values["ApplyCmd"], lastApplyCommandTemplate)
+	if len(provider.values["ApplyCmd"]) != 0 || panel.LastApplyCommandTemplate != "" {
+		t.Fatalf("cancelled preflight changed history=%v template=%q", provider.values["ApplyCmd"], panel.LastApplyCommandTemplate)
 	}
-	if !panel.IsNameSelected("one.txt") || panel.entries[1].PrevSelected {
+	if !pnl.IsNameSelected("one.txt") || pnl.Entries[1].PrevSelected {
 		t.Fatal("cancelled preflight changed or saved the panel selection")
 	}
 	applyDialog.Close()
@@ -444,7 +446,7 @@ func TestApplyCommandPromptDialogPagesEveryField(t *testing.T) {
 		prompts[i] = cmdline.ApplyCommandResolvedPrompt{Index: i, Title: fmt.Sprintf("Field %d", i+1), Initial: fmt.Sprintf("default-%d", i+1)}
 	}
 	var accepted cmdline.ApplyCommandPromptValues
-	showApplyCommandPrompts(nil, prompts, func(values cmdline.ApplyCommandPromptValues) { accepted = values })
+	panel.ShowApplyCommandPrompts(nil, prompts, func(values cmdline.ApplyCommandPromptValues) { accepted = values })
 	dlg, ok := vtui.FrameManager.GetTopFrame().(*vtui.Window)
 	if !ok {
 		t.Fatalf("top frame = %T, want prompt dialog", vtui.FrameManager.GetTopFrame())

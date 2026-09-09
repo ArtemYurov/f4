@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/paneltest"
 	"strings"
 	"testing"
 
@@ -14,7 +15,7 @@ import (
 // newSheetFrameForTest builds a frame on a silent screen buffer.
 func newSheetFrameForTest(t *testing.T) *SheetFrame {
 	t.Helper()
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
 	sf := NewSheetFrame()

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
 	"sort"
 	"strings"
 	"unicode"
@@ -192,7 +193,7 @@ func normalizeHotkeySearchQuery(query string) string {
 	if strings.HasPrefix(raw.String(), "RCtrl") {
 		return raw.String()
 	}
-	return FormatKeyForUI(raw.String())
+	return keymap.FormatKeyForUI(raw.String())
 }
 
 func configureHotkeyTableSearch(table *vtui.Table) {
@@ -224,7 +225,7 @@ func selectedHotkeyRow(table *vtui.Table, rows []hotkeyRow) (hotkeyRow, bool) {
 // shows: one editable row per configurable binding, one read-only row per
 // framework-owned native chord, and one editable row for every action that has
 // no configurable binding yet.
-func buildHotkeyRows(draft *HotkeyManager) []hotkeyRow {
+func buildHotkeyRows(draft *keymap.HotkeyManager) []hotkeyRow {
 	if draft == nil {
 		return nil
 	}
@@ -252,7 +253,7 @@ func buildHotkeyRows(draft *HotkeyManager) []hotkeyRow {
 				Action:    act.Name,
 				Label:     action.PlainLabel(act.DisplayLabel()),
 				Area:      area,
-				Key:       FormatKeyForUI(key),
+				Key:       keymap.FormatKeyForUI(key),
 				RawKey:    key,
 				Editable:  true,
 				Condition: cond,
@@ -276,7 +277,7 @@ func buildHotkeyRows(draft *HotkeyManager) []hotkeyRow {
 	// the native chord: Ctrl+Tab switches browser tabs when f4 runs in a
 	// browser, and iTerm2 over ssh does not deliver it either (issue #72).
 	// Dispatch already honors such a binding -- macro.MacroManager.Filter resolves
-	// it through configuredHotkeyAction and RunAction, with Common as the
+	// it through keymap.ConfiguredHotkeyAction and RunAction, with Common as the
 	// fallback area -- so only this inventory stood in the way. The read-only
 	// native row stays alongside the editable one.
 	for _, act := range actions {
@@ -284,7 +285,7 @@ func buildHotkeyRows(draft *HotkeyManager) []hotkeyRow {
 		for _, spec := range act.NativeKeys {
 			key, cond, _ := strings.Cut(spec, ":")
 			key = strings.TrimSpace(key)
-			displayKey := FormatKeyForUI(key)
+			displayKey := keymap.FormatKeyForUI(key)
 			if key == "" || seenNative[displayKey] {
 				continue
 			}
@@ -322,16 +323,16 @@ func buildHotkeyRows(draft *HotkeyManager) []hotkeyRow {
 	// use the same persisted binding format. Show every loaded command so a
 	// shortcut can be prepared even while its context-sensitive menu item is
 	// currently hidden.
-	for _, act := range pluginHotkeyActionsSnapshot() {
+	for _, act := range panel.PluginHotkeyActionsSnapshot() {
 		if assignedActions[strings.ToLower(act.Name)] {
 			continue
 		}
-		key := pluginActionShortcut(act.Name)
+		key := panel.PluginActionShortcut(act.Name)
 		if key == "" {
-			key = pluginActionDefaultShortcut(act.Name)
+			key = panel.PluginActionDefaultShortcut(act.Name)
 		}
 		rawKey := ""
-		if configured := pluginActionConfiguredKey(act.Name); configured != "" {
+		if configured := panel.PluginActionConfiguredKey(act.Name); configured != "" {
 			rawKey = configured
 		}
 		hkRows = append(hkRows, hotkeyRow{
@@ -369,7 +370,7 @@ func buildHotkeyRows(draft *HotkeyManager) []hotkeyRow {
 	return hkRows
 }
 
-func actionHotkeyConfig(pf *PanelsFrame) {
+func actionHotkeyConfig(pf *panel.PanelsFrame) {
 	w, h := 120, 48
 	if vtui.FrameManager != nil {
 		w, h = hotkeyDialogSizeForScreen(vtui.FrameManager.GetScreenSize(), vtui.FrameManager.GetScreenHeight())
@@ -381,10 +382,10 @@ func actionHotkeyConfig(pf *PanelsFrame) {
 	btnCancel := vtui.NewButton(0, 0, i18n.Msg("vtui.Cancel"))
 	btnSave.IsDefault = true
 
-	if GlobalHotkeysMgr == nil {
+	if keymap.GlobalHotkeysMgr == nil {
 		return
 	}
-	original := GlobalHotkeysMgr
+	original := keymap.GlobalHotkeysMgr
 	draft := original.CloneForEdit()
 
 	dlg, table := vtui.NewTableDialog(w, h, i18n.Msg("Hotkeys.Title"), []vtui.TableColumn{
@@ -457,7 +458,7 @@ func actionHotkeyConfig(pf *PanelsFrame) {
 	refresh()
 }
 
-func showAreaSelectDialog(hm *HotkeyManager, actionName, defaultArea, defaultCond string, onComplete func()) {
+func showAreaSelectDialog(hm *keymap.HotkeyManager, actionName, defaultArea, defaultCond string, onComplete func()) {
 	dlg := vtui.NewCenteredDialog(40, 11, i18n.Msg("Hotkeys.SelectTitle"))
 	dlg.ShowClose = true
 
@@ -478,7 +479,7 @@ func showAreaSelectDialog(hm *HotkeyManager, actionName, defaultArea, defaultCon
 	combo.Menu.SetSelectPos(idx)
 	combo.Edit.SetText(areas[idx])
 
-	conds := GetConditions()
+	conds := keymap.GetConditions()
 	comboCond := vtui.NewComboBox(0, 0, 20, conds)
 	comboCond.DropdownOnly = true
 	cIdx := 0
@@ -547,13 +548,13 @@ func showAreaSelectDialog(hm *HotkeyManager, actionName, defaultArea, defaultCon
 
 type HotkeyAssignFrame struct {
 	*vtui.Window
-	hm         *HotkeyManager
+	hm         *keymap.HotkeyManager
 	actionName string
 	area       string
 	onComplete func()
 }
 
-func NewHotkeyAssignFrame(hm *HotkeyManager, actionName, area string, onComplete func()) *HotkeyAssignFrame {
+func NewHotkeyAssignFrame(hm *keymap.HotkeyManager, actionName, area string, onComplete func()) *HotkeyAssignFrame {
 	width, height := 42, 9
 	base := vtui.NewCenteredDialog(width, height, i18n.Msg("Hotkeys.AssignTitle"))
 	f := &HotkeyAssignFrame{
@@ -567,8 +568,8 @@ func NewHotkeyAssignFrame(hm *HotkeyManager, actionName, area string, onComplete
 	lblAction := vtui.NewText(0, 0, fmt.Sprintf(i18n.Msg("Hotkeys.AssignAction"), actionName), vtui.Palette[vtui.ColDialogText])
 	lblArea := vtui.NewText(0, 0, fmt.Sprintf(i18n.Msg("Hotkeys.AssignArea"), area), vtui.Palette[vtui.ColDialogText])
 	currentText := fmt.Sprintf(i18n.Msg("Hotkeys.AssignCurrent"), i18n.Msg("Hotkeys.AssignNone"))
-	if _, currentKey := configuredHotkeyBinding(hm, strings.SplitN(actionName, ":", 2)[0]); currentKey != "" {
-		currentText = fmt.Sprintf(i18n.Msg("Hotkeys.AssignCurrent"), FormatKeyForUI(currentKey))
+	if _, currentKey := keymap.ConfiguredHotkeyBinding(hm, strings.SplitN(actionName, ":", 2)[0]); currentKey != "" {
+		currentText = fmt.Sprintf(i18n.Msg("Hotkeys.AssignCurrent"), keymap.FormatKeyForUI(currentKey))
 	}
 	lblCurrent := vtui.NewText(0, 0, currentText, vtui.Palette[vtui.ColDialogText])
 	prompt := vtui.NewText(0, 0, i18n.Msg("Hotkeys.AssignPrompt"), vtui.Palette[vtui.ColDialogText])

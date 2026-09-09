@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/unxed/f4/internal/panel"
 	"os"
 	"path/filepath"
 	"testing"
@@ -16,14 +17,14 @@ import (
 
 func TestFileSystemPanelSemanticPanelNode(t *testing.T) {
 	tmp := t.TempDir()
-	fp := &FileSystemPanel{
-		vfs:           vfs.NewOSVFS(tmp),
-		frame:         vtui.NewBorderedFrame(0, 0, 39, 9, vtui.SingleBox, tmp),
-		table:         vtui.NewTable(1, 1, 38, 6, nil),
-		viewMode:      ViewModeDetailed,
-		sortMode:      SortSize,
-		selectedItems: make(map[string]bool),
-		entries: []*fileEntry{
+	fp := &panel.FileSystemPanel{
+		Vfs:           vfs.NewOSVFS(tmp),
+		Frame:         vtui.NewBorderedFrame(0, 0, 39, 9, vtui.SingleBox, tmp),
+		Table:         vtui.NewTable(1, 1, 38, 6, nil),
+		ViewMode:      panel.ViewModeDetailed,
+		SortMode:      panel.SortSize,
+		SelectedItems: make(map[string]bool),
+		Entries: []*panel.FileEntry{
 			{VFSItem: vfs.VFSItem{Name: "..", IsDir: true, Mode: "drwxr-xr-x"}},
 			{VFSItem: vfs.VFSItem{Name: "alpha.txt", Size: 1234, MTime: time.Date(2026, 7, 4, 12, 0, 0, 0, time.UTC), Mode: "-rw-r--r--"}, Selected: true},
 		},
@@ -32,7 +33,7 @@ func TestFileSystemPanelSemanticPanelNode(t *testing.T) {
 	fp.SetPosition(0, 0, 39, 9)
 	fp.SetCursorIndex(1)
 
-	model := fp.semanticPanelModel(&vtui.SemanticContext{Width: 80, Height: 25}, 0, true)
+	model := fp.SemanticPanelModel(&vtui.SemanticContext{Width: 80, Height: 25}, 0, true)
 	node := model.ToMap()
 
 	if node["kind"] != "filePanel" {
@@ -61,32 +62,32 @@ func TestFileSystemPanelSemanticPanelNode(t *testing.T) {
 
 func TestPanelsFrameSemanticActionAcceptsQMLNumbers(t *testing.T) {
 	tmp := t.TempDir()
-	left := &FileSystemPanel{
-		vfs:           vfs.NewOSVFS(tmp),
-		frame:         vtui.NewBorderedFrame(0, 0, 39, 9, vtui.SingleBox, tmp),
-		table:         vtui.NewTable(1, 1, 38, 6, nil),
-		viewMode:      ViewModeDetailed,
-		selectedItems: make(map[string]bool),
-		entries: []*fileEntry{
+	left := &panel.FileSystemPanel{
+		Vfs:           vfs.NewOSVFS(tmp),
+		Frame:         vtui.NewBorderedFrame(0, 0, 39, 9, vtui.SingleBox, tmp),
+		Table:         vtui.NewTable(1, 1, 38, 6, nil),
+		ViewMode:      panel.ViewModeDetailed,
+		SelectedItems: make(map[string]bool),
+		Entries: []*panel.FileEntry{
 			{VFSItem: vfs.VFSItem{Name: "..", IsDir: true}},
 			{VFSItem: vfs.VFSItem{Name: "alpha.txt", Size: 12}},
 			{VFSItem: vfs.VFSItem{Name: "beta.txt", Size: 34}},
 		},
 	}
-	right := &FileSystemPanel{
-		vfs:           vfs.NewOSVFS(tmp),
-		frame:         vtui.NewBorderedFrame(40, 0, 79, 9, vtui.SingleBox, tmp),
-		table:         vtui.NewTable(41, 1, 78, 6, nil),
-		viewMode:      ViewModeDetailed,
-		selectedItems: make(map[string]bool),
-		entries: []*fileEntry{
+	right := &panel.FileSystemPanel{
+		Vfs:           vfs.NewOSVFS(tmp),
+		Frame:         vtui.NewBorderedFrame(40, 0, 79, 9, vtui.SingleBox, tmp),
+		Table:         vtui.NewTable(41, 1, 78, 6, nil),
+		ViewMode:      panel.ViewModeDetailed,
+		SelectedItems: make(map[string]bool),
+		Entries: []*panel.FileEntry{
 			{VFSItem: vfs.VFSItem{Name: "..", IsDir: true}},
 			{VFSItem: vfs.VFSItem{Name: "right.txt", Size: 56}},
 		},
 	}
-	pf := &PanelsFrame{
-		panels:    [2]Panel{left, right},
-		activeIdx: 0,
+	pf := &panel.PanelsFrame{
+		Panels:    [2]panel.Panel{left, right},
+		ActiveIdx: 0,
 	}
 
 	if !pf.HandleSemanticAction(map[string]any{
@@ -106,8 +107,8 @@ func TestPanelsFrameSemanticActionAcceptsQMLNumbers(t *testing.T) {
 	}) {
 		t.Fatal("activate panel action was not handled")
 	}
-	if pf.activeIdx != 1 {
-		t.Fatalf("activeIdx = %d, want 1", pf.activeIdx)
+	if pf.ActiveIdx != 1 {
+		t.Fatalf("activeIdx = %d, want 1", pf.ActiveIdx)
 	}
 }
 

@@ -2,6 +2,9 @@ package main
 
 import (
 	"bytes"
+	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -59,7 +62,7 @@ func (frame *frameworkActionTestFrame) HandleCommand(command int, args any) bool
 
 func initFrameworkActionTestScreen(t *testing.T) *vtui.ScreenBuf {
 	t.Helper()
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	screen := vtui.NewSilentScreenBuf()
 	screen.AllocBuf(100, 30)
 	vtui.FrameManager.Init(screen)
@@ -76,7 +79,7 @@ func TestFrameworkActionsKeepNativeShortcutsOutOfHotkeyDefaults(t *testing.T) {
 		"Workspace.Previous": "CtrlShiftTab",
 		"Workspace.List":     "F12",
 	}
-	manager := NewHotkeyManager(filepath.Join(t.TempDir(), "hotkeys.ini"))
+	manager := keymap.NewHotkeyManager(filepath.Join(t.TempDir(), "hotkeys.ini"))
 	for name, nativeKey := range want {
 		action, ok := GetAction(name)
 		if !ok {
@@ -108,29 +111,29 @@ func TestFrameworkActionsKeepNativeShortcutsOutOfHotkeyDefaults(t *testing.T) {
 }
 
 func TestNativeFrameworkShortcutMetadataHonorsExplicitOverrides(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
-	previous := GlobalHotkeysMgr
-	manager := NewHotkeyManager(filepath.Join(t.TempDir(), "hotkeys.ini"))
-	GlobalHotkeysMgr = manager
-	t.Cleanup(func() { GlobalHotkeysMgr = previous })
+	previous := keymap.GlobalHotkeysMgr
+	manager := keymap.NewHotkeyManager(filepath.Join(t.TempDir(), "hotkeys.ini"))
+	keymap.GlobalHotkeysMgr = manager
+	t.Cleanup(func() { keymap.GlobalHotkeysMgr = previous })
 
 	help, ok := GetAction("App.Help")
 	if !ok {
 		t.Fatal("App.Help is not registered")
 	}
-	if got := NativeShortcutsForAction("Shell", help); !reflect.DeepEqual(got, []string{"F1"}) {
+	if got := keymap.NativeShortcutsForAction("Shell", help); !reflect.DeepEqual(got, []string{"F1"}) {
 		t.Fatalf("native help shortcuts = %v, want [F1]", got)
 	}
 
 	manager.Bind("Shell", "F1", "None")
-	if got := NativeShortcutsForAction("Shell", help); len(got) != 0 {
+	if got := keymap.NativeShortcutsForAction("Shell", help); len(got) != 0 {
 		t.Fatalf("explicit F1=None still advertised native help shortcut: %v", got)
 	}
 
 	manager.Bind("Shell", "F1", "Editor.Save")
-	if got := NativeShortcutsForAction("Shell", help); len(got) != 0 {
+	if got := keymap.NativeShortcutsForAction("Shell", help); len(got) != 0 {
 		t.Fatalf("explicit F1 override still advertised native help shortcut: %v", got)
 	}
 
@@ -143,42 +146,42 @@ func TestNativeFrameworkShortcutMetadataHonorsExplicitOverrides(t *testing.T) {
 
 func TestNativeFrameworkShortcutMetadataRespectsTerminalOwnership(t *testing.T) {
 	initFrameworkActionTestScreen(t)
-	previousHotkeys := GlobalHotkeysMgr
-	GlobalHotkeysMgr = nil
+	previousHotkeys := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = nil
 	previousCtrlN := config.App.TerminalCtrlNWorkspace
 	config.App.TerminalCtrlNWorkspace = true
 	t.Cleanup(func() {
-		GlobalHotkeysMgr = previousHotkeys
+		keymap.GlobalHotkeysMgr = previousHotkeys
 		config.App.TerminalCtrlNWorkspace = previousCtrlN
 	})
 
 	// A hidden AltScreen terminal consumes ordinary framework fallbacks before
 	// FrameManager sees them, but explicitly releases Ctrl+Tab and preferred
 	// Ctrl+N workspace handling.
-	panels := &PanelsFrame{
-		showPanels: false,
-		termView:   &terminal.TerminalView{UseAltScreen: true},
+	panels := &panel.PanelsFrame{
+		ShowPanels: false,
+		TermView:   &terminal.TerminalView{UseAltScreen: true},
 	}
 	vtui.FrameManager.Push(panels)
 
 	closeAction, _ := GetAction("Workspace.Close")
-	if got := NativeShortcutsForAction("Shell", closeAction); len(got) != 0 {
+	if got := keymap.NativeShortcutsForAction("Shell", closeAction); len(got) != 0 {
 		t.Fatalf("busy terminal advertised Ctrl+W workspace close: %v", got)
 	}
 	helpAction, _ := GetAction("App.Help")
-	if got := NativeShortcutsForAction("Shell", helpAction); len(got) != 0 {
+	if got := keymap.NativeShortcutsForAction("Shell", helpAction); len(got) != 0 {
 		t.Fatalf("busy terminal advertised consumed F1 help: %v", got)
 	}
 	nextAction, _ := GetAction("Workspace.Next")
-	if got := NativeShortcutsForAction("Shell", nextAction); !reflect.DeepEqual(got, []string{"Ctrl+Tab"}) {
+	if got := keymap.NativeShortcutsForAction("Shell", nextAction); !reflect.DeepEqual(got, []string{"Ctrl+Tab"}) {
 		t.Fatalf("busy terminal next-workspace shortcut = %v, want [Ctrl+Tab]", got)
 	}
 	newAction, _ := GetAction("Workspace.New")
-	if got := NativeShortcutsForAction("Shell", newAction); !reflect.DeepEqual(got, []string{"Ctrl+N"}) {
+	if got := keymap.NativeShortcutsForAction("Shell", newAction); !reflect.DeepEqual(got, []string{"Ctrl+N"}) {
 		t.Fatalf("preferred terminal new-workspace shortcut = %v, want [Ctrl+N]", got)
 	}
 	config.App.TerminalCtrlNWorkspace = false
-	if got := NativeShortcutsForAction("Shell", newAction); len(got) != 0 {
+	if got := keymap.NativeShortcutsForAction("Shell", newAction); len(got) != 0 {
 		t.Fatalf("terminal-owned Ctrl+N was advertised with preference disabled: %v", got)
 	}
 }
@@ -223,21 +226,21 @@ func TestFrameworkHelpAndMainMenuActionsPreserveFrameBehavior(t *testing.T) {
 
 func TestPaletteMainMenuMatchesPanelsF9ActiveSide(t *testing.T) {
 	initFrameworkActionTestScreen(t)
-	panels := &PanelsFrame{
-		activeIdx:  1,
-		showPanels: true,
-		menuBar:    vtui.NewMenuBar(nil),
-		cmdLine:    cmdline.NewCommandLine(">"),
-		termView:   terminal.NewTerminalView(100, 30),
+	panels := &panel.PanelsFrame{
+		ActiveIdx:  1,
+		ShowPanels: true,
+		MenuBar:    vtui.NewMenuBar(nil),
+		CmdLine:    cmdline.NewCommandLine(">"),
+		TermView:   terminal.NewTerminalView(100, 30),
 	}
-	panels.menuBar.SetOwner(panels)
+	panels.MenuBar.SetOwner(panels)
 	vtui.FrameManager.Push(panels)
 
-	panels.menuBar.SelectPos = 2
+	panels.MenuBar.SelectPos = 2
 	if !actionActivateMainMenu() {
 		t.Fatal("palette main-menu action failed for PanelsFrame")
 	}
-	if got := panels.menuBar.SelectPos; got != 4 {
+	if got := panels.MenuBar.SelectPos; got != 4 {
 		t.Fatalf("right-panel menu position = %d, want physical F9 position 4", got)
 	}
 	if top := vtui.FrameManager.GetTopFrame(); top == panels || top.GetType() != vtui.TypeMenu {
@@ -245,14 +248,14 @@ func TestPaletteMainMenuMatchesPanelsF9ActiveSide(t *testing.T) {
 	}
 	vtui.FrameManager.Pop()
 	vtui.FrameManager.SyncCurrentScreen()
-	panels.menuBar.Active = false
+	panels.MenuBar.Active = false
 
-	panels.activeIdx = 0
-	panels.menuBar.SelectPos = 3
+	panels.ActiveIdx = 0
+	panels.MenuBar.SelectPos = 3
 	if !actionActivateMainMenu() {
 		t.Fatal("palette main-menu action failed for left panel")
 	}
-	if got := panels.menuBar.SelectPos; got != 0 {
+	if got := panels.MenuBar.SelectPos; got != 0 {
 		t.Fatalf("left-panel menu position = %d, want physical F9 position 0", got)
 	}
 }
@@ -471,7 +474,7 @@ func TestWorkspaceClosePreservesQueueVetoBelowHelpAndForBackgroundTarget(t *test
 
 func TestWorkspaceCloseKeepsTheOnlyPanelsWorkspace(t *testing.T) {
 	initFrameworkActionTestScreen(t)
-	panels := setupMockPanelsFrame(t)
+	panels := paneltest.SetupMockPanelsFrame(t)
 	vtui.FrameManager.Push(panels)
 	viewer := &frameworkActionTestFrame{title: "Viewer"}
 	vtui.FrameManager.AddScreen(viewer)
@@ -495,7 +498,7 @@ func TestWorkspaceCloseKeepsTheOnlyPanelsWorkspace(t *testing.T) {
 
 func TestPanelsFrameCloseVetoProtectsTheOnlyPanelsWorkspace(t *testing.T) {
 	initFrameworkActionTestScreen(t)
-	panels := setupMockPanelsFrame(t)
+	panels := paneltest.SetupMockPanelsFrame(t)
 	vtui.FrameManager.Push(panels)
 	vtui.FrameManager.AddScreen(&frameworkActionTestFrame{title: "Editor"})
 	vtui.FrameManager.SwitchScreen(0)
@@ -508,12 +511,12 @@ func TestPanelsFrameCloseVetoProtectsTheOnlyPanelsWorkspace(t *testing.T) {
 
 func TestWorkspaceNewFindsPanelsBehindFullScreenWorkspace(t *testing.T) {
 	initFrameworkActionTestScreen(t)
-	source := setupMockPanelsFrame(t)
+	source := paneltest.SetupMockPanelsFrame(t)
 	defer source.Close()
 	vtui.FrameManager.Push(source)
 
 	// Image, Editor, Viewer and Queue screens are all separate workspaces with
-	// no PanelsFrame in their active stack. Image is a lightweight real frame
+	// no panel.PanelsFrame in their active stack. Image is a lightweight real frame
 	// that exercises that shared full-screen layout without test doubles.
 	image := &media.ImageView{}
 	vtui.FrameManager.AddScreen(image)
@@ -526,12 +529,12 @@ func TestWorkspaceNewFindsPanelsBehindFullScreenWorkspace(t *testing.T) {
 	if got := len(vtui.FrameManager.Screens); got != 3 {
 		t.Fatalf("screens after fork = %d, want 3", got)
 	}
-	clone, ok := vtui.FrameManager.GetTopFrame().(*PanelsFrame)
+	clone, ok := vtui.FrameManager.GetTopFrame().(*panel.PanelsFrame)
 	if !ok || clone == source {
 		t.Fatalf("new workspace top = %T, want a cloned PanelsFrame", vtui.FrameManager.GetTopFrame())
 	}
 	defer clone.Close()
-	if !clone.showPanels {
+	if !clone.ShowPanels {
 		t.Fatal("new workspace did not expose the cloned panels")
 	}
 }

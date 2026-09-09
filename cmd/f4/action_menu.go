@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/panel"
 	"strings"
 
 	"github.com/unxed/f4/internal/action"
@@ -64,7 +66,7 @@ func BuildMenuBarItems(area string) []vtui.MenuBarItem {
 			OnClick:  func() { RunAction(a.Name) },
 			UserData: history.MenuHistoryItemKey(a.Name),
 		}
-		item.Shortcut = MenuShortcutsForAction(area, a.Name)
+		item.Shortcut = keymap.MenuShortcutsForAction(area, a.Name)
 		if a.MenuLast {
 			if a.MenuSeparatorBefore {
 				m.pinned = append(m.pinned, vtui.MenuItem{Separator: true})
@@ -131,10 +133,10 @@ func BuildMenuBarItems(area string) []vtui.MenuBarItem {
 		}
 		m.items = append(m.items, vtui.MenuItem{
 			Text:     text,
-			Shortcut: pluginCommandShortcut(command),
+			Shortcut: panel.PluginCommandShortcut(command),
 			UserData: history.MenuHistoryItemKey("plugin:" + command.ID),
 			OnClick: func() {
-				if pf := findPanelsFrameAnyScreen(); pf != nil {
+				if pf := panel.FindPanelsFrameAnyScreen(); pf != nil {
 					plughost.ExecutePluginCommand(vfs.PluginCommandPanel, command.ID, pf)
 				}
 			},
@@ -158,10 +160,10 @@ func BuildMenuBarItems(area string) []vtui.MenuBarItem {
 	// plugin commands after core actions so the built-in menu remains stable,
 	// while still exposing plugin functionality without requiring F11.
 	if area == "Shell" {
-		// NewPanelsFrame builds its first menu before it is attached to a
-		// frame manager. Do not pass a typed-nil *PanelsFrame as vfs.App to
+		// panel.NewPanelsFrame builds its first menu before it is attached to a
+		// frame manager. Do not pass a typed-nil *panel.PanelsFrame as vfs.App to
 		// plugin visibility callbacks: some plugins inspect the panel state.
-		if pf := findPanelsFrameAnyScreen(); pf != nil {
+		if pf := panel.FindPanelsFrameAnyScreen(); pf != nil {
 			for _, command := range plughost.PluginCommandsSnapshot(vfs.PluginCommandPanel, pf) {
 				if command.MenuPath != "" {
 					appendPluginCommand(command)

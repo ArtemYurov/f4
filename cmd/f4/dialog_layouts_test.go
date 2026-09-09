@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,7 +26,7 @@ import (
 )
 
 func TestAllDialogs_LayoutValidation(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	testutil.SkipIfNoRelevantChanges(t, "layouts",
 		"lang/*.lng",
 		"lang/*.txt",
@@ -144,13 +147,13 @@ func TestAllDialogs_LayoutValidation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	oldHotkeys := GlobalHotkeysMgr
+	oldHotkeys := keymap.GlobalHotkeysMgr
 	oldMacro := macro.MacroMgr
 	defer func() {
-		GlobalHotkeysMgr = oldHotkeys
+		keymap.GlobalHotkeysMgr = oldHotkeys
 		macro.MacroMgr = oldMacro
 	}()
-	GlobalHotkeysMgr = NewHotkeyManager(filepath.Join(tmpDir, "hotkeys.ini"))
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager(filepath.Join(tmpDir, "hotkeys.ini"))
 	macro.MacroMgr = macro.NewMacroManager(filepath.Join(tmpDir, "key_macros.ini"))
 
 	// Load all language packs so the validator can assert layout against all translations dynamically
@@ -159,14 +162,14 @@ func TestAllDialogs_LayoutValidation(t *testing.T) {
 		packs = []vtui.LanguagePack{{Name: "current"}}
 	}
 
-	oldMountTaskRunner := runPanelMountTask
-	runPanelMountTask = func(pf *PanelsFrame, label string, readOnly bool, _ func(context.Context) (*fusefs.Mount, error)) {
-		reportMount(pf, label, &fusefs.Mount{
+	oldMountTaskRunner := panel.RunPanelMountTask
+	panel.RunPanelMountTask = func(pf *panel.PanelsFrame, label string, readOnly bool, _ func(context.Context) (*fusefs.Mount, error)) {
+		panel.ReportMount(pf, label, &fusefs.Mount{
 			MountPoint: filepath.Join(tmpDir, "layout-validation-mount"),
 			ReadOnly:   readOnly,
 		}, nil, readOnly)
 	}
-	t.Cleanup(func() { runPanelMountTask = oldMountTaskRunner })
+	t.Cleanup(func() { panel.RunPanelMountTask = oldMountTaskRunner })
 
 	rig := newDialogLayoutRig(t, tmpDir)
 	defer rig.close(t)
@@ -228,7 +231,7 @@ type dialogLayoutRig struct {
 	manager    *vtui.FrameManagerType
 	screen     *vtui.ScreenBuf
 	baseScreen *vtui.AppScreen
-	panels     *PanelsFrame
+	panels     *panel.PanelsFrame
 	localVFS   vfs.VFS
 }
 
@@ -243,16 +246,16 @@ func newDialogLayoutRig(t *testing.T, dir string) *dialogLayoutRig {
 	if err := localVFS.SetPath(dir); err != nil {
 		t.Fatal(err)
 	}
-	panels := NewPanelsFrame()
-	left := NewFileSystemPanel(0, 0, 40, 20, localVFS)
-	right := NewFileSystemPanel(40, 0, 40, 20, localVFS.Clone())
-	waitForLoad(t, left)
-	waitForLoad(t, right)
-	panels.panels[0] = left
-	panels.panels[1] = right
+	panels := panel.NewPanelsFrame()
+	left := panel.NewFileSystemPanel(0, 0, 40, 20, localVFS)
+	right := panel.NewFileSystemPanel(40, 0, 40, 20, localVFS.Clone())
+	paneltest.WaitForLoad(t, left)
+	paneltest.WaitForLoad(t, right)
+	panels.Panels[0] = left
+	panels.Panels[1] = right
 	panels.ResizeConsole(120, 60)
-	waitForLoad(t, panels.panels[0].(*FileSystemPanel))
-	waitForLoad(t, panels.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, panels.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, panels.Panels[1].(*panel.FileSystemPanel))
 	manager.Push(panels)
 
 	return &dialogLayoutRig{
@@ -277,8 +280,8 @@ func (rig *dialogLayoutRig) validateAction(t *testing.T, act action.Action, name
 
 	initialCount := len(rig.manager.Screens[rig.manager.ActiveIdx].Frames)
 	act.Handler()
-	waitForLoad(t, rig.panels.panels[0].(*FileSystemPanel))
-	waitForLoad(t, rig.panels.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, rig.panels.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, rig.panels.Panels[1].(*panel.FileSystemPanel))
 	if rig.manager.GetActiveToast() != "" {
 		testutil.WaitForToastExpiry(t, 6*time.Second)
 	}
@@ -301,7 +304,7 @@ func (rig *dialogLayoutRig) validateAction(t *testing.T, act action.Action, name
 
 func (rig *dialogLayoutRig) reset(t *testing.T) {
 	t.Helper()
-	waitForDirectoryLoads(t)
+	paneltest.WaitForDirectoryLoads(t)
 
 	baseIdx := -1
 	for i, screen := range rig.manager.Screens {
@@ -383,11 +386,11 @@ func (rig *dialogLayoutRig) attach() {
 func (rig *dialogLayoutRig) close(t *testing.T) {
 	t.Helper()
 	terminal.WaitForAsyncClipboard()
-	waitForDirectoryLoads(t)
+	paneltest.WaitForDirectoryLoads(t)
 	testutil.CloseFrameManagerFrames(rig.manager)
 }
 
-// These handlers change the reusable PanelsFrame itself (or stop/close its
+// These handlers change the reusable panel.PanelsFrame itself (or stop/close its
 // manager). Keeping their old per-combination freshness avoids making a later
 // action or translation depend on that mutation; ordinary actions share the
 // expensive VFS and panels fixture above.

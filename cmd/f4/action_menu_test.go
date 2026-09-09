@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/panel"
 	"testing"
 
 	"github.com/unxed/f4/internal/action"
@@ -11,9 +13,9 @@ import (
 )
 
 func TestBuildMenuBarItems_Editor(t *testing.T) {
-	old := GlobalHotkeysMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	defer func() { GlobalHotkeysMgr = old }()
+	old := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	defer func() { keymap.GlobalHotkeysMgr = old }()
 
 	items := BuildMenuBarItems("Editor")
 
@@ -40,7 +42,7 @@ func TestBuildMenuBarItems_Editor(t *testing.T) {
 	}
 
 	// A user override must be reflected in the shortcut column.
-	GlobalHotkeysMgr.Bind("Editor", "CtrlS", "Editor.Save")
+	keymap.GlobalHotkeysMgr.Bind("Editor", "CtrlS", "Editor.Save")
 	File = BuildMenuBarItems("Editor")[0].SubItems
 	if File[0].Shortcut != "F2" && File[0].Shortcut != "Ctrl+S" {
 		t.Errorf("Override not reflected: got %q", File[0].Shortcut)
@@ -48,9 +50,9 @@ func TestBuildMenuBarItems_Editor(t *testing.T) {
 }
 
 func TestBuildMenuBarItems_Viewer(t *testing.T) {
-	old := GlobalHotkeysMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	defer func() { GlobalHotkeysMgr = old }()
+	old := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	defer func() { keymap.GlobalHotkeysMgr = old }()
 
 	items := BuildMenuBarItems("Viewer")
 
@@ -76,9 +78,9 @@ func TestBuildMenuBarItems_Viewer(t *testing.T) {
 }
 
 func TestBuildMenuBarItems_Shell(t *testing.T) {
-	old := GlobalHotkeysMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	defer func() { GlobalHotkeysMgr = old }()
+	old := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	defer func() { keymap.GlobalHotkeysMgr = old }()
 
 	items := BuildMenuBarItems("Shell")
 
@@ -185,9 +187,9 @@ func TestBuildMenuBarItems_Shell(t *testing.T) {
 }
 
 func TestBuildMenuBarItems_Terminal(t *testing.T) {
-	old := GlobalHotkeysMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	defer func() { GlobalHotkeysMgr = old }()
+	old := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	defer func() { keymap.GlobalHotkeysMgr = old }()
 
 	items := BuildMenuBarItems("Terminal")
 	if len(items) != 1 || items[0].Label != "&File" {
@@ -201,9 +203,9 @@ func TestBuildMenuBarItems_Terminal(t *testing.T) {
 
 func TestBuildMenuBarItems_OnClickRunsAction(t *testing.T) {
 	preserveActionRegistry(t)
-	old := GlobalHotkeysMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	defer func() { GlobalHotkeysMgr = old }()
+	old := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	defer func() { keymap.GlobalHotkeysMgr = old }()
 
 	clicked := false
 	action.RegisterAction(action.Action{
@@ -229,7 +231,7 @@ func TestBuildMenuBarItems_OnClickRunsAction(t *testing.T) {
 }
 
 func TestBuildMenuBarItems_IncludesPluginPanelCommandsInDeclaredMenu(t *testing.T) {
-	t.Cleanup(testutil.SetFrameManagerScreens(t, []*vtui.AppScreen{{Frames: []vtui.Frame{&PanelsFrame{}}}}, 0))
+	t.Cleanup(testutil.SetFrameManagerScreens(t, []*vtui.AppScreen{{Frames: []vtui.Frame{&panel.PanelsFrame{}}}}, 0))
 
 	api := &coreAPI{}
 	run := 0
@@ -246,9 +248,9 @@ func TestBuildMenuBarItems_IncludesPluginPanelCommandsInDeclaredMenu(t *testing.
 	}
 	t.Cleanup(registration.Unregister)
 
-	old := GlobalHotkeysMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	t.Cleanup(func() { GlobalHotkeysMgr = old })
+	old := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	t.Cleanup(func() { keymap.GlobalHotkeysMgr = old })
 
 	items := BuildMenuBarItems("Shell")
 	if len(items) == 0 || items[0].Label != "&Files" {
@@ -300,9 +302,9 @@ func TestBuildMenuBarItemsSkipsPluginVisibilityBeforePanelsFrameRegistration(t *
 }
 
 func TestBuildMenuBarItemsGroupsShellMenus(t *testing.T) {
-	old := GlobalHotkeysMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	defer func() { GlobalHotkeysMgr = old }()
+	old := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	defer func() { keymap.GlobalHotkeysMgr = old }()
 
 	for _, menu := range BuildMenuBarItems("Shell") {
 		separators := 0
@@ -325,7 +327,7 @@ func TestBuildMenuBarItemsGroupsShellMenus(t *testing.T) {
 }
 
 func TestBuildMenuBarItemsSeparatesPluginCommandsFromBuiltIns(t *testing.T) {
-	t.Cleanup(testutil.SetFrameManagerScreens(t, []*vtui.AppScreen{{Frames: []vtui.Frame{&PanelsFrame{}}}}, 0))
+	t.Cleanup(testutil.SetFrameManagerScreens(t, []*vtui.AppScreen{{Frames: []vtui.Frame{&panel.PanelsFrame{}}}}, 0))
 
 	api := &coreAPI{}
 	first, err := api.RegisterPluginCommand(vfs.PluginCommand{
@@ -351,9 +353,9 @@ func TestBuildMenuBarItemsSeparatesPluginCommandsFromBuiltIns(t *testing.T) {
 	}
 	t.Cleanup(second.Unregister)
 
-	old := GlobalHotkeysMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	t.Cleanup(func() { GlobalHotkeysMgr = old })
+	old := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	t.Cleanup(func() { keymap.GlobalHotkeysMgr = old })
 
 	items := BuildMenuBarItems("Shell")
 	if len(items) == 0 || items[0].Label != "&Files" {
@@ -382,9 +384,9 @@ func TestBuildMenuBarItemsSeparatesPluginCommandsFromBuiltIns(t *testing.T) {
 }
 
 func TestBuildMenuBarItemsFoldsRareCommandsIntoSubMenus(t *testing.T) {
-	old := GlobalHotkeysMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	defer func() { GlobalHotkeysMgr = old }()
+	old := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	defer func() { keymap.GlobalHotkeysMgr = old }()
 
 	items := BuildMenuBarItems("Shell")
 	if len(items) < 2 || items[1].Label != "&Commands" {

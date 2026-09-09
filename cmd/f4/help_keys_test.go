@@ -1,14 +1,15 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/keymap"
 	"strings"
 	"testing"
 )
 
 func TestGenerateKeysHelpTopic(t *testing.T) {
-	old := GlobalHotkeysMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	defer func() { GlobalHotkeysMgr = old }()
+	old := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	defer func() { keymap.GlobalHotkeysMgr = old }()
 
 	topic := generateKeysHelpTopic("ViewerEditor", "Viewer & Editor Keys", []string{"Editor", "Viewer", "Common"}, "ViewerNav")
 
@@ -41,9 +42,9 @@ func TestGenerateKeysHelpTopic(t *testing.T) {
 }
 
 func TestGenerateKeysHelpTopic_PanelNav(t *testing.T) {
-	old := GlobalHotkeysMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	defer func() { GlobalHotkeysMgr = old }()
+	old := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	defer func() { keymap.GlobalHotkeysMgr = old }()
 
 	topic := generateKeysHelpTopic("PanelNav", "Panel Keys", []string{"Shell", "Terminal", "Common"}, "ShellNav")
 	joined := strings.Join(topic.Lines, "\n")
@@ -67,19 +68,19 @@ func TestGenerateKeysHelpTopic_PanelNav(t *testing.T) {
 }
 
 func TestGenerateKeysHelpTopic_ReflectsOverrides(t *testing.T) {
-	old := GlobalHotkeysMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	defer func() { GlobalHotkeysMgr = old }()
+	old := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	defer func() { keymap.GlobalHotkeysMgr = old }()
 
 	// Unbind F2: the Save line must disappear from the topic.
-	GlobalHotkeysMgr.Bind("Editor", "F2", "None")
+	keymap.GlobalHotkeysMgr.Bind("Editor", "F2", "None")
 	topic := generateKeysHelpTopic("ViewerEditor", "t", []string{"Editor"}, "")
 	if strings.Contains(strings.Join(topic.Lines, "\n"), "Save file") {
 		t.Error("Unbound action must not appear in the generated topic")
 	}
 
 	// Rebind to Ctrl+S: the new key must be shown.
-	GlobalHotkeysMgr.Bind("Editor", "CtrlS", "Editor.Save")
+	keymap.GlobalHotkeysMgr.Bind("Editor", "CtrlS", "Editor.Save")
 	topic = generateKeysHelpTopic("ViewerEditor", "t", []string{"Editor"}, "")
 	if !strings.Contains(strings.Join(topic.Lines, "\n"), "Ctrl+S") {
 		t.Error("Rebound key must appear in the generated topic")

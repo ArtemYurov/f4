@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -189,7 +191,7 @@ func TestGetInstalledPlugRingItems(t *testing.T) {
 	}
 }
 func TestCheckForPluginUpdates(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
 	tmpDir := t.TempDir()
@@ -287,7 +289,7 @@ func TestCheckForPluginUpdates(t *testing.T) {
 	}
 }
 func TestPlugRing_InstallAndRemove_EndToEnd(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
 	tmpConfig := t.TempDir()
@@ -317,7 +319,7 @@ echo "running"
 		SetupCmd:    "echo 'setup complete' > setup.log",
 	}
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 
 	// 2. Perform installation

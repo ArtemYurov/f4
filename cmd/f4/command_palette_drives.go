@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
 	"strings"
 
 	"github.com/unxed/f4/internal/action"
@@ -15,7 +16,7 @@ const (
 	commandPaletteDriveRight
 )
 
-func commandPaletteDriveEntries(pf *PanelsFrame) []commandPaletteEntry {
+func commandPaletteDriveEntries(pf *panel.PanelsFrame) []commandPaletteEntry {
 	if pf == nil {
 		return nil
 	}
@@ -33,7 +34,7 @@ func commandPaletteDriveEntries(pf *PanelsFrame) []commandPaletteEntry {
 			return executeCommandPalettePlatformDrive(pf, panelIndex, registryName)
 		})...)
 	}
-	if bookmarks, err := LoadBookmarks(BookmarksFilePath()); err == nil {
+	if bookmarks, err := panel.LoadBookmarks(panel.BookmarksFilePath()); err == nil {
 		for slot := range bookmarks {
 			if bookmarks[slot].IsEmpty() || strings.TrimSpace(bookmarks[slot].Path) == "" {
 				continue
@@ -60,7 +61,7 @@ func commandPaletteDriveEntries(pf *PanelsFrame) []commandPaletteEntry {
 	return entries
 }
 
-func commandPaletteDrivePair(pf *PanelsFrame, source, id, displayName string, run func(panelIndex int) bool, extraTranslationKeys ...string) []commandPaletteEntry {
+func commandPaletteDrivePair(pf *panel.PanelsFrame, source, id, displayName string, run func(panelIndex int) bool, extraTranslationKeys ...string) []commandPaletteEntry {
 	entries := make([]commandPaletteEntry, 0, 2)
 	for panelIndex := commandPaletteDriveLeft; panelIndex <= commandPaletteDriveRight; panelIndex++ {
 		panelIndex := panelIndex
@@ -107,7 +108,7 @@ func commandPaletteDriveDisplayName(name string) string {
 // executeCommandPaletteDrive deliberately re-resolves the named drive. A
 // command palette may stay open while a plugin replaces or removes its drive;
 // retaining the old Factory would call unloaded plugin code.
-func executeCommandPaletteDrive(pf *PanelsFrame, panelIndex int, registryName string) bool {
+func executeCommandPaletteDrive(pf *panel.PanelsFrame, panelIndex int, registryName string) bool {
 	if !commandPaletteDrivePanelValid(pf, panelIndex) {
 		return false
 	}
@@ -124,7 +125,7 @@ func executeCommandPaletteDrive(pf *PanelsFrame, panelIndex int, registryName st
 	return switchCommandPaletteDriveVFS(pf, panelIndex, factory())
 }
 
-func executeCommandPalettePlatformDrive(pf *PanelsFrame, panelIndex int, name string) bool {
+func executeCommandPalettePlatformDrive(pf *panel.PanelsFrame, panelIndex int, name string) bool {
 	if !commandPaletteDrivePanelValid(pf, panelIndex) {
 		return false
 	}
@@ -136,23 +137,23 @@ func executeCommandPalettePlatformDrive(pf *PanelsFrame, panelIndex int, name st
 	return false
 }
 
-func commandPaletteDrivePanelValid(pf *PanelsFrame, panelIndex int) bool {
-	if pf == nil || pf.closed || findPanelsFrameAnyScreen() != pf ||
+func commandPaletteDrivePanelValid(pf *panel.PanelsFrame, panelIndex int) bool {
+	if pf == nil || pf.Closed || panel.FindPanelsFrameAnyScreen() != pf ||
 		panelIndex < commandPaletteDriveLeft || panelIndex > commandPaletteDriveRight {
 		return false
 	}
-	fsp, ok := pf.panels[panelIndex].(*FileSystemPanel)
+	fsp, ok := pf.Panels[panelIndex].(*panel.FileSystemPanel)
 	return ok && fsp != nil
 }
 
-func switchCommandPaletteDriveVFS(pf *PanelsFrame, panelIndex int, newVFS vfs.VFS) bool {
-	if pf == nil || pf.closed || panelIndex < commandPaletteDriveLeft || panelIndex > commandPaletteDriveRight {
+func switchCommandPaletteDriveVFS(pf *panel.PanelsFrame, panelIndex int, newVFS vfs.VFS) bool {
+	if pf == nil || pf.Closed || panelIndex < commandPaletteDriveLeft || panelIndex > commandPaletteDriveRight {
 		if newVFS != nil {
 			newVFS.Close()
 		}
 		return false
 	}
-	fsp, ok := pf.panels[panelIndex].(*FileSystemPanel)
+	fsp, ok := pf.Panels[panelIndex].(*panel.FileSystemPanel)
 	if !ok || fsp == nil {
 		if newVFS != nil {
 			newVFS.Close()
@@ -162,33 +163,33 @@ func switchCommandPaletteDriveVFS(pf *PanelsFrame, panelIndex int, newVFS vfs.VF
 	if newVFS == nil {
 		return false
 	}
-	pf.switchToVFS(fsp, newVFS)
+	pf.SwitchToVFS(fsp, newVFS)
 	return true
 }
 
-func executeCommandPaletteOtherPanel(pf *PanelsFrame, panelIndex int) bool {
-	if pf == nil || pf.closed || panelIndex < commandPaletteDriveLeft || panelIndex > commandPaletteDriveRight {
+func executeCommandPaletteOtherPanel(pf *panel.PanelsFrame, panelIndex int) bool {
+	if pf == nil || pf.Closed || panelIndex < commandPaletteDriveLeft || panelIndex > commandPaletteDriveRight {
 		return false
 	}
-	other, ok := pf.panels[1-panelIndex].(*FileSystemPanel)
-	if !ok || other == nil || other.vfs == nil {
+	other, ok := pf.Panels[1-panelIndex].(*panel.FileSystemPanel)
+	if !ok || other == nil || other.Vfs == nil {
 		return false
 	}
-	return switchCommandPaletteDriveVFS(pf, panelIndex, other.vfs.Clone())
+	return switchCommandPaletteDriveVFS(pf, panelIndex, other.Vfs.Clone())
 }
 
-func executeCommandPaletteBookmark(pf *PanelsFrame, panelIndex, slot int) bool {
-	if pf == nil || pf.closed || panelIndex < commandPaletteDriveLeft || panelIndex > commandPaletteDriveRight {
+func executeCommandPaletteBookmark(pf *panel.PanelsFrame, panelIndex, slot int) bool {
+	if pf == nil || pf.Closed || panelIndex < commandPaletteDriveLeft || panelIndex > commandPaletteDriveRight {
 		return false
 	}
-	fsp, ok := pf.panels[panelIndex].(*FileSystemPanel)
+	fsp, ok := pf.Panels[panelIndex].(*panel.FileSystemPanel)
 	if !ok || fsp == nil {
 		return false
 	}
-	bookmarks, err := LoadBookmarks(BookmarksFilePath())
+	bookmarks, err := panel.LoadBookmarks(panel.BookmarksFilePath())
 	if err != nil || slot < 0 || slot >= len(bookmarks) || bookmarks[slot].IsEmpty() || strings.TrimSpace(bookmarks[slot].Path) == "" {
 		return false
 	}
-	pf.navigateToBookmark(fsp, bookmarks[slot])
+	pf.NavigateToBookmark(fsp, bookmarks[slot])
 	return true
 }

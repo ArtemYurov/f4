@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/panel"
 	"testing"
 
 	"github.com/unxed/f4/internal/action"
@@ -11,16 +13,16 @@ import (
 
 // TestKeyBarClick_DispatchesHotkeyAction guards the regression introduced by
 // the KeyBind refactor (commit 5b91218): mouse clicks on the F-key bar reach
-// PanelsFrame via FrameManager.InjectEvents, which sets is_injected=true and
+// panel.PanelsFrame via FrameManager.InjectEvents, which sets is_injected=true and
 // therefore skips FrameManager.EventFilter — the macro.MacroMgr.Filter path where
 // configured hotkey actions (F3=View, F4=Edit, F5=Copy, …) are dispatched.
-// Before the fix, the injected VK_F5 fell through PanelsFrame.ProcessKey
+// Before the fix, the injected VK_F5 fell through panel.PanelsFrame.ProcessKey
 // unhandled, so clicking F5 in the bottom bar did nothing.
 func TestKeyBarClick_DispatchesHotkeyAction(t *testing.T) {
 	preserveActionRegistry(t)
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	if GlobalHotkeysMgr == nil {
-		GlobalHotkeysMgr = NewHotkeyManager("")
+	if keymap.GlobalHotkeysMgr == nil {
+		keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
 	}
 	if macro.MacroMgr == nil {
 		macro.MacroMgr = macro.NewMacroManager("")
@@ -38,17 +40,17 @@ func TestKeyBarClick_DispatchesHotkeyAction(t *testing.T) {
 			return true
 		},
 	})
-	prev := GlobalHotkeysMgr.GetAction("Shell", "F5")
-	GlobalHotkeysMgr.Bind("Shell", "F5", "Test.KeyBarF5Probe")
+	prev := keymap.GlobalHotkeysMgr.GetAction("Shell", "F5")
+	keymap.GlobalHotkeysMgr.Bind("Shell", "F5", "Test.KeyBarF5Probe")
 	defer func() {
 		if prev == "" {
-			GlobalHotkeysMgr.Unbind("Shell", "F5")
+			keymap.GlobalHotkeysMgr.Unbind("Shell", "F5")
 		} else {
-			GlobalHotkeysMgr.Bind("Shell", "F5", prev)
+			keymap.GlobalHotkeysMgr.Bind("Shell", "F5", prev)
 		}
 	}()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 	vtui.FrameManager.Push(pf)

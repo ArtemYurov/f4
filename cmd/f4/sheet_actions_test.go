@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -32,9 +34,9 @@ func spreadsheetMenuItem(items []vtui.MenuBarItem) (vtui.MenuBarItem, vtui.MenuI
 // reading. The predicate came from Arkanoid, where it is harmless because that
 // action is HideFromMenu and the check only ever runs for the palette.
 func TestSpreadsheetStaysInTheMenuWhileAPopupIsOpen(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 	vtui.FrameManager.Push(pf)
@@ -59,9 +61,9 @@ func TestSpreadsheetStaysInTheMenuWhileAPopupIsOpen(t *testing.T) {
 // reachable when the command is launched from a menu or from the palette,
 // where the popup rather than the panels frame is on top.
 func TestSpreadsheetPathLookupIgnoresPopups(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 	vtui.FrameManager.Push(pf)

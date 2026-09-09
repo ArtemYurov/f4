@@ -3,6 +3,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
@@ -14,7 +15,7 @@ import (
 	"time"
 )
 
-// startLocalConPTY brings up a PanelsFrame on a real ConPTY and waits until
+// startLocalConPTY brings up a panel.PanelsFrame on a real ConPTY and waits until
 // cmd.exe has printed its first prompt. Starting a command before that races
 // the prompt-driven completion guard: the startup prompt may be delivered
 // after the command has armed ignoreNextPrompt. That ordering is covered by
@@ -37,32 +38,32 @@ func drainFrameTasks() {
 	}
 }
 
-func startLocalConPTY(t *testing.T) *PanelsFrame {
+func startLocalConPTY(t *testing.T) *panel.PanelsFrame {
 	t.Helper()
 	if !terminal.ConPTYAvailable() {
 		t.Skip("ConPTY unavailable")
 	}
 
-	oldSpawn := spawnLocalShellPTY
+	oldSpawn := panel.SpawnLocalShellPTY
 	oldConfig := config.App
 	t.Cleanup(func() {
-		spawnLocalShellPTY = oldSpawn
+		panel.SpawnLocalShellPTY = oldSpawn
 		config.App = oldConfig
 	})
-	spawnLocalShellPTY = true
+	panel.SpawnLocalShellPTY = true
 	config.App.ConsoleMode = "own"
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	pf.ResizeConsole(80, 25)
 	waitForLocalConPTYPrompt(t, pf, nil)
 	return pf
 }
 
-func waitForLocalConPTYPrompt(t *testing.T, pf *PanelsFrame, previous terminal.PtyBackend) {
+func waitForLocalConPTYPrompt(t *testing.T, pf *panel.PanelsFrame, previous terminal.PtyBackend) {
 	t.Helper()
 	deadline := time.Now().Add(5 * time.Second)
-	for pf.getActivePTY() == nil || pf.getActivePTY() == previous {
+	for pf.GetActivePTY() == nil || pf.GetActivePTY() == previous {
 		drainFrameTasks()
 		if time.Now().After(deadline) {
 			t.Fatal("local ConPTY did not start")
@@ -70,7 +71,7 @@ func waitForLocalConPTYPrompt(t *testing.T, pf *PanelsFrame, previous terminal.P
 		time.Sleep(10 * time.Millisecond)
 	}
 	promptDeadline := time.Now().Add(5 * time.Second)
-	for !pf.shellPromptReady {
+	for !pf.ShellPromptReady {
 		drainFrameTasks()
 		if time.Now().After(promptDeadline) {
 			t.Fatal("local ConPTY startup prompt did not arrive")
@@ -97,7 +98,7 @@ func TestActionExecuteBatchDoesNotReturnPanelsEarly(t *testing.T) {
 
 	actionExecute(pf, vfs.NewOSVFS(dir), dir, filepath.Base(script), script)
 	start := time.Now()
-	for pf.showPanels {
+	for pf.ShowPanels {
 		drainFrameTasks()
 		if time.Since(start) > 5*time.Second {
 			t.Fatal("actionExecute did not hide panels")
@@ -108,7 +109,7 @@ func TestActionExecuteBatchDoesNotReturnPanelsEarly(t *testing.T) {
 	completionDeadline := time.Now().Add(15 * time.Second)
 	for time.Now().Before(completionDeadline) {
 		drainFrameTasks()
-		if pf.showPanels {
+		if pf.ShowPanels {
 			panelsReturned = time.Since(start)
 			break
 		}
@@ -129,7 +130,7 @@ func TestActionExecuteBatchDoesNotReturnPanelsEarly(t *testing.T) {
 func TestActionExecuteBatchExitRestartsShell(t *testing.T) {
 	pf := startLocalConPTY(t)
 	defer pf.Close()
-	oldPTY := pf.getActivePTY()
+	oldPTY := pf.GetActivePTY()
 
 	dir := t.TempDir()
 	after := filepath.Join(dir, "after.marker")
@@ -141,7 +142,7 @@ func TestActionExecuteBatchExitRestartsShell(t *testing.T) {
 
 	actionExecute(pf, vfs.NewOSVFS(dir), dir, filepath.Base(script), script)
 	start := time.Now()
-	for pf.showPanels {
+	for pf.ShowPanels {
 		drainFrameTasks()
 		if time.Since(start) > 5*time.Second {
 			t.Fatal("actionExecute did not hide panels")
@@ -149,14 +150,14 @@ func TestActionExecuteBatchExitRestartsShell(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 	deadline := time.Now().Add(15 * time.Second)
-	for !pf.showPanels {
+	for !pf.ShowPanels {
 		drainFrameTasks()
 		if time.Now().After(deadline) {
-			t.Fatalf("panels did not return after the batch exited the shell (executing=%v)", pf.executing)
+			t.Fatalf("panels did not return after the batch exited the shell (executing=%v)", pf.Executing)
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	if pf.executing {
+	if pf.Executing {
 		t.Fatal("execution still marked running after the shell exited")
 	}
 	if _, err := os.Stat(after); err == nil {
@@ -164,10 +165,10 @@ func TestActionExecuteBatchExitRestartsShell(t *testing.T) {
 	}
 
 	waitForLocalConPTYPrompt(t, pf, oldPTY)
-	if pf.getActivePTY() == oldPTY {
+	if pf.GetActivePTY() == oldPTY {
 		t.Fatal("the dead shell was not replaced")
 	}
-	if pf.isPtyBusy() {
+	if pf.IsPtyBusy() {
 		t.Fatal("the fresh shell reports busy at its prompt")
 	}
 	t.Logf("panels returned and the shell was replaced in %v", time.Since(start))

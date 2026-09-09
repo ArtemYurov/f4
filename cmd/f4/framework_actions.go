@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
 	"os"
 	"path/filepath"
 	"strings"
@@ -89,12 +90,12 @@ func activateMainMenuAt(requestedPos int) bool {
 			selectPos = menu.SelectPos
 		}
 		if requestedPos < 0 {
-			if panels, ok := top.(*PanelsFrame); ok {
-				// PanelsFrame owns F9 before vtui's fallback and always opens the
+			if panels, ok := top.(*panel.PanelsFrame); ok {
+				// panel.PanelsFrame owns F9 before vtui's fallback and always opens the
 				// fixed-side menu belonging to the active panel. Do not retain the
 				// previously visited menu when the command comes from the palette.
 				selectPos = 0
-				if panels.activeIdx == 1 {
+				if panels.ActiveIdx == 1 {
 					selectPos = 4
 				}
 				if selectPos >= len(menu.Items) {
@@ -128,7 +129,7 @@ func actionWorkspaceNew() bool {
 	}
 
 	// Full-screen editor, viewer, image and queue workspaces do not keep the
-	// PanelsFrame in their own frame stack, so vtui's active-stack CmResize
+	// panel.PanelsFrame in their own frame stack, so vtui's active-stack CmResize
 	// broadcast cannot reach the frame that knows how to clone panels. Reuse
 	// the same MRU-aware resolver used by the rest of f4 and ask that concrete
 	// panels frame to perform its ordinary, well-tested fork operation.
@@ -137,16 +138,16 @@ func actionWorkspaceNew() bool {
 
 // forkNearestPanelsFrame clones the panels the current workspace was opened
 // from into a new workspace, wherever those panels currently live. Returns
-// false only when no workspace holds a PanelsFrame at all, which leaves the
+// false only when no workspace holds a panel.PanelsFrame at all, which leaves the
 // caller free to report the request as unhandled.
 func forkNearestPanelsFrame() bool {
-	panels := findPanelsFrameAnyScreen()
+	panels := panel.FindPanelsFrameAnyScreen()
 	return panels != nil && panels.HandleCommand(vtui.CmResize, "fork")
 }
 
 // handleWorkspaceForkCommand serves vtui's fork request -- CmResize carrying
 // the string "fork", as emitted by FrameManager's native Ctrl+N fallback and
-// by a click on the "+" workspace tab. Only PanelsFrame implements that
+// by a click on the "+" workspace tab. Only panel.PanelsFrame implements that
 // command, and FrameManager routes it down the *active* screen's frame stack
 // only, so on a workspace that holds no panels of its own the request used to
 // die unhandled after the framework had already flashed the screen for it
@@ -230,31 +231,6 @@ func queueFrameInWorkspace(screen *vtui.AppScreen) *fileops.QueueFrame {
 	return nil
 }
 
-func workspaceHasOpenPanels(screen *vtui.AppScreen) bool {
-	if screen == nil {
-		return false
-	}
-	for index := len(screen.Frames) - 1; index >= 0; index-- {
-		if panels, ok := screen.Frames[index].(*PanelsFrame); ok && !panels.closed {
-			return true
-		}
-	}
-	return false
-}
-
-func isOnlyPanelsWorkspace(screen *vtui.AppScreen) bool {
-	if !workspaceHasOpenPanels(screen) || vtui.FrameManager == nil || len(vtui.FrameManager.Screens) <= 1 {
-		return false
-	}
-	panelsWorkspaces := 0
-	for _, candidate := range vtui.FrameManager.Screens {
-		if workspaceHasOpenPanels(candidate) {
-			panelsWorkspaces++
-		}
-	}
-	return panelsWorkspaces == 1
-}
-
 // actionWorkspaceCloseNumber resolves the stable workspace number at
 // execution time. Queue may be underneath contextual Help, or the target may
 // be a background workspace selected by a dynamic palette entry; both cases
@@ -266,9 +242,9 @@ func actionWorkspaceCloseNumber(number int) bool {
 	}
 	// Keep f4 alive while the only workspace containing file panels exists.
 	// Closing it while editor/viewer workspaces remain leaves the next last
-	// workspace without PanelsFrame, so its final Ctrl+W emits CmQuit directly
-	// and bypasses PanelsFrame's exit-confirmation policy (issue #531).
-	if isOnlyPanelsWorkspace(screen) {
+	// workspace without panel.PanelsFrame, so its final Ctrl+W emits CmQuit directly
+	// and bypasses panel.PanelsFrame's exit-confirmation policy (issue #531).
+	if panel.IsOnlyPanelsWorkspace(screen) {
 		return true
 	}
 	if queue := queueFrameInWorkspace(screen); queue != nil && queue.VetoCloseWhileActive() {

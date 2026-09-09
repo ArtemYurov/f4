@@ -3,6 +3,7 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"github.com/unxed/f4/internal/panel"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -100,8 +101,8 @@ func TestUpdateFailureMessageRepro(t *testing.T) {
 	// 6. Run update logic
 	// We call performUpdate directly as it's the one handling the installation.
 	// Since performUpdate is internal and runs in a goroutine via RunProgressTask,
-	// we need a PanelsFrame to host it.
-	pf := NewPanelsFrame()
+	// we need a panel.PanelsFrame to host it.
+	pf := panel.NewPanelsFrame()
 	pf.ResizeConsole(80, 25)
 
 	performUpdate(pf, update.Candidate{

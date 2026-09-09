@@ -7,6 +7,7 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"github.com/unxed/f4/internal/panel"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -70,7 +71,7 @@ func TestColorer_DownloadColorerSchemas(t *testing.T) {
 	editor.ColorerDownloadURL = ts.URL
 	defer func() { editor.ColorerDownloadURL = oldURL }()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 

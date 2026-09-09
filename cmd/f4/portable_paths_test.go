@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
 	"os"
 	"path/filepath"
 	"testing"
@@ -18,9 +19,9 @@ var iniResolvers = []struct {
 	fn   func() string
 	rel  string
 }{
-	{"BookmarksFilePath", BookmarksFilePath, "settings/bookmarks.ini"},
-	{"AssociationsFilePath", AssociationsFilePath, "settings/associations.ini"},
-	{"MainMenuFilePath", MainMenuFilePath, "settings/user_menu.ini"},
+	{"BookmarksFilePath", panel.BookmarksFilePath, "settings/bookmarks.ini"},
+	{"AssociationsFilePath", panel.AssociationsFilePath, "settings/associations.ini"},
+	{"MainMenuFilePath", panel.MainMenuFilePath, "settings/user_menu.ini"},
 	{"getSessionIniPath", getSessionIniPath, "session.ini"},
 	{"vtvibeIniPath", vtvibeIniPath, "vtvibe.ini"},
 	{"theme.UserColorOverridesPath", theme.UserColorOverridesPath, "farcolors.ini"},

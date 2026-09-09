@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/keymap"
 	"os"
 	"path/filepath"
 	"strings"
@@ -97,9 +98,9 @@ func InitHelpSystem() {
 func generateKeysHelpTopic(name, title string, areas []string, navTarget string) *vtui.HelpTopic {
 	topic := &vtui.HelpTopic{Name: name, StickyRows: 1, Lines: []string{title}}
 
-	hm := GlobalHotkeysMgr
+	hm := keymap.GlobalHotkeysMgr
 	if hm == nil {
-		hm = NewHotkeyManager("")
+		hm = keymap.NewHotkeyManager("")
 	}
 	active := hm.GetActiveBindings()
 
@@ -108,10 +109,10 @@ func generateKeysHelpTopic(name, title string, areas []string, navTarget string)
 		for key, binding := range active[area] {
 			parts := strings.SplitN(binding, ":", 2)
 			if strings.EqualFold(parts[0], action.Name) {
-				keys = append(keys, FormatKeyForUI(key))
+				keys = append(keys, keymap.FormatKeyForUI(key))
 			}
 		}
-		keys = mergeCommandPaletteShortcuts(keys, NativeShortcutsForAction(area, action))
+		keys = keymap.MergeShortcuts(keys, keymap.NativeShortcutsForAction(area, action))
 		return strings.Join(keys, " / ")
 	}
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
 	"strings"
 
 	"github.com/unxed/f4/internal/action"
@@ -20,7 +21,7 @@ func commandPaletteFrameEntries() []commandPaletteEntry {
 		return nil
 	}
 	switch frame := vtui.FrameManager.GetTopFrame().(type) {
-	case *PanelsFrame:
+	case *panel.PanelsFrame:
 		return commandPalettePanelsContextEntries(frame)
 	case commandPaletteHelpFrame:
 		return commandPaletteHelpEntries(frame)

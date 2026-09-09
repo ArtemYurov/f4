@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/keymap"
 	"strings"
 	"testing"
 
@@ -10,9 +11,9 @@ import (
 )
 
 func TestGenerateKeysHelpTopic_Russian(t *testing.T) {
-	old := GlobalHotkeysMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	defer func() { GlobalHotkeysMgr = old }()
+	old := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	defer func() { keymap.GlobalHotkeysMgr = old }()
 
 	oldLang := config.App.Language
 	defer func() {
@@ -35,9 +36,9 @@ func TestGenerateKeysHelpTopic_Russian(t *testing.T) {
 }
 
 func TestGenerateKeysHelpTopicsFitHelpWidth(t *testing.T) {
-	old := GlobalHotkeysMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	t.Cleanup(func() { GlobalHotkeysMgr = old })
+	old := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	t.Cleanup(func() { keymap.GlobalHotkeysMgr = old })
 
 	oldLang := config.App.Language
 	t.Cleanup(func() {
@@ -67,9 +68,9 @@ func TestGenerateKeysHelpTopicsFitHelpWidth(t *testing.T) {
 // differs from the UI language: a Russian .hlf gets Russian action
 // descriptions with an English UI.
 func TestGenerateKeysHelpTopic_HelpLanguageOverridesUI(t *testing.T) {
-	old := GlobalHotkeysMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	defer func() { GlobalHotkeysMgr = old }()
+	old := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	defer func() { keymap.GlobalHotkeysMgr = old }()
 
 	oldLang := config.App.Language
 	defer func() {

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/paneltest"
 	"testing"
 
 	"github.com/unxed/f4/internal/history"
@@ -8,7 +10,7 @@ import (
 )
 
 func TestMenuHistory_ShiftF10SelectsLastExecutedItem(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	history.ClearMenuHistory()
 	t.Cleanup(history.ClearMenuHistory)
@@ -33,7 +35,7 @@ func TestMenuHistory_ShiftF10SelectsLastExecutedItem(t *testing.T) {
 }
 
 func TestMenuHistory_ShiftF10OpensMainMenuAtLastExecutedItem(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	history.ClearMenuHistory()
 	t.Cleanup(history.ClearMenuHistory)
@@ -78,14 +80,14 @@ func TestLastMenuItemActionHasShiftF10Default(t *testing.T) {
 		t.Fatalf("App.LastMenuItem default keys = %v, want [ShiftF10]", action.DefaultKeys)
 	}
 
-	manager := NewHotkeyManager("")
+	manager := keymap.NewHotkeyManager("")
 	if got := manager.GetAction("Shell", "ShiftF10"); got != "App.LastMenuItem" {
 		t.Fatalf("Shell ShiftF10 binding = %q, want term.App.LastMenuItem", got)
 	}
 }
 
 func TestMenuHistory_ShiftF10DoesNotOverrideUserMenu(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	history.ClearMenuHistory()
 	t.Cleanup(history.ClearMenuHistory)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/unxed/f4/internal/panel"
 	"io"
 	"os"
 	"path/filepath"
@@ -17,8 +18,8 @@ func TestTempPanelVFSStoresReferencesWithoutCopying(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	store := &tempPanelStore{}
-	tmp := newTempPanelVFS(nil, store, 0)
+	store := &panel.TempPanelStore{}
+	tmp := panel.NewTempPanelVFS(nil, store, 0)
 	source := vfs.NewOSVFS(root)
 	if err := tmp.AddReferences(context.Background(), source, []string{"one.txt", "one.txt"}); err != nil {
 		t.Fatal(err)
@@ -49,7 +50,7 @@ func TestTempPanelVFSStoresReferencesWithoutCopying(t *testing.T) {
 	if tmp.HandlePanelAction(nil, vfs.PanelActionCreate, []string{entryPath}) {
 		t.Fatal("temporary panel consumed the create action used by Shift+F4")
 	}
-	tmp.removePanelReferences([]string{entryPath})
+	tmp.RemovePanelReferences([]string{entryPath})
 	if _, err := os.Stat(FilePath); err != nil {
 		t.Fatalf("removing a temporary-panel reference touched the source file: %v", err)
 	}
@@ -60,7 +61,7 @@ func TestTempPanelVFSStoresReferencesWithoutCopying(t *testing.T) {
 
 func TestTempPanelVFSParentIsRestoredByPanelSwitch(t *testing.T) {
 	parent := vfs.NewOSVFS(t.TempDir())
-	tmp := newTempPanelVFS(parent, &tempPanelStore{}, 3)
+	tmp := panel.NewTempPanelVFS(parent, &panel.TempPanelStore{}, 3)
 	if got := tmp.ParentVFS(); got != parent {
 		t.Fatalf("ParentVFS() = %T, want the source VFS", got)
 	}
@@ -82,12 +83,12 @@ func TestTempPanelStoreReplacesSearchResultsInSelectedSlot(t *testing.T) {
 		}
 	}
 
-	store := &tempPanelStore{}
+	store := &panel.TempPanelStore{}
 	source := vfs.NewOSVFS(root)
-	store.replaceWithSearchResults(2, source, []FoundFile{{Path: first, Item: vfs.VFSItem{Name: "first.txt"}}})
-	store.replaceWithSearchResults(2, source, []FoundFile{{Path: second, Item: vfs.VFSItem{Name: "second.txt"}}})
+	store.ReplaceWithSearchResults(2, source, []panel.FoundFile{{Path: first, Item: vfs.VFSItem{Name: "first.txt"}}})
+	store.ReplaceWithSearchResults(2, source, []panel.FoundFile{{Path: second, Item: vfs.VFSItem{Name: "second.txt"}}})
 
-	tmp := newTempPanelVFS(nil, store, 2)
+	tmp := panel.NewTempPanelVFS(nil, store, 2)
 	items := readTempPanelItems(t, tmp)
 	if len(items) != 1 || items[0].Name != second {
 		t.Fatalf("search-result replacement produced %#v, want only %q", items, second)
@@ -101,8 +102,8 @@ func TestTempPanelVFSDeleteRemovesReferenceAndRealItem(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	store := &tempPanelStore{}
-	tmp := newTempPanelVFS(nil, store, 0)
+	store := &panel.TempPanelStore{}
+	tmp := panel.NewTempPanelVFS(nil, store, 0)
 	source := vfs.NewOSVFS(root)
 	if err := tmp.AddReferences(context.Background(), source, []string{"delete.txt"}); err != nil {
 		t.Fatal(err)
@@ -132,7 +133,7 @@ func (r readAtCloserReader) Read(p []byte) (int, error) {
 	return r.reader.Read(context.Background(), p)
 }
 
-func readTempPanelItems(t *testing.T, tmp *TempPanelVFS) []vfs.VFSItem {
+func readTempPanelItems(t *testing.T, tmp *panel.TempPanelVFS) []vfs.VFSItem {
 	t.Helper()
 	var items []vfs.VFSItem
 	if err := tmp.ReadDir(context.Background(), tmp.GetPath(), func(chunk []vfs.VFSItem) {

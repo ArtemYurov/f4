@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"github.com/unxed/f4/internal/panel"
 	"os"
 	"testing"
 	"time"
@@ -28,8 +29,8 @@ import (
 // where action hotkeys are dispatched. The managers are created on demand
 // because most tests never touch them.
 func pressKey(f vtui.Frame, e *vtinput.InputEvent) bool {
-	if GlobalHotkeysMgr == nil {
-		GlobalHotkeysMgr = NewHotkeyManager("")
+	if keymap.GlobalHotkeysMgr == nil {
+		keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
 	}
 	if macro.MacroMgr == nil {
 		macro.MacroMgr = macro.NewMacroManager("")
@@ -77,26 +78,48 @@ func installTestSeams() {
 	editor.LookupHotkey = func(e *vtinput.InputEvent) bool { return macroLookupHotkey(macro.MacroMgr, e) }
 	editor.MenuBarItems = BuildMenuBarItems
 	editor.CrossAttrs = EditorCrossAttrs
-	editor.KeyBarLabels = KeyBarLabelsForArea
+	editor.KeyBarLabels = keymap.KeyBarLabelsForArea
 	editor.HotkeyAction = func(area, key string) string {
-		if GlobalHotkeysMgr == nil {
+		if keymap.GlobalHotkeysMgr == nil {
 			return ""
 		}
-		return GlobalHotkeysMgr.GetAction(area, key)
+		return keymap.GlobalHotkeysMgr.GetAction(area, key)
 	}
 	editor.RememberEdited = func(v vfs.VFS, path string) { rememberViewerEditorHistory(v, path, historyModeEdit) }
 	editor.SaveSession = SaveSession
 	editor.HandleWorkspaceFork = handleWorkspaceForkCommand
 	editor.SwitchToViewer = actionSwitchEditorToViewer
+	// internal/panel declares what it needs from the application above it; this
+	// is the root filling it in. Every default is inert, so an unwired panel
+	// declines the command rather than doing the wrong thing.
+	panel.AppCommand = handlePanelsAppCommand
+	panel.RunAction = RunAction
+	panel.BuildMenuBarItems = BuildMenuBarItems
+	panel.SaveSession = SaveSession
+	panel.OpenEditor = actionOpenEditor
+	panel.OpenViewer = actionOpenViewer
+	panel.OpenViewerInternal = openViewerInternal
+	panel.OpenEditFileIn = openEditFileIn
+	panel.ShowViewer = showViewer
+	panel.ShowEditor = showEditor
+	panel.FindOpenedEditor = findOpenedEditor
+	panel.Execute = actionExecute
+	panel.SortMenuForPanel = actionSortMenuForPanel
+	panel.WorkspaceClose = actionWorkspaceClose
+	panel.Arkanoid = actionArkanoid
+	panel.CurrentArea = macroCurrentArea
+	panel.MacroHotkey = func(e *vtinput.InputEvent) bool { return macroLookupHotkey(macro.MacroMgr, e) }
+	panel.KeyFilter = func(e *vtinput.InputEvent) bool { return macroFilter(macro.MacroMgr, e) }
+	panel.AISetViewMode = aiSetViewMode
 
 	// Unit tests must never hand control to the user's desktop. Individual
 	// tests that exercise these routes install per-dialog/per-frame recorders.
-	defaultExternalUICommandRunner = func(string, []string, string) error { return nil }
+	panel.DefaultExternalUICommandRunner = func(string, []string, string) error { return nil }
 	dialog.DefaultNativePropertiesOpener = func(string) error { return nil }
 
 	// Frames must not fork the user's shell during unit tests; the few
 	// tests that exercise the term.PTY path construct one explicitly.
-	spawnLocalShellPTY = false
+	panel.SpawnLocalShellPTY = false
 
 	// Toast behavior is still exercised through vtui's real asynchronous
 	// setup and expiry paths, but unit tests do not need production-length

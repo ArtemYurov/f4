@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/paneltest"
 	"testing"
 
 	"github.com/unxed/vtinput"
@@ -8,7 +9,7 @@ import (
 )
 
 func TestForcedMouseSelectionStartsAtShiftClick(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	scr := setupGrabberScreen(t)
 	vtui.FrameManager.Push(vtui.NewDesktop())
 
@@ -45,7 +46,7 @@ func TestForcedMouseSelectionStartsAtShiftClick(t *testing.T) {
 }
 
 func TestForcedMouseSelectionLeavesOtherMouseGesturesAlone(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	setupGrabberScreen(t)
 	vtui.FrameManager.Push(vtui.NewDesktop())
 
@@ -78,7 +79,7 @@ func TestForcedMouseSelectionLeavesOtherMouseGesturesAlone(t *testing.T) {
 }
 
 func TestForcedMouseSelectionDoesNotNestGrabbers(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	setupGrabberScreen(t)
 	vtui.FrameManager.Push(vtui.NewDesktop())
 

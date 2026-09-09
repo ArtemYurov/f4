@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -27,7 +28,7 @@ func TestMatchMask_BasicGlob(t *testing.T) {
 		{"pic.png", "", false},
 	}
 	for _, c := range cases {
-		got := MatchMask(c.name, c.mask, false)
+		got := panel.MatchMask(c.name, c.mask, false)
 		if got != c.want {
 			t.Errorf("MatchMask(%q, %q, false) = %v, want %v", c.name, c.mask, got, c.want)
 		}
@@ -35,51 +36,51 @@ func TestMatchMask_BasicGlob(t *testing.T) {
 }
 
 func TestMatchMask_IgnoreCase(t *testing.T) {
-	if !MatchMask("PIC.PNG", "*.png", true) {
+	if !panel.MatchMask("PIC.PNG", "*.png", true) {
 		t.Error("expected case-insensitive match")
 	}
-	if !MatchMask("pic.png", "*.PNG", true) {
+	if !panel.MatchMask("pic.png", "*.PNG", true) {
 		t.Error("expected case-insensitive match (mask upper, name lower)")
 	}
 }
 
 func TestMatchMask_Exclude(t *testing.T) {
 	// Include OR-list, exclude vetoes.
-	if !MatchMask("pic.png", "*.png,*.jpg", false) {
+	if !panel.MatchMask("pic.png", "*.png,*.jpg", false) {
 		t.Fatal("include should match without exclude")
 	}
-	if MatchMask("thumb_pic.png", "*.png,*.jpg|thumb_*", false) {
+	if panel.MatchMask("thumb_pic.png", "*.png,*.jpg|thumb_*", false) {
 		t.Error("exclude thumb_* should veto thumb_pic.png")
 	}
-	if !MatchMask("normal.png", "*.png,*.jpg|thumb_*", false) {
+	if !panel.MatchMask("normal.png", "*.png,*.jpg|thumb_*", false) {
 		t.Error("normal.png should survive the exclude filter")
 	}
-	if MatchMask("weird.png", "*.png|*.png", false) {
+	if panel.MatchMask("weird.png", "*.png|*.png", false) {
 		t.Error("exclude equal to include should veto")
 	}
 }
 
 func TestMatchMask_Regex(t *testing.T) {
 	// /^Makefile.*$/ matches names starting with Makefile.
-	if !MatchMask("Makefile", "/^Makefile.*$/", false) {
+	if !panel.MatchMask("Makefile", "/^Makefile.*$/", false) {
 		t.Error("regex should match Makefile")
 	}
-	if !MatchMask("Makefile.in", "/^Makefile.*$/", false) {
+	if !panel.MatchMask("Makefile.in", "/^Makefile.*$/", false) {
 		t.Error("regex should match Makefile.in")
 	}
-	if MatchMask("something-else", "/^Makefile.*$/", false) {
+	if panel.MatchMask("something-else", "/^Makefile.*$/", false) {
 		t.Error("regex should not match something-else")
 	}
 	// Regex with commas stays a single mask when wrapped in slashes.
-	if !MatchMask("v1_2", "/v\\d+_\\d+/", false) {
+	if !panel.MatchMask("v1_2", "/v\\d+_\\d+/", false) {
 		t.Error("regex with commas or backrefs must survive the splitter")
 	}
 	// Ignore-case in regex mode via (?i) prefix.
-	if !MatchMask("MAKEFILE", "/^makefile$/", true) {
+	if !panel.MatchMask("MAKEFILE", "/^makefile$/", true) {
 		t.Error("regex + ignoreCase should match uppercase")
 	}
 	// Bad regex never matches — no panic, no crash.
-	if MatchMask("x", "/[/", false) {
+	if panel.MatchMask("x", "/[/", false) {
 		t.Error("malformed regex should return false, not panic")
 	}
 }
@@ -88,30 +89,30 @@ func TestSaveLoadAssociations_RoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "associations.ini")
 
-	in := []FileAssoc{
+	in := []panel.FileAssoc{
 		{
 			Mask:        "*.png,*.jpg",
 			Description: "Image viewer",
-			Commands: [assocKindCount]string{
-				AssocExecute: `eog "!.!"`,
-				AssocView:    `feh "!.!"`,
+			Commands: [panel.AssocKindCount]string{
+				panel.AssocExecute: `eog "!.!"`,
+				panel.AssocView:    `feh "!.!"`,
 			},
-			Enabled: [assocKindCount]bool{
-				AssocExecute: true,
-				AssocView:    true,
+			Enabled: [panel.AssocKindCount]bool{
+				panel.AssocExecute: true,
+				panel.AssocView:    true,
 			},
 		},
 		{
 			Mask:        "*.md",
 			Description: "Markdown",
-			Commands: [assocKindCount]string{
-				AssocEdit: "vim !.!",
+			Commands: [panel.AssocKindCount]string{
+				panel.AssocEdit: "vim !.!",
 			},
-			Enabled: [assocKindCount]bool{AssocEdit: true},
+			Enabled: [panel.AssocKindCount]bool{panel.AssocEdit: true},
 		},
 	}
 
-	if err := SaveAssociations(path, in); err != nil {
+	if err := panel.SaveAssociations(path, in); err != nil {
 		t.Fatalf("SaveAssociations: %v", err)
 	}
 
@@ -120,7 +121,7 @@ func TestSaveLoadAssociations_RoundTrip(t *testing.T) {
 		t.Fatalf("expected %s to exist after save: %v", path, err)
 	}
 
-	out, err := LoadAssociations(path)
+	out, err := panel.LoadAssociations(path)
 	if err != nil {
 		t.Fatalf("LoadAssociations: %v", err)
 	}
@@ -130,7 +131,7 @@ func TestSaveLoadAssociations_RoundTrip(t *testing.T) {
 }
 
 func TestLoadAssociations_MissingFile(t *testing.T) {
-	out, err := LoadAssociations(filepath.Join(t.TempDir(), "nope.ini"))
+	out, err := panel.LoadAssociations(filepath.Join(t.TempDir(), "nope.ini"))
 	if err != nil {
 		t.Fatalf("missing file should not error: %v", err)
 	}
@@ -160,7 +161,7 @@ State=1
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	out, err := LoadAssociations(path)
+	out, err := panel.LoadAssociations(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -190,7 +191,7 @@ State=5
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	out, err := LoadAssociations(path)
+	out, err := panel.LoadAssociations(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -198,9 +199,9 @@ State=5
 		t.Fatalf("expected 1 entry, got %d", len(out))
 	}
 	got := out[0].Enabled
-	want := [assocKindCount]bool{
-		AssocExecute: true,
-		AssocView:    true,
+	want := [panel.AssocKindCount]bool{
+		panel.AssocExecute: true,
+		panel.AssocView:    true,
 	}
 	if got != want {
 		t.Errorf("Enabled=%v, want %v", got, want)
@@ -208,48 +209,48 @@ State=5
 }
 
 func TestMatchingAssociations_SkipsDisabledAndEmpty(t *testing.T) {
-	list := []FileAssoc{
+	list := []panel.FileAssoc{
 		{
 			Mask:     "*.png",
-			Commands: [assocKindCount]string{AssocView: "feh"},
-			Enabled:  [assocKindCount]bool{AssocView: true},
+			Commands: [panel.AssocKindCount]string{panel.AssocView: "feh"},
+			Enabled:  [panel.AssocKindCount]bool{panel.AssocView: true},
 		},
 		{
 			// Enabled but empty command — must be skipped.
 			Mask:    "*.png",
-			Enabled: [assocKindCount]bool{AssocView: true},
+			Enabled: [panel.AssocKindCount]bool{panel.AssocView: true},
 		},
 		{
 			// Command present but disabled — must be skipped.
 			Mask:     "*.png",
-			Commands: [assocKindCount]string{AssocView: "eog"},
+			Commands: [panel.AssocKindCount]string{panel.AssocView: "eog"},
 		},
 	}
-	got := MatchingAssociations(list, "pic.png", AssocView)
+	got := panel.MatchingAssociations(list, "pic.png", panel.AssocView)
 	if len(got) != 1 {
 		t.Fatalf("expected 1 match, got %d", len(got))
 	}
-	if got[0].Commands[AssocView] != "feh" {
-		t.Errorf("expected feh match, got %q", got[0].Commands[AssocView])
+	if got[0].Commands[panel.AssocView] != "feh" {
+		t.Errorf("expected feh match, got %q", got[0].Commands[panel.AssocView])
 	}
 }
 
 func TestMatchingAssociations_OrderPreserved(t *testing.T) {
-	list := []FileAssoc{
+	list := []panel.FileAssoc{
 		{
 			Mask:        "*.png",
 			Description: "First",
-			Commands:    [assocKindCount]string{AssocView: "feh"},
-			Enabled:     [assocKindCount]bool{AssocView: true},
+			Commands:    [panel.AssocKindCount]string{panel.AssocView: "feh"},
+			Enabled:     [panel.AssocKindCount]bool{panel.AssocView: true},
 		},
 		{
 			Mask:        "*.png",
 			Description: "Second",
-			Commands:    [assocKindCount]string{AssocView: "eog"},
-			Enabled:     [assocKindCount]bool{AssocView: true},
+			Commands:    [panel.AssocKindCount]string{panel.AssocView: "eog"},
+			Enabled:     [panel.AssocKindCount]bool{panel.AssocView: true},
 		},
 	}
-	got := MatchingAssociations(list, "pic.png", AssocView)
+	got := panel.MatchingAssociations(list, "pic.png", panel.AssocView)
 	if len(got) != 2 {
 		t.Fatalf("expected 2 matches, got %d", len(got))
 	}

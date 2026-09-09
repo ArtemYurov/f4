@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/unxed/f4/internal/media"
+	"github.com/unxed/f4/internal/panel"
 	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/vtui"
 )
@@ -18,7 +19,7 @@ func (termApplication) OpenEditFile() { openDashEFileIfRequested() }
 
 func (termApplication) ClientAttached(startLeft, startRight, editPath string) {
 	top := vtui.FrameManager.GetTopFrame()
-	pf, ok := top.(*PanelsFrame)
+	pf, ok := top.(*panel.PanelsFrame)
 	if !ok || pf == nil {
 		if editPath != "" {
 			vtui.DebugLog("SERVER: -e %q: top frame is not a *PanelsFrame (%T)", editPath, top)
@@ -26,13 +27,13 @@ func (termApplication) ClientAttached(startLeft, startRight, editPath string) {
 		return
 	}
 	// A workspace that had its panels hidden gets its host console back.
-	if pf.shellMode == terminal.ShellModeHost && !pf.showPanels {
-		pf.enterHostConsole()
+	if pf.ShellMode == terminal.ShellModeHost && !pf.ShowPanels {
+		pf.EnterHostConsole()
 	}
 	// A client that attached to a running daemon moves its workspace to its
 	// own directory, as a normal start would.
 	if startLeft != "" {
-		applyStartupDirs(pf, startLeft, startRight)
+		panel.ApplyStartupDirs(pf, startLeft, startRight)
 	}
 	if editPath != "" {
 		openEditFileIn(pf, editPath)
@@ -45,9 +46,9 @@ func (termApplication) ClientDetached() {
 			continue
 		}
 		for _, f := range s.Frames {
-			if pf, ok := f.(*PanelsFrame); ok && pf != nil {
-				if pf.shellMode == terminal.ShellModeHost && pf.isHostConsoleActive() {
-					pf.leaveHostConsole()
+			if pf, ok := f.(*panel.PanelsFrame); ok && pf != nil {
+				if pf.ShellMode == terminal.ShellModeHost && pf.IsHostConsoleActive() {
+					pf.LeaveHostConsole()
 				}
 			}
 		}

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
 	"io"
 	"path/filepath"
 	"strings"
@@ -19,11 +20,6 @@ import (
 	"github.com/unxed/vtinput"
 	"github.com/unxed/vtui"
 )
-
-type FoundFile struct {
-	Path string
-	Item vfs.VFSItem
-}
 
 // FindFileOptions are the portable Find File options. Archive and alternate
 // stream searches are intentionally not presented here: those are backend
@@ -61,7 +57,7 @@ func padLabelTo(s string, w int) string {
 }
 
 // ExecuteFindFile initiates a background search and displays a progress dialog.
-func ExecuteFindFile(pf *PanelsFrame, v vfs.VFS, startDir, mask, text string, options FindFileOptions) {
+func ExecuteFindFile(pf *panel.PanelsFrame, v vfs.VFS, startDir, mask, text string, options FindFileOptions) {
 	dlg := vtui.NewCenteredDialog(60, 9, i18n.Msg("FindFile.SearchingTitle"))
 	dlg.AttentionSuppressed = true
 
@@ -125,7 +121,7 @@ func ExecuteFindFile(pf *PanelsFrame, v vfs.VFS, startDir, mask, text string, op
 			})
 			return
 		}
-		var found []FoundFile
+		var found []panel.FoundFile
 		var lastUpdate time.Time // Used for throttling UI redraws
 		// A remote finder that supports progress reports intermediate
 		// counters before we get the entries themselves: what has been
@@ -213,7 +209,7 @@ func ExecuteFindFile(pf *PanelsFrame, v vfs.VFS, startDir, mask, text string, op
 
 					if item.IsDir {
 						if options.FindFolders && text == "" && matched {
-							found = append(found, FoundFile{Path: itemPath, Item: item})
+							found = append(found, panel.FoundFile{Path: itemPath, Item: item})
 							updateUI(dir, false)
 						}
 						_ = walk(itemPath) // Ignore permissions/read errors to continue walking
@@ -227,7 +223,7 @@ func ExecuteFindFile(pf *PanelsFrame, v vfs.VFS, startDir, mask, text string, op
 						continue
 					}
 
-					found = append(found, FoundFile{Path: itemPath, Item: item})
+					found = append(found, panel.FoundFile{Path: itemPath, Item: item})
 					updateUI(dir, false)
 				}
 			})
@@ -264,7 +260,7 @@ func ExecuteFindFile(pf *PanelsFrame, v vfs.VFS, startDir, mask, text string, op
 			})
 			if findErr == nil {
 				for _, hit := range hits {
-					found = append(found, FoundFile{Path: hit.Path, Item: hit.Item})
+					found = append(found, panel.FoundFile{Path: hit.Path, Item: hit.Item})
 				}
 				searched = true
 			} else if ctx.Err() == nil {
@@ -462,7 +458,7 @@ func fileContainsTextWithMatcher(ctx context.Context, v vfs.VFS, path string, ma
 }
 
 type foundFileRow struct {
-	ff FoundFile
+	ff panel.FoundFile
 	v  vfs.VFS
 }
 
@@ -484,9 +480,9 @@ func (r foundFileRow) GetCellText(col int) string {
 type SearchResultsWindow struct {
 	*vtui.Window
 	table *vtui.Table
-	found []FoundFile
+	found []panel.FoundFile
 	vfs   vfs.VFS
-	pf    *PanelsFrame
+	pf    *panel.PanelsFrame
 }
 
 func (srw *SearchResultsWindow) ProcessKey(e *vtinput.InputEvent) bool {
@@ -534,18 +530,18 @@ func (srw *SearchResultsWindow) sendToTempPanel() bool {
 	if srw == nil || srw.pf == nil || len(srw.found) == 0 {
 		return true
 	}
-	fsp := srw.pf.getActivePanel()
+	fsp := srw.pf.GetActivePanel()
 	if fsp == nil {
 		return true
 	}
-	slot := globalTempPanelStore.searchSlot()
-	globalTempPanelStore.replaceWithSearchResults(slot, srw.vfs, srw.found)
+	slot := panel.GlobalTempPanelStore.SearchSlot()
+	panel.GlobalTempPanelStore.ReplaceWithSearchResults(slot, srw.vfs, srw.found)
 	srw.Close()
-	srw.pf.switchToVFS(fsp, newTempPanelVFS(nil, globalTempPanelStore, slot))
+	srw.pf.SwitchToVFS(fsp, panel.NewTempPanelVFS(nil, panel.GlobalTempPanelStore, slot))
 	return true
 }
 
-func ShowSearchResults(pf *PanelsFrame, v vfs.VFS, found []FoundFile) {
+func ShowSearchResults(pf *panel.PanelsFrame, v vfs.VFS, found []panel.FoundFile) {
 	dlgW, dlgH := 76, 20
 	baseDlg := vtui.NewCenteredDialog(dlgW, dlgH, i18n.Msg("FindFile.SearchResultsTitle"))
 
@@ -589,11 +585,11 @@ func ShowSearchResults(pf *PanelsFrame, v vfs.VFS, found []FoundFile) {
 		if idx >= 0 && idx < len(found) {
 			ff := found[idx]
 			srw.Close()
-			if fsp := pf.getActivePanel(); fsp != nil {
-				fsp.vfs.SetPath(v.Dir(ff.Path))
-				fsp.pendingSelection = v.Base(ff.Path)
+			if fsp := pf.GetActivePanel(); fsp != nil {
+				_ = fsp.Vfs.SetPath(v.Dir(ff.Path))
+				fsp.PendingSelection = v.Base(ff.Path)
 				fsp.ReadDirectory()
-				pf.showPanels = true
+				pf.ShowPanels = true
 			}
 		}
 	}

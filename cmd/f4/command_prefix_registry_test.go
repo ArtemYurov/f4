@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"testing"
 
 	"github.com/unxed/f4/internal/sysinfo"
@@ -19,30 +21,30 @@ func TestCommandPrefixRegistrationDispatchAndUpdate(t *testing.T) {
 	}
 	t.Cleanup(registration.Unregister)
 
-	if !dispatchCommandPrefix(nil, `  MEDIA_TEST: "clip one.mp4"`) {
+	if !panel.DispatchCommandPrefix(nil, `  MEDIA_TEST: "clip one.mp4"`) {
 		t.Fatal("registered prefix was not dispatched")
 	}
 	if argument != ` "clip one.mp4"` {
 		t.Fatalf("argument = %q", argument)
 	}
-	if dispatchCommandPrefix(nil, "unrelated:value") {
+	if panel.DispatchCommandPrefix(nil, "unrelated:value") {
 		t.Fatal("unknown prefix was consumed")
 	}
 
 	if err := registration.SetPrefix("Changed"); err != nil {
 		t.Fatal(err)
 	}
-	if dispatchCommandPrefix(nil, "Media_Test:value") {
+	if panel.DispatchCommandPrefix(nil, "Media_Test:value") {
 		t.Fatal("old prefix remained active")
 	}
-	if !dispatchCommandPrefix(nil, "changed:value") {
+	if !panel.DispatchCommandPrefix(nil, "changed:value") {
 		t.Fatal("updated prefix was not active")
 	}
 
 	if err := registration.SetPrefix(""); err != nil {
 		t.Fatal(err)
 	}
-	if dispatchCommandPrefix(nil, "changed:value") {
+	if panel.DispatchCommandPrefix(nil, "changed:value") {
 		t.Fatal("disabled prefix was dispatched")
 	}
 }
@@ -79,28 +81,28 @@ func TestPanelsFrameCommandPrefixIsConsumedBeforePTY(t *testing.T) {
 	}
 	t.Cleanup(registration.Unregister)
 
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	defer pf.Close()
-	pty := pf.pty.(*mockPty)
-	pf.cmdLine.Edit.SetText("CorePrefix: selected.mkv")
+	pty := pf.Pty.(*paneltest.MockPty)
+	pf.CmdLine.Edit.SetText("CorePrefix: selected.mkv")
 	pressKey(pf, &vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_RETURN})
 
 	if !called {
 		t.Fatal("prefix handler was not invoked with the panel app and raw argument")
 	}
-	if got := pf.cmdLine.Edit.GetText(); got != "" {
+	if got := pf.CmdLine.Edit.GetText(); got != "" {
 		t.Fatalf("command line was not cleared: %q", got)
 	}
-	if len(pty.written) != 0 {
-		t.Fatalf("prefix leaked to term.PTY: %q", pty.written)
+	if len(pty.Written) != 0 {
+		t.Fatalf("prefix leaked to term.PTY: %q", pty.Written)
 	}
-	if !pf.showPanels {
+	if !pf.ShowPanels {
 		t.Fatal("prefix command unexpectedly hid panels")
 	}
 }
 
 func TestCommandPrefixOpensRegisteredDrive(t *testing.T) {
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	defer pf.Close()
 
 	t.Cleanup(sysinfo.SnapshotDrives())
@@ -108,16 +110,16 @@ func TestCommandPrefixOpensRegisteredDrive(t *testing.T) {
 		return vfs.NewNullVFS(0)
 	}}})
 
-	if !dispatchCommandPrefix(pf, "EXAMPLEDRIVE:") {
+	if !panel.DispatchCommandPrefix(pf, "EXAMPLEDRIVE:") {
 		t.Fatal("drive prefix was not consumed")
 	}
-	if _, ok := pf.getActivePanel().vfs.(*vfs.NullVFS); !ok {
-		t.Fatalf("active panel VFS = %T, want *vfs.NullVFS", pf.getActivePanel().vfs)
+	if _, ok := pf.GetActivePanel().Vfs.(*vfs.NullVFS); !ok {
+		t.Fatalf("active panel VFS = %T, want *vfs.NullVFS", pf.GetActivePanel().Vfs)
 	}
 }
 
 func TestCommandPrefixDriveRequiresBarePrefix(t *testing.T) {
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	defer pf.Close()
 
 	t.Cleanup(sysinfo.SnapshotDrives())
@@ -125,7 +127,7 @@ func TestCommandPrefixDriveRequiresBarePrefix(t *testing.T) {
 		return vfs.NewNullVFS(0)
 	}}})
 
-	if dispatchCommandPrefix(pf, "ExampleDrive:/child") {
+	if panel.DispatchCommandPrefix(pf, "ExampleDrive:/child") {
 		t.Fatal("drive prefix with an argument was consumed")
 	}
 }

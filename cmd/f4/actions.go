@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/panel"
 	"io"
 	"os"
 	"os/exec"
@@ -55,26 +57,6 @@ var (
 	LastFindFileNotContaining = false
 	LastFindFileFolders       = false
 	LastFindFileSymlinks      = false
-	LastLeftPath              = ""
-	LastRightPath             = ""
-	LastLeftCursor            = ""
-	LastRightCursor           = ""
-	LastActivePanel           = 1
-	LastWidePanel             = -1
-
-	LastLeftViewMode  = 0
-	LastRightViewMode = 0
-	LastLeftSortMode  = 0
-	LastRightSortMode = 0
-	LastLeftSortRev   = false
-	LastRightSortRev  = false
-
-	LastLeftSortGroups  = false
-	LastRightSortGroups = false
-
-	LastShowPanels = true
-	LastShowLeft   = true
-	LastShowRight  = true
 )
 
 func choiceText(choices []string, selected int) string {
@@ -86,7 +68,7 @@ func choiceText(choices []string, selected int) string {
 	return ""
 }
 
-func actionFoldersHistory(pf *PanelsFrame) {
+func actionFoldersHistory(pf *panel.PanelsFrame) {
 	if vtui.GlobalHistoryProvider == nil {
 		return
 	}
@@ -96,12 +78,12 @@ func actionFoldersHistory(pf *PanelsFrame) {
 	// saved folders are bookmarks still opens the dialog, and hand the marks
 	// their digits straight away — a folder locked before this existed picks
 	// up a hotkey the first time the dialog is opened.
-	var pins *folderPins
+	var pins *panel.FolderPins
 	if folderHP != nil {
-		if pins = loadFolderPins(); pins != nil {
-			richFolders = mergeFolderPins(richFolders, pins)
-			if pins.reconcile(richFolders) {
-				pins.save()
+		if pins = panel.LoadFolderPins(); pins != nil {
+			richFolders = panel.MergeFolderPins(richFolders, pins)
+			if pins.Reconcile(richFolders) {
+				pins.Save()
 			}
 		}
 	}
@@ -119,7 +101,7 @@ func actionFoldersHistory(pf *PanelsFrame) {
 	search.showTimes = true
 	search.timeMode = config.App.HistoryShowTimes[config.HistoryTypeFolders]
 	if pins != nil {
-		search.pinSlotOf = func(rec history.HistoryRecord) int { return pins.slotOf(rec.Name) }
+		search.pinSlotOf = func(rec history.HistoryRecord) int { return pins.SlotOf(rec.Name) }
 	}
 	search.onTimesChanged = func(mode int) {
 		config.App.HistoryShowTimes[config.HistoryTypeFolders] = mode
@@ -136,8 +118,8 @@ func actionFoldersHistory(pf *PanelsFrame) {
 		} else if vtui.GlobalHistoryProvider != nil {
 			vtui.GlobalHistoryProvider.SaveHistory("folders", h)
 		}
-		if pins != nil && pins.reconcile(richFolders) {
-			pins.save()
+		if pins != nil && pins.Reconcile(richFolders) {
+			pins.Save()
 		}
 	}
 	search.onLockToggled = func() {
@@ -147,10 +129,10 @@ func actionFoldersHistory(pf *PanelsFrame) {
 	}
 	search.applyFilter()
 
-	if activePanel := pf.getActivePanel(); activePanel != nil {
-		currentPath := activePanel.persistentPath()
+	if activePanel := pf.GetActivePanel(); activePanel != nil {
+		currentPath := activePanel.PersistentPath()
 		for historyPos, path := range h {
-			if sameFolderHistoryPath(path, currentPath) {
+			if panel.SameFolderHistoryPath(path, currentPath) {
 				search.selectOriginalIndex(historyPos)
 				break
 			}
@@ -161,10 +143,10 @@ func actionFoldersHistory(pf *PanelsFrame) {
 	gotoActive := func(pos int) {
 		search.cleanup()
 		menu.Close()
-		if targetPanel := pf.getActivePanel(); targetPanel != nil {
+		if targetPanel := pf.GetActivePanel(); targetPanel != nil {
 			// The menu is oldest → newest. If the selected path disappeared,
 			// navigateAvailableFolderHistory walks toward newer entries.
-			pf.navigateAvailableFolderHistory(targetPanel, h, pos, -1)
+			pf.NavigateAvailableFolderHistory(targetPanel, h, pos, -1)
 		}
 	}
 	menu.OnAction = func(int) {
@@ -191,10 +173,10 @@ func actionFoldersHistory(pf *PanelsFrame) {
 		// through while this dialog is on top of the frame stack (#407).
 		if pins != nil && alt && !shift &&
 			e.VirtualKeyCode >= vtinput.VK_0 && e.VirtualKeyCode <= vtinput.VK_9 {
-			if path := pins.slotAt(int(e.VirtualKeyCode - vtinput.VK_0)); path != "" {
+			if path := pins.SlotAt(int(e.VirtualKeyCode - vtinput.VK_0)); path != "" {
 				search.cleanup()
 				menu.Close()
-				if targetPanel := pf.getActivePanel(); targetPanel != nil {
+				if targetPanel := pf.GetActivePanel(); targetPanel != nil {
 					pf.NavigateToPath(targetPanel, path)
 				}
 			}
@@ -217,15 +199,15 @@ func actionFoldersHistory(pf *PanelsFrame) {
 			if ctrl {
 				// Insert into command line
 				search.cleanup()
-				pf.cmdLine.InsertString(path)
+				pf.CmdLine.InsertString(path)
 				menu.Close()
 				return true
 			}
 			if shift {
 				search.cleanup()
 				menu.Close()
-				if targetPanel := pf.getInactivePanel(); targetPanel != nil {
-					pf.navigateAvailableFolderHistory(targetPanel, h, historyPos, -1)
+				if targetPanel := pf.GetInactivePanel(); targetPanel != nil {
+					pf.NavigateAvailableFolderHistory(targetPanel, h, historyPos, -1)
 				}
 				return true
 			}
@@ -251,11 +233,11 @@ func actionFoldersHistory(pf *PanelsFrame) {
 				confirmAndClearRichHistory(i18n.Msg("History.FoldersTitle"), "folders", &richFolders, func() {
 					h = history.ExtractNames(richFolders)
 					folderHP.SaveHistory("folders", h)
-					pf.cmdLine.Edit.HistoryPos = -1
+					pf.CmdLine.Edit.HistoryPos = -1
 				}, search, menu)
 			} else {
 				confirmAndClearHistory(i18n.Msg("History.FoldersTitle"), "folders", &h, func() {
-					pf.cmdLine.Edit.HistoryPos = -1
+					pf.CmdLine.Edit.HistoryPos = -1
 				}, search, menu)
 			}
 			return true
@@ -272,8 +254,8 @@ func actionFoldersHistory(pf *PanelsFrame) {
 	vtui.FrameManager.Push(menu)
 }
 
-func actionCommandHistory(pf *PanelsFrame) {
-	h := pf.cmdLine.Edit.History
+func actionCommandHistory(pf *panel.PanelsFrame) {
+	h := pf.CmdLine.Edit.History
 	if len(h) == 0 {
 		vtui.ShowMessage(i18n.Msg("History.Title"), i18n.Msg("History.EmptyCommands"), []string{i18n.Msg("vtui.Ok")})
 		return
@@ -331,7 +313,7 @@ func actionCommandHistory(pf *PanelsFrame) {
 		if dir := rec.Directory(); dir != "" {
 			search.cleanup()
 			menu.Close()
-			if targetPanel := pf.getActivePanel(); targetPanel != nil {
+			if targetPanel := pf.GetActivePanel(); targetPanel != nil {
 				pf.NavigateToPath(targetPanel, dir)
 			}
 		}
@@ -345,8 +327,8 @@ func actionCommandHistory(pf *PanelsFrame) {
 	// selection, which would otherwise make Enter paste a different row.
 	pasteRecord := func(rec history.HistoryRecord) {
 		search.cleanup()
-		pf.cmdLine.Edit.SetText(rec.Name)
-		pf.cmdLine.Edit.HistoryPos = -1
+		pf.CmdLine.Edit.SetText(rec.Name)
+		pf.CmdLine.Edit.HistoryPos = -1
 	}
 	// VMenu.ProcessMouse calls SetExitCode after OnAction, so click closes
 	// the menu automatically — pasteRecord only does the side effect.
@@ -381,7 +363,7 @@ func actionCommandHistory(pf *PanelsFrame) {
 				if path != "" {
 					search.cleanup()
 					menu.Close()
-					pf.insertPathToCmdLine(path)
+					pf.InsertPathToCmdLine(path)
 				}
 				return true
 			}
@@ -392,7 +374,7 @@ func actionCommandHistory(pf *PanelsFrame) {
 
 		if e.VirtualKeyCode == vtinput.VK_NEXT && ctrl && !shift && !alt {
 			if path != "" {
-				if targetPanel := pf.getActivePanel(); targetPanel != nil && pf.NavigateToPath(targetPanel, path) {
+				if targetPanel := pf.GetActivePanel(); targetPanel != nil && pf.NavigateToPath(targetPanel, path) {
 					search.cleanup()
 					menu.Close()
 				}
@@ -407,7 +389,7 @@ func actionCommandHistory(pf *PanelsFrame) {
 					hp.SaveRichHistory("cmdline", search.all)
 				}
 				h = history.ExtractNames(search.all)
-				pf.cmdLine.Edit.History = h
+				pf.CmdLine.Edit.History = h
 				if !isF4 && vtui.GlobalHistoryProvider != nil {
 					vtui.GlobalHistoryProvider.SaveHistory("cmdline", h)
 				}
@@ -423,8 +405,8 @@ func actionCommandHistory(pf *PanelsFrame) {
 		if e.VirtualKeyCode == vtinput.VK_DELETE && !ctrl && !alt && !shift {
 			confirmAndClearRichHistory(i18n.Msg("History.CommandsTitle"), "cmdline", &richCmds, func() {
 				h = history.ExtractNames(richCmds)
-				pf.cmdLine.Edit.History = h
-				pf.cmdLine.Edit.HistoryPos = -1
+				pf.CmdLine.Edit.History = h
+				pf.CmdLine.Edit.HistoryPos = -1
 				if !isF4 && vtui.GlobalHistoryProvider != nil {
 					vtui.GlobalHistoryProvider.SaveHistory("cmdline", h)
 				}
@@ -443,7 +425,7 @@ func actionCommandHistory(pf *PanelsFrame) {
 	vtui.FrameManager.Push(menu)
 }
 
-func showCommandHistoryDetails(pf *PanelsFrame, rec history.HistoryRecord, search *historySearch, menu *vtui.VMenu) {
+func showCommandHistoryDetails(pf *panel.PanelsFrame, rec history.HistoryRecord, search *historySearch, menu *vtui.VMenu) {
 	dateText := "None"
 	timeText := "None"
 	if !rec.Timestamp.IsZero() {
@@ -464,14 +446,14 @@ func showCommandHistoryDetails(pf *PanelsFrame, rec history.HistoryRecord, searc
 		search.cleanup()
 		menu.Close()
 		if code == 1 {
-			if panel := pf.getActivePanel(); panel != nil {
-				pf.NavigateToPath(panel, dir)
+			if pnl := pf.GetActivePanel(); pnl != nil {
+				pf.NavigateToPath(pnl, dir)
 			}
 			return
 		}
 		if code == 2 {
-			pf.cmdLine.Edit.SetText(rec.Name)
-			pf.cmdLine.Edit.HistoryPos = -1
+			pf.CmdLine.Edit.SetText(rec.Name)
+			pf.CmdLine.Edit.HistoryPos = -1
 		}
 	}
 }
@@ -569,32 +551,32 @@ func confirmAndPruneMissingFolderHistory(h *[]string, rich *[]history.HistoryRec
 	}
 }
 
-func actionSortMenu(pf *PanelsFrame) {
-	actionSortMenuForPanel(pf, pf.getActivePanel())
+func actionSortMenu(pf *panel.PanelsFrame) {
+	actionSortMenuForPanel(pf, pf.GetActivePanel())
 }
 
-func actionSortMenuForPanel(pf *PanelsFrame, fsp *FileSystemPanel) {
+func actionSortMenuForPanel(pf *panel.PanelsFrame, fsp *panel.FileSystemPanel) {
 	if fsp == nil {
 		return
 	}
 
 	entries := []struct {
-		mode     SortMode
+		mode     panel.SortMode
 		labelKey string
 		shortcut string
 	}{
-		{mode: SortName, labelKey: "Menu.SortName", shortcut: "Ctrl+F3"},
-		{mode: SortExt, labelKey: "Menu.SortExt", shortcut: "Ctrl+F4"},
-		{mode: SortTime, labelKey: "Menu.SortTime", shortcut: "Ctrl+F5"},
-		{mode: SortSize, labelKey: "Menu.SortSize", shortcut: "Ctrl+F6"},
-		{mode: SortUnsorted, labelKey: "Menu.SortUnsorted", shortcut: "Ctrl+F7"},
+		{mode: panel.SortName, labelKey: "Menu.SortName", shortcut: "Ctrl+F3"},
+		{mode: panel.SortExt, labelKey: "Menu.SortExt", shortcut: "Ctrl+F4"},
+		{mode: panel.SortTime, labelKey: "Menu.SortTime", shortcut: "Ctrl+F5"},
+		{mode: panel.SortSize, labelKey: "Menu.SortSize", shortcut: "Ctrl+F6"},
+		{mode: panel.SortUnsorted, labelKey: "Menu.SortUnsorted", shortcut: "Ctrl+F7"},
 	}
 
 	menu := vtui.NewVMenu(i18n.Msg("Sort.Title"))
 	selected := 0
 	for idx, entry := range entries {
 		prefix := "  "
-		if entry.mode == fsp.sortMode {
+		if entry.mode == fsp.SortMode {
 			prefix = "✓ "
 			selected = idx
 		}
@@ -607,12 +589,12 @@ func actionSortMenuForPanel(pf *PanelsFrame, fsp *FileSystemPanel) {
 	// The last row is a toggle rather than a mode, the way far puts "use sort
 	// groups" below the mode list. Its index is len(entries).
 	groupsPrefix := "  "
-	if fsp.useSortGroups {
+	if fsp.UseSortGroups {
 		groupsPrefix = "✓ "
 	}
 	menu.AddItem(vtui.MenuItem{
 		Text:     groupsPrefix + i18n.Msg("Menu.SortUseGroups"),
-		Shortcut: MenuShortcutsForAction("Shell", "Panel.SortUseGroups"),
+		Shortcut: keymap.MenuShortcutsForAction("Shell", "Panel.SortUseGroups"),
 	})
 
 	menu.SetSelectPos(selected)
@@ -625,7 +607,7 @@ func actionSortMenuForPanel(pf *PanelsFrame, fsp *FileSystemPanel) {
 		default:
 			return
 		}
-		pf.updateMenuCheckmarks()
+		pf.UpdateMenuCheckmarks()
 		vtui.FrameManager.Redraw()
 	}
 
@@ -649,7 +631,7 @@ func actionSortMenuForPanel(pf *PanelsFrame, fsp *FileSystemPanel) {
 	vtui.FrameManager.Push(menu)
 }
 
-func actionEditFileExternal(pf *PanelsFrame, v vfs.VFS, path string, size int64) {
+func actionEditFileExternal(pf *panel.PanelsFrame, v vfs.VFS, path string, size int64) {
 	rememberViewerEditorHistory(v, path, historyModeEdit)
 	cmdStr := editor.ConfiguredExternalEditorCommand()
 	if cmdStr == "" {
@@ -799,7 +781,7 @@ func actionEditFileExternal(pf *PanelsFrame, v vfs.VFS, path string, size int64)
 	})
 }
 
-func runExternalEditor(pf *PanelsFrame, cmdStr, path string) {
+func runExternalEditor(pf *panel.PanelsFrame, cmdStr, path string) {
 	parts := strings.Fields(cmdStr)
 	if len(parts) == 0 {
 		return
@@ -811,9 +793,9 @@ func runExternalEditor(pf *PanelsFrame, cmdStr, path string) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	editor.ConfigureExternalEditorProcess(cmd)
-	if fsp := pf.getActivePanel(); fsp != nil {
-		if _, isLocal := fsp.vfs.(*vfs.OSVFS); isLocal {
-			cmd.Dir = fsp.vfs.GetPath()
+	if fsp := pf.GetActivePanel(); fsp != nil {
+		if _, isLocal := fsp.Vfs.(*vfs.OSVFS); isLocal {
+			cmd.Dir = fsp.Vfs.GetPath()
 		}
 	}
 
@@ -831,7 +813,7 @@ func runExternalEditor(pf *PanelsFrame, cmdStr, path string) {
 	})
 }
 
-func showEditor(pf *PanelsFrame, v vfs.VFS, path string, f vfs.ReadAtCloser) {
+func showEditor(pf *panel.PanelsFrame, v vfs.VFS, path string, f vfs.ReadAtCloser) {
 	var pt *piecetable.PieceTable
 	var buf *editor.AsyncBuffer
 	var mapped *editor.MappedFile
@@ -934,7 +916,7 @@ func showEditor(pf *PanelsFrame, v vfs.VFS, path string, f vfs.ReadAtCloser) {
 	ev.File = f
 	ev.AsyncBuf = buf
 	ev.Mapped = mapped
-	ev.ResizeConsole(pf.lastW, pf.lastH)
+	ev.ResizeConsole(pf.LastW, pf.LastH)
 	ev.StartIndexing()
 
 	vtui.FrameManager.AddScreen(ev)
@@ -973,7 +955,7 @@ func findOpenedEditor(v vfs.VFS, path string) (*editor.EditorView, int) {
 	return nil, -1
 }
 
-func actionOpenEditor(pf *PanelsFrame, v vfs.VFS, path string) {
+func actionOpenEditor(pf *panel.PanelsFrame, v vfs.VFS, path string) {
 	rememberViewerEditorHistory(v, path, historyModeEdit)
 	existingEditor, screenIdx := findOpenedEditor(v, path)
 	if existingEditor != nil {
@@ -1004,7 +986,7 @@ func actionOpenEditor(pf *PanelsFrame, v vfs.VFS, path string) {
 	openEditorInternal(pf, v, path)
 }
 
-func openEditorInternal(pf *PanelsFrame, v vfs.VFS, path string) {
+func openEditorInternal(pf *panel.PanelsFrame, v vfs.VFS, path string) {
 	if config.App.EditorHighlighter == "Colorer" && !editor.SchemasExist() {
 		// Read on the goroutine that starts this work, not inside it: the
 		// work outlives the call, and reading the global from it races
@@ -1066,7 +1048,7 @@ func openEditorInternal(pf *PanelsFrame, v vfs.VFS, path string) {
 	}
 
 	var f vfs.ReadAtCloser
-	pf.runProgressTaskAfter(openingProgressDelay, " Opening... ", "Preparing to edit file...", false, func(ctx context.Context, update func(msg string, percent int)) error {
+	pf.RunProgressTaskAfter(openingProgressDelay, " Opening... ", "Preparing to edit file...", false, func(ctx context.Context, update func(msg string, percent int)) error {
 		update("Opening file...", -1)
 		var err error
 		if v != nil {
@@ -1132,7 +1114,7 @@ func findOpenedViewer(v vfs.VFS, path string) (*viewer.ViewerView, int) {
 	return nil, -1
 }
 
-func showViewer(pf *PanelsFrame, vv *viewer.ViewerView, path string) {
+func showViewer(pf *panel.PanelsFrame, vv *viewer.ViewerView, path string) {
 	if fileops.GlobalFileState != nil && path != "" {
 		if state := fileops.GlobalFileState.GetState(fileops.FileStateKey(vv.VFS, path)); state != nil {
 			vv.TopOffset = state.ViewerOffset
@@ -1149,11 +1131,11 @@ func showViewer(pf *PanelsFrame, vv *viewer.ViewerView, path string) {
 			vv.HexAuto = false
 		}
 	}
-	vv.ResizeConsole(pf.lastW, pf.lastH)
+	vv.ResizeConsole(pf.LastW, pf.LastH)
 	vtui.FrameManager.AddScreen(vv)
 }
 
-func actionOpenViewer(pf *PanelsFrame, v vfs.VFS, path string) {
+func actionOpenViewer(pf *panel.PanelsFrame, v vfs.VFS, path string) {
 	rememberViewerEditorHistory(v, path, historyModeView)
 	existingViewer, screenIdx := findOpenedViewer(v, path)
 	if existingViewer != nil {
@@ -1454,7 +1436,7 @@ func actionSwitchViewerToEditor(vv *viewer.ViewerView) {
 // tryOpenVideoPlayer offers to play a video. It comes before the picture
 // viewer because a file is one or the other, and before the text viewer
 // because a hex dump of an mp4 is not what anybody asked for.
-func tryOpenVideoPlayer(pf *PanelsFrame, v vfs.VFS, path string) bool {
+func tryOpenVideoPlayer(pf *panel.PanelsFrame, v vfs.VFS, path string) bool {
 	if pf == nil || !media.IsVideoFile(path) {
 		return false
 	}
@@ -1474,12 +1456,12 @@ func tryOpenVideoPlayer(pf *PanelsFrame, v vfs.VFS, path string) bool {
 		vtui.DebugLog("VIDEO: %v", err)
 		return false
 	}
-	vv.ResizeConsole(pf.lastW, pf.lastH)
+	vv.ResizeConsole(pf.LastW, pf.LastH)
 	vtui.FrameManager.AddScreen(vv)
 	return true
 }
 
-func tryOpenImageViewer(pf *PanelsFrame, v vfs.VFS, path string) bool {
+func tryOpenImageViewer(pf *panel.PanelsFrame, v vfs.VFS, path string) bool {
 	if pf == nil || !media.IsImageFile(path) {
 		return false
 	}
@@ -1501,7 +1483,7 @@ func tryOpenImageViewer(pf *PanelsFrame, v vfs.VFS, path string) bool {
 	// operations afterwards act on what the reader picked among the
 	// thumbnails. What the panel had picked already is taken here, on the UI
 	// thread, for the same reason the sibling list is.
-	fsp := pf.getActivePanel()
+	fsp := pf.GetActivePanel()
 	picked := make(map[string]bool)
 	if fsp != nil && v != nil {
 		for _, sibling := range siblings {
@@ -1528,7 +1510,7 @@ func tryOpenImageViewer(pf *PanelsFrame, v vfs.VFS, path string) bool {
 					}
 				}
 			}
-			iv.ResizeConsole(pf.lastW, pf.lastH)
+			iv.ResizeConsole(pf.LastW, pf.LastH)
 			vtui.FrameManager.AddScreen(iv)
 		})
 	})
@@ -1538,16 +1520,16 @@ func tryOpenImageViewer(pf *PanelsFrame, v vfs.VFS, path string) bool {
 // imageSiblingPaths lists the pictures next to this one, in the order the
 // active panel shows them. A panel looking somewhere else has nothing to say
 // about this file, and then the viewer simply shows one picture.
-func imageSiblingPaths(pf *PanelsFrame, v vfs.VFS, path string) ([]string, int) {
+func imageSiblingPaths(pf *panel.PanelsFrame, v vfs.VFS, path string) ([]string, int) {
 	if pf == nil || v == nil {
 		return nil, -1
 	}
-	fsp := pf.getActivePanel()
-	if fsp == nil || fsp.vfs == nil {
+	fsp := pf.GetActivePanel()
+	if fsp == nil || fsp.Vfs == nil {
 		return nil, -1
 	}
 	dir := v.Dir(path)
-	if fsp.vfs.GetPath() != dir {
+	if fsp.Vfs.GetPath() != dir {
 		return nil, -1
 	}
 
@@ -1559,7 +1541,7 @@ func imageSiblingPaths(pf *PanelsFrame, v vfs.VFS, path string) ([]string, int) 
 	return paths, index
 }
 
-func openViewerInternal(pf *PanelsFrame, v vfs.VFS, path string) {
+func openViewerInternal(pf *panel.PanelsFrame, v vfs.VFS, path string) {
 	if tryOpenVideoPlayer(pf, v, path) {
 		return
 	}
@@ -1595,7 +1577,7 @@ func openViewerInternal(pf *PanelsFrame, v vfs.VFS, path string) {
 	}
 
 	var vv *viewer.ViewerView
-	pf.runProgressTaskAfter(openingProgressDelay, " Opening... ", "Preparing to open file...", false, func(ctx context.Context, update func(msg string, percent int)) error {
+	pf.RunProgressTaskAfter(openingProgressDelay, " Opening... ", "Preparing to open file...", false, func(ctx context.Context, update func(msg string, percent int)) error {
 		update("Opening file...", -1)
 		ctx = context.WithValue(ctx, vfs.ProgressKey, vfs.ProgressCallback(update))
 		var err error
@@ -1779,11 +1761,11 @@ func runViewerSearch(vv *viewer.ViewerView, pattern string, reverse bool) {
 
 // openPlayerPanel is the player when it is open on the passive side, which
 // is the only side it can be on while a file panel is active.
-func openPlayerPanel(pf *PanelsFrame) *PlayerPanel {
-	if pf == nil || !pf.showPanels || pf.activeIdx < 0 || pf.activeIdx > 1 {
+func openPlayerPanel(pf *panel.PanelsFrame) *PlayerPanel {
+	if pf == nil || !pf.ShowPanels || pf.ActiveIdx < 0 || pf.ActiveIdx > 1 {
 		return nil
 	}
-	player, _ := pf.altPanels[1-pf.activeIdx].(*PlayerPanel)
+	player, _ := pf.AltPanels[1-pf.ActiveIdx].(*PlayerPanel)
 	return player
 }
 
@@ -1792,7 +1774,7 @@ func openPlayerPanel(pf *PanelsFrame) *PlayerPanel {
 // the rest of the panel's audio files become the queue. Without the player
 // open, Enter keeps its usual meaning — associations, then the system
 // opener — so the rule costs nobody anything they did not ask for.
-func tryPlayInPlayerPanel(pf *PanelsFrame, v vfs.VFS, path string) bool {
+func tryPlayInPlayerPanel(pf *panel.PanelsFrame, v vfs.VFS, path string) bool {
 	player := openPlayerPanel(pf)
 	if player == nil || !media.IsAudioFile(path) {
 		return false
@@ -1802,13 +1784,13 @@ func tryPlayInPlayerPanel(pf *PanelsFrame, v vfs.VFS, path string) bool {
 		vtui.ShowMessage(i18n.Msg("Player.Title"), i18n.Msg("Player.LocalOnly"), []string{i18n.Msg("vtui.Ok")})
 		return true
 	}
-	fsp := pf.getActivePanel()
+	fsp := pf.GetActivePanel()
 	if fsp == nil {
 		return false
 	}
 	dir := v.Dir(path)
 	names, index := fsp.AudioSiblings()
-	if index < 0 || fsp.vfs.GetPath() != dir {
+	if index < 0 || fsp.Vfs.GetPath() != dir {
 		names, index = []string{v.Base(path)}, 0
 	}
 	files := make([]string, 0, len(names))
@@ -1824,11 +1806,11 @@ func tryPlayInPlayerPanel(pf *PanelsFrame, v vfs.VFS, path string) bool {
 	return true
 }
 
-func actionExecute(pf *PanelsFrame, v vfs.VFS, dir, name, path string) {
+func actionExecute(pf *panel.PanelsFrame, v vfs.VFS, dir, name, path string) {
 	// User-defined file associations for Enter (mirrors far2l F9 →
 	// Commands → File associations). A matching association intercepts
 	// before the runnable / xdg-open fallback; no match → default flow.
-	if tryFileAssociation(pf, AssocExecute) {
+	if panel.TryFileAssociation(pf, panel.AssocExecute) {
 		return
 	}
 	if tryPlayInPlayerPanel(pf, v, path) {
@@ -1865,8 +1847,8 @@ func actionExecute(pf *PanelsFrame, v vfs.VFS, dir, name, path string) {
 				if !isWindowsShell {
 					historyCmd = "./" + historyCmd
 				}
-				pf.addCommandHistory(historyCmd)
-				pf.cmdLine.Edit.HistoryPos = -1
+				pf.AddCommandHistory(historyCmd)
+				pf.CmdLine.Edit.HistoryPos = -1
 
 				useDir := isOS || isPty
 				actualDir := ""
@@ -1874,16 +1856,16 @@ func actionExecute(pf *PanelsFrame, v vfs.VFS, dir, name, path string) {
 					actualDir = dir
 				}
 
-				if pf.shellMode == terminal.ShellModeSimpleInline {
-					pf.runSimpleInlineCommand(actualDir, historyCmd)
+				if pf.ShellMode == terminal.ShellModeSimpleInline {
+					pf.RunSimpleInlineCommand(actualDir, historyCmd)
 					return
 				}
-				if pf.shellMode == terminal.ShellModeSimpleCaptured {
-					pf.runSimpleCapturedCommand(actualDir, historyCmd)
+				if pf.ShellMode == terminal.ShellModeSimpleCaptured {
+					pf.RunSimpleCapturedCommand(actualDir, historyCmd)
 					return
 				}
 
-				activePty := pf.getActivePTY()
+				activePty := pf.GetActivePTY()
 				if activePty != nil {
 					cmd := name
 					var cmdToWire string
@@ -1913,30 +1895,30 @@ func actionExecute(pf *PanelsFrame, v vfs.VFS, dir, name, path string) {
 						cleanCmd = cmd
 					}
 					if !isWindowsShell {
-						pf.termView.PrintCleanCommand(cleanCmd)
+						pf.TermView.PrintCleanCommand(cleanCmd)
 					}
 
 					// Only the Unix template above wraps the command in an
 					// OSC 133 C/D pair; cmd.exe reports completion through
 					// the prompt marker instead.
 					if isWindowsShell {
-						pf.beginPromptDrivenExecution()
+						pf.BeginPromptDrivenExecution()
 					} else {
-						pf.beginManagedExecution()
+						pf.BeginManagedExecution()
 					}
-					pf.returnToPanels = true
+					pf.ReturnToPanels = true
 
 					if !isWindowsShell {
-						pf.termView.SetMuted(true)
+						pf.TermView.SetMuted(true)
 					}
-					pf.writePTY(activePty, []byte(cmdToWire))
+					_, _ = pf.WritePTY(activePty, []byte(cmdToWire))
 					if isWindowsShell {
 						if cmdline.IsBatchCommand(historyCmd) {
-							pf.cmdSession.noteBatchExecution()
+							pf.CmdSession.NoteBatchExecution()
 						}
-						pf.noteLocalShellLineSent(activePty)
+						pf.NoteLocalShellLineSent(activePty)
 					}
-					pf.showPanels = false
+					pf.ShowPanels = false
 				}
 			})
 		} else {
@@ -1946,14 +1928,14 @@ func actionExecute(pf *PanelsFrame, v vfs.VFS, dir, name, path string) {
 				})
 				return
 			}
-			command, args, ok := associatedFileCommand(path)
+			command, args, ok := panel.AssociatedFileCommand(path)
 			if ok {
 				workingDir := ""
 				if _, isLocal := v.(*vfs.OSVFS); isLocal {
 					workingDir = dir
 				}
 				vtui.DebugLog("ACTIONS: Executing external command: %s %q", command, args)
-				err := pf.runExternalUICommand(command, args, workingDir)
+				err := pf.RunExternalUICommand(command, args, workingDir)
 				if err != nil {
 					vtui.DebugLog("ACTIONS: External command failed: %v", err)
 					ctx.RunOnUI(func() {
@@ -1965,13 +1947,13 @@ func actionExecute(pf *PanelsFrame, v vfs.VFS, dir, name, path string) {
 	})
 }
 
-func actionNewFile(pf *PanelsFrame) {
-	if fsp := pf.getActivePanel(); fsp != nil {
-		dir := fsp.vfs.GetPath()
-		if dispatchPanelAction(pf, vfs.PanelActionCreate, []string{dir}) {
+func actionNewFile(pf *panel.PanelsFrame) {
+	if fsp := pf.GetActivePanel(); fsp != nil {
+		dir := fsp.Vfs.GetPath()
+		if panel.DispatchPanelAction(pf, vfs.PanelActionCreate, []string{dir}) {
 			return
 		}
-		activeVfs := fsp.vfs
+		activeVfs := fsp.Vfs
 		var nameEdit *vtui.Edit
 		dlg := vtui.InputBox(i18n.Msg("Edit.NewFileTitle"), i18n.Msg("Edit.NewFilePrompt"), "", func(name string) {
 			// Record what was actually typed, before the fallback below
@@ -2000,54 +1982,39 @@ func actionNewFile(pf *PanelsFrame) {
 	}
 }
 
-func actionViewTerminalLog(pf *PanelsFrame) {
-	v := terminal.NewTerminalLogVFS(pf.termView, pf.hostConsoleLogFallback())
+func actionViewTerminalLog(pf *panel.PanelsFrame) {
+	v := terminal.NewTerminalLogVFS(pf.TermView, pf.HostConsoleLogFallback())
 	actionOpenViewer(pf, v, "Terminal Log")
 }
 
-func actionEditTerminalLog(pf *PanelsFrame) {
-	v := terminal.NewTerminalLogVFS(pf.termView, pf.hostConsoleLogFallback())
+func actionEditTerminalLog(pf *panel.PanelsFrame) {
+	v := terminal.NewTerminalLogVFS(pf.TermView, pf.HostConsoleLogFallback())
 	actionOpenEditor(pf, v, "Terminal Log")
 }
 
-// hostConsoleLogFallback selects the data source for F3/F4 (Terminal.ViewLog/
-// EditLog). pf.termView only ever sees bytes that came through a real terminal.PTY;
-// under terminal.ShellModeSimpleInline (issue #513 / WINE.md -- Wine has no usable
-// ConPTY) commands run with inherited stdio straight into the host console
-// buffer, never touching termView, so its log is permanently empty there.
-// Read the host console buffer itself instead. Every other shell mode keeps
-// using termView exactly as before (nil here).
-func (pf *PanelsFrame) hostConsoleLogFallback() func() []byte {
-	if pf.shellMode != terminal.ShellModeSimpleInline || !consoleOverlayUsesWinAPI() {
-		return nil
-	}
-	lines := pf.overlayLines()
-	return func() []byte { return terminal.ReadHostConsoleFullText(lines) }
-}
-
-func actionViewFile(pf *PanelsFrame) {
-	if fsp := pf.getActivePanel(); fsp != nil {
+func actionViewFile(pf *panel.PanelsFrame) {
+	if fsp := pf.GetActivePanel(); fsp != nil {
 		idx := fsp.GetCursorIndex()
-		if idx < 0 || idx >= len(fsp.entries) {
+		if idx < 0 || idx >= len(fsp.Entries) {
 			return
 		}
-		if fsp.entries[idx].IsDir {
+		if fsp.Entries[idx].IsDir {
 			actionCalcDirSize(pf, fsp, idx)
 			return
 		}
 		// A matching View association intercepts before the built-in
 		// viewer, so users can wire F3 to feh, less, or anything else.
-		if tryFileAssociation(pf, AssocView) {
+		if panel.TryFileAssociation(pf, panel.AssocView) {
 			return
 		}
 		name := fsp.GetSelectedName()
-		path := fsp.vfs.Join(fsp.vfs.GetPath(), name)
-		actionOpenViewer(pf, fsp.vfs, path)
+		path := fsp.Vfs.Join(fsp.Vfs.GetPath(), name)
+		actionOpenViewer(pf, fsp.Vfs, path)
 	}
 }
 
-func actionCalcDirSize(pf *PanelsFrame, fsp *FileSystemPanel, idx int) {
-	entry := fsp.entries[idx]
+func actionCalcDirSize(pf *panel.PanelsFrame, fsp *panel.FileSystemPanel, idx int) {
+	entry := fsp.Entries[idx]
 	name := entry.Name
 	// ".." is a panel navigation row, not a directory owned by this VFS.
 	// Trying to scan it from an archive crosses the virtual root and produces
@@ -2055,9 +2022,9 @@ func actionCalcDirSize(pf *PanelsFrame, fsp *FileSystemPanel, idx int) {
 	if name == ".." {
 		return
 	}
-	basePath := fsp.vfs.GetPath()
+	basePath := fsp.Vfs.GetPath()
 
-	var targetPath = fsp.vfs.Join(basePath, name)
+	var targetPath = fsp.Vfs.Join(basePath, name)
 
 	opDlg := fileops.NewFileOpProgressDialog(" Calculating Size... ")
 	var taskCtx *vtui.TaskContext
@@ -2075,7 +2042,7 @@ func actionCalcDirSize(pf *PanelsFrame, fsp *FileSystemPanel, idx int) {
 	taskCtx = vtui.RunAsync(func(ctx *vtui.TaskContext) {
 		var totalStats vfs.OpStats
 		lastScanUpdate := time.Now()
-		totalStats, scanErr := vfs.CalculateStats(ctx.Context, fsp.vfs, targetPath, []string{""}, func(currentPath string, stats vfs.OpStats) {
+		totalStats, scanErr := vfs.CalculateStats(ctx.Context, fsp.Vfs, targetPath, []string{""}, func(currentPath string, stats vfs.OpStats) {
 			now := time.Now()
 			if now.Sub(lastScanUpdate) > 50*time.Millisecond {
 				lastScanUpdate = now
@@ -2095,10 +2062,10 @@ func actionCalcDirSize(pf *PanelsFrame, fsp *FileSystemPanel, idx int) {
 			if ctx.Err() == nil {
 				entry.Size = totalStats.Bytes
 				entry.SizeCalculated = true
-				if fsp.sortMode == SortSize {
-					fsp.sortEntries()
+				if fsp.SortMode == panel.SortSize {
+					fsp.SortEntries()
 					// Keep cursor on the same item after re-sorting
-					for i, e := range fsp.entries {
+					for i, e := range fsp.Entries {
 						if e == entry {
 							fsp.SetCursorIndex(i)
 							break
@@ -2111,39 +2078,39 @@ func actionCalcDirSize(pf *PanelsFrame, fsp *FileSystemPanel, idx int) {
 	})
 }
 
-func actionEditFile(pf *PanelsFrame) {
-	if fsp := pf.getActivePanel(); fsp != nil {
-		if dispatchPanelAction(pf, vfs.PanelActionEdit, selectedPanelActionPaths(fsp)) {
+func actionEditFile(pf *panel.PanelsFrame) {
+	if fsp := pf.GetActivePanel(); fsp != nil {
+		if panel.DispatchPanelAction(pf, vfs.PanelActionEdit, panel.SelectedPanelActionPaths(fsp)) {
 			return
 		}
 		idx := fsp.GetCursorIndex()
-		if idx < 0 || idx >= len(fsp.entries) {
+		if idx < 0 || idx >= len(fsp.Entries) {
 			return
 		}
-		if fsp.entries[idx].IsDir {
+		if fsp.Entries[idx].IsDir {
 			actionFileAttributes(pf)
 			return
 		}
 		// A matching Edit association intercepts before the built-in
 		// editor (or the external one if UseExternalEditor is on).
-		if tryFileAssociation(pf, AssocEdit) {
+		if panel.TryFileAssociation(pf, panel.AssocEdit) {
 			return
 		}
 		name := fsp.GetSelectedName()
-		path := fsp.vfs.Join(fsp.vfs.GetPath(), name)
+		path := fsp.Vfs.Join(fsp.Vfs.GetPath(), name)
 
 		if config.App.UseExternalEditor {
-			actionEditFileExternal(pf, fsp.vfs, path, fsp.entries[idx].Size)
+			actionEditFileExternal(pf, fsp.Vfs, path, fsp.Entries[idx].Size)
 			return
 		}
 
-		actionOpenEditor(pf, fsp.vfs, path)
+		actionOpenEditor(pf, fsp.Vfs, path)
 	}
 }
 
-func actionCopyMove(pf *PanelsFrame, isMove bool) {
-	fspSrc := pf.getActivePanel()
-	fspDst := pf.getInactivePanel()
+func actionCopyMove(pf *panel.PanelsFrame, isMove bool) {
+	fspSrc := pf.GetActivePanel()
+	fspDst := pf.GetInactivePanel()
 	if fspSrc == nil || fspDst == nil {
 		return
 	}
@@ -2160,9 +2127,9 @@ func actionCopyMove(pf *PanelsFrame, isMove bool) {
 		prompt = i18n.Msg("Move.Prompt")
 	}
 
-	srcVfs, dstVfs := fspSrc.vfs, fspDst.vfs
+	srcVfs, dstVfs := fspSrc.Vfs, fspDst.Vfs
 	srcBasePath := srcVfs.GetPath()
-	if player, ok := pf.altPanels[1-pf.activeIdx].(*PlayerPanel); ok {
+	if player, ok := pf.AltPanels[1-pf.ActiveIdx].(*PlayerPanel); ok {
 		// The player panel is a playlist, not a place: F5 adds
 		// references, F6 is refused rather than moving music around.
 		if isMove {
@@ -2184,22 +2151,22 @@ func actionCopyMove(pf *PanelsFrame, isMove bool) {
 			vtui.ShowMessage(i18n.Msg("Player.Title"), i18n.Msg("Player.NothingAdded"), []string{i18n.Msg("vtui.Ok")})
 			return
 		}
-		fspSrc.selectedItems = make(map[string]bool)
-		for _, entry := range fspSrc.entries {
+		fspSrc.SelectedItems = make(map[string]bool)
+		for _, entry := range fspSrc.Entries {
 			entry.Selected = false
 		}
 		vtui.FrameManager.Redraw()
 		return
 	}
-	if temp, ok := dstVfs.(*TempPanelVFS); ok {
+	if temp, ok := dstVfs.(*panel.TempPanelVFS); ok {
 		// A temporary panel contains references, not copies. Keep F5/F6
 		// useful for it, but never remove the real source on F6: the
 		// reference list is intentionally non-destructive.
 		if err := temp.AddReferences(context.Background(), srcVfs, names); err != nil {
 			vtui.ShowMessage(i18n.Msg("Error.Title"), fmt.Sprintf(i18n.Msg("TempPanel.AddError"), err), []string{i18n.Msg("vtui.Ok")})
 		}
-		fspSrc.selectedItems = make(map[string]bool)
-		for _, entry := range fspSrc.entries {
+		fspSrc.SelectedItems = make(map[string]bool)
+		for _, entry := range fspSrc.Entries {
 			entry.Selected = false
 		}
 		pf.RefreshAll()
@@ -2217,9 +2184,9 @@ func actionCopyMove(pf *PanelsFrame, isMove bool) {
 
 	onCompleteWithClear := func() {
 		if pf != nil {
-			if fsp := pf.getActivePanel(); fsp != nil {
-				fsp.selectedItems = make(map[string]bool)
-				for _, e := range fsp.entries {
+			if fsp := pf.GetActivePanel(); fsp != nil {
+				fsp.SelectedItems = make(map[string]bool)
+				for _, e := range fsp.Entries {
 					e.Selected = false
 				}
 			}
@@ -2231,8 +2198,8 @@ func actionCopyMove(pf *PanelsFrame, isMove bool) {
 	// to land before the operation starts — afterwards the name it would look
 	// for is gone.
 	if isMove {
-		if fsp := pf.getActivePanel(); fsp != nil {
-			fsp.pendingSelection = fsp.GetSuccessorName()
+		if fsp := pf.GetActivePanel(); fsp != nil {
+			fsp.PendingSelection = fsp.GetSuccessorName()
 		}
 	}
 
@@ -2316,13 +2283,13 @@ func actionCopyMove(pf *PanelsFrame, isMove bool) {
 
 	vtui.FrameManager.Push(dlg)
 }
-func actionRename(pf *PanelsFrame) {
-	fsp := pf.getActivePanel()
+func actionRename(pf *panel.PanelsFrame) {
+	fsp := pf.GetActivePanel()
 	if fsp == nil {
 		return
 	}
 
-	name := fsp.getRawSelectedName()
+	name := fsp.GetRawSelectedName()
 	if name == "" || name == ".." {
 		return
 	}
@@ -2331,31 +2298,31 @@ func actionRename(pf *PanelsFrame) {
 		if newName == "" || newName == name {
 			return
 		}
-		oldPath := fsp.vfs.Join(fsp.vfs.GetPath(), name)
-		newPath := fsp.vfs.Join(fsp.vfs.GetPath(), newName)
+		oldPath := fsp.Vfs.Join(fsp.Vfs.GetPath(), name)
+		newPath := fsp.Vfs.Join(fsp.Vfs.GetPath(), newName)
 
 		vtui.RunAsync(func(ctx *vtui.TaskContext) {
 			// The rename dialog never asks for overwrite confirmation. Carry an
 			// atomic no-replace decision so remote providers cannot silently
 			// destroy an entry that already has the requested name.
-			err := fsp.vfs.Rename(vfs.WithDestinationOverwrite(ctx.Context, false), oldPath, newPath)
+			err := fsp.Vfs.Rename(vfs.WithDestinationOverwrite(ctx.Context, false), oldPath, newPath)
 			ctx.RunOnUI(func() {
 				if err != nil {
 					vtui.ShowMessage(" Error ", fmt.Sprintf("Failed to rename:\n%v", err), []string{"&Ok"})
-					fsp.pendingSelection = name
+					fsp.PendingSelection = name
 				} else {
 					// Clear cache to ensure the new name is visible immediately
-					delete(fsp.dirCache, fsp.cacheKey(fsp.vfs.GetPath()))
-					fsp.pendingSelection = newName
+					delete(fsp.DirCache, fsp.CacheKey(fsp.Vfs.GetPath()))
+					fsp.PendingSelection = newName
 				}
 				pf.RefreshAll()
 			})
 		})
 	})
 }
-func actionCreateLink(pf *PanelsFrame) {
-	fspSrc := pf.getActivePanel()
-	fspDst := pf.getInactivePanel()
+func actionCreateLink(pf *panel.PanelsFrame) {
+	fspSrc := pf.GetActivePanel()
+	fspDst := pf.GetInactivePanel()
 	if fspSrc == nil || fspDst == nil {
 		return
 	}
@@ -2370,10 +2337,10 @@ func actionCreateLink(pf *PanelsFrame) {
 		prompt = fmt.Sprintf(i18n.Msg("Link.PromptMultiple"), len(names))
 	}
 
-	initialDest := fspDst.vfs.GetPath()
+	initialDest := fspDst.Vfs.GetPath()
 	if initialDest != "" && !strings.HasSuffix(initialDest, "/") && !strings.HasSuffix(initialDest, "\\") {
 		sep := "/"
-		if _, isOS := fspDst.vfs.(*vfs.OSVFS); isOS && runtime.GOOS == "windows" {
+		if _, isOS := fspDst.Vfs.(*vfs.OSVFS); isOS && runtime.GOOS == "windows" {
 			sep = "\\"
 		}
 		initialDest += sep
@@ -2413,8 +2380,8 @@ func actionCreateLink(pf *PanelsFrame) {
 		}
 
 		vtui.RunAsync(func(ctx *vtui.TaskContext) {
-			srcVfs := fspSrc.vfs
-			dstVfs := fspDst.vfs
+			srcVfs := fspSrc.Vfs
+			dstVfs := fspDst.Vfs
 			srcBasePath := srcVfs.GetPath()
 
 			var errs []string
@@ -2494,18 +2461,18 @@ func actionCreateLink(pf *PanelsFrame) {
 
 	vtui.FrameManager.Push(dlg)
 }
-func actionCopyInPlace(pf *PanelsFrame) {
-	fsp := pf.getActivePanel()
+func actionCopyInPlace(pf *panel.PanelsFrame) {
+	fsp := pf.GetActivePanel()
 	if fsp == nil {
 		return
 	}
 
-	name := fsp.getRawSelectedName()
+	name := fsp.GetRawSelectedName()
 	if name == "" || name == ".." {
 		return
 	}
 
-	sourceVFS := fsp.vfs
+	sourceVFS := fsp.Vfs
 	sourceBasePath := sourceVFS.GetPath()
 	dialog.FileInputBox(" Copy ", "Copy '"+name+"' to:", name, func(newName string) {
 		if newName == "" || newName == name {
@@ -2515,9 +2482,9 @@ func actionCopyInPlace(pf *PanelsFrame) {
 
 		onCompleteWithClear := func() {
 			if pf != nil {
-				if fsp := pf.getActivePanel(); fsp != nil {
-					fsp.selectedItems = make(map[string]bool)
-					for _, e := range fsp.entries {
+				if fsp := pf.GetActivePanel(); fsp != nil {
+					fsp.SelectedItems = make(map[string]bool)
+					for _, e := range fsp.Entries {
 						e.Selected = false
 					}
 				}
@@ -2528,7 +2495,7 @@ func actionCopyInPlace(pf *PanelsFrame) {
 		go fileops.ExecuteFileOpAt(sourceVFS, sourceVFS, sourceBasePath, []string{name}, newPath, false, config.App.DefaultFileOpMode, onCompleteWithClear)
 	})
 }
-func actionEditorSettings(pf *PanelsFrame) {
+func actionEditorSettings(pf *panel.PanelsFrame) {
 	// Height sized so the 3×2 checkbox grid stacks tight (no blank
 	// rows between rows of the grid). See #298.
 	width, height := 78, 27
@@ -2877,7 +2844,7 @@ func actionEditorSettings(pf *PanelsFrame) {
 // stopPlayerForDelete lets go of a file the player is reading when it is
 // about to be deleted, so the delete succeeds on Windows and the player does
 // not stay on a file that is gone. Nothing happens for other files.
-func stopPlayerForDelete(pf *PanelsFrame, v vfs.VFS, basePath string, names []string) {
+func stopPlayerForDelete(pf *panel.PanelsFrame, v vfs.VFS, basePath string, names []string) {
 	player := openPlayerPanel(pf)
 	if player == nil {
 		return
@@ -2900,7 +2867,7 @@ func stopPlayerForDelete(pf *PanelsFrame, v vfs.VFS, basePath string, names []st
 // actionDelete follows the global trash preference. The disposition is
 // resolved here, before a task can be queued, so later settings changes cannot
 // alter the meaning of an already confirmed operation.
-func actionDelete(pf *PanelsFrame) {
+func actionDelete(pf *panel.PanelsFrame) {
 	disposition := vfs.DeletePermanently
 	if config.App.UseTrash {
 		disposition = vfs.DeleteToTrash
@@ -2910,23 +2877,23 @@ func actionDelete(pf *PanelsFrame) {
 
 // actionDeletePermanent is bound to Shift+Del/Shift+NumDel and intentionally
 // ignores the global trash preference.
-func actionDeletePermanent(pf *PanelsFrame) {
+func actionDeletePermanent(pf *panel.PanelsFrame) {
 	actionDeleteWithDisposition(pf, vfs.DeletePermanently, true)
 }
 
-func actionDeleteWithDisposition(pf *PanelsFrame, disposition vfs.DeleteDisposition, explicitPermanent bool) {
-	fsp := pf.getActivePanel()
+func actionDeleteWithDisposition(pf *panel.PanelsFrame, disposition vfs.DeleteDisposition, explicitPermanent bool) {
+	fsp := pf.GetActivePanel()
 	if fsp == nil {
 		return
 	}
 
-	activeVfs := fsp.vfs
+	activeVfs := fsp.Vfs
 	basePath := activeVfs.GetPath()
 	names := fsp.GetSelectedNames()
 	if len(names) == 0 {
 		return
 	}
-	if dispatchPanelAction(pf, vfs.PanelActionDelete, selectedPanelActionPaths(fsp)) {
+	if panel.DispatchPanelAction(pf, vfs.PanelActionDelete, panel.SelectedPanelActionPaths(fsp)) {
 		return
 	}
 
@@ -2943,7 +2910,7 @@ func actionDeleteWithDisposition(pf *PanelsFrame, disposition vfs.DeleteDisposit
 	}
 
 	if !config.App.ConfirmDelete {
-		fsp.pendingSelection = fsp.GetSuccessorName()
+		fsp.PendingSelection = fsp.GetSuccessorName()
 		stopPlayerForDelete(pf, activeVfs, basePath, names)
 		go fileops.ExecuteDeleteOpWithDispositionAt(activeVfs, basePath, names, config.App.DefaultFileOpMode, disposition, pf.RefreshAll)
 		return
@@ -3008,7 +2975,7 @@ func actionDeleteWithDisposition(pf *PanelsFrame, disposition vfs.DeleteDisposit
 	btnCancel.OnClick = func() { dlg.Close() }
 	btnDel.OnClick = func() {
 		mode := comboMode.Menu.SelectPos
-		fsp.pendingSelection = fsp.GetSuccessorName()
+		fsp.PendingSelection = fsp.GetSuccessorName()
 		dlg.Close()
 		stopPlayerForDelete(pf, activeVfs, basePath, names)
 		go fileops.ExecuteDeleteOpWithDispositionAt(activeVfs, basePath, names, mode, disposition, pf.RefreshAll)
@@ -3023,29 +2990,29 @@ func actionDeleteWithDisposition(pf *PanelsFrame, disposition vfs.DeleteDisposit
 	vtui.FrameManager.Push(dlg)
 }
 
-func actionMkDir(pf *PanelsFrame) {
-	panel := pf.getActivePanel()
-	if panel == nil {
+func actionMkDir(pf *panel.PanelsFrame) {
+	pnl := pf.GetActivePanel()
+	if pnl == nil {
 		return
 	}
-	if temp, isTempPanel := panel.vfs.(*TempPanelVFS); isTempPanel {
+	if temp, isTempPanel := pnl.Vfs.(*panel.TempPanelVFS); isTempPanel {
 		// F7 removes references from TempPanel. Do this at the concrete F7
 		// action boundary: PanelActionCreate is also used by Shift+F4 for
 		// creating a new file and must keep its ordinary meaning.
-		paths := selectedPanelActionPaths(panel)
+		paths := panel.SelectedPanelActionPaths(pnl)
 		if len(paths) > 0 {
 			// Unlike a real delete, removing a TempPanel reference is immediate.
 			// Preserve the row above the removed item before the refresh resets
 			// the asynchronously loaded panel contents.
-			panel.pendingSelection = panel.GetPredecessorName()
+			pnl.PendingSelection = pnl.GetPredecessorName()
 		}
-		if temp.removePanelReferences(paths) {
+		if temp.RemovePanelReferences(paths) {
 			pf.RefreshAll()
 			return
 		}
 	}
 
-	activeVfs := panel.vfs
+	activeVfs := pnl.Vfs
 
 	dlg := vtui.NewCenteredDialog(40, 11, i18n.Msg("MakeFolder.Title"))
 	dlg.ShowClose = true
@@ -3119,7 +3086,7 @@ func actionMkDir(pf *PanelsFrame) {
 				ResKeys: keys,
 				Run:     runFunc,
 				OnComplete: func() {
-					panel.pendingSelection = name
+					pnl.PendingSelection = name
 					pf.RefreshAll()
 				},
 			}
@@ -3131,7 +3098,7 @@ func actionMkDir(pf *PanelsFrame) {
 					if err != nil {
 						vtui.ShowMessage(" Error ", fmt.Sprintf(i18n.Msg("Operation.Error"), err.Error()), []string{"&Ok"})
 					}
-					panel.pendingSelection = name
+					pnl.PendingSelection = name
 					pf.RefreshAll()
 				})
 			})
@@ -3146,15 +3113,15 @@ func actionMkDir(pf *PanelsFrame) {
 // answer a duplicate search. It is what keeps the menu entry out of sight
 // on the ones that cannot, rather than offering it and refusing.
 func panelCanFindDuplicates() bool {
-	pf := findPanelsFrameAnyScreen()
+	pf := panel.FindPanelsFrameAnyScreen()
 	if pf == nil {
 		return false
 	}
-	fsp := pf.getActivePanel()
+	fsp := pf.GetActivePanel()
 	if fsp == nil {
 		return false
 	}
-	_, ok := fsp.vfs.(vfs.DuplicateFinder)
+	_, ok := fsp.Vfs.(vfs.DuplicateFinder)
 	return ok
 }
 
@@ -3162,12 +3129,12 @@ func panelCanFindDuplicates() bool {
 // content. Only a file system that can do the work on its own side offers
 // it: doing it from here would mean reading every candidate over the
 // network, which costs more than the answer is worth.
-func actionFindDuplicates(pf *PanelsFrame) {
-	fsp := pf.getActivePanel()
+func actionFindDuplicates(pf *panel.PanelsFrame) {
+	fsp := pf.GetActivePanel()
 	if fsp == nil {
 		return
 	}
-	finder, ok := fsp.vfs.(vfs.DuplicateFinder)
+	finder, ok := fsp.Vfs.(vfs.DuplicateFinder)
 	if !ok {
 		// Reachable through a key binding or a macro, which the menu's
 		// visibility rule does not cover.
@@ -3177,7 +3144,7 @@ func actionFindDuplicates(pf *PanelsFrame) {
 		return
 	}
 
-	v := fsp.vfs
+	v := fsp.Vfs
 	root := v.GetPath()
 	opDlg := fileops.NewFileOpProgressDialog(" Searching for duplicates... ")
 	var taskCtx *vtui.TaskContext
@@ -3206,7 +3173,7 @@ func actionFindDuplicates(pf *PanelsFrame) {
 		// Started against the connection it runs on, so that a session
 		// rebuilt from another panel takes this job off the list instead of
 		// leaving it there waiting for an answer that cannot come.
-		job := terminal.GlobalBackgroundJobs.StartOn(sessionKeyOf(v), "Duplicates in "+root, ctx.Cancel)
+		job := terminal.GlobalBackgroundJobs.StartOn(panel.SessionKeyOf(v), "Duplicates in "+root, ctx.Cancel)
 		finished := false
 		defer func() {
 			if !finished {
@@ -3234,7 +3201,7 @@ func actionFindDuplicates(pf *PanelsFrame) {
 		// The panel wants an item per row, and a group is only recognizable
 		// by its neighbours, so the groups are flattened in order and the
 		// rows of one group stay adjacent.
-		var found []FoundFile
+		var found []panel.FoundFile
 		if err == nil {
 			for _, group := range groups {
 				for _, p := range group {
@@ -3242,7 +3209,7 @@ func actionFindDuplicates(pf *PanelsFrame) {
 					if statErr != nil {
 						item = vfs.VFSItem{Name: v.Base(p)}
 					}
-					found = append(found, FoundFile{Path: p, Item: item})
+					found = append(found, panel.FoundFile{Path: p, Item: item})
 				}
 			}
 		}
@@ -3304,8 +3271,8 @@ func boolToCheckboxState(value bool) int {
 	return 0
 }
 
-func actionFindFile(pf *PanelsFrame) {
-	activePanel := pf.getActivePanel()
+func actionFindFile(pf *panel.PanelsFrame) {
+	activePanel := pf.GetActivePanel()
 	if activePanel == nil {
 		return
 	}
@@ -3404,7 +3371,7 @@ func actionFindFile(pf *PanelsFrame) {
 		SaveSession()
 		dlg.Close()
 		if LastFindFileMask != "" {
-			ExecuteFindFile(pf, activePanel.vfs, activePanel.vfs.GetPath(), LastFindFileMask, LastFindFileText, FindFileOptions{
+			ExecuteFindFile(pf, activePanel.Vfs, activePanel.Vfs.GetPath(), LastFindFileMask, LastFindFileText, FindFileOptions{
 				CaseSensitive: LastFindFileCaseSensitive,
 				WholeWords:    LastFindFileWholeWords,
 				Regex:         LastFindFileRegexp,
@@ -3417,7 +3384,7 @@ func actionFindFile(pf *PanelsFrame) {
 
 	vtui.FrameManager.Push(dlg)
 }
-func actionSaveSettings(pf *PanelsFrame) {
+func actionSaveSettings(pf *panel.PanelsFrame) {
 	const width, height = 54, 11
 	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("SaveSettings.Title"))
 	dlg.ShowClose = true
@@ -3464,7 +3431,7 @@ func actionSaveSettings(pf *PanelsFrame) {
 	vtui.FrameManager.PushToFrameScreen(pf, dlg)
 }
 
-func actionAutoSaveSettings(pf *PanelsFrame) {
+func actionAutoSaveSettings(pf *panel.PanelsFrame) {
 	const width, height = 66, 13
 	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("PanelSettings.AutoSaveDetails"))
 	dlg.ShowClose = true
@@ -3516,7 +3483,7 @@ func actionAutoSaveSettings(pf *PanelsFrame) {
 	vtui.FrameManager.PushToFrameScreen(pf, dlg)
 }
 
-func actionPanelSettings(pf *PanelsFrame) {
+func actionPanelSettings(pf *panel.PanelsFrame) {
 	// Keep the frequently used panel and navigation options in a compact
 	// dialog. The less frequently changed performance, console, and operation
 	// display options live in actionPanelAdditionalSettings below. Keeping both
@@ -3688,13 +3655,13 @@ func actionPanelSettings(pf *PanelsFrame) {
 		config.SyncAutoSaveMaster()
 		config.App.UseTrash = chkUseTrash.State == 1
 		config.App.CommandLineAutoComplete = chkCmdAc.State == 1
-		pf.cmdLine.Edit.PathHintsEnabled = config.App.CommandLineAutoComplete
+		pf.CmdLine.Edit.PathHintsEnabled = config.App.CommandLineAutoComplete
 		config.App.NavigationMode = config.PanelNavigationMode(navigation.Selected)
 		config.App.SearchCommandStayFocused = chkStayFocused.State == 1
-		pf.applyNavigationMode()
+		pf.ApplyNavigationMode()
 		config.SaveConfig()
 		dlg.Close()
-		pf.ResizeConsole(pf.lastW, pf.lastH)
+		pf.ResizeConsole(pf.LastW, pf.LastH)
 		pf.RefreshAll()
 	}
 	btnAdditional.OnClick = func() { actionPanelAdditionalSettings(pf) }
@@ -3703,7 +3670,7 @@ func actionPanelSettings(pf *PanelsFrame) {
 	vtui.FrameManager.Push(dlg)
 }
 
-func actionPanelAdditionalSettings(pf *PanelsFrame) {
+func actionPanelAdditionalSettings(pf *panel.PanelsFrame) {
 	// This page contains the options that are changed less often than the
 	// panel/navigation controls. Keep it below 25 rows even when the host
 	// console notice needs a separate line.
@@ -3865,14 +3832,14 @@ func actionPanelAdditionalSettings(pf *PanelsFrame) {
 		config.App.MacroRecordFormat = comboMacro.Menu.SelectPos
 		config.SaveConfig()
 		dlg.Close()
-		pf.ResizeConsole(pf.lastW, pf.lastH)
+		pf.ResizeConsole(pf.LastW, pf.LastH)
 		pf.RefreshAll()
 	}
 
 	vtui.FrameManager.Push(dlg)
 }
 
-func actionConfirmationsSettings(pf *PanelsFrame) {
+func actionConfirmationsSettings(pf *panel.PanelsFrame) {
 	const width, height = 56, 15
 	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("ConfirmationsSettings.Title"))
 	dlg.ShowClose = true
@@ -3950,7 +3917,7 @@ func actionConfirmationsSettings(pf *PanelsFrame) {
 	vtui.FrameManager.Push(dlg)
 }
 
-func actionMouseWheelSettings(pf *PanelsFrame) {
+func actionMouseWheelSettings(pf *panel.PanelsFrame) {
 	const width, height = 44, 22
 	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("MouseWheel.Title"))
 	dlg.ShowClose = true
@@ -4065,7 +4032,7 @@ func actionMouseWheelSettings(pf *PanelsFrame) {
 	vtui.FrameManager.Push(dlg)
 }
 
-func actionPathHintSettings(pf *PanelsFrame) {
+func actionPathHintSettings(pf *panel.PanelsFrame) {
 	const width, height = 56, 19
 	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("PathHints.Title"))
 	dlg.ShowClose = true
@@ -4172,14 +4139,14 @@ func actionPathHintSettings(pf *PanelsFrame) {
 		config.App.PathHintMaxVisible = maxVisible
 		config.App.PathHintPerCategory = chkPerCategory.State == 1
 		config.App.DialogAutoComplete = chkDialogAutoComplete.State == 1
-		applyPathHintSettings()
+		panel.ApplyPathHintSettings()
 		config.SaveConfig()
 		dlg.Close()
 	}
 
 	vtui.FrameManager.Push(dlg)
 }
-func actionUpdateSettings(pf *PanelsFrame) {
+func actionUpdateSettings(pf *panel.PanelsFrame) {
 	width, height := 54, 11
 	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("UpdateSettings.Title"))
 	dlg.ShowClose = true
@@ -4260,7 +4227,7 @@ func actionUpdateSettings(pf *PanelsFrame) {
 	vtui.FrameManager.Push(dlg)
 }
 
-func actionImportFar2lHistory(pf *PanelsFrame) {
+func actionImportFar2lHistory(pf *panel.PanelsFrame) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		vtui.ShowMessage(" Error ", "Cannot find user home directory.", []string{"&Ok"})
@@ -4309,7 +4276,7 @@ func actionImportFar2lHistory(pf *PanelsFrame) {
 					}
 				}
 
-				limit := pf.cmdLine.Edit.HistoryLimit
+				limit := pf.CmdLine.Edit.HistoryLimit
 				if limit <= 0 {
 					limit = 100
 				}
@@ -4320,7 +4287,7 @@ func actionImportFar2lHistory(pf *PanelsFrame) {
 				hp.SaveRichHistory("cmdline", merged)
 
 				h := history.ExtractNames(merged)
-				pf.cmdLine.Edit.History = h
+				pf.CmdLine.Edit.History = h
 
 				toast.Show(fmt.Sprintf("Imported %d new commands from far2l.", len(merged)-len(current)), 3*time.Second)
 			})
@@ -4328,7 +4295,7 @@ func actionImportFar2lHistory(pf *PanelsFrame) {
 	}
 }
 
-func actionAppearanceSettings(pf *PanelsFrame) {
+func actionAppearanceSettings(pf *panel.PanelsFrame) {
 	const width, height = 64, 30
 	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("AppearanceSettings.Title"))
 	dlg.ShowClose = true
@@ -4594,7 +4561,7 @@ func actionAppearanceSettings(pf *PanelsFrame) {
 		config.App.RestoreWorkspaceTabs = chkRestoreWorkspaceTabs.State == 1
 		config.App.WorkspaceTabNumbering = config.WorkspaceTabNumberingMode(comboWorkspaceNumbering.Menu.SelectPos)
 		if config.App.WorkspaceTabNumbering == config.WorkspaceTabNumbersOrder {
-			renumberWorkspaceScreens()
+			panel.RenumberWorkspaceScreens()
 		}
 		config.SaveConfig()
 
@@ -4624,7 +4591,7 @@ func actionAppearanceSettings(pf *PanelsFrame) {
 	vtui.FrameManager.Push(dlg)
 }
 
-func actionManagePlugins(pf *PanelsFrame) {
+func actionManagePlugins(pf *panel.PanelsFrame) {
 	width, height := 60, 16
 	btnAdd := vtui.NewButton(0, 0, i18n.Msg("Plugins.BtnAdd"))
 	btnDel := vtui.NewButton(0, 0, i18n.Msg("Plugins.BtnRemove"))
@@ -4671,9 +4638,9 @@ func actionManagePlugins(pf *PanelsFrame) {
 
 	btnAdd.OnClick = func() {
 		startPath := "."
-		if fsp := pf.getActivePanel(); fsp != nil {
-			if _, ok := fsp.vfs.(*vfs.OSVFS); ok {
-				startPath = fsp.vfs.GetPath()
+		if fsp := pf.GetActivePanel(); fsp != nil {
+			if _, ok := fsp.Vfs.(*vfs.OSVFS); ok {
+				startPath = fsp.Vfs.GetPath()
 			}
 		}
 		showPluginFileDialog(dlg, startPath, func(path string) {
@@ -4844,9 +4811,9 @@ func showPluginFileDialog(parent *vtui.Window, startPath string, onSelect func(s
 	vtui.FrameManager.PushToFrameScreen(parent, dlg)
 }
 
-func actionFileAttributes(pf *PanelsFrame) {
-	fsp := pf.getActivePanel()
-	if fsp == nil || fsp.vfs == nil {
+func actionFileAttributes(pf *panel.PanelsFrame) {
+	fsp := pf.GetActivePanel()
+	if fsp == nil || fsp.Vfs == nil {
 		return
 	}
 
@@ -4858,7 +4825,7 @@ func actionFileAttributes(pf *PanelsFrame) {
 	paths := make([]string, 0, len(names))
 	for _, name := range names {
 		if name != "" && name != ".." {
-			paths = append(paths, fsp.vfs.Join(fsp.vfs.GetPath(), name))
+			paths = append(paths, fsp.Vfs.Join(fsp.Vfs.GetPath(), name))
 		}
 	}
 	if len(paths) == 0 {
@@ -4868,7 +4835,7 @@ func actionFileAttributes(pf *PanelsFrame) {
 	vtui.RunAsync(func(ctx *vtui.TaskContext) {
 		targets := make([]dialog.AttributesTarget, 0, len(paths))
 		for _, path := range paths {
-			item, err := vfs.Lstat(ctx.Context, fsp.vfs, path)
+			item, err := vfs.Lstat(ctx.Context, fsp.Vfs, path)
 			if err != nil {
 				ctx.RunOnUI(func() {
 					vtui.ShowMessage(" Error ", err.Error(), []string{"&Ok"})
@@ -4878,14 +4845,14 @@ func actionFileAttributes(pf *PanelsFrame) {
 			targets = append(targets, dialog.AttributesTarget{Path: path, Item: item})
 		}
 		ctx.RunOnUI(func() {
-			dialog.ShowAttributesDialogForTargets(pf.RefreshAll, fsp.vfs, targets)
+			dialog.ShowAttributesDialogForTargets(pf.RefreshAll, fsp.Vfs, targets)
 		})
 	})
 }
 
-func actionEditSymlink(pf *PanelsFrame) {
-	fsp := pf.getActivePanel()
-	if fsp == nil || fsp.vfs == nil {
+func actionEditSymlink(pf *panel.PanelsFrame) {
+	fsp := pf.GetActivePanel()
+	if fsp == nil || fsp.Vfs == nil {
 		return
 	}
 
@@ -4895,7 +4862,7 @@ func actionEditSymlink(pf *PanelsFrame) {
 		return
 	}
 
-	v := fsp.vfs
+	v := fsp.Vfs
 	path := v.Join(v.GetPath(), names[0])
 	vtui.RunAsync(func(ctx *vtui.TaskContext) {
 		item, err := vfs.Lstat(ctx.Context, v, path)
@@ -4953,7 +4920,7 @@ func listAvailableHelpLanguages() []i18n.Language {
 	return langs
 }
 
-func actionLanguage(pf *PanelsFrame) {
+func actionLanguage(pf *panel.PanelsFrame) {
 	uiLangs := i18n.ListAvailable(userLangDir())
 	helpLangs := listAvailableHelpLanguages()
 
@@ -5067,6 +5034,6 @@ func actionLanguage(pf *PanelsFrame) {
 	vtui.FrameManager.Push(dlg)
 }
 
-func actionHelpLanguage(pf *PanelsFrame) {
+func actionHelpLanguage(pf *panel.PanelsFrame) {
 	actionLanguage(pf)
 }

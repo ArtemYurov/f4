@@ -1,6 +1,9 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"strings"
 	"testing"
 
@@ -30,13 +33,13 @@ func sqliteMenuItem(items []vtui.MenuBarItem) (vtui.MenuBarItem, vtui.MenuItem, 
 // GetMenuBar call and the open dropdown is the top frame while they are, so a
 // menu-visible entry must not depend on what sits on top.
 func TestSQLiteClientIsInTheCommandsMenuWithItsKey(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldHotkeys := GlobalHotkeysMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	t.Cleanup(func() { GlobalHotkeysMgr = oldHotkeys })
+	oldHotkeys := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	t.Cleanup(func() { keymap.GlobalHotkeysMgr = oldHotkeys })
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 	vtui.FrameManager.Push(pf)
@@ -48,7 +51,7 @@ func TestSQLiteClientIsInTheCommandsMenuWithItsKey(t *testing.T) {
 	if commands := action.PlainLabel(i18n.Msg("Menu.Shell.Commands")); !strings.Contains(bar.Label, commands) {
 		t.Errorf("the SQLite client sits in %q, expected %q", bar.Label, commands)
 	}
-	if want := FormatKeyForUI("CtrlAltD"); item.Shortcut != want {
+	if want := keymap.FormatKeyForUI("CtrlAltD"); item.Shortcut != want {
 		t.Errorf("the SQLite client shows %q, expected %q", item.Shortcut, want)
 	}
 
@@ -64,10 +67,10 @@ func TestSQLiteClientIsInTheCommandsMenuWithItsKey(t *testing.T) {
 // plugin means no success and no panic, and a registered plugin is handed the
 // panels frame even when a popup is what the command was chosen from.
 func TestSQLiteActionReachesThePluginCommand(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 	vtui.FrameManager.Push(pf)

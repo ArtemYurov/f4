@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"testing"
 	"time"
 
@@ -17,23 +19,23 @@ import (
 )
 
 func TestSimpleInline_CommandExecution(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
 	theme.SetDefaultF4Palette()
 
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	defer pf.Close()
-	pf.shellMode = terminal.ShellModeSimpleInline
+	pf.ShellMode = terminal.ShellModeSimpleInline
 	pf.ResizeConsole(80, 25)
 
-	oldWait := waitForAnyKey
-	waitForAnyKey = func() {}
-	t.Cleanup(func() { waitForAnyKey = oldWait })
+	oldWait := panel.WaitForAnyKey
+	panel.WaitForAnyKey = func() {}
+	t.Cleanup(func() { panel.WaitForAnyKey = oldWait })
 
 	dir := t.TempDir()
-	pf.runSimpleInlineCommand(dir, "echo simple_inline_test")
+	pf.RunSimpleInlineCommand(dir, "echo simple_inline_test")
 
 	for i := 0; i < 10; i++ {
 		select {
@@ -46,18 +48,18 @@ func TestSimpleInline_CommandExecution(t *testing.T) {
 }
 
 func TestSimpleCaptured_CommandExecution(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
 	theme.SetDefaultF4Palette()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
-	pf.shellMode = terminal.ShellModeSimpleCaptured
+	pf.ShellMode = terminal.ShellModeSimpleCaptured
 	pf.ResizeConsole(80, 25)
 
-	pf.runSimpleCapturedCommand(t.TempDir(), "echo simple_captured_test")
+	pf.RunSimpleCapturedCommand(t.TempDir(), "echo simple_captured_test")
 	top := vtui.FrameManager.GetTopFrame()
 	dlg, ok := top.(*vtui.Window)
 	if !ok {
@@ -92,7 +94,7 @@ func TestSimpleCaptured_CommandExecution(t *testing.T) {
 }
 
 func TestSimpleInline_ToggleAndAnyKeyReturn(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
@@ -102,15 +104,15 @@ func TestSimpleInline_ToggleAndAnyKeyReturn(t *testing.T) {
 	t.Cleanup(func() { config.App = oldCfg })
 	config.App.ConsoleMode = terminal.ConsoleViewMc
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
-	pf.shellMode = terminal.ShellModeSimpleInline
+	pf.ShellMode = terminal.ShellModeSimpleInline
 	pf.ResizeConsole(80, 25)
 	vtui.FrameManager.Push(pf)
 
 	// 1. Panel.Toggle hides panels in view-only primary screen
 	RunAction("Panel.Toggle")
-	if pf.showPanels {
+	if pf.ShowPanels {
 		t.Fatal("Panel.Toggle should hide panels in SimpleInline mode")
 	}
 
@@ -120,7 +122,7 @@ func TestSimpleInline_ToggleAndAnyKeyReturn(t *testing.T) {
 		KeyDown: true,
 		Char:    ' ',
 	})
-	if !pf.showPanels {
+	if !pf.ShowPanels {
 		t.Fatal("Any keypress while viewing primary screen in SimpleInline mode must restore panels")
 	}
 }
@@ -132,7 +134,7 @@ func TestSimpleInline_ToggleAndAnyKeyReturn(t *testing.T) {
 // returns to panels" fallback below unfiltered, immediately undoing the
 // toggle within the same keystroke.
 func TestSimpleInline_CtrlOKeyUpDoesNotRestorePanels(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
@@ -142,14 +144,14 @@ func TestSimpleInline_CtrlOKeyUpDoesNotRestorePanels(t *testing.T) {
 	t.Cleanup(func() { config.App = oldCfg })
 	config.App.ConsoleMode = terminal.ConsoleViewMc
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
-	pf.shellMode = terminal.ShellModeSimpleInline
+	pf.ShellMode = terminal.ShellModeSimpleInline
 	pf.ResizeConsole(80, 25)
 	vtui.FrameManager.Push(pf)
 
 	RunAction("Panel.Toggle")
-	if pf.showPanels {
+	if pf.ShowPanels {
 		t.Fatal("Panel.Toggle should hide panels in SimpleInline mode")
 	}
 
@@ -161,7 +163,7 @@ func TestSimpleInline_CtrlOKeyUpDoesNotRestorePanels(t *testing.T) {
 		Char:            0x0F,
 		ControlKeyState: vtinput.LeftCtrlPressed,
 	})
-	if pf.showPanels {
+	if pf.ShowPanels {
 		t.Fatal("Ctrl+O's KeyUp event must not restore panels on its own")
 	}
 
@@ -171,28 +173,28 @@ func TestSimpleInline_CtrlOKeyUpDoesNotRestorePanels(t *testing.T) {
 		KeyDown: true,
 		Char:    ' ',
 	})
-	if !pf.showPanels {
+	if !pf.ShowPanels {
 		t.Fatal("A real keypress after Ctrl+O's KeyUp should still restore panels")
 	}
 }
 
 func TestSimpleCaptured_ToggleShowsToast(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
 	theme.SetDefaultF4Palette()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
-	pf.shellMode = terminal.ShellModeSimpleCaptured
+	pf.ShellMode = terminal.ShellModeSimpleCaptured
 	pf.ResizeConsole(80, 25)
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
 	vtui.FrameManager.Push(pf)
 
 	RunAction("Panel.Toggle")
-	if !pf.showPanels {
+	if !pf.ShowPanels {
 		t.Fatal("Panel.Toggle should not hide panels in SimpleCaptured mode")
 	}
 
@@ -214,8 +216,8 @@ Loop:
 		}
 	}
 	testutil.WaitForToastExpiry(t, 4*time.Second)
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
 }
 
 // TestSimpleInline_FarStyleKeepsConsoleAndTypes covers the Ctrl+O screen users
@@ -223,7 +225,7 @@ Loop:
 // drawn on it, and typing edits that command line instead of throwing the user
 // back to the panels.
 func TestSimpleInline_FarStyleKeepsConsoleAndTypes(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	scr := vtui.NewSilentScreenBuf()
 	var out bytes.Buffer
 	scr.Writer = &out
@@ -238,20 +240,20 @@ func TestSimpleInline_FarStyleKeepsConsoleAndTypes(t *testing.T) {
 	vtui.GetTerminalSize = func() (int, int, error) { return 80, 25, nil }
 	t.Cleanup(func() { vtui.GetTerminalSize = oldGetTerminalSize })
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
-	pf.shellMode = terminal.ShellModeSimpleInline
-	pf.showKeyBar = true
+	pf.ShellMode = terminal.ShellModeSimpleInline
+	pf.ShowKeyBar = true
 	pf.ResizeConsole(80, 25)
 	vtui.FrameManager.Push(pf)
 
-	if got := pf.overlayLines(); got != 2 {
+	if got := pf.OverlayLines(); got != 2 {
 		t.Fatalf("overlayLines() in Far style with keybar = %d, want 2", got)
 	}
 
 	out.Reset()
 	RunAction("Panel.Toggle")
-	if pf.showPanels {
+	if pf.ShowPanels {
 		t.Fatal("Panel.Toggle should hide panels in SimpleInline mode")
 	}
 	// Command line row of an 80x25 screen with a two line overlay is row 24.
@@ -264,10 +266,10 @@ func TestSimpleInline_FarStyleKeepsConsoleAndTypes(t *testing.T) {
 		KeyDown: true,
 		Char:    'd',
 	})
-	if pf.showPanels {
+	if pf.ShowPanels {
 		t.Fatal("typing in the Far-style console must not restore panels")
 	}
-	if got := pf.cmdLine.Edit.GetText(); got != "d" {
+	if got := pf.CmdLine.Edit.GetText(); got != "d" {
 		t.Errorf("typed character should reach the command line, got %q", got)
 	}
 }

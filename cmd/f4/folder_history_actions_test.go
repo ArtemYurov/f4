@@ -1,15 +1,16 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/keymap"
 	"testing"
 
 	"github.com/unxed/vtui"
 )
 
 // Alt+Left/Right folder history navigation is a pair of actions, not
-// hardcoded keys in PanelsFrame.ProcessKey.
+// hardcoded keys in panel.PanelsFrame.ProcessKey.
 func TestFolderHistoryActionsRegistered(t *testing.T) {
-	hm := NewHotkeyManager("")
+	hm := keymap.NewHotkeyManager("")
 
 	if got := hm.GetAction("Shell", "AltLeft"); got != "Panel.HistoryBack" {
 		t.Errorf("AltLeft should be bound to Panel.HistoryBack, got %q", got)
@@ -18,9 +19,9 @@ func TestFolderHistoryActionsRegistered(t *testing.T) {
 		t.Errorf("AltRight should be bound to Panel.HistoryForward, got %q", got)
 	}
 
-	old := GlobalHotkeysMgr
-	GlobalHotkeysMgr = hm
-	defer func() { GlobalHotkeysMgr = old }()
+	old := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = hm
+	defer func() { keymap.GlobalHotkeysMgr = old }()
 
 	// Both appear in the generated Commands menu.
 	items := BuildMenuBarItems("Shell")

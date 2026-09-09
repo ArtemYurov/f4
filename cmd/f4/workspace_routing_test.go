@@ -1,6 +1,9 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"testing"
 
 	"github.com/unxed/vtui"
@@ -21,30 +24,30 @@ func screenIndexOfFrame(f vtui.Frame) int {
 	return -1
 }
 
-func waitForWorkspacePanels(t *testing.T, frames ...*PanelsFrame) {
+func waitForWorkspacePanels(t *testing.T, frames ...*panel.PanelsFrame) {
 	t.Helper()
 	for _, frame := range frames {
-		waitForLoad(t, frame.panels[0].(*FileSystemPanel))
-		waitForLoad(t, frame.panels[1].(*FileSystemPanel))
+		paneltest.WaitForLoad(t, frame.Panels[0].(*panel.FileSystemPanel))
+		paneltest.WaitForLoad(t, frame.Panels[1].(*panel.FileSystemPanel))
 	}
 }
 
 // Issue #424: with two workspaces open, actions and hotkey conditions must
 // read the workspace the user is looking at, not the oldest one.
 func TestFindPanelsFrameAnyScreen_PrefersActiveWorkspace(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
-	first := NewPanelsFrame()
+	first := panel.NewPanelsFrame()
 	defer first.Close()
 	vtui.FrameManager.Push(first)
 
-	second := NewPanelsFrame()
+	second := panel.NewPanelsFrame()
 	defer second.Close()
 	vtui.FrameManager.AddScreen(second)
 	waitForWorkspacePanels(t, first, second)
 
-	if got := findPanelsFrameAnyScreen(); got != second {
+	if got := panel.FindPanelsFrameAnyScreen(); got != second {
 		t.Fatalf("after Ctrl+N the new workspace is active, got %v", got == first)
 	}
 
@@ -54,7 +57,7 @@ func TestFindPanelsFrameAnyScreen_PrefersActiveWorkspace(t *testing.T) {
 	}
 	vtui.FrameManager.SwitchScreen(firstIdx)
 
-	if got := findPanelsFrameAnyScreen(); got != first {
+	if got := panel.FindPanelsFrameAnyScreen(); got != first {
 		t.Fatalf("after switching back the first workspace is active, got the other one")
 	}
 }
@@ -62,21 +65,21 @@ func TestFindPanelsFrameAnyScreen_PrefersActiveWorkspace(t *testing.T) {
 // The hotkey conditions read state off the frame this function returns, so
 // they follow the active workspace too.
 func TestConditionsFollowActiveWorkspace(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
-	first := NewPanelsFrame()
+	first := panel.NewPanelsFrame()
 	defer first.Close()
 	vtui.FrameManager.Push(first)
 
-	second := NewPanelsFrame()
+	second := panel.NewPanelsFrame()
 	defer second.Close()
 	vtui.FrameManager.AddScreen(second)
 	waitForWorkspacePanels(t, first, second)
 
-	second.cmdLine.Edit.SetText("ls -la")
+	second.CmdLine.Edit.SetText("ls -la")
 
-	emptyCmdLine, ok := conditionRegistry["emptycommandline"]
+	emptyCmdLine, ok := keymap.LookupCondition("emptycommandline")
 	if !ok {
 		t.Fatalf("emptycommandline condition is not registered")
 	}
@@ -95,18 +98,18 @@ func TestConditionsFollowActiveWorkspace(t *testing.T) {
 	}
 }
 
-// A headless screen (arkanoid, a modal dialog) has no PanelsFrame of its own.
+// A headless screen (arkanoid, a modal dialog) has no panel.PanelsFrame of its own.
 // The search must then fall back to the workspace used most recently, which
 // is what keeps Ctrl+[ and friends working from a full-screen editor.
 func TestFindPanelsFrameAnyScreen_FallsBackToMostRecent(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
-	first := NewPanelsFrame()
+	first := panel.NewPanelsFrame()
 	defer first.Close()
 	vtui.FrameManager.Push(first)
 
-	second := NewPanelsFrame()
+	second := panel.NewPanelsFrame()
 	defer second.Close()
 	vtui.FrameManager.AddScreen(second)
 	waitForWorkspacePanels(t, first, second)
@@ -121,28 +124,28 @@ func TestFindPanelsFrameAnyScreen_FallsBackToMostRecent(t *testing.T) {
 	t.Cleanup(arkanoid.Close)
 	vtui.FrameManager.AddScreenHeadless(arkanoid)
 
-	if got := findPanelsFrameAnyScreen(); got != first {
+	if got := panel.FindPanelsFrameAnyScreen(); got != first {
 		t.Fatalf("the fallback must reach the workspace used last, not the oldest one")
 	}
 }
 
 // A frame already closed is not somewhere the user can be working.
 func TestFindPanelsFrameAnyScreen_SkipsClosedFrame(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
-	first := NewPanelsFrame()
+	first := panel.NewPanelsFrame()
 	defer first.Close()
 	vtui.FrameManager.Push(first)
 
-	second := NewPanelsFrame()
+	second := panel.NewPanelsFrame()
 	defer second.Close()
 	vtui.FrameManager.AddScreen(second)
 	waitForWorkspacePanels(t, first, second)
 
-	second.closed = true
+	second.Closed = true
 
-	if got := findPanelsFrameAnyScreen(); got != first {
+	if got := panel.FindPanelsFrameAnyScreen(); got != first {
 		t.Fatalf("a closed frame on the active screen must be skipped")
 	}
 }

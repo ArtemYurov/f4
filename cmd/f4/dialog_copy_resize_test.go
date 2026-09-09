@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"testing"
 
 	"github.com/unxed/f4/internal/dialog"
@@ -10,22 +12,22 @@ import (
 )
 
 func TestCopyDialogFollowsWindowResize(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	screen := vtui.NewSilentScreenBuf()
 	screen.AllocBuf(80, 25)
 	vtui.FrameManager.Init(screen)
 	theme.SetDefaultF4Palette()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	src := pf.panels[0].(*FileSystemPanel)
-	if err := src.vfs.SetPath(t.TempDir()); err != nil {
+	src := pf.Panels[0].(*panel.FileSystemPanel)
+	if err := src.Vfs.SetPath(t.TempDir()); err != nil {
 		t.Fatalf("set source path: %v", err)
 	}
-	src.entries = []*fileEntry{{VFSItem: vfs.VFSItem{Name: "test.txt"}}}
+	src.Entries = []*panel.FileEntry{{VFSItem: vfs.VFSItem{Name: "test.txt"}}}
 	src.SetCursorIndex(0)
-	pf.activeIdx = 0
+	pf.ActiveIdx = 0
 
 	actionCopyMove(pf, false)
 	dlg, ok := vtui.FrameManager.GetTopFrame().(*dialog.FileDialog)

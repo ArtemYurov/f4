@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/unxed/f4/internal/panel"
 	"io"
 	"strings"
 	"time"
@@ -19,7 +20,7 @@ import (
 
 type AIChatPanel struct {
 	vtui.ScreenObject
-	src     *FileSystemPanel
+	src     *panel.FileSystemPanel
 	frame   *vtui.BorderedFrame
 	input   *vtui.MultiLineEdit
 	focused bool
@@ -42,7 +43,7 @@ type chatLink struct {
 	target string
 }
 
-func NewAIChatPanel(src *FileSystemPanel) *AIChatPanel {
+func NewAIChatPanel(src *panel.FileSystemPanel) *AIChatPanel {
 	x1, y1, x2, y2 := src.GetPosition()
 	cp := &AIChatPanel{
 		src:            src,
@@ -92,21 +93,21 @@ func (cp *AIChatPanel) barKind() int {
 
 // activateBar is what Enter on the strip does.
 func (cp *AIChatPanel) activateBar() {
-	pf := findPanelsFrameAnyScreen()
+	pf := panel.FindPanelsFrameAnyScreen()
 	if pf == nil {
 		return
 	}
 	switch cp.barKind() {
 	case aiBarFiles:
-		AiSetViewModePanel(pf, pf.activeIdx, "ai://ctx", false)
+		AiSetViewModePanel(pf, pf.ActiveIdx, "ai://ctx", false)
 	case aiBarPatch:
 		aiApplyPatch(pf)
 	}
 }
 
-func (cp *AIChatPanel) Kind() string             { return "ai_chat" }
-func (cp *AIChatPanel) Source() *FileSystemPanel { return cp.src }
-func (cp *AIChatPanel) IsFocused() bool          { return cp.focused }
+func (cp *AIChatPanel) Kind() string                   { return "ai_chat" }
+func (cp *AIChatPanel) Source() *panel.FileSystemPanel { return cp.src }
+func (cp *AIChatPanel) IsFocused() bool                { return cp.focused }
 
 func (cp *AIChatPanel) SetFocus(f bool) {
 	cp.focused = f
@@ -150,15 +151,15 @@ func (cp *AIChatPanel) ScrollToBottom() {
 }
 
 func (cp *AIChatPanel) navigateToTarget(target string) {
-	pf := findPanelsFrameAnyScreen()
+	pf := panel.FindPanelsFrameAnyScreen()
 	if pf == nil {
 		return
 	}
 	if strings.HasPrefix(target, "ai://") {
 		if strings.HasPrefix(target, "ai://out/") || strings.HasPrefix(target, "ai://ctx/") {
-			actionOpenViewer(pf, cp.src.vfs, target)
+			actionOpenViewer(pf, cp.src.Vfs, target)
 		} else {
-			AiSetViewModePanel(pf, pf.activeIdx, target, false)
+			AiSetViewModePanel(pf, pf.ActiveIdx, target, false)
 		}
 	}
 }
@@ -188,7 +189,7 @@ func (cp *AIChatPanel) ProcessKey(e *vtinput.InputEvent) bool {
 	}
 
 	if e.VirtualKeyCode == vtinput.VK_P && rctrl && !alt && !shift {
-		aiApplyPatch(findPanelsFrameAnyScreen())
+		aiApplyPatch(panel.FindPanelsFrameAnyScreen())
 		return true
 	}
 
@@ -297,7 +298,7 @@ func (cp *AIChatPanel) ProcessKey(e *vtinput.InputEvent) bool {
 		} else {
 			text := cp.input.GetText()
 			if strings.TrimSpace(text) != "" {
-				aiSend(findPanelsFrameAnyScreen(), text)
+				aiSend(panel.FindPanelsFrameAnyScreen(), text)
 				cp.input.SetText("")
 				cp.ScrollToBottom()
 			}
@@ -435,9 +436,9 @@ func (cp *AIChatPanel) updateLines() {
 
 	var lines []chatLine
 	var session *vtvibe.Session
-	if w, ok := cp.src.vfs.(*aiVFSWrapper); ok {
+	if w, ok := cp.src.Vfs.(*aiVFSWrapper); ok {
 		session = w.Session()
-	} else if a, ok := cp.src.vfs.(*vtvibe.AIVFS); ok {
+	} else if a, ok := cp.src.Vfs.(*vtvibe.AIVFS); ok {
 		session = a.Session()
 	} else {
 		session = aiSession()
@@ -805,10 +806,10 @@ func cellCutChat(s string, width int) int {
 }
 
 func (cp *AIChatPanel) getSession() *vtvibe.Session {
-	if cp.src != nil && cp.src.vfs != nil {
-		if w, ok := cp.src.vfs.(*aiVFSWrapper); ok {
+	if cp.src != nil && cp.src.Vfs != nil {
+		if w, ok := cp.src.Vfs.(*aiVFSWrapper); ok {
 			return w.Session()
-		} else if a, ok := cp.src.vfs.(*vtvibe.AIVFS); ok {
+		} else if a, ok := cp.src.Vfs.(*vtvibe.AIVFS); ok {
 			return a.Session()
 		}
 	}
@@ -816,19 +817,19 @@ func (cp *AIChatPanel) getSession() *vtvibe.Session {
 }
 
 func (cp *AIChatPanel) copyLinkTarget(target string) {
-	pf := findPanelsFrameAnyScreen()
+	pf := panel.FindPanelsFrameAnyScreen()
 	if pf == nil || cp.src == nil {
 		return
 	}
 
-	var dstFSP *FileSystemPanel
-	for _, p := range pf.panels {
-		if fsp, ok := p.(*FileSystemPanel); ok && fsp != cp.src {
+	var dstFSP *panel.FileSystemPanel
+	for _, p := range pf.Panels {
+		if fsp, ok := p.(*panel.FileSystemPanel); ok && fsp != cp.src {
 			dstFSP = fsp
 			break
 		}
 	}
-	if dstFSP == nil || dstFSP.vfs == nil {
+	if dstFSP == nil || dstFSP.Vfs == nil {
 		return
 	}
 
@@ -837,19 +838,19 @@ func (cp *AIChatPanel) copyLinkTarget(target string) {
 		cleanTarget = "/" + cleanTarget
 	}
 
-	fileName := cp.src.vfs.Base(cleanTarget)
-	dstDir := dstFSP.vfs.GetPath()
-	dstPath := dstFSP.vfs.Join(dstDir, fileName)
+	fileName := cp.src.Vfs.Base(cleanTarget)
+	dstDir := dstFSP.Vfs.GetPath()
+	dstPath := dstFSP.Vfs.Join(dstDir, fileName)
 
 	pf.RunProgressTask(" Copy ", "Copying "+fileName+"...", false,
 		func(ctx context.Context, update func(msg string, percent int)) error {
-			srcFile, err := cp.src.vfs.Open(ctx, cleanTarget)
+			srcFile, err := cp.src.Vfs.Open(ctx, cleanTarget)
 			if err != nil {
 				return err
 			}
 			defer srcFile.Close()
 
-			dstFile, err := dstFSP.vfs.Create(ctx, dstPath)
+			dstFile, err := dstFSP.Vfs.Create(ctx, dstPath)
 			if err != nil {
 				return err
 			}

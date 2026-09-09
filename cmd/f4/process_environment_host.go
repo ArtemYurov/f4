@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
 	"github.com/unxed/f4/internal/terminal"
 	"github.com/unxed/f4/vfs"
 )
@@ -15,13 +16,13 @@ var _ vfs.ProcessEnvironmentHost = (*coreAPI)(nil)
 func (c *coreAPI) SnapshotProcessEnvironment() vfs.ProcessEnvironmentSnapshot {
 	// EnvMan calls Snapshot during plugin initialization, making this the
 	// earliest reliable point to establish this process's isolated runtime.
-	_ = initializeProcessEnvironmentRuntime()
+	_ = panel.InitializeProcessEnvironmentRuntime()
 	snapshot, _ := terminal.GlobalProcessEnvironment.Snapshot()
 	return snapshot
 }
 
 func (c *coreAPI) ApplyProcessEnvironment(changes []vfs.ProcessEnvironmentChange) (vfs.ProcessEnvironmentSnapshot, error) {
-	snapshot, generations, err := terminal.ApplyProcessEnvironmentWithRuntime(terminal.GlobalProcessEnvironment, initializeProcessEnvironmentRuntime, changes)
-	broadcastProcessEnvironmentGenerations(generations)
+	snapshot, generations, err := terminal.ApplyProcessEnvironmentWithRuntime(terminal.GlobalProcessEnvironment, panel.InitializeProcessEnvironmentRuntime, changes)
+	panel.BroadcastProcessEnvironmentGenerations(generations)
 	return snapshot, err
 }

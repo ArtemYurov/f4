@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/unxed/f4/internal/panel"
 	"strings"
 	"testing"
 
@@ -188,12 +189,12 @@ func TestDeleteActionsExposeDistinctDispositions(t *testing.T) {
 	defer func() { config.App = oldCfg }()
 	config.App.ConfirmDelete = true
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	pf.activeIdx = 0
-	fsp := pf.panels[0].(*FileSystemPanel)
-	fsp.entries = []*fileEntry{{VFSItem: vfs.VFSItem{Name: "item.txt"}}}
+	pf.ActiveIdx = 0
+	fsp := pf.Panels[0].(*panel.FileSystemPanel)
+	fsp.Entries = []*panel.FileEntry{{VFSItem: vfs.VFSItem{Name: "item.txt"}}}
 
 	findButton := func(t *testing.T, want string) {
 		t.Helper()

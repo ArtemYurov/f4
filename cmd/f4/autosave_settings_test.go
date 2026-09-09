@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/panel"
 	"os"
 	"path/filepath"
 	"testing"
@@ -120,15 +121,15 @@ func TestSaveSession_SkippedWhenStateWasNeverLoaded(t *testing.T) {
 }
 
 func TestMergeWorkspaceSessionSaveGranularPolicies(t *testing.T) {
-	previous := []workspaceSessionState{{
+	previous := []panel.WorkspaceSessionState{{
 		Number: 4, ActivePanel: 0, WidePanel: 1, ShowPanels: true,
-		Left:  panelSessionState{Path: "old-left", Cursor: "old-left.txt", ViewMode: int(ViewModeBrief), SortMode: int(SortName)},
-		Right: panelSessionState{Path: "old-right", Cursor: "old-right.txt", ViewMode: int(ViewModeDetailed), SortMode: int(SortTime)},
+		Left:  panel.PanelSessionState{Path: "old-left", Cursor: "old-left.txt", ViewMode: int(panel.ViewModeBrief), SortMode: int(panel.SortName)},
+		Right: panel.PanelSessionState{Path: "old-right", Cursor: "old-right.txt", ViewMode: int(panel.ViewModeDetailed), SortMode: int(panel.SortTime)},
 	}}
-	current := []workspaceSessionState{{
+	current := []panel.WorkspaceSessionState{{
 		Number: 4, ActivePanel: 1, WidePanel: -1, ShowPanels: false,
-		Left:  panelSessionState{Path: "new-left", Cursor: "new-left.txt", ViewMode: int(ViewModeMedium), SortMode: int(SortSize)},
-		Right: panelSessionState{Path: "new-right", Cursor: "new-right.txt", ViewMode: int(ViewModeBrief), SortMode: int(SortExt)},
+		Left:  panel.PanelSessionState{Path: "new-left", Cursor: "new-left.txt", ViewMode: int(panel.ViewModeMedium), SortMode: int(panel.SortSize)},
+		Right: panel.PanelSessionState{Path: "new-right", Cursor: "new-right.txt", ViewMode: int(panel.ViewModeBrief), SortMode: int(panel.SortExt)},
 	}}
 
 	pathsOnly, active := mergeWorkspaceSessionSave(previous, 0, current, 1, false, true)

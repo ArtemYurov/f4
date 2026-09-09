@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -25,22 +26,22 @@ func TestIssue54_History(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
 	// 2. Setup the panel to point to this directory
-	fsp := pf.panels[0].(*FileSystemPanel)
-	fsp.vfs = vfs.NewOSVFS(tmpDir)
+	fsp := pf.Panels[0].(*panel.FileSystemPanel)
+	fsp.Vfs = vfs.NewOSVFS(tmpDir)
 
 	// We manually populate entries to avoid waiting for async ReadDir
-	fsp.entries = []*fileEntry{
+	fsp.Entries = []*panel.FileEntry{
 		{VFSItem: vfs.VFSItem{Name: "..", IsDir: true}},
 		{VFSItem: vfs.VFSItem{Name: scriptName, IsDir: false, IsExecutable: true}},
 	}
 	fsp.Refresh()
 	fsp.SetCursorIndex(1)
-	pf.activeIdx = 0
+	pf.ActiveIdx = 0
 
 	// 3. Trigger Enter on the script
 	pressKey(pf, &vtinput.InputEvent{
@@ -57,7 +58,7 @@ Loop:
 		select {
 		case task := <-vtui.FrameManager.TaskChan:
 			task()
-			if len(pf.cmdLine.Edit.History) > 0 {
+			if len(pf.CmdLine.Edit.History) > 0 {
 				break Loop
 			}
 		case <-timeout:
@@ -69,7 +70,7 @@ Loop:
 	}
 
 	// 5. Verify results
-	history := pf.cmdLine.Edit.History
+	history := pf.CmdLine.Edit.History
 	expected := scriptName
 	if runtime.GOOS != "windows" {
 		expected = "./" + expected

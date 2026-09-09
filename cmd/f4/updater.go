@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
 	"strings"
 	"time"
 
@@ -81,7 +82,7 @@ func shouldCheck() bool {
 	return false
 }
 
-func CheckForUpdates(pf *PanelsFrame, manual bool) {
+func CheckForUpdates(pf *panel.PanelsFrame, manual bool) {
 	if !manual && !shouldCheck() {
 		return
 	}
@@ -145,7 +146,7 @@ func reportUpdateError(manual bool, msg string) {
 	}
 }
 
-func performUpdate(pf *PanelsFrame, cand update.Candidate) {
+func performUpdate(pf *panel.PanelsFrame, cand update.Candidate) {
 	if pf == nil {
 		return
 	}
@@ -182,7 +183,7 @@ func performUpdate(pf *PanelsFrame, cand update.Candidate) {
 		dlg := vtui.ShowMessage(" Update Successful ", "f4 has been updated successfully.\nPlease restart the application to apply changes.", []string{"E&xit now", "&Later"})
 		dlg.OnResult = func(code int) {
 			if code == 0 {
-				cancelOperationsForShutdown()
+				panel.CancelOperationsForShutdown()
 				vtui.FrameManager.Shutdown()
 			}
 		}

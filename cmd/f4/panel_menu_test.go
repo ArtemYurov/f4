@@ -1,6 +1,9 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"testing"
 	"time"
 
@@ -10,12 +13,12 @@ import (
 )
 
 func TestPanelsFrame_MenuFitsSmallScreenAndScrolls(t *testing.T) {
-	defer swapFrameManager(t)()
+	defer paneltest.SwapFrameManager(t)()
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 10)
 	vtui.FrameManager.Init(scr)
 
-	pf := &PanelsFrame{lastW: 80, lastH: 10}
+	pf := &panel.PanelsFrame{LastW: 80, LastH: 10}
 	items := make([]string, 30)
 	for i := range items {
 		items[i] = "Item"
@@ -47,14 +50,14 @@ func TestPanelsFrame_MenuFitsSmallScreenAndScrolls(t *testing.T) {
 }
 
 func TestPanelsFrame_SideMenusExposeDriveHotkeys(t *testing.T) {
-	pf := &PanelsFrame{}
+	pf := &panel.PanelsFrame{}
 
-	left := pf.leftMenu().SubItems
+	left := pf.LeftMenu().SubItems
 	if !findSideDriveMenuItem(left, i18n.Msg("Menu.Left.DriveMenu"), "Alt+F1", appcmd.CmLeftDriveMenu) {
 		t.Fatalf("left drive menu has no drive item: %+v", left)
 	}
 
-	right := pf.rightMenu().SubItems
+	right := pf.RightMenu().SubItems
 	if !findSideDriveMenuItem(right, i18n.Msg("Menu.Right.DriveMenu"), "Alt+F2", appcmd.CmRightDriveMenu) {
 		t.Fatalf("right drive menu has no drive item: %+v", right)
 	}
@@ -70,7 +73,7 @@ func findSideDriveMenuItem(items []vtui.MenuItem, label, shortcut string, comman
 }
 
 func TestPanelsFrame_SideMenuExposesWorkspaceHotkeys(t *testing.T) {
-	items := (&PanelsFrame{}).leftMenu().SubItems
+	items := (&panel.PanelsFrame{}).LeftMenu().SubItems
 	for _, tc := range []struct {
 		command  int
 		label    string
@@ -99,13 +102,13 @@ func TestPanelsFrame_SideMenuExposesWorkspaceHotkeys(t *testing.T) {
 }
 
 func TestPanelsFrame_GetMenuBarKeepsNativeWorkspaceHotkeys(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	oldHotkeys := GlobalHotkeysMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	t.Cleanup(func() { GlobalHotkeysMgr = oldHotkeys })
+	oldHotkeys := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	t.Cleanup(func() { keymap.GlobalHotkeysMgr = oldHotkeys })
 
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	t.Cleanup(pf.Close)
 	vtui.FrameManager.Push(pf)
 	menuFrame := vtui.NewVMenu("test")
@@ -136,7 +139,7 @@ func TestPanelsFrame_GetMenuBarKeepsNativeWorkspaceHotkeys(t *testing.T) {
 		t.Fatalf("Close workspace shortcut after GetMenuBar refresh = %q, want Ctrl+W", item.Shortcut)
 	}
 
-	GlobalHotkeysMgr.Bind("Shell", "CtrlN", "None")
+	keymap.GlobalHotkeysMgr.Bind("Shell", "CtrlN", "None")
 	if item := find(appcmd.CmWorkspaceNew); item == nil || item.Shortcut != "" {
 		if item == nil {
 			t.Fatal("Left menu lost New workspace item after explicit unbind")

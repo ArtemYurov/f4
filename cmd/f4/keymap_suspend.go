@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
 	"github.com/unxed/vtui"
 
 	"github.com/unxed/f4/internal/terminal"
@@ -15,14 +16,14 @@ func keyRemapSuspended() bool {
 	if vtui.FrameManager == nil {
 		return false
 	}
-	pf, ok := vtui.FrameManager.GetTopFrame().(*PanelsFrame)
-	if !ok || pf.showPanels {
+	pf, ok := vtui.FrameManager.GetTopFrame().(*panel.PanelsFrame)
+	if !ok || pf.ShowPanels {
 		return false
 	}
-	if pf.shellMode == terminal.ShellModeSimpleInline {
+	if pf.ShellMode == terminal.ShellModeSimpleInline {
 		// No terminal.PTY in this mode, so no foreign program can be holding the
 		// keyboard; the console view on screen is f4's own overlay.
 		return false
 	}
-	return (pf.termView != nil && pf.termView.UseAltScreen) || pf.isPtyBusy()
+	return (pf.TermView != nil && pf.TermView.UseAltScreen) || pf.IsPtyBusy()
 }

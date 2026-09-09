@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/paneltest"
 	"math/rand"
 	"testing"
 
@@ -10,7 +11,7 @@ import (
 )
 
 func TestArkanoid_Init(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
 
@@ -31,7 +32,7 @@ func TestArkanoid_Init(t *testing.T) {
 }
 
 func TestArkanoid_PhysicsAndCollisions(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
 	af := NewArkanoidFrame()
@@ -101,7 +102,7 @@ func TestArkanoid_PhysicsAndCollisions(t *testing.T) {
 }
 
 func TestArkanoid_AutoplayAI(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
 	af := NewArkanoidFrame()

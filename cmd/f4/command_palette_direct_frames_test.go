@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/paneltest"
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
@@ -17,7 +18,7 @@ func (*directPaletteOtherFrame) GetType() vtui.FrameType { return vtui.TypeUser 
 
 func setDirectPaletteTopFrame(t *testing.T, frame vtui.Frame) {
 	t.Helper()
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(100, 30)
 	vtui.FrameManager.Init(scr)

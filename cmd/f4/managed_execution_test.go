@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -24,18 +26,18 @@ import (
 // exact no matter how long the backlog is, and needs no guess about timing.
 // runBusyChange delivers an OSC 133 C/D transition and settles the UI tasks
 // it posts.
-func runBusyChange(pf *PanelsFrame, busy bool) {
-	pf.termView.OnBusyChange(busy)
+func runBusyChange(pf *panel.PanelsFrame, busy bool) {
+	pf.TermView.OnBusyChange(busy)
 	testutil.DrainUITasks()
 }
 
-func newExecutionTestFrame(t *testing.T) *PanelsFrame {
+func newExecutionTestFrame(t *testing.T) *panel.PanelsFrame {
 	t.Helper()
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	t.Cleanup(pf.Close)
-	pf.showPanels = false
+	pf.ShowPanels = false
 	return pf
 }
 
@@ -50,11 +52,11 @@ func newExecutionTestFrame(t *testing.T) *PanelsFrame {
 func TestWrappedCommandCompletionEndsExecution(t *testing.T) {
 	pf := newExecutionTestFrame(t)
 
-	pf.beginManagedExecution()
+	pf.BeginManagedExecution()
 	runBusyChange(pf, true)
 	runBusyChange(pf, false)
 
-	if pf.executing {
+	if pf.Executing {
 		t.Fatal("executing is still set after the command's own OSC 133 D marker")
 	}
 }
@@ -66,14 +68,14 @@ func TestWrappedCommandCompletionEndsExecution(t *testing.T) {
 func TestPromptDrivenCommandIgnoresStartupPrompt(t *testing.T) {
 	pf := newExecutionTestFrame(t)
 
-	pf.beginPromptDrivenExecution()
+	pf.BeginPromptDrivenExecution()
 	runBusyChange(pf, false) // stale prompt from shell startup
-	if !pf.executing {
+	if !pf.Executing {
 		t.Fatal("a stale startup prompt ended the execution")
 	}
 
 	runBusyChange(pf, false) // prompt printed after the command finished
-	if pf.executing {
+	if pf.Executing {
 		t.Fatal("executing is still set after the command's prompt marker")
 	}
 }
@@ -84,10 +86,10 @@ func TestPromptDrivenCommandAfterPromptSeen(t *testing.T) {
 	pf := newExecutionTestFrame(t)
 
 	runBusyChange(pf, false) // shell startup prompt, no command running
-	pf.beginPromptDrivenExecution()
+	pf.BeginPromptDrivenExecution()
 	runBusyChange(pf, false)
 
-	if pf.executing {
+	if pf.Executing {
 		t.Fatal("executing is still set after the command's prompt marker")
 	}
 }
@@ -104,7 +106,7 @@ func TestShellSingleQuote(t *testing.T) {
 		`echo "unclosed`: `'echo "unclosed'`,
 	}
 	for in, want := range cases {
-		if got := shellSingleQuote(in); got != want {
+		if got := panel.ShellSingleQuote(in); got != want {
 			t.Errorf("shellSingleQuote(%q) = %s, want %s", in, got, want)
 		}
 	}
@@ -119,7 +121,7 @@ func TestShellSingleQuoteRoundTripsThroughSh(t *testing.T) {
 		t.Skip("no sh available")
 	}
 	for _, payload := range []string{">", "echo 'quoted'", `echo "x"`, "a'b", "$HOME"} {
-		script := "printf '%s' " + shellSingleQuote(payload)
+		script := "printf '%s' " + panel.ShellSingleQuote(payload)
 		out, err := exec.Command("sh", "-c", script).Output()
 		if err != nil {
 			t.Fatalf("sh rejected the quoting of %q: %v", payload, err)
@@ -140,7 +142,7 @@ func TestManagedWrapperReportsCompletionOnSyntaxError(t *testing.T) {
 		t.Skip("no bash available")
 	}
 	for _, payload := range []string{">", `echo "unterminated`, "echo ok"} {
-		line := `{ printf "[C]"; eval ` + shellSingleQuote(payload) +
+		line := `{ printf "[C]"; eval ` + panel.ShellSingleQuote(payload) +
 			` ; R=$?; printf "[D]"; }`
 		out, _ := exec.Command("bash", "-c", line).CombinedOutput()
 		if !strings.Contains(string(out), "[D]") {

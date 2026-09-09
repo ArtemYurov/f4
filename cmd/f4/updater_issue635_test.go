@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,7 +15,7 @@ import (
 )
 
 func TestIssue635NetworkDropWhileProgressScreenIsBackground(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	oldTimeout := update.DownloadIdleTimeout
 	update.DownloadIdleTimeout = 50 * time.Millisecond
@@ -38,7 +40,7 @@ func TestIssue635NetworkDropWhileProgressScreenIsBackground(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 	performUpdate(pf, update.Candidate{

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
@@ -171,7 +172,7 @@ func TestFindFileDialog_SharesSearchTextBucket(t *testing.T) {
 	store["SearchText"] = []string{"typed in the editor"}
 	store["Masks"] = []string{"*.go"}
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
@@ -248,7 +249,7 @@ func TestSelectGroupDialog_UsesMaskHistory(t *testing.T) {
 	store := useStubHistory(t)
 	store["Masks"] = []string{"*.go"}
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 	vtui.FrameManager.Push(pf)
@@ -294,7 +295,7 @@ func TestMkDirDialog_PreFillsFromNewFolderHistory(t *testing.T) {
 	store := useStubHistory(t)
 	store["NewFolder"] = []string{"build"}
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 	vtui.FrameManager.Push(pf)
@@ -364,13 +365,13 @@ func TestDialogAutoComplete_TogglePushedIntoVtui(t *testing.T) {
 	})
 
 	config.App.DialogAutoComplete = false
-	applyPathHintSettings()
+	panel.ApplyPathHintSettings()
 	if vtui.AutoCompleteEnabled {
 		t.Error("switching the setting off did not reach vtui")
 	}
 
 	config.App.DialogAutoComplete = true
-	applyPathHintSettings()
+	panel.ApplyPathHintSettings()
 	if !vtui.AutoCompleteEnabled {
 		t.Error("switching the setting on did not reach vtui")
 	}

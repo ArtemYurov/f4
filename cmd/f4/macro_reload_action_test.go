@@ -1,5 +1,9 @@
 package main
 
+import (
+	"github.com/unxed/f4/internal/keymap"
+)
+
 import "testing"
 
 // The action registration stayed with the registry and the hotkey manager; the
@@ -13,7 +17,7 @@ func TestMacroReloadActionRegistration(t *testing.T) {
 	if action.Area != "Common" || len(action.DefaultKeys) != 1 || action.DefaultKeys[0] != "CtrlAltShiftM" {
 		t.Fatalf("action metadata = %+v", action)
 	}
-	if got := NewHotkeyManager("").GetAction("Shell", "CtrlAltShiftM"); got != "Macro.Reload" {
+	if got := keymap.NewHotkeyManager("").GetAction("Shell", "CtrlAltShiftM"); got != "Macro.Reload" {
 		t.Fatalf("default hotkey = %q, want Macro.Reload", got)
 	}
 }

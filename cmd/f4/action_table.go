@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -33,13 +34,13 @@ func RunAction(name string) bool {
 		// is leaving it, including actions that replace a file panel in place
 		// (Info/Quick View) and therefore do not push a focus-stealing frame.
 		if !strings.EqualFold(name, commandPaletteActionName) {
-			if pf := findPanelsFrame(); pf != nil && pf.cancelFastFind() && vtui.FrameManager != nil {
+			if pf := panel.FindPanelsFrame(); pf != nil && pf.CancelFastFind() && vtui.FrameManager != nil {
 				vtui.FrameManager.Redraw()
 			}
 		}
 		return a.Handler()
 	}
-	if a, ok := pluginActionForName(name); ok && a.Handler != nil {
+	if a, ok := panel.PluginActionForName(name); ok && a.Handler != nil {
 		return a.Handler()
 	}
 	return false
@@ -49,7 +50,7 @@ func RunAction(name string) bool {
 func GetAction(name string) (action.Action, bool) {
 	a, ok := action.Lookup(name)
 	if !ok {
-		return pluginActionForName(name)
+		return panel.PluginActionForName(name)
 	}
 	return a, ok
 }
@@ -57,44 +58,26 @@ func GetAction(name string) (action.Action, bool) {
 // cursorOnParent reports whether the panel's cursor sits on the ".."
 // (parent-directory) entry — used by the far2l Ins clipboard shortcuts
 // that treat this position as the current folder itself.
-func cursorOnParent(fsp *FileSystemPanel) bool {
+func cursorOnParent(fsp *panel.FileSystemPanel) bool {
 	if fsp == nil {
 		return false
 	}
 	idx := fsp.GetCursorIndex()
-	return idx >= 0 && idx < len(fsp.entries) && fsp.entries[idx].Name == ".."
-}
-
-// currentPanelEntryPath returns the full path represented by the panel cursor.
-// As in Far, the parent entry represents the current directory for path-copy
-// and path-insertion commands.
-func currentPanelEntryPath(fsp *FileSystemPanel) string {
-	if fsp == nil || fsp.vfs == nil {
-		return ""
-	}
-	idx := fsp.GetCursorIndex()
-	if idx < 0 || idx >= len(fsp.entries) {
-		return ""
-	}
-	base := fsp.vfs.GetPath()
-	if fsp.entries[idx].Name == ".." {
-		return base
-	}
-	return fsp.vfs.Join(base, fsp.entries[idx].Name)
+	return idx >= 0 && idx < len(fsp.Entries) && fsp.Entries[idx].Name == ".."
 }
 
 // isAIPanelActive returns true if the currently active panel is an AI panel.
 // Used to dynamically show/hide specific menu items.
 func isAIPanelActive() bool {
-	pf := findPanelsFrameAnyScreen()
+	pf := panel.FindPanelsFrameAnyScreen()
 	if pf == nil {
 		return false
 	}
-	fsp := pf.getActivePanel()
+	fsp := pf.GetActivePanel()
 	if fsp == nil {
 		return false
 	}
-	if tp, ok := fsp.vfs.(vfs.TitleProvider); ok {
+	if tp, ok := fsp.Vfs.(vfs.TitleProvider); ok {
 		return tp.GetTitle() == "ai"
 	}
 	return false
@@ -110,9 +93,9 @@ func repeatEditorSearchDirection(ev *editor.EditorView, reverse bool) {
 }
 
 func init() {
-	withPF := func(fn func(pf *PanelsFrame)) func() bool {
+	withPF := func(fn func(pf *panel.PanelsFrame)) func() bool {
 		return func() bool {
-			if pf := findPanelsFrameAnyScreen(); pf != nil {
+			if pf := panel.FindPanelsFrameAnyScreen(); pf != nil {
 				fn(pf)
 				return true
 			}
@@ -289,7 +272,7 @@ func init() {
 		Description: "Open the terminal in a workspace of its own",
 		DescKey:     "Action.Workspace.NewTerminal.Desc",
 		DefaultKeys: []string{"CtrlShiftO"},
-		Handler:     actionWorkspaceNewTerminal,
+		Handler:     panel.ActionWorkspaceNewTerminal,
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Workspace.Close",
@@ -367,7 +350,7 @@ func init() {
 		DescKey:     "Action.File.View.Desc",
 		DefaultKeys: []string{"F3"},
 		MenuPath:    "Files",
-		Handler:     withPF(func(pf *PanelsFrame) { actionViewFile(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionViewFile(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "File.Edit",
@@ -378,7 +361,7 @@ func init() {
 		DescKey:     "Action.File.Edit.Desc",
 		DefaultKeys: []string{"F4"},
 		MenuPath:    "Files",
-		Handler:     withPF(func(pf *PanelsFrame) { actionEditFile(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionEditFile(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:         "File.New",
@@ -390,7 +373,7 @@ func init() {
 		DefaultKeys:  []string{"ShiftF4:NoAltScreenApp"},
 		DefaultAreas: []string{"Terminal"},
 		MenuPath:     "Files",
-		Handler:      withPF(func(pf *PanelsFrame) { actionNewFile(pf) }),
+		Handler:      withPF(func(pf *panel.PanelsFrame) { actionNewFile(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "File.ApplyCommand",
@@ -401,10 +384,10 @@ func init() {
 		DescKey:     "Action.File.ApplyCommand.Desc",
 		DefaultKeys: []string{"CtrlG"},
 		MenuPath:    "Files",
-		Visible:     panelCanApplyCommand,
+		Visible:     panel.PanelCanApplyCommand,
 		Handler: func() bool {
-			if pf := findPanelsFrame(); pf != nil {
-				actionApplyCommand(pf)
+			if pf := panel.FindPanelsFrame(); pf != nil {
+				panel.ActionApplyCommand(pf)
 				return true
 			}
 			return false
@@ -420,7 +403,7 @@ func init() {
 		DefaultKeys:         []string{"F5"},
 		MenuPath:            "Files",
 		MenuSeparatorBefore: true,
-		Handler:             withPF(func(pf *PanelsFrame) { actionCopyMove(pf, false) }),
+		Handler:             withPF(func(pf *panel.PanelsFrame) { actionCopyMove(pf, false) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "File.CopyInPlace",
@@ -431,7 +414,7 @@ func init() {
 		DescKey:     "Action.File.CopyInPlace.Desc",
 		DefaultKeys: []string{"ShiftF5"},
 		MenuPath:    "Files",
-		Handler:     withPF(func(pf *PanelsFrame) { actionCopyInPlace(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionCopyInPlace(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "File.Move",
@@ -442,7 +425,7 @@ func init() {
 		DescKey:     "Action.File.Move.Desc",
 		DefaultKeys: []string{"F6"},
 		MenuPath:    "Files",
-		Handler:     withPF(func(pf *PanelsFrame) { actionCopyMove(pf, true) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionCopyMove(pf, true) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "File.CreateLink",
@@ -453,7 +436,7 @@ func init() {
 		DescKey:     "Action.File.CreateLink.Desc",
 		DefaultKeys: []string{"AltF6"},
 		MenuPath:    "Files",
-		Handler:     withPF(func(pf *PanelsFrame) { actionCreateLink(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionCreateLink(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "File.EditSymlink",
@@ -463,7 +446,7 @@ func init() {
 		Description: "Edit the target of the selected symbolic link",
 		DescKey:     "Action.File.EditSymlink.Desc",
 		MenuPath:    "Files",
-		Handler:     withPF(func(pf *PanelsFrame) { actionEditSymlink(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionEditSymlink(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "File.Rename",
@@ -474,7 +457,7 @@ func init() {
 		DescKey:     "Action.File.Rename.Desc",
 		DefaultKeys: []string{"ShiftF6"},
 		MenuPath:    "Files",
-		Handler:     withPF(func(pf *PanelsFrame) { actionRename(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionRename(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:         "File.MakeDir",
@@ -486,7 +469,7 @@ func init() {
 		DefaultKeys:  []string{"F7:NoAltScreenApp"},
 		DefaultAreas: []string{"Terminal"},
 		MenuPath:     "Files",
-		Handler:      withPF(func(pf *PanelsFrame) { actionMkDir(pf) }),
+		Handler:      withPF(func(pf *panel.PanelsFrame) { actionMkDir(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "File.Delete",
@@ -497,7 +480,7 @@ func init() {
 		DescKey:     "Action.File.Delete.Desc",
 		DefaultKeys: []string{"F8"},
 		MenuPath:    "Files",
-		Handler:     withPF(func(pf *PanelsFrame) { actionDelete(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionDelete(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "File.DeletePermanent",
@@ -508,7 +491,7 @@ func init() {
 		DescKey:     "Action.File.DeletePermanent.Desc",
 		DefaultKeys: []string{"ShiftDel", "ShiftNumDel"},
 		MenuPath:    "Files",
-		Handler:     withPF(func(pf *PanelsFrame) { actionDeletePermanent(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionDeletePermanent(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:                "File.Attributes",
@@ -520,7 +503,7 @@ func init() {
 		DefaultKeys:         []string{"CtrlA"},
 		MenuPath:            "Files",
 		MenuSeparatorBefore: true,
-		Handler:             withPF(func(pf *PanelsFrame) { actionFileAttributes(pf) }),
+		Handler:             withPF(func(pf *panel.PanelsFrame) { actionFileAttributes(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "File.Share",
@@ -531,18 +514,18 @@ func init() {
 		DescKey:     "Action.File.Share.Desc",
 		MenuPath:    "Files",
 		Visible: func() bool {
-			pf := findPanelsFrame()
+			pf := panel.FindPanelsFrame()
 			if pf == nil {
 				return false
 			}
-			panel := pf.getActivePanel()
-			if panel == nil || panel.vfs == nil {
+			pnl := pf.GetActivePanel()
+			if pnl == nil || pnl.Vfs == nil {
 				return false
 			}
-			_, ok := panel.vfs.(vfs.ShareLinkProvider)
+			_, ok := pnl.Vfs.(vfs.ShareLinkProvider)
 			return ok
 		},
-		Handler: withPF(func(pf *PanelsFrame) { actionShareLink(pf) }),
+		Handler: withPF(func(pf *panel.PanelsFrame) { actionShareLink(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.SystemExplorer",
@@ -558,30 +541,30 @@ func init() {
 		DefaultKeys:  []string{"ShiftEnter:NoTerminalApp"},
 		DefaultAreas: []string{"Terminal"},
 		MenuPath:     "Files",
-		Handler: withPF(func(pf *PanelsFrame) {
-			fsp := pf.getActivePanel()
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			fsp := pf.GetActivePanel()
 			if fsp == nil {
 				return
 			}
 			idx := fsp.GetCursorIndex()
-			if idx < 0 || idx >= len(fsp.entries) {
+			if idx < 0 || idx >= len(fsp.Entries) {
 				return
 			}
-			name := fsp.entries[idx].Name
+			name := fsp.Entries[idx].Name
 			var fullPath string
 			if name == ".." {
-				fullPath = fsp.vfs.GetPath()
+				fullPath = fsp.Vfs.GetPath()
 			} else {
-				fullPath = fsp.vfs.Join(fsp.vfs.GetPath(), name)
+				fullPath = fsp.Vfs.Join(fsp.Vfs.GetPath(), name)
 			}
-			if _, isLocal := fsp.vfs.(*vfs.OSVFS); isLocal {
+			if _, isLocal := fsp.Vfs.(*vfs.OSVFS); isLocal {
 				// Capture entry state before spawning: the entries
 				// slice may be replaced by a refresh at any time.
-				isDir := fsp.entries[idx].IsDir || name == ".."
+				isDir := fsp.Entries[idx].IsDir || name == ".."
 				go func() {
-					command, args, ok := systemFileManagerCommand(fullPath, isDir)
+					command, args, ok := panel.SystemFileManagerCommand(fullPath, isDir)
 					if ok {
-						_ = pf.runExternalUICommand(command, args, "")
+						_ = pf.RunExternalUICommand(command, args, "")
 					}
 				}()
 			} else {
@@ -600,8 +583,8 @@ func init() {
 		DefaultKeys:         []string{"Add"},
 		MenuPath:            "Files",
 		MenuSeparatorBefore: true,
-		Handler: withPF(func(pf *PanelsFrame) {
-			if fsp := pf.getActivePanel(); fsp != nil {
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			if fsp := pf.GetActivePanel(); fsp != nil {
 				var maskEdit *vtui.Edit
 				dlg := vtui.InputBox(i18n.Msg("Select.Title"), i18n.Msg("Select.Mask"), "*", func(mask string) {
 					history.CommitHistory(maskEdit, mask)
@@ -622,8 +605,8 @@ func init() {
 		DescKey:     "Action.Panel.DeselectGroup.Desc",
 		DefaultKeys: []string{"Subtract"},
 		MenuPath:    "Files",
-		Handler: withPF(func(pf *PanelsFrame) {
-			if fsp := pf.getActivePanel(); fsp != nil {
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			if fsp := pf.GetActivePanel(); fsp != nil {
 				var maskEdit *vtui.Edit
 				dlg := vtui.InputBox(i18n.Msg("Deselect.Title"), i18n.Msg("Select.Mask"), "*", func(mask string) {
 					history.CommitHistory(maskEdit, mask)
@@ -642,8 +625,8 @@ func init() {
 		DescKey:     "Action.Panel.InvertSelection.Desc",
 		DefaultKeys: []string{"Multiply"},
 		MenuPath:    "Files",
-		Handler: withPF(func(pf *PanelsFrame) {
-			if fsp := pf.getActivePanel(); fsp != nil {
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			if fsp := pf.GetActivePanel(); fsp != nil {
 				fsp.InvertSelection()
 			}
 		}),
@@ -657,8 +640,8 @@ func init() {
 		DescKey:     "Action.Panel.RestoreSelection.Desc",
 		DefaultKeys: []string{"CtrlM"},
 		MenuPath:    "Files",
-		Handler: withPF(func(pf *PanelsFrame) {
-			if fsp := pf.getActivePanel(); fsp != nil {
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			if fsp := pf.GetActivePanel(); fsp != nil {
 				fsp.RestoreSelection()
 			}
 		}),
@@ -672,8 +655,8 @@ func init() {
 			"Ins", "ShiftUp", "ShiftDown", "ShiftLeft", "ShiftRight",
 			"ShiftPgUp", "ShiftPgDn", "ShiftHome", "ShiftEnd",
 		},
-		Handler: withPF(func(pf *PanelsFrame) {
-			if fsp := pf.getActivePanel(); fsp != nil {
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			if fsp := pf.GetActivePanel(); fsp != nil {
 				fsp.ProcessKey(keymap.ParseFarKey("Ins"))
 			}
 		}),
@@ -685,11 +668,11 @@ func init() {
 		Description: "Toggle command-line focus in Search by default navigation mode",
 		NativeKeys:  []string{"VK_C0:SearchFirst", "`:SearchFirst", "ё:SearchFirst"},
 		Handler: func() bool {
-			pf := findPanelsFrameAnyScreen()
-			if pf == nil || !pf.searchFirstMode() || !pf.showPanels {
+			pf := panel.FindPanelsFrameAnyScreen()
+			if pf == nil || !pf.SearchFirstMode() || !pf.ShowPanels {
 				return false
 			}
-			pf.setCommandLineFocus(!pf.commandLineFocused)
+			pf.SetCommandLineFocus(!pf.CommandLineFocused)
 			return true
 		},
 	})
@@ -704,7 +687,7 @@ func init() {
 		DefaultKeys:  []string{"F2:NoAltScreenApp"},
 		DefaultAreas: []string{"Terminal"},
 		MenuPath:     "Commands",
-		Handler:      withPF(func(pf *PanelsFrame) { ShowUserMenu(pf) }),
+		Handler:      withPF(func(pf *panel.PanelsFrame) { panel.ShowUserMenu(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.FileAssociations",
@@ -714,7 +697,7 @@ func init() {
 		Description: "Configure per-mask commands for Enter, F3 and F4",
 		DescKey:     "Action.Panel.FileAssociations.Desc",
 		MenuPath:    "Commands",
-		Handler:     withPF(func(pf *PanelsFrame) { ShowFileAssociations(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { panel.ShowFileAssociations(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:                "File.Find",
@@ -726,7 +709,7 @@ func init() {
 		DefaultKeys:         []string{"AltF7"},
 		MenuPath:            "Commands",
 		MenuSeparatorBefore: true,
-		Handler:             withPF(func(pf *PanelsFrame) { actionFindFile(pf) }),
+		Handler:             withPF(func(pf *panel.PanelsFrame) { actionFindFile(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "File.FindDuplicates",
@@ -737,7 +720,7 @@ func init() {
 		DescKey:     "Action.File.FindDuplicates.Desc",
 		MenuPath:    "Commands",
 		Visible:     panelCanFindDuplicates,
-		Handler:     withPF(func(pf *PanelsFrame) { actionFindDuplicates(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionFindDuplicates(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.CompareFolders",
@@ -748,7 +731,7 @@ func init() {
 		DescKey:     "Action.Panel.CompareFolders.Desc",
 		MenuPath:    "Commands",
 		Visible:     panelCanCompareFolders,
-		Handler:     withPF(func(pf *PanelsFrame) { ShowCompareFoldersDialog(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { ShowCompareFoldersDialog(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "File.RunRemoteCommand",
@@ -758,8 +741,8 @@ func init() {
 		Description: "Run a command on the host the panel is showing",
 		DescKey:     "Action.File.RunRemoteCommand.Desc",
 		MenuPath:    "Commands",
-		Visible:     panelCanRunCommand,
-		Handler:     withPF(func(pf *PanelsFrame) { actionRunRemoteCommand(pf) }),
+		Visible:     panel.PanelCanRunCommand,
+		Handler:     withPF(func(pf *panel.PanelsFrame) { panel.ActionRunRemoteCommand(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.BackgroundJobs",
@@ -769,7 +752,7 @@ func init() {
 		Description: "Show work still running and results waiting to be seen",
 		DescKey:     "Action.Panel.BackgroundJobs.Desc",
 		MenuPath:    "Commands",
-		Handler:     withPF(func(pf *PanelsFrame) { ShowBackgroundJobs(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { ShowBackgroundJobs(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:                "Panel.Bookmarks",
@@ -781,7 +764,7 @@ func init() {
 		DefaultKeys:         []string{"CtrlShiftVK_DC"},
 		MenuPath:            "Commands",
 		MenuSeparatorBefore: true,
-		Handler:             withPF(func(pf *PanelsFrame) { ShowBookmarksDialog(pf) }),
+		Handler:             withPF(func(pf *panel.PanelsFrame) { panel.ShowBookmarksDialog(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.PluginMenu",
@@ -792,7 +775,7 @@ func init() {
 		DescKey:     "Action.Panel.PluginMenu.Desc",
 		DefaultKeys: []string{"F11"},
 		MenuPath:    "Commands",
-		Handler:     withPF(func(pf *PanelsFrame) { pf.showPluginMenu() }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { pf.ShowPluginMenu() }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.TempPanel",
@@ -803,7 +786,7 @@ func init() {
 		DescKey:     "Action.Panel.TempPanel.Desc",
 		DefaultKeys: []string{"AltShiftF12"},
 		MenuPath:    "Commands",
-		Handler:     withPF(func(pf *PanelsFrame) { actionOpenTempPanel(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { panel.ActionOpenTempPanel(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:                "Panel.CommandHistory",
@@ -816,7 +799,7 @@ func init() {
 		MenuPath:            "Commands",
 		MenuSubPath:         "History",
 		MenuSeparatorBefore: true,
-		Handler:             withPF(func(pf *PanelsFrame) { actionCommandHistory(pf) }),
+		Handler:             withPF(func(pf *panel.PanelsFrame) { actionCommandHistory(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.FoldersHistory",
@@ -828,7 +811,7 @@ func init() {
 		DefaultKeys: []string{"AltF12"},
 		MenuPath:    "Commands",
 		MenuSubPath: "History",
-		Handler:     withPF(func(pf *PanelsFrame) { actionFoldersHistory(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionFoldersHistory(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.ViewerEditorHistory",
@@ -840,7 +823,7 @@ func init() {
 		DefaultKeys: []string{"AltF11"},
 		MenuPath:    "Commands",
 		MenuSubPath: "History",
-		Handler:     withPF(func(pf *PanelsFrame) { actionViewerEditorHistory(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionViewerEditorHistory(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "History.ImportFar2l",
@@ -849,7 +832,7 @@ func init() {
 		Description: "Import command history from far2l (.hst)",
 		MenuPath:    "Commands",
 		MenuSubPath: "History",
-		Handler:     withPF(func(pf *PanelsFrame) { actionImportFar2lHistory(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionImportFar2lHistory(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.GoParent",
@@ -861,23 +844,23 @@ func init() {
 		DefaultKeys: []string{"CtrlPgUp"},
 		MenuPath:    "Commands",
 		MenuSubPath: "Navigation",
-		Handler: withPF(func(pf *PanelsFrame) {
-			fsp := pf.getActivePanel()
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			fsp := pf.GetActivePanel()
 			if fsp == nil {
 				return
 			}
-			if fsp.vfs.IsAtRoot() {
-				if fsp.vfs.ParentVFS() == nil {
-					pf.showDriveMenu(pf.activeIdx)
+			if fsp.Vfs.IsAtRoot() {
+				if fsp.Vfs.ParentVFS() == nil {
+					pf.ShowDriveMenu(pf.ActiveIdx)
 				} else {
 					// Exit an archive or a NetFox connection to the parent VFS
 					pf.NavigateToPath(fsp, "..")
 				}
 			} else {
-				oldPath := fsp.vfs.GetPath()
-				parentPath := fsp.vfs.Dir(oldPath)
-				if err := fsp.setKnownDirectoryPath(parentPath); err == nil {
-					fsp.pendingSelection = fsp.vfs.Base(oldPath)
+				oldPath := fsp.Vfs.GetPath()
+				parentPath := fsp.Vfs.Dir(oldPath)
+				if err := fsp.SetKnownDirectoryPath(parentPath); err == nil {
+					fsp.PendingSelection = fsp.Vfs.Base(oldPath)
 					fsp.ReadDirectory()
 				} else {
 					pf.NavigateToPath(fsp, "..")
@@ -895,13 +878,13 @@ func init() {
 		DefaultKeys: []string{"CtrlVK_DC"},
 		MenuPath:    "Commands",
 		MenuSubPath: "Navigation",
-		Handler: withPF(func(pf *PanelsFrame) {
-			if fsp := pf.getActivePanel(); fsp != nil {
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			if fsp := pf.GetActivePanel(); fsp != nil {
 				rootPath := "/"
 				if runtime.GOOS == "windows" {
 					rootPath = string(os.PathSeparator)
-					if _, isOS := fsp.vfs.(*vfs.OSVFS); isOS {
-						rootPath = filepath.VolumeName(fsp.vfs.GetPath()) + string(os.PathSeparator)
+					if _, isOS := fsp.Vfs.(*vfs.OSVFS); isOS {
+						rootPath = filepath.VolumeName(fsp.Vfs.GetPath()) + string(os.PathSeparator)
 					}
 				}
 				pf.NavigateToPath(fsp, rootPath)
@@ -918,16 +901,16 @@ func init() {
 		DefaultKeys: []string{"AltLeft"},
 		MenuPath:    "Commands",
 		MenuSubPath: "Navigation",
-		Handler: withPF(func(pf *PanelsFrame) {
-			if fsp := pf.getActivePanel(); fsp != nil {
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			if fsp := pf.GetActivePanel(); fsp != nil {
 				// far2l scrolls long names with Alt+Left/Right (#890). Keep
 				// folder history on the same keys, but only when nothing on
 				// screen is cut off, so scrolling never jumps directories.
-				if fsp.namesOverflow() {
+				if fsp.NamesOverflow() {
 					fsp.ScrollNames(-1)
 					return
 				}
-				pf.moveFolderHistory(fsp, -1)
+				pf.MoveFolderHistory(fsp, -1)
 			}
 		}),
 	})
@@ -941,13 +924,13 @@ func init() {
 		DefaultKeys: []string{"AltRight"},
 		MenuPath:    "Commands",
 		MenuSubPath: "Navigation",
-		Handler: withPF(func(pf *PanelsFrame) {
-			if fsp := pf.getActivePanel(); fsp != nil {
-				if fsp.namesOverflow() {
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			if fsp := pf.GetActivePanel(); fsp != nil {
+				if fsp.NamesOverflow() {
 					fsp.ScrollNames(1)
 					return
 				}
-				pf.moveFolderHistory(fsp, 1)
+				pf.MoveFolderHistory(fsp, 1)
 			}
 		}),
 	})
@@ -958,8 +941,8 @@ func init() {
 		LabelKey:    "Action.Panel.ScrollNamesLeft",
 		Description: "Scroll long file names one cell left",
 		DescKey:     "Action.Panel.ScrollNamesLeft.Desc",
-		Handler: withPF(func(pf *PanelsFrame) {
-			if fsp := pf.getActivePanel(); fsp != nil {
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			if fsp := pf.GetActivePanel(); fsp != nil {
 				fsp.ScrollNames(-1)
 			}
 		}),
@@ -971,8 +954,8 @@ func init() {
 		LabelKey:    "Action.Panel.ScrollNamesRight",
 		Description: "Scroll long file names one cell right",
 		DescKey:     "Action.Panel.ScrollNamesRight.Desc",
-		Handler: withPF(func(pf *PanelsFrame) {
-			if fsp := pf.getActivePanel(); fsp != nil {
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			if fsp := pf.GetActivePanel(); fsp != nil {
 				fsp.ScrollNames(1)
 			}
 		}),
@@ -985,8 +968,8 @@ func init() {
 		Description: "Show the beginning of long file names",
 		DescKey:     "Action.Panel.ScrollNamesHome.Desc",
 		DefaultKeys: []string{"AltHome"},
-		Handler: withPF(func(pf *PanelsFrame) {
-			if fsp := pf.getActivePanel(); fsp != nil {
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			if fsp := pf.GetActivePanel(); fsp != nil {
 				fsp.SetNameLeftPos(0)
 			}
 		}),
@@ -999,8 +982,8 @@ func init() {
 		Description: "Show the end of long file names",
 		DescKey:     "Action.Panel.ScrollNamesEnd.Desc",
 		DefaultKeys: []string{"AltEnd"},
-		Handler: withPF(func(pf *PanelsFrame) {
-			if fsp := pf.getActivePanel(); fsp != nil {
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			if fsp := pf.GetActivePanel(); fsp != nil {
 				fsp.SetNameLeftPos(1 << 30)
 			}
 		}),
@@ -1015,9 +998,9 @@ func init() {
 		DefaultKeys: []string{"CtrlD"},
 		MenuPath:    "Commands",
 		MenuSubPath: "Paths",
-		Handler: withPF(func(pf *PanelsFrame) {
-			if fsp := pf.getActivePanel(); fsp != nil {
-				if path := currentPanelEntryPath(fsp); path != "" {
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			if fsp := pf.GetActivePanel(); fsp != nil {
+				if path := panel.CurrentPanelEntryPath(fsp); path != "" {
 					terminal.SetF4Clipboard(path)
 				}
 			}
@@ -1033,9 +1016,9 @@ func init() {
 		DefaultKeys: []string{"CtrlF"},
 		MenuPath:    "Commands",
 		MenuSubPath: "Paths",
-		Handler: withPF(func(pf *PanelsFrame) {
-			if fsp := pf.getActivePanel(); fsp != nil {
-				pf.insertPathToCmdLine(currentPanelEntryPath(fsp))
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			if fsp := pf.GetActivePanel(); fsp != nil {
+				pf.InsertPathToCmdLine(panel.CurrentPanelEntryPath(fsp))
 			}
 		}),
 	})
@@ -1049,23 +1032,23 @@ func init() {
 		DefaultKeys: []string{"CtrlIns"},
 		MenuPath:    "Commands",
 		MenuSubPath: "Paths",
-		Handler: withPF(func(pf *PanelsFrame) {
-			if !pf.cmdLine.IsEmpty() {
-				terminal.SetF4Clipboard(pf.cmdLine.Edit.GetText())
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			if !pf.CmdLine.IsEmpty() {
+				terminal.SetF4Clipboard(pf.CmdLine.Edit.GetText())
 				return
 			}
-			if fsp := pf.getActivePanel(); fsp != nil {
+			if fsp := pf.GetActivePanel(); fsp != nil {
 				idx := fsp.GetCursorIndex()
-				if idx < 0 || idx >= len(fsp.entries) {
+				if idx < 0 || idx >= len(fsp.Entries) {
 					return
 				}
-				name := fsp.entries[idx].Name
+				name := fsp.Entries[idx].Name
 				if name == ".." {
 					// far2l docs: with the cursor on ".." this hotkey
 					// treats it as the name of the current folder.
 					// Mirrors far2l's PointToName(GetCurDir()) branch
 					// in FileList::CopyNames() (FullPathName=false).
-					name = fsp.vfs.Base(fsp.vfs.GetPath())
+					name = fsp.Vfs.Base(fsp.Vfs.GetPath())
 				}
 				terminal.SetF4Clipboard(name)
 			}
@@ -1081,8 +1064,8 @@ func init() {
 		DefaultKeys: []string{"CtrlShiftIns"},
 		MenuPath:    "Commands",
 		MenuSubPath: "Paths",
-		Handler: withPF(func(pf *PanelsFrame) {
-			if fsp := pf.getActivePanel(); fsp != nil {
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			if fsp := pf.GetActivePanel(); fsp != nil {
 				if names := fsp.GetSelectedNames(); len(names) > 0 {
 					// SetClipboard can block up to ~4s on far2l IPC or
 					// while shelling out to xclip/wl-copy — do it off the
@@ -1102,9 +1085,9 @@ func init() {
 		DefaultKeys: []string{"AltShiftIns"},
 		MenuPath:    "Commands",
 		MenuSubPath: "Paths",
-		Handler: withPF(func(pf *PanelsFrame) {
-			if fsp := pf.getActivePanel(); fsp != nil {
-				base := fsp.vfs.GetPath()
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			if fsp := pf.GetActivePanel(); fsp != nil {
+				base := fsp.Vfs.GetPath()
 				names := fsp.GetSelectedNames()
 				if len(names) == 0 {
 					// far2l note: with the cursor on ".." this action
@@ -1116,7 +1099,7 @@ func init() {
 				}
 				paths := make([]string, 0, len(names))
 				for _, n := range names {
-					paths = append(paths, fsp.vfs.Join(base, n))
+					paths = append(paths, fsp.Vfs.Join(base, n))
 				}
 				terminal.SetClipboardAsync(strings.Join(paths, "\n"))
 			}
@@ -1132,10 +1115,10 @@ func init() {
 		DefaultKeys: []string{"CtrlAltIns"},
 		MenuPath:    "Commands",
 		MenuSubPath: "Paths",
-		Handler: withPF(func(pf *PanelsFrame) {
-			if fsp := pf.getActivePanel(); fsp != nil {
-				base := fsp.vfs.GetPath()
-				_, isOS := fsp.vfs.(*vfs.OSVFS)
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			if fsp := pf.GetActivePanel(); fsp != nil {
+				base := fsp.Vfs.GetPath()
+				_, isOS := fsp.Vfs.(*vfs.OSVFS)
 				resolve := func(p string) string {
 					if isOS {
 						if r, err := filepath.EvalSymlinks(p); err == nil {
@@ -1155,7 +1138,7 @@ func init() {
 				}
 				paths := make([]string, 0, len(names))
 				for _, n := range names {
-					paths = append(paths, resolve(fsp.vfs.Join(base, n)))
+					paths = append(paths, resolve(fsp.Vfs.Join(base, n)))
 				}
 				terminal.SetClipboardAsync(strings.Join(paths, "\n"))
 			}
@@ -1169,14 +1152,14 @@ func init() {
 		Description: "Group panel entries by the configured sort groups",
 		DescKey:     "Action.Panel.SortUseGroups.Desc",
 		Checked: func() bool {
-			pf := findPanelsFrameAnyScreen()
+			pf := panel.FindPanelsFrameAnyScreen()
 			if pf == nil {
 				return false
 			}
-			fsp := pf.getActivePanel()
-			return fsp != nil && fsp.useSortGroups
+			fsp := pf.GetActivePanel()
+			return fsp != nil && fsp.UseSortGroups
 		},
-		Handler: withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmSortGroups, nil) }),
+		Handler: withPF(func(pf *panel.PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmSortGroups, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:                "Panel.SortMenu",
@@ -1188,7 +1171,7 @@ func init() {
 		DefaultKeys:         []string{"CtrlF12"},
 		MenuPath:            "Commands",
 		MenuSeparatorBefore: true,
-		Handler:             withPF(func(pf *PanelsFrame) { actionSortMenu(pf) }),
+		Handler:             withPF(func(pf *panel.PanelsFrame) { actionSortMenu(pf) }),
 	})
 
 	action.RegisterAction(action.Action{
@@ -1199,7 +1182,7 @@ func init() {
 		Description: "Open language selection dialog",
 		DescKey:     "Action.Settings.Language.Desc",
 		MenuPath:    "Options",
-		Handler:     withPF(func(pf *PanelsFrame) { actionLanguage(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionLanguage(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:                "Settings.Panel",
@@ -1210,7 +1193,7 @@ func init() {
 		DescKey:             "Action.Settings.Panel.Desc",
 		MenuPath:            "Options",
 		MenuSeparatorBefore: true,
-		Handler:             withPF(func(pf *PanelsFrame) { actionPanelSettings(pf) }),
+		Handler:             withPF(func(pf *panel.PanelsFrame) { actionPanelSettings(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Settings.Editor",
@@ -1220,7 +1203,7 @@ func init() {
 		Description: "Open editor settings dialog",
 		DescKey:     "Action.Settings.Editor.Desc",
 		MenuPath:    "Options",
-		Handler:     withPF(func(pf *PanelsFrame) { actionEditorSettings(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionEditorSettings(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Settings.Viewer",
@@ -1230,7 +1213,7 @@ func init() {
 		Description: "Open viewer settings dialog",
 		DescKey:     "Action.Settings.Viewer.Desc",
 		MenuPath:    "Options",
-		Handler:     withPF(func(pf *PanelsFrame) { dialog.ShowViewerSettings() }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { dialog.ShowViewerSettings() }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Settings.Colorer",
@@ -1240,7 +1223,7 @@ func init() {
 		Description: "Open Colorer settings dialog",
 		DescKey:     "Action.Settings.Colorer.Desc",
 		MenuPath:    "Options",
-		Handler:     withPF(func(pf *PanelsFrame) { actionColorerSettings(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionColorerSettings(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Settings.Appearance",
@@ -1250,7 +1233,7 @@ func init() {
 		Description: "Open appearance settings dialog",
 		DescKey:     "Action.Settings.Appearance.Desc",
 		MenuPath:    "Options",
-		Handler:     withPF(func(pf *PanelsFrame) { actionAppearanceSettings(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionAppearanceSettings(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Settings.Startup",
@@ -1260,7 +1243,7 @@ func init() {
 		Description: "Choose the startup mode and the renderer backends f4 uses by default",
 		DescKey:     "Action.Settings.Startup.Desc",
 		MenuPath:    "Options",
-		Handler:     withPF(func(pf *PanelsFrame) { actionStartupSettings(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionStartupSettings(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Settings.Portable",
@@ -1270,7 +1253,7 @@ func init() {
 		Description: "Keep the profile next to the program (Far-style f4.ini) or in the user directory",
 		DescKey:     "Action.Settings.Portable.Desc",
 		MenuPath:    "Options",
-		Handler:     withPF(func(pf *PanelsFrame) { dialog.ShowPortableSettings() }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { dialog.ShowPortableSettings() }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Settings.Confirmations",
@@ -1280,7 +1263,7 @@ func init() {
 		Description: "Open confirmations settings dialog",
 		DescKey:     "Action.Settings.Confirmations.Desc",
 		MenuPath:    "Options",
-		Handler:     withPF(func(pf *PanelsFrame) { actionConfirmationsSettings(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionConfirmationsSettings(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Settings.MouseWheel",
@@ -1290,7 +1273,7 @@ func init() {
 		Description: "Open mouse wheel scroll speed settings dialog",
 		DescKey:     "Action.Settings.MouseWheel.Desc",
 		MenuPath:    "Options",
-		Handler:     withPF(func(pf *PanelsFrame) { actionMouseWheelSettings(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionMouseWheelSettings(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Settings.PathHints",
@@ -1300,7 +1283,7 @@ func init() {
 		Description: "Open path hints settings dialog",
 		DescKey:     "Action.Settings.PathHints.Desc",
 		MenuPath:    "Options",
-		Handler:     withPF(func(pf *PanelsFrame) { actionPathHintSettings(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionPathHintSettings(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:                "Settings.Hotkeys",
@@ -1311,7 +1294,7 @@ func init() {
 		DescKey:             "Action.Settings.Hotkeys.Desc",
 		MenuPath:            "Options",
 		MenuSeparatorBefore: true,
-		Handler:             withPF(func(pf *PanelsFrame) { actionHotkeyConfig(pf) }),
+		Handler:             withPF(func(pf *panel.PanelsFrame) { actionHotkeyConfig(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:                "Settings.AutoUpdate",
@@ -1322,7 +1305,7 @@ func init() {
 		DescKey:             "Action.Settings.AutoUpdate.Desc",
 		MenuPath:            "Options",
 		MenuSeparatorBefore: true,
-		Handler:             withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmUpdateSettings, nil) }),
+		Handler:             withPF(func(pf *panel.PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmUpdateSettings, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Settings.Proxy",
@@ -1332,7 +1315,7 @@ func init() {
 		Description: "Configure the proxy used for updates, plugins and network connections",
 		DescKey:     "Action.Settings.Proxy.Desc",
 		MenuPath:    "Options",
-		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmProxySettings, nil) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmProxySettings, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:                "Settings.PluginConfiguration",
@@ -1344,7 +1327,7 @@ func init() {
 		DefaultKeys:         []string{"ShiftF11"},
 		MenuPath:            "Options",
 		MenuSeparatorBefore: true,
-		Handler:             withPF(func(pf *PanelsFrame) { actionPluginConfiguration(pf) }),
+		Handler:             withPF(func(pf *panel.PanelsFrame) { actionPluginConfiguration(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:                "Settings.Plugins",
@@ -1355,7 +1338,7 @@ func init() {
 		DescKey:             "Action.Settings.Plugins.Desc",
 		MenuPath:            "Options",
 		MenuSeparatorBefore: true,
-		Handler:             withPF(func(pf *PanelsFrame) { actionManagePlugins(pf) }),
+		Handler:             withPF(func(pf *panel.PanelsFrame) { actionManagePlugins(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:                "App.PlugRing",
@@ -1366,7 +1349,7 @@ func init() {
 		DescKey:             "Action.App.PlugRing.Desc",
 		MenuPath:            "Options",
 		MenuSeparatorBefore: true,
-		Handler:             withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmPlugRing, nil) }),
+		Handler:             withPF(func(pf *panel.PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmPlugRing, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:         "App.SaveSettings",
@@ -1378,7 +1361,7 @@ func init() {
 		DefaultKeys:  []string{"ShiftF9:NoAltScreenApp"},
 		DefaultAreas: []string{"Terminal"},
 		MenuPath:     "Options",
-		Handler: withPF(func(pf *PanelsFrame) {
+		Handler: withPF(func(pf *panel.PanelsFrame) {
 			actionSaveSettings(pf)
 		}),
 	})
@@ -1391,9 +1374,9 @@ func init() {
 		DescKey:     "Action.App.ToggleWindowSize.Desc",
 		DefaultKeys: []string{"AltF9"},
 		MenuPath:    "Options",
-		Handler: withPF(func(pf *PanelsFrame) {
+		Handler: withPF(func(pf *panel.PanelsFrame) {
 			targetCols, targetRows := config.App.GuiCols, config.App.GuiRows
-			if pf.lastW == config.App.GuiCols && pf.lastH == config.App.GuiRows {
+			if pf.LastW == config.App.GuiCols && pf.LastH == config.App.GuiRows {
 				targetCols, targetRows = config.App.GuiCols+40, config.App.GuiRows+15
 			}
 			// xterm resize sequence for console mode
@@ -1416,9 +1399,9 @@ func init() {
 		DescKey:     "Action.Panel.ToggleKeyBar.Desc",
 		DefaultKeys: []string{"CtrlB"},
 		MenuPath:    "Options",
-		Handler: withPF(func(pf *PanelsFrame) {
-			pf.showKeyBar = !pf.showKeyBar
-			pf.ResizeConsole(pf.lastW, pf.lastH)
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			pf.ShowKeyBar = !pf.ShowKeyBar
+			pf.ResizeConsole(pf.LastW, pf.LastH)
 		}),
 	})
 	action.RegisterAction(action.Action{
@@ -1453,7 +1436,7 @@ func init() {
 		Description: "Refresh panel contents",
 		DescKey:     "Action.Panel.Rescan.Desc",
 		DefaultKeys: []string{"CtrlR"},
-		Handler:     withPF(func(pf *PanelsFrame) { pf.RefreshAll() }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { pf.RefreshAll() }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.Swap",
@@ -1462,7 +1445,7 @@ func init() {
 		Description: "Swap left and right panels",
 		DescKey:     "Action.Panel.Swap.Desc",
 		DefaultKeys: []string{"CtrlU"},
-		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmSwapPanels, nil) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmSwapPanels, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:         "Panel.Toggle",
@@ -1472,8 +1455,8 @@ func init() {
 		DescKey:      "Action.Panel.Toggle.Desc",
 		DefaultKeys:  []string{"CtrlO:NoAltScreenApp", "Esc:EscToggle", "Del:EscToggle", "NumDel:EscToggle"},
 		DefaultAreas: []string{"Terminal"},
-		Handler: withPF(func(pf *PanelsFrame) {
-			pf.togglePanelsVisibility()
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			pf.TogglePanelsVisibility()
 		}),
 	})
 	action.RegisterAction(action.Action{
@@ -1483,20 +1466,20 @@ func init() {
 		Description: "Show or hide the left panel",
 		DescKey:     "Action.Panel.ToggleLeftPanel.Desc",
 		DefaultKeys: []string{"CtrlF1"},
-		Handler: withPF(func(pf *PanelsFrame) {
-			pf.exitWide()
-			pf.showLeftPanel = !pf.showLeftPanel
-			if !pf.showLeftPanel && pf.activeIdx == 0 && pf.showRightPanel {
-				pf.activeIdx = 1
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			pf.ExitWide()
+			pf.ShowLeftPanel = !pf.ShowLeftPanel
+			if !pf.ShowLeftPanel && pf.ActiveIdx == 0 && pf.ShowRightPanel {
+				pf.ActiveIdx = 1
 			}
-			if !pf.showLeftPanel && !pf.showRightPanel {
-				pf.showPanels = false
+			if !pf.ShowLeftPanel && !pf.ShowRightPanel {
+				pf.ShowPanels = false
 			}
-			if pf.lastW > 0 && pf.lastH > 0 {
-				pf.ResizeConsole(pf.lastW, pf.lastH)
+			if pf.LastW > 0 && pf.LastH > 0 {
+				pf.ResizeConsole(pf.LastW, pf.LastH)
 			}
 			vtui.FrameManager.HardRefresh()
-			if pf.showPanels {
+			if pf.ShowPanels {
 				pf.RefreshAll()
 			}
 		}),
@@ -1508,20 +1491,20 @@ func init() {
 		Description: "Show or hide the right panel",
 		DescKey:     "Action.Panel.ToggleRightPanel.Desc",
 		DefaultKeys: []string{"CtrlF2"},
-		Handler: withPF(func(pf *PanelsFrame) {
-			pf.exitWide()
-			pf.showRightPanel = !pf.showRightPanel
-			if !pf.showRightPanel && pf.activeIdx == 1 && pf.showLeftPanel {
-				pf.activeIdx = 0
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			pf.ExitWide()
+			pf.ShowRightPanel = !pf.ShowRightPanel
+			if !pf.ShowRightPanel && pf.ActiveIdx == 1 && pf.ShowLeftPanel {
+				pf.ActiveIdx = 0
 			}
-			if !pf.showLeftPanel && !pf.showRightPanel {
-				pf.showPanels = false
+			if !pf.ShowLeftPanel && !pf.ShowRightPanel {
+				pf.ShowPanels = false
 			}
-			if pf.lastW > 0 && pf.lastH > 0 {
-				pf.ResizeConsole(pf.lastW, pf.lastH)
+			if pf.LastW > 0 && pf.LastH > 0 {
+				pf.ResizeConsole(pf.LastW, pf.LastH)
 			}
 			vtui.FrameManager.HardRefresh()
-			if pf.showPanels {
+			if pf.ShowPanels {
 				pf.RefreshAll()
 			}
 		}),
@@ -1534,21 +1517,21 @@ func init() {
 		DescKey:      "Action.Panel.TogglePassivePanel.Desc",
 		DefaultKeys:  []string{"CtrlP:NoAltScreenApp"},
 		DefaultAreas: []string{"Terminal"},
-		Handler: withPF(func(pf *PanelsFrame) {
-			pf.exitWide()
-			if pf.activeIdx == 0 {
-				pf.showRightPanel = !pf.showRightPanel
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			pf.ExitWide()
+			if pf.ActiveIdx == 0 {
+				pf.ShowRightPanel = !pf.ShowRightPanel
 			} else {
-				pf.showLeftPanel = !pf.showLeftPanel
+				pf.ShowLeftPanel = !pf.ShowLeftPanel
 			}
-			if !pf.showLeftPanel && !pf.showRightPanel {
-				pf.showPanels = false
+			if !pf.ShowLeftPanel && !pf.ShowRightPanel {
+				pf.ShowPanels = false
 			}
-			if pf.lastW > 0 && pf.lastH > 0 {
-				pf.ResizeConsole(pf.lastW, pf.lastH)
+			if pf.LastW > 0 && pf.LastH > 0 {
+				pf.ResizeConsole(pf.LastW, pf.LastH)
 			}
 			vtui.FrameManager.HardRefresh()
-			if pf.showPanels {
+			if pf.ShowPanels {
 				pf.RefreshAll()
 			}
 		}),
@@ -1560,8 +1543,8 @@ func init() {
 		Description: "Toggle the info panel",
 		DescKey:     "Action.Panel.InfoPanel.Desc",
 		DefaultKeys: []string{"CtrlL"},
-		Handler: withPF(func(pf *PanelsFrame) {
-			pf.toggleAltPanel("info", func(src *FileSystemPanel) AltPanel { return NewInfoPanel(src) })
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			pf.ToggleAltPanel("info", func(src *panel.FileSystemPanel) panel.AltPanel { return panel.NewInfoPanel(src) })
 		}),
 	})
 	action.RegisterAction(action.Action{
@@ -1571,8 +1554,8 @@ func init() {
 		Description: "Toggle the quick view panel",
 		DescKey:     "Action.Panel.QuickView.Desc",
 		DefaultKeys: []string{"CtrlQ"},
-		Handler: withPF(func(pf *PanelsFrame) {
-			pf.toggleAltPanel("quick_view", func(src *FileSystemPanel) AltPanel { return NewQuickViewPanel(src) })
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			pf.ToggleAltPanel("quick_view", func(src *panel.FileSystemPanel) panel.AltPanel { return panel.NewQuickViewPanel(src) })
 		}),
 	})
 	action.RegisterAction(action.Action{
@@ -1583,8 +1566,8 @@ func init() {
 		Description: "Toggle the audio player panel",
 		DescKey:     "Action.Panel.Player.Desc",
 		DefaultKeys: []string{"CtrlShiftM"},
-		Handler: withPF(func(pf *PanelsFrame) {
-			pf.toggleAltPanel("player", func(src *FileSystemPanel) AltPanel { return NewPlayerPanel(src) })
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			pf.ToggleAltPanel("player", func(src *panel.FileSystemPanel) panel.AltPanel { return NewPlayerPanel(src) })
 		}),
 	})
 	action.RegisterAction(action.Action{
@@ -1594,13 +1577,13 @@ func init() {
 		Description: "Move the vertical split to the left",
 		DescKey:     "Action.Panel.SplitLeft.Desc",
 		DefaultKeys: []string{"CtrlLeft:EmptyCommandLine"},
-		Handler: withPF(func(pf *PanelsFrame) {
-			next := pf.widthDecrement + 1
-			if maxWD := (pf.lastW / 2) - 10; maxWD > 0 && next <= maxWD && next >= -maxWD {
-				pf.widthDecrement = next
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			next := pf.WidthDecrement + 1
+			if maxWD := (pf.LastW / 2) - 10; maxWD > 0 && next <= maxWD && next >= -maxWD {
+				pf.WidthDecrement = next
 				config.App.WidthDecrement = next
 				config.RequestSaveConfig()
-				pf.ResizeConsole(pf.lastW, pf.lastH)
+				pf.ResizeConsole(pf.LastW, pf.LastH)
 				vtui.FrameManager.HardRefresh()
 			}
 		}),
@@ -1612,13 +1595,13 @@ func init() {
 		Description: "Move the vertical split to the right",
 		DescKey:     "Action.Panel.SplitRight.Desc",
 		DefaultKeys: []string{"CtrlRight:EmptyCommandLine"},
-		Handler: withPF(func(pf *PanelsFrame) {
-			next := pf.widthDecrement - 1
-			if maxWD := (pf.lastW / 2) - 10; maxWD > 0 && next <= maxWD && next >= -maxWD {
-				pf.widthDecrement = next
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			next := pf.WidthDecrement - 1
+			if maxWD := (pf.LastW / 2) - 10; maxWD > 0 && next <= maxWD && next >= -maxWD {
+				pf.WidthDecrement = next
 				config.App.WidthDecrement = next
 				config.RequestSaveConfig()
-				pf.ResizeConsole(pf.lastW, pf.lastH)
+				pf.ResizeConsole(pf.LastW, pf.LastH)
 				vtui.FrameManager.HardRefresh()
 			}
 		}),
@@ -1630,17 +1613,17 @@ func init() {
 		Description: "Shrink both panels vertically",
 		DescKey:     "Action.Panel.SplitUp.Desc",
 		DefaultKeys: []string{"CtrlUp:EmptyCommandLine"},
-		Handler: withPF(func(pf *PanelsFrame) {
-			nextL := pf.leftHeightDecrement + 1
-			nextR := pf.rightHeightDecrement + 1
-			maxHD := pf.lastH - 7
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			nextL := pf.LeftHeightDecrement + 1
+			nextR := pf.RightHeightDecrement + 1
+			maxHD := pf.LastH - 7
 			if nextL >= 0 && nextR >= 0 && (maxHD <= 0 || (nextL <= maxHD && nextR <= maxHD)) {
-				pf.leftHeightDecrement = nextL
-				pf.rightHeightDecrement = nextR
+				pf.LeftHeightDecrement = nextL
+				pf.RightHeightDecrement = nextR
 				config.App.LeftHeightDecrement = nextL
 				config.App.RightHeightDecrement = nextR
 				config.RequestSaveConfig()
-				pf.ResizeConsole(pf.lastW, pf.lastH)
+				pf.ResizeConsole(pf.LastW, pf.LastH)
 				vtui.FrameManager.HardRefresh()
 			}
 		}),
@@ -1652,17 +1635,17 @@ func init() {
 		Description: "Grow both panels vertically",
 		DescKey:     "Action.Panel.SplitDown.Desc",
 		DefaultKeys: []string{"CtrlDown:EmptyCommandLine"},
-		Handler: withPF(func(pf *PanelsFrame) {
-			nextL := pf.leftHeightDecrement - 1
-			nextR := pf.rightHeightDecrement - 1
-			maxHD := pf.lastH - 7
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			nextL := pf.LeftHeightDecrement - 1
+			nextR := pf.RightHeightDecrement - 1
+			maxHD := pf.LastH - 7
 			if nextL >= 0 && nextR >= 0 && (maxHD <= 0 || (nextL <= maxHD && nextR <= maxHD)) {
-				pf.leftHeightDecrement = nextL
-				pf.rightHeightDecrement = nextR
+				pf.LeftHeightDecrement = nextL
+				pf.RightHeightDecrement = nextR
 				config.App.LeftHeightDecrement = nextL
 				config.App.RightHeightDecrement = nextR
 				config.RequestSaveConfig()
-				pf.ResizeConsole(pf.lastW, pf.lastH)
+				pf.ResizeConsole(pf.LastW, pf.LastH)
 				vtui.FrameManager.HardRefresh()
 			}
 		}),
@@ -1674,20 +1657,20 @@ func init() {
 		Description: "Shrink the active panel vertically",
 		DescKey:     "Action.Panel.SplitActiveUp.Desc",
 		DefaultKeys: []string{"CtrlShiftUp:EmptyCommandLine"},
-		Handler: withPF(func(pf *PanelsFrame) {
-			cur := &pf.rightHeightDecrement
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			cur := &pf.RightHeightDecrement
 			cfg := &config.App.RightHeightDecrement
-			if pf.activeIdx == 0 {
-				cur = &pf.leftHeightDecrement
+			if pf.ActiveIdx == 0 {
+				cur = &pf.LeftHeightDecrement
 				cfg = &config.App.LeftHeightDecrement
 			}
 			next := *cur + 1
-			maxHD := pf.lastH - 7
+			maxHD := pf.LastH - 7
 			if next >= 0 && (maxHD <= 0 || next <= maxHD) {
 				*cur = next
 				*cfg = next
 				config.RequestSaveConfig()
-				pf.ResizeConsole(pf.lastW, pf.lastH)
+				pf.ResizeConsole(pf.LastW, pf.LastH)
 				vtui.FrameManager.HardRefresh()
 			}
 		}),
@@ -1699,20 +1682,20 @@ func init() {
 		Description: "Grow the active panel vertically",
 		DescKey:     "Action.Panel.SplitActiveDown.Desc",
 		DefaultKeys: []string{"CtrlShiftDown:EmptyCommandLine"},
-		Handler: withPF(func(pf *PanelsFrame) {
-			cur := &pf.rightHeightDecrement
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			cur := &pf.RightHeightDecrement
 			cfg := &config.App.RightHeightDecrement
-			if pf.activeIdx == 0 {
-				cur = &pf.leftHeightDecrement
+			if pf.ActiveIdx == 0 {
+				cur = &pf.LeftHeightDecrement
 				cfg = &config.App.LeftHeightDecrement
 			}
 			next := *cur - 1
-			maxHD := pf.lastH - 7
+			maxHD := pf.LastH - 7
 			if next >= 0 && (maxHD <= 0 || next <= maxHD) {
 				*cur = next
 				*cfg = next
 				config.RequestSaveConfig()
-				pf.ResizeConsole(pf.lastW, pf.lastH)
+				pf.ResizeConsole(pf.LastW, pf.LastH)
 				vtui.FrameManager.HardRefresh()
 			}
 		}),
@@ -1724,16 +1707,16 @@ func init() {
 		Description: "Reset the panel split to defaults",
 		DescKey:     "Action.Panel.SplitReset.Desc",
 		DefaultKeys: []string{"CtrlVK_C"},
-		Handler: withPF(func(pf *PanelsFrame) {
-			if pf.widthDecrement != 0 || pf.leftHeightDecrement != 0 || pf.rightHeightDecrement != 0 {
-				pf.widthDecrement = 0
-				pf.leftHeightDecrement = 0
-				pf.rightHeightDecrement = 0
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			if pf.WidthDecrement != 0 || pf.LeftHeightDecrement != 0 || pf.RightHeightDecrement != 0 {
+				pf.WidthDecrement = 0
+				pf.LeftHeightDecrement = 0
+				pf.RightHeightDecrement = 0
 				config.App.WidthDecrement = 0
 				config.App.LeftHeightDecrement = 0
 				config.App.RightHeightDecrement = 0
 				config.RequestSaveConfig()
-				pf.ResizeConsole(pf.lastW, pf.lastH)
+				pf.ResizeConsole(pf.LastW, pf.LastH)
 				vtui.FrameManager.HardRefresh()
 			}
 		}),
@@ -1745,7 +1728,7 @@ func init() {
 		Description: "Open the active panel's directory in the passive panel",
 		DescKey:     "Action.Panel.SyncPanels.Desc",
 		DefaultKeys: []string{"AltI"},
-		Handler:     withPF(func(pf *PanelsFrame) { pf.syncPassivePanel() }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { pf.SyncPassivePanel() }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.ToggleInfoBytes",
@@ -1754,7 +1737,7 @@ func init() {
 		Description: "Flip number formatting in info and quick view panels",
 		DescKey:     "Action.Panel.ToggleInfoBytes.Desc",
 		DefaultKeys: []string{"B:AltPanelVisible"},
-		Handler: withPF(func(pf *PanelsFrame) {
+		Handler: withPF(func(pf *panel.PanelsFrame) {
 			config.App.InfoPanelBytes = !config.App.InfoPanelBytes
 			config.RequestSaveConfig()
 			vtui.FrameManager.HardRefresh()
@@ -1769,7 +1752,7 @@ func init() {
 		DescKey:     "Action.Panel.ToggleHidden.Desc",
 		DefaultKeys: []string{"CtrlH"},
 		Checked:     func() bool { return config.App.ShowHiddenFiles },
-		Handler: withPF(func(pf *PanelsFrame) {
+		Handler: withPF(func(pf *panel.PanelsFrame) {
 			config.App.ShowHiddenFiles = !config.App.ShowHiddenFiles
 			pf.RefreshAll()
 		}),
@@ -1782,7 +1765,7 @@ func init() {
 		DescKey:     "Action.Panel.ViewBrief.Desc",
 		DefaultKeys: []string{"Ctrl1"},
 		Visible:     func() bool { return !isAIPanelActive() },
-		Handler:     withPF(func(pf *PanelsFrame) { pf.setPanelViewMode(pf.activeIdx, ViewModeBrief) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { pf.SetPanelViewMode(pf.ActiveIdx, panel.ViewModeBrief) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.ViewMedium",
@@ -1792,7 +1775,7 @@ func init() {
 		DescKey:     "Action.Panel.ViewMedium.Desc",
 		DefaultKeys: []string{"Ctrl2"},
 		Visible:     func() bool { return !isAIPanelActive() },
-		Handler:     withPF(func(pf *PanelsFrame) { pf.setPanelViewMode(pf.activeIdx, ViewModeMedium) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { pf.SetPanelViewMode(pf.ActiveIdx, panel.ViewModeMedium) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.ViewDetailed",
@@ -1802,7 +1785,7 @@ func init() {
 		DescKey:     "Action.Panel.ViewDetailed.Desc",
 		DefaultKeys: []string{"Ctrl3"},
 		Visible:     func() bool { return !isAIPanelActive() },
-		Handler:     withPF(func(pf *PanelsFrame) { pf.setPanelViewMode(pf.activeIdx, ViewModeDetailed) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { pf.SetPanelViewMode(pf.ActiveIdx, panel.ViewModeDetailed) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.ViewWide",
@@ -1812,7 +1795,7 @@ func init() {
 		DescKey:     "Action.Panel.ViewWide.Desc",
 		DefaultKeys: []string{"Ctrl4"},
 		Visible:     func() bool { return !isAIPanelActive() },
-		Handler:     withPF(func(pf *PanelsFrame) { pf.setWidePanel(pf.activeIdx) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { pf.SetWidePanel(pf.ActiveIdx) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.SortByName",
@@ -1821,7 +1804,7 @@ func init() {
 		Description: "Sort panel by name",
 		DescKey:     "Action.Panel.SortByName.Desc",
 		DefaultKeys: []string{"CtrlF3"},
-		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmSortName, nil) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmSortName, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.SortByExt",
@@ -1830,7 +1813,7 @@ func init() {
 		Description: "Sort panel by extension",
 		DescKey:     "Action.Panel.SortByExt.Desc",
 		DefaultKeys: []string{"CtrlF4"},
-		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmSortExt, nil) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmSortExt, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.SortByTime",
@@ -1839,7 +1822,7 @@ func init() {
 		Description: "Sort panel by modification time",
 		DescKey:     "Action.Panel.SortByTime.Desc",
 		DefaultKeys: []string{"CtrlF5"},
-		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmSortTime, nil) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmSortTime, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.SortBySize",
@@ -1848,7 +1831,7 @@ func init() {
 		Description: "Sort panel by size",
 		DescKey:     "Action.Panel.SortBySize.Desc",
 		DefaultKeys: []string{"CtrlF6"},
-		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmSortSize, nil) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmSortSize, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.SortUnsorted",
@@ -1857,7 +1840,7 @@ func init() {
 		Description: "Disable panel sorting",
 		DescKey:     "Action.Panel.SortUnsorted.Desc",
 		DefaultKeys: []string{"CtrlF7"},
-		Handler:     withPF(func(pf *PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmSortUnsorted, nil) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { vtui.FrameManager.EmitCommand(appcmd.CmSortUnsorted, nil) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:         "Panel.LeftDriveMenu",
@@ -1868,7 +1851,7 @@ func init() {
 		DescKey:      "Action.Panel.LeftDriveMenu.Desc",
 		DefaultKeys:  []string{"AltF1:NoAltScreenApp", "CtrlShiftLeft:NoAltScreenApp"},
 		DefaultAreas: []string{"Terminal"},
-		Handler:      withPF(func(pf *PanelsFrame) { pf.showDriveMenu(0) }),
+		Handler:      withPF(func(pf *panel.PanelsFrame) { pf.ShowDriveMenu(0) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:         "Panel.RightDriveMenu",
@@ -1879,7 +1862,7 @@ func init() {
 		DescKey:      "Action.Panel.RightDriveMenu.Desc",
 		DefaultKeys:  []string{"AltF2:NoAltScreenApp", "CtrlShiftRight:NoAltScreenApp"},
 		DefaultAreas: []string{"Terminal"},
-		Handler:      withPF(func(pf *PanelsFrame) { pf.showDriveMenu(1) }),
+		Handler:      withPF(func(pf *panel.PanelsFrame) { pf.ShowDriveMenu(1) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Panel.EnterDirectory",
@@ -1888,21 +1871,21 @@ func init() {
 		Description: "Enter the directory or archive under the cursor",
 		DescKey:     "Action.Panel.EnterDirectory.Desc",
 		DefaultKeys: []string{"CtrlPgDn", "CtrlShiftPgDn"},
-		Handler: withPF(func(pf *PanelsFrame) {
-			fsp := pf.getActivePanel()
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			fsp := pf.GetActivePanel()
 			if fsp == nil {
 				return
 			}
 			idx := fsp.GetCursorIndex()
-			if idx < 0 || idx >= len(fsp.entries) {
+			if idx < 0 || idx >= len(fsp.Entries) {
 				return
 			}
-			selected := fsp.entries[idx]
+			selected := fsp.Entries[idx]
 			isDir := selected.IsDir
 			isArchive := false
 			if !isDir {
-				fullPath := fsp.vfs.Join(fsp.vfs.GetPath(), selected.Name)
-				isArchive = vfs.FindProvider(context.Background(), fsp.vfs, fullPath) != nil
+				fullPath := fsp.Vfs.Join(fsp.Vfs.GetPath(), selected.Name)
+				isArchive = vfs.FindProvider(context.Background(), fsp.Vfs, fullPath) != nil
 			}
 			if isDir || isArchive {
 				pf.ProcessKey(&vtinput.InputEvent{Type: vtinput.KeyEventType, KeyDown: true, VirtualKeyCode: vtinput.VK_RETURN})
@@ -1922,8 +1905,8 @@ func init() {
 		// leaves the command line hidden anyway.
 		DefaultKeys:  []string{"CtrlEnter:NoTerminalApp"},
 		DefaultAreas: []string{"Terminal"},
-		Handler: withPF(func(pf *PanelsFrame) {
-			pf.insertSelectedFileName()
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			pf.InsertSelectedFileName()
 		}),
 	})
 	action.RegisterAction(action.Action{
@@ -1933,9 +1916,9 @@ func init() {
 		Description: "Insert the left panel path into the command line",
 		DescKey:     "Action.Panel.InsertLeftPath.Desc",
 		DefaultKeys: []string{"CtrlVK_DB"},
-		Handler: withPF(func(pf *PanelsFrame) {
-			if fsp := pf.visualLeftFSP(); fsp != nil {
-				pf.insertPathToCmdLine(fsp.vfs.GetPath())
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			if fsp := pf.VisualLeftFSP(); fsp != nil {
+				pf.InsertPathToCmdLine(fsp.Vfs.GetPath())
 			}
 		}),
 	})
@@ -1946,9 +1929,9 @@ func init() {
 		Description: "Insert the right panel path into the command line",
 		DescKey:     "Action.Panel.InsertRightPath.Desc",
 		DefaultKeys: []string{"CtrlVK_DD"},
-		Handler: withPF(func(pf *PanelsFrame) {
-			if fsp := pf.visualRightFSP(); fsp != nil {
-				pf.insertPathToCmdLine(fsp.vfs.GetPath())
+		Handler: withPF(func(pf *panel.PanelsFrame) {
+			if fsp := pf.VisualRightFSP(); fsp != nil {
+				pf.InsertPathToCmdLine(fsp.Vfs.GetPath())
 			}
 		}),
 	})
@@ -1969,7 +1952,7 @@ func init() {
 		Description: "Show a dummy long operation dialog (debug)",
 		DescKey:     "Action.Debug.DummyOperation.Desc",
 		DefaultKeys: []string{"AltF5"},
-		Handler:     withPF(func(pf *PanelsFrame) { pf.showDummyOpDialog() }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { pf.ShowDummyOpDialog() }),
 	})
 
 	// --- Terminal actions ---
@@ -1982,7 +1965,7 @@ func init() {
 		DescKey:     "Action.Terminal.ViewLog.Desc",
 		DefaultKeys: []string{"F3:TerminalQuiet", "CtrlShiftF3"},
 		MenuPath:    "File",
-		Handler:     withPF(func(pf *PanelsFrame) { actionViewTerminalLog(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionViewTerminalLog(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Terminal.EditLog",
@@ -1993,7 +1976,7 @@ func init() {
 		DescKey:     "Action.Terminal.EditLog.Desc",
 		DefaultKeys: []string{"F4:TerminalQuiet", "CtrlShiftF4"},
 		MenuPath:    "File",
-		Handler:     withPF(func(pf *PanelsFrame) { actionEditTerminalLog(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionEditTerminalLog(pf) }),
 	})
 
 	// --- Editor actions (menu order follows registration order) ---
@@ -2457,7 +2440,7 @@ func init() {
 		DefaultKeys: []string{"CtrlVK_DB"},
 		MenuPath:    "Insert",
 		Handler: withEditor(func(ev *editor.EditorView) {
-			if s := leftPanelPathForEditor(); s != "" {
+			if s := panel.LeftPanelPathForEditor(); s != "" {
 				ev.InsertTextAtCursor([]byte(s))
 			}
 		}),
@@ -2472,7 +2455,7 @@ func init() {
 		DefaultKeys: []string{"CtrlVK_DD"},
 		MenuPath:    "Insert",
 		Handler: withEditor(func(ev *editor.EditorView) {
-			if s := rightPanelPathForEditor(); s != "" {
+			if s := panel.RightPanelPathForEditor(); s != "" {
 				ev.InsertTextAtCursor([]byte(s))
 			}
 		}),
@@ -2486,7 +2469,7 @@ func init() {
 		DescKey:     "Action.Editor.InsertActivePanelFileName.Desc",
 		MenuPath:    "Insert",
 		Handler: withEditor(func(ev *editor.EditorView) {
-			if s := activePanelNameForEditor(); s != "" {
+			if s := panel.ActivePanelNameForEditor(); s != "" {
 				ev.InsertTextAtCursor([]byte(s))
 			}
 		}),
@@ -2664,7 +2647,7 @@ func init() {
 		Description: "Open editor settings dialog",
 		DescKey:     "Action.Settings.Editor.Desc",
 		MenuPath:    "Options",
-		Handler:     withPF(func(pf *PanelsFrame) { actionEditorSettings(pf) }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { actionEditorSettings(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "Viewer.Settings",
@@ -2674,6 +2657,6 @@ func init() {
 		Description: "Open viewer settings dialog",
 		DescKey:     "Action.Settings.Viewer.Desc",
 		MenuPath:    "Options",
-		Handler:     withPF(func(pf *PanelsFrame) { dialog.ShowViewerSettings() }),
+		Handler:     withPF(func(pf *panel.PanelsFrame) { dialog.ShowViewerSettings() }),
 	})
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/unxed/f4/internal/appcmd"
+	"github.com/unxed/f4/internal/keymap"
 	"github.com/unxed/f4/internal/macro"
 	"github.com/unxed/f4/internal/viewer"
 	"github.com/unxed/vtinput"
@@ -18,14 +19,14 @@ func (viewerApplication) MenuBarItems(area string) []vtui.MenuBarItem {
 }
 
 func (viewerApplication) KeyBarLabels(area string, fallbacks *vtui.KeySet) *vtui.KeySet {
-	return KeyBarLabelsForArea(area, fallbacks)
+	return keymap.KeyBarLabelsForArea(area, fallbacks)
 }
 
 func (viewerApplication) ActionForKey(area, key string) string {
-	if GlobalHotkeysMgr == nil {
+	if keymap.GlobalHotkeysMgr == nil {
 		return ""
 	}
-	return GlobalHotkeysMgr.GetAction(area, key)
+	return keymap.GlobalHotkeysMgr.GetAction(area, key)
 }
 
 func (viewerApplication) HandleCommand(v *viewer.ViewerView, cmd int, args any) bool {

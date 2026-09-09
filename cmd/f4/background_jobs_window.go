@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
 	"time"
 
 	"github.com/unxed/f4/internal/i18n"
@@ -13,7 +14,7 @@ import (
 // that are waiting to be looked at. It is the way back to a job whose window
 // was closed, and the only way to see a result that finished while nobody
 // was watching.
-func ShowBackgroundJobs(pf *PanelsFrame) {
+func ShowBackgroundJobs(pf *panel.PanelsFrame) {
 	width, height := 66, 16
 	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("Jobs.Title"))
 	dlg.ShowClose = true

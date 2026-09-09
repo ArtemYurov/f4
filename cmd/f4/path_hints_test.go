@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,7 +43,7 @@ func TestPathHintItems_AbsoluteEmptyNeedle(t *testing.T) {
 	dir := setupPathHintDir(t)
 	v := vfs.NewOSVFS(dir)
 
-	items := pathHintItems(v, dir+string(filepath.Separator), 5, 9)
+	items := panel.PathHintItems(v, dir+string(filepath.Separator), 5, 9)
 	if len(items) != 5 {
 		t.Fatalf("Expected 5 items, got %d", len(items))
 	}
@@ -75,7 +77,7 @@ func TestPathHintItems_FuzzyNeedle(t *testing.T) {
 
 	dirPart := dir + string(filepath.Separator)
 
-	items := pathHintItems(v, dirPart+"alp", 0, 0)
+	items := panel.PathHintItems(v, dirPart+"alp", 0, 0)
 	if len(items) != 1 {
 		t.Fatalf("Expected exactly alpha.txt, got %d items: %v", len(items), items)
 	}
@@ -93,7 +95,7 @@ func TestPathHintItems_RelativeToPanel(t *testing.T) {
 	dir := setupPathHintDir(t)
 	v := vfs.NewOSVFS(dir)
 
-	items := pathHintItems(v, "subdir1/", 0, 0)
+	items := panel.PathHintItems(v, "subdir1/", 0, 0)
 	if len(items) != 1 || !strings.HasSuffix(items[0].Text, "inner.txt") {
 		t.Fatalf("Relative resolution against the panel path failed: %v", items)
 	}
@@ -106,13 +108,13 @@ func TestPathHintItems_Rejects(t *testing.T) {
 	dir := setupPathHintDir(t)
 	v := vfs.NewOSVFS(dir)
 
-	if items := pathHintItems(v, "justafile", 0, 0); items != nil {
+	if items := panel.PathHintItems(v, "justafile", 0, 0); items != nil {
 		t.Errorf("No separator -> no hints, got %v", items)
 	}
-	if items := pathHintItems(v, filepath.Join(dir, "nosuch")+"/", 0, 0); items != nil {
+	if items := panel.PathHintItems(v, filepath.Join(dir, "nosuch")+"/", 0, 0); items != nil {
 		t.Errorf("Invalid dir -> no hints, got %v", items)
 	}
-	if items := pathHintItems(v, "", 0, 0); items != nil {
+	if items := panel.PathHintItems(v, "", 0, 0); items != nil {
 		t.Errorf("Empty word -> no hints, got %v", items)
 	}
 }
@@ -123,7 +125,7 @@ func TestPathHintItems_BareDirectoryArgumentPreservesQuote(t *testing.T) {
 
 	edit := vtui.NewEdit(0, 0, 80, `cd "sub`)
 	from, to, word := edit.WordUnderCursor()
-	items := pathHintItemsForCommand(v, edit, word, from, to)
+	items := panel.PathHintItemsForCommand(v, edit, word, from, to)
 	if len(items) != 2 {
 		t.Fatalf("Expected both matching directories, got %d: %v", len(items), items)
 	}
@@ -136,7 +138,7 @@ func TestPathHintItems_BareDirectoryArgumentPreservesQuote(t *testing.T) {
 
 	other := vtui.NewEdit(0, 0, 80, `echo "sub`)
 	from, to, word = other.WordUnderCursor()
-	if items := pathHintItemsForCommand(v, other, word, from, to); items != nil {
+	if items := panel.PathHintItemsForCommand(v, other, word, from, to); items != nil {
 		t.Fatalf("Bare arguments to non-directory commands must not list panel entries: %v", items)
 	}
 }
@@ -145,7 +147,7 @@ func TestPathHintItems_QuotedPath(t *testing.T) {
 	dir := setupPathHintDir(t)
 	v := vfs.NewOSVFS(dir)
 
-	items := pathHintItems(v, `"`+dir+string(filepath.Separator)+`"`, 0, 0)
+	items := panel.PathHintItems(v, `"`+dir+string(filepath.Separator)+`"`, 0, 0)
 	if len(items) != 5 {
 		t.Fatalf("Quoted path should resolve, got %d items", len(items))
 	}
@@ -161,7 +163,7 @@ func TestPathHintItems_FinalElementOnly(t *testing.T) {
 	config.App.ShowHighlightMarks = false
 
 	dirPart := dir + string(filepath.Separator)
-	items := pathHintItems(v, dirPart+"alp", 0, 0)
+	items := panel.PathHintItems(v, dirPart+"alp", 0, 0)
 	if len(items) != 1 {
 		t.Fatalf("Expected alpha.txt only, got %d items", len(items))
 	}
@@ -176,7 +178,7 @@ func TestPathHintItems_FinalElementOnly(t *testing.T) {
 	}
 
 	config.App.PathHintFullPath = true
-	items = pathHintItems(v, dirPart+"alp", 0, 0)
+	items = panel.PathHintItems(v, dirPart+"alp", 0, 0)
 	if items[0].Display != dirPart+"alpha.txt" {
 		t.Errorf("FullPath display: %q", items[0].Display)
 	}
@@ -199,7 +201,7 @@ func TestPathHintItems_HighlightMarker(t *testing.T) {
 	theme.GlobalFileHighlighter.LoadFromIni(ini)
 
 	dirPart := dir + string(filepath.Separator)
-	items := pathHintItems(v, dirPart+"bet", 0, 0)
+	items := panel.PathHintItems(v, dirPart+"bet", 0, 0)
 	if len(items) != 1 {
 		t.Fatalf("Expected beta.exe only, got %d items", len(items))
 	}
@@ -215,7 +217,7 @@ func TestPathHintItems_HighlightMarker(t *testing.T) {
 
 	// Same file without the panel marks setting: no marker
 	config.App.ShowHighlightMarks = false
-	items = pathHintItems(v, dirPart+"bet", 0, 0)
+	items = panel.PathHintItems(v, dirPart+"bet", 0, 0)
 	if items[0].Display != "beta.exe" {
 		t.Errorf("Marker should follow the panel setting: %q", items[0].Display)
 	}
@@ -240,21 +242,21 @@ func TestPathHintProvider_BothPanels(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	pf.panels[1].(*FileSystemPanel).vfs = vfs.NewOSVFS(dirA) // activeIdx = 1
-	pf.panels[0].(*FileSystemPanel).vfs = vfs.NewOSVFS(dirB)
+	pf.Panels[1].(*panel.FileSystemPanel).Vfs = vfs.NewOSVFS(dirA) // activeIdx = 1
+	pf.Panels[0].(*panel.FileSystemPanel).Vfs = vfs.NewOSVFS(dirB)
 	vtui.FrameManager.Push(pf)
 	defer vtui.FrameManager.Pop()
 
 	oldCfg := config.App
 	defer func() { config.App = oldCfg }()
 	config.App.CommandLineAutoComplete = true
-	config.App.PathHintSource = PathHintSourceBoth
+	config.App.PathHintSource = panel.PathHintSourceBoth
 	config.App.PathHintFullPath = false
 
-	items := pathHintProvider(nil, "sub/", 0, 4)
+	items := panel.PathHintProvider(nil, "sub/", 0, 4)
 	// active group, separator, passive group
 	if len(items) != 3 {
 		t.Fatalf("Expected 3 items (active + separator + passive), got %d: %v", len(items), items)
@@ -270,15 +272,15 @@ func TestPathHintProvider_BothPanels(t *testing.T) {
 	}
 
 	// Passive only
-	config.App.PathHintSource = PathHintSourcePassive
-	items = pathHintProvider(nil, "sub/", 0, 4)
+	config.App.PathHintSource = panel.PathHintSourcePassive
+	items = panel.PathHintProvider(nil, "sub/", 0, 4)
 	if len(items) != 1 || !strings.HasSuffix(items[0].Display, "passive.txt") {
 		t.Fatalf("Passive-only source failed: %v", items)
 	}
 
 	// Active only (default)
-	config.App.PathHintSource = PathHintSourceActive
-	items = pathHintProvider(nil, "sub/", 0, 4)
+	config.App.PathHintSource = panel.PathHintSourceActive
+	items = panel.PathHintProvider(nil, "sub/", 0, 4)
 	if len(items) != 1 || !strings.HasSuffix(items[0].Display, "active.txt") {
 		t.Fatalf("Active-only source failed: %v", items)
 	}
@@ -296,20 +298,20 @@ func TestPathHintProvider_DisabledWhenCommandLineAutoCompleteOff(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	pf.panels[1].(*FileSystemPanel).vfs = vfs.NewOSVFS(dir)
+	pf.Panels[1].(*panel.FileSystemPanel).Vfs = vfs.NewOSVFS(dir)
 	vtui.FrameManager.Push(pf)
 	defer vtui.FrameManager.Pop()
 
 	oldCfg := config.App
 	defer func() { config.App = oldCfg }()
 	config.App.CommandLineAutoComplete = false
-	config.App.PathHintSource = PathHintSourceBoth
+	config.App.PathHintSource = panel.PathHintSourceBoth
 	config.App.PathHintFullPath = false
 
-	if items := pathHintProvider(nil, "sub/", 0, 4); items != nil {
+	if items := panel.PathHintProvider(nil, "sub/", 0, 4); items != nil {
 		t.Fatalf("Path hints should be disabled when command line autocompletion is off, got %d items", len(items))
 	}
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/keymap"
 	"testing"
 
 	"github.com/unxed/f4/internal/testutil"
@@ -51,10 +52,10 @@ func TestHotkeyRow(t *testing.T) {
 }
 
 func TestHotkeyAssignFramePreservesRightCtrl(t *testing.T) {
-	previous := GlobalHotkeysMgr
-	t.Cleanup(func() { GlobalHotkeysMgr = previous })
+	previous := keymap.GlobalHotkeysMgr
+	t.Cleanup(func() { keymap.GlobalHotkeysMgr = previous })
 
-	hm := NewHotkeyManager("")
+	hm := keymap.NewHotkeyManager("")
 	f := NewHotkeyAssignFrame(hm, "File.Attributes", "Shell", nil)
 	ctrlABefore, ctrlAExists := hm.Bindings["Shell"]["CtrlA"]
 
@@ -183,9 +184,9 @@ func TestNativeHotkeyInventory(t *testing.T) {
 }
 
 func TestActionHotkeyConfigBuildsNativeRowsAndFitsScreen(t *testing.T) {
-	previous := GlobalHotkeysMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	t.Cleanup(func() { GlobalHotkeysMgr = previous })
+	previous := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	t.Cleanup(func() { keymap.GlobalHotkeysMgr = previous })
 
 	screen := vtui.NewSilentScreenBuf()
 	screen.AllocBuf(160, 40)
@@ -255,10 +256,10 @@ func TestActionHotkeyConfigBuildsNativeRowsAndFitsScreen(t *testing.T) {
 }
 
 func TestActionHotkeyConfigUnbindUsesDraftUntilSave(t *testing.T) {
-	previous := GlobalHotkeysMgr
-	manager := NewHotkeyManager("")
-	GlobalHotkeysMgr = manager
-	t.Cleanup(func() { GlobalHotkeysMgr = previous })
+	previous := keymap.GlobalHotkeysMgr
+	manager := keymap.NewHotkeyManager("")
+	keymap.GlobalHotkeysMgr = manager
+	t.Cleanup(func() { keymap.GlobalHotkeysMgr = previous })
 
 	screen := vtui.NewSilentScreenBuf()
 	screen.AllocBuf(160, 40)
@@ -332,11 +333,11 @@ func TestActionHotkeyConfigUnbindUsesDraftUntilSave(t *testing.T) {
 // swallows a framework-owned chord must still be able to put the action on a
 // key of their own from the hotkey settings dialog.
 func TestNativeOnlyActionsStayAssignable(t *testing.T) {
-	previous := GlobalHotkeysMgr
-	t.Cleanup(func() { GlobalHotkeysMgr = previous })
+	previous := keymap.GlobalHotkeysMgr
+	t.Cleanup(func() { keymap.GlobalHotkeysMgr = previous })
 
-	hm := NewHotkeyManager("")
-	GlobalHotkeysMgr = hm
+	hm := keymap.NewHotkeyManager("")
+	keymap.GlobalHotkeysMgr = hm
 	rows := buildHotkeyRows(hm)
 
 	for _, tc := range []struct {
@@ -374,11 +375,11 @@ func TestNativeOnlyActionsStayAssignable(t *testing.T) {
 // unchanged: once an action carries a configurable binding it no longer needs
 // the empty row.
 func TestConfiguredBindingReplacesTheAssignableRow(t *testing.T) {
-	previous := GlobalHotkeysMgr
-	t.Cleanup(func() { GlobalHotkeysMgr = previous })
+	previous := keymap.GlobalHotkeysMgr
+	t.Cleanup(func() { keymap.GlobalHotkeysMgr = previous })
 
-	hm := NewHotkeyManager("")
-	GlobalHotkeysMgr = hm
+	hm := keymap.NewHotkeyManager("")
+	keymap.GlobalHotkeysMgr = hm
 	hm.Bind("Common", "CtrlShiftT", "Workspace.Next")
 
 	var empty, bound int

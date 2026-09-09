@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
 	"strconv"
 	"strings"
 	"time"
@@ -38,11 +39,11 @@ const compareProgressInterval = 50 * time.Millisecond
 // has no folder of its own, so the menu entry stays out of sight rather
 // than being offered and refused.
 func panelCanCompareFolders() bool {
-	pf := findPanelsFrameAnyScreen()
+	pf := panel.FindPanelsFrameAnyScreen()
 	if pf == nil {
 		return false
 	}
-	return pf.getActivePanel() != nil && pf.getInactivePanel() != nil
+	return pf.GetActivePanel() != nil && pf.GetInactivePanel() != nil
 }
 
 // compareCaptionWidth is how many columns a checkbox with this caption
@@ -65,7 +66,7 @@ func compareRadioWidth(indent int, items []string) int {
 
 // ShowCompareFoldersDialog asks what to compare and how, then runs the
 // comparison over the two panels.
-func ShowCompareFoldersDialog(pf *PanelsFrame) {
+func ShowCompareFoldersDialog(pf *panel.PanelsFrame) {
 	if pf == nil {
 		return
 	}
@@ -278,22 +279,22 @@ func compareCheckState(on bool) int {
 // started. The scan runs off the UI thread and may take a while, so the
 // marks are only applied if the panel is still showing the same listing.
 type comparePanelSnapshot struct {
-	panel *FileSystemPanel
+	pnl   *panel.FileSystemPanel
 	fs    vfs.VFS
 	root  string
 	allow map[string]bool
 	epoch uint64
 }
 
-func captureComparePanel(fsp *FileSystemPanel, opts config.CompareOptions) (comparePanelSnapshot, bool) {
-	if fsp == nil || fsp.vfs == nil {
+func captureComparePanel(fsp *panel.FileSystemPanel, opts config.CompareOptions) (comparePanelSnapshot, bool) {
+	if fsp == nil || fsp.Vfs == nil {
 		return comparePanelSnapshot{}, false
 	}
 	snap := comparePanelSnapshot{
-		panel: fsp,
-		fs:    fsp.vfs,
-		root:  fsp.vfs.GetPath(),
-		epoch: fsp.directoryEpoch,
+		pnl:   fsp,
+		fs:    fsp.Vfs,
+		root:  fsp.Vfs.GetPath(),
+		epoch: fsp.DirectoryEpoch,
 	}
 	if opts.MarkedOnly {
 		marked := fsp.GetMarkedNames()
@@ -313,32 +314,32 @@ func captureComparePanel(fsp *FileSystemPanel, opts config.CompareOptions) (comp
 // stillCurrent reports whether the panel is showing what it was showing
 // when the comparison started.
 func (s comparePanelSnapshot) stillCurrent() bool {
-	fsp := s.panel
-	return fsp != nil && fsp.vfs != nil && fileops.SameVFSInstance(fsp.vfs, s.fs) &&
-		fsp.vfs.GetPath() == s.root && fsp.directoryEpoch == s.epoch
+	fsp := s.pnl
+	return fsp != nil && fsp.Vfs != nil && fileops.SameVFSInstance(fsp.Vfs, s.fs) &&
+		fsp.Vfs.GetPath() == s.root && fsp.DirectoryEpoch == s.epoch
 }
 
 // applyCompareMarks replaces the panel's selection with the comparison
 // result. The previous selection is kept as the restorable one, so Ctrl+M
 // undoes a comparison the same way it undoes any other mass selection.
 func (s comparePanelSnapshot) applyCompareMarks(marks map[string]bool) {
-	fsp := s.panel
+	fsp := s.pnl
 	if fsp == nil {
 		return
 	}
 	fsp.SaveSelection()
-	fsp.setAllItemsSelected(false)
+	fsp.SetAllItemsSelected(false)
 	for name := range marks {
 		fsp.SetSelectedByName(name, true)
 	}
 }
 
 // runCompareFolders compares the two panels and marks what differs.
-func runCompareFolders(pf *PanelsFrame, opts config.CompareOptions) {
+func runCompareFolders(pf *panel.PanelsFrame, opts config.CompareOptions) {
 	if pf == nil {
 		return
 	}
-	active, passive := pf.getActivePanel(), pf.getInactivePanel()
+	active, passive := pf.GetActivePanel(), pf.GetInactivePanel()
 	if active == nil || passive == nil {
 		vtui.ShowMessage(i18n.Msg("Compare.Title"), i18n.Msg("Compare.NoPanels"), []string{"&Ok"})
 		return

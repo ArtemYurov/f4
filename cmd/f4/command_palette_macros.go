@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/unxed/f4/internal/keymap"
 	"sort"
 	"strings"
 
@@ -39,7 +40,7 @@ func commandPaletteMacroRecordEntry(category string, aliases []string) commandPa
 		Description:  i18n.Msg("CommandPalette.MacroRecording.Desc"),
 		ID:           "Macro.RecordToggle",
 		Category:     category,
-		Shortcut:     FormatKeyForUI("Ctrl."),
+		Shortcut:     keymap.FormatKeyForUI("Ctrl."),
 		SearchFields: append(append([]string(nil), aliases...), commandPaletteTranslations(
 			"CommandPalette.StartMacroRecording",
 			"CommandPalette.StopMacroRecording",
@@ -66,13 +67,13 @@ func commandPaletteRecordedMacroEntries(area, category string, aliases []string)
 			capturedArea, capturedKey := bindingArea, key
 			entries = append(entries, commandPaletteEntry{
 				Key:                "recorded-macro:" + strings.ToLower(bindingArea) + ":" + strings.ToLower(key),
-				Label:              fmt.Sprintf(i18n.Msg("CommandPalette.RecordedMacro"), FormatKeyForUI(key)),
-				EnglishLabel:       "Recorded macro: " + FormatKeyForUI(key),
+				Label:              fmt.Sprintf(i18n.Msg("CommandPalette.RecordedMacro"), keymap.FormatKeyForUI(key)),
+				EnglishLabel:       "Recorded macro: " + keymap.FormatKeyForUI(key),
 				Description:        fmt.Sprintf(i18n.Msg("CommandPalette.RecordedMacro.Desc"), bindingArea),
 				EnglishDescription: "Play a recorded keyboard macro",
 				ID:                 "Macro.Recorded." + bindingArea + "." + key,
 				Category:           category,
-				Shortcut:           FormatKeyForUI(key),
+				Shortcut:           keymap.FormatKeyForUI(key),
 				SearchFields: append(append([]string{bindingArea}, aliases...), commandPaletteTranslations(
 					"CommandPalette.RecordedMacro",
 					"CommandPalette.RecordedMacro.Desc",
@@ -115,7 +116,7 @@ func commandPaletteLuaMacroEntries(area, category string, aliases []string) []co
 		bindingKey := binding.Key
 		label := strings.TrimSpace(binding.Description)
 		if label == "" {
-			label = fmt.Sprintf(i18n.Msg("CommandPalette.LuaMacro"), FormatKeyForUI(binding.Key))
+			label = fmt.Sprintf(i18n.Msg("CommandPalette.LuaMacro"), keymap.FormatKeyForUI(binding.Key))
 		}
 		entries = append(entries, commandPaletteEntry{
 			Key:                "lua-macro:" + strings.ToLower(binding.Area) + ":" + strings.ToLower(binding.Key),
@@ -125,7 +126,7 @@ func commandPaletteLuaMacroEntries(area, category string, aliases []string) []co
 			EnglishDescription: binding.Source,
 			ID:                 "Macro.Lua." + binding.Area + "." + binding.Key,
 			Category:           category,
-			Shortcut:           FormatKeyForUI(binding.Key),
+			Shortcut:           keymap.FormatKeyForUI(binding.Key),
 			SearchFields: append(append([]string{binding.Area, binding.Source}, aliases...), commandPaletteTranslations(
 				"CommandPalette.LuaMacro",
 			)...),

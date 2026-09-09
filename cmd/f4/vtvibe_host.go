@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -107,9 +108,9 @@ func init() {
 		vtui.DebugLog("VTVIBE: cannot register the ai: prefix: %v", err)
 	}
 
-	withAI := func(fn func(pf *PanelsFrame)) func() bool {
+	withAI := func(fn func(pf *panel.PanelsFrame)) func() bool {
 		return func() bool {
-			if pf := findPanelsFrameAnyScreen(); pf != nil {
+			if pf := panel.FindPanelsFrameAnyScreen(); pf != nil {
 				fn(pf)
 				return true
 			}
@@ -127,7 +128,7 @@ func init() {
 		DefaultKeys: []string{"RCtrlA"},
 		MenuPath:    "Commands",
 		MenuSubPath: "AI",
-		Handler:     withAI(func(pf *PanelsFrame) { aiTogglePanel(pf) }),
+		Handler:     withAI(func(pf *panel.PanelsFrame) { aiTogglePanel(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "AI.Ask",
@@ -149,7 +150,7 @@ func init() {
 		MenuPath:    "Commands",
 		MenuSubPath: "AI",
 		Visible:     func() bool { return isAIPanelActive() },
-		Handler:     withAI(func(pf *PanelsFrame) { aiNewSession(pf) }),
+		Handler:     withAI(func(pf *panel.PanelsFrame) { aiNewSession(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "AI.ApplyPatch",
@@ -162,7 +163,7 @@ func init() {
 		MenuPath:    "Commands",
 		MenuSubPath: "AI",
 		Visible:     func() bool { return aiSession().LastPatch() != nil },
-		Handler:     withAI(func(pf *PanelsFrame) { aiApplyPatch(pf) }),
+		Handler:     withAI(func(pf *panel.PanelsFrame) { aiApplyPatch(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "AI.Setup",
@@ -172,7 +173,7 @@ func init() {
 		Description: "Set the API key and the model used by the AI panel",
 		DescKey:     "Action.AI.Setup.Desc",
 		MenuPath:    "Options",
-		Handler:     withAI(func(pf *PanelsFrame) { aiSetupDialog(pf) }),
+		Handler:     withAI(func(pf *panel.PanelsFrame) { aiSetupDialog(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "AI.Help",
@@ -183,7 +184,7 @@ func init() {
 		DescKey:     "Action.AI.Help.Desc",
 		MenuPath:    "Commands",
 		MenuSubPath: "AI",
-		Handler:     withAI(func(pf *PanelsFrame) { aiCommand(pf, "help") }),
+		Handler:     withAI(func(pf *panel.PanelsFrame) { aiCommand(pf, "help") }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "AI.AttachAPSpec",
@@ -194,7 +195,7 @@ func init() {
 		DescKey:     "Action.AI.AttachAPSpec.Desc",
 		MenuPath:    "Commands",
 		MenuSubPath: "AI",
-		Handler:     withAI(func(pf *PanelsFrame) { aiAttachAPSpec(pf) }),
+		Handler:     withAI(func(pf *panel.PanelsFrame) { aiAttachAPSpec(pf) }),
 	})
 	action.RegisterAction(action.Action{
 		Name:        "AI.ListModels",
@@ -205,13 +206,9 @@ func init() {
 		DescKey:     "Action.AI.ListModels.Desc",
 		MenuPath:    "Commands",
 		MenuSubPath: "AI",
-		Handler:     withAI(func(pf *PanelsFrame) { aiListModels(pf) }),
+		Handler:     withAI(func(pf *panel.PanelsFrame) { aiListModels(pf) }),
 	})
 }
-
-// aiPrevPath remembers where a panel was before it showed the dialog, so the
-// same key brings the files back.
-var aiPrevPath [2]string
 
 type aiVFSWrapper struct {
 	*vtvibe.AIVFS
@@ -226,14 +223,14 @@ func (w *aiVFSWrapper) ProcessPanelKey(app vfs.App, e *vtinput.InputEvent) bool 
 	shift := (e.ControlKeyState & vtinput.ShiftPressed) != 0
 
 	if ctrl && !alt && !shift {
-		pf, ok := app.(*PanelsFrame)
+		pf, ok := app.(*panel.PanelsFrame)
 		if !ok {
 			return false
 		}
 
 		idx := -1
-		for i, p := range pf.panels {
-			if fsp, isFsp := p.(*FileSystemPanel); isFsp && fsp.vfs == w {
+		for i, p := range pf.Panels {
+			if fsp, isFsp := p.(*panel.FileSystemPanel); isFsp && fsp.Vfs == w {
 				idx = i
 				break
 			}
@@ -260,45 +257,45 @@ func (w *aiVFSWrapper) ProcessPanelKey(app vfs.App, e *vtinput.InputEvent) bool 
 	return false
 }
 
-func aiTogglePanel(pf *PanelsFrame) {
+func aiTogglePanel(pf *panel.PanelsFrame) {
 	// If any panel is AI, close it entirely
-	for i, p := range pf.panels {
-		if fsp, ok := p.(*FileSystemPanel); ok {
-			if _, isAI := fsp.vfs.(*aiVFSWrapper); isAI {
-				pf.exitWide()
-				if pf.altPanels[i] != nil && pf.altPanels[i].Kind() == "ai_chat" {
-					if c, ok := pf.altPanels[i].(interface{ Close() }); ok {
+	for i, p := range pf.Panels {
+		if fsp, ok := p.(*panel.FileSystemPanel); ok {
+			if _, isAI := fsp.Vfs.(*aiVFSWrapper); isAI {
+				pf.ExitWide()
+				if pf.AltPanels[i] != nil && pf.AltPanels[i].Kind() == "ai_chat" {
+					if c, ok := pf.AltPanels[i].(interface{ Close() }); ok {
 						c.Close()
 					}
-					pf.altPanels[i] = nil
+					pf.AltPanels[i] = nil
 				}
-				target := aiPrevPath[i]
+				target := panel.AIPrevPath[i]
 				if target == "" {
 					target, _ = os.UserHomeDir()
 				}
-				pf.switchToVFS(fsp, vfs.NewOSVFS(target))
-				pf.activeIdx = 1 - i
+				pf.SwitchToVFS(fsp, vfs.NewOSVFS(target))
+				pf.ActiveIdx = 1 - i
 				return
 			}
 		}
 	}
 
-	idx := 1 - pf.activeIdx
-	fsp := pf.panels[idx].(*FileSystemPanel)
-	aiPrevPath[idx] = fsp.vfs.GetPath()
+	idx := 1 - pf.ActiveIdx
+	fsp := pf.Panels[idx].(*panel.FileSystemPanel)
+	panel.AIPrevPath[idx] = fsp.Vfs.GetPath()
 	vtvibeConfig()
-	pf.switchToVFS(fsp, &aiVFSWrapper{vtvibe.NewVFS(aiSession())})
+	pf.SwitchToVFS(fsp, &aiVFSWrapper{vtvibe.NewVFS(aiSession())})
 
 	AiSetViewModePanel(pf, idx, "ai://chat", true)
 }
 
-func AiSetViewModePanel(pf *PanelsFrame, idx int, path string, isChat bool) {
-	fsp := pf.panels[idx].(*FileSystemPanel)
-	if _, isAI := fsp.vfs.(*aiVFSWrapper); !isAI {
+func AiSetViewModePanel(pf *panel.PanelsFrame, idx int, path string, isChat bool) {
+	fsp := pf.Panels[idx].(*panel.FileSystemPanel)
+	if _, isAI := fsp.Vfs.(*aiVFSWrapper); !isAI {
 		return
 	}
 
-	currentAlt := pf.altPanels[idx]
+	currentAlt := pf.AltPanels[idx]
 
 	if isChat {
 		if currentAlt == nil || currentAlt.Kind() != "ai_chat" {
@@ -308,7 +305,7 @@ func AiSetViewModePanel(pf *PanelsFrame, idx int, path string, isChat bool) {
 				}
 			}
 			chatAlt := NewAIChatPanel(fsp)
-			pf.altPanels[idx] = chatAlt
+			pf.AltPanels[idx] = chatAlt
 			chatAlt.ScrollToBottom()
 		}
 		if path != "" {
@@ -319,34 +316,17 @@ func AiSetViewModePanel(pf *PanelsFrame, idx int, path string, isChat bool) {
 			if c, ok := currentAlt.(interface{ Close() }); ok {
 				c.Close()
 			}
-			pf.altPanels[idx] = nil
+			pf.AltPanels[idx] = nil
 		}
 		if path != "" {
 			pf.NavigateToPath(fsp, path)
 		}
 	}
-	pf.ResizeConsole(pf.lastW, pf.lastH)
+	pf.ResizeConsole(pf.LastW, pf.LastH)
 	vtui.FrameManager.HardRefresh()
 }
 
-// Support for reflection cast from commands.go
-func (fsp *FileSystemPanel) AiSetViewMode(path string, isChat bool) {
-	pf := findPanelsFrameAnyScreen()
-	if pf != nil {
-		idx := -1
-		if pf.panels[0] == fsp {
-			idx = 0
-		}
-		if pf.panels[1] == fsp {
-			idx = 1
-		}
-		if idx != -1 {
-			AiSetViewModePanel(pf, idx, path, isChat)
-		}
-	}
-}
-
-func aiNewSession(pf *PanelsFrame) {
+func aiNewSession(pf *panel.PanelsFrame) {
 	aiSession().Reset(true)
 	vtvibeConfig()
 	pf.RefreshAll()
@@ -388,13 +368,13 @@ func aiAskAction() bool {
 		ctxParts = append(ctxParts, fmt.Sprintf("Offset: %d", f.TopOffset))
 	}
 
-	pf := findPanelsFrameAnyScreen()
+	pf := panel.FindPanelsFrameAnyScreen()
 	if pf != nil {
-		fsp := pf.getActivePanel()
+		fsp := pf.GetActivePanel()
 		if fsp != nil {
-			_, isAI := fsp.vfs.(*aiVFSWrapper)
+			_, isAI := fsp.Vfs.(*aiVFSWrapper)
 			if !isAI {
-				ctxParts = append(ctxParts, "Path: "+fsp.vfs.GetPath())
+				ctxParts = append(ctxParts, "Path: "+fsp.Vfs.GetPath())
 				if name := fsp.GetSelectedName(); name != "" && name != ".." {
 					ctxParts = append(ctxParts, "Focus: "+name)
 				}
@@ -407,14 +387,14 @@ func aiAskAction() bool {
 	}
 
 	// 2. Find an existing AI workspace or create a new one by forking
-	var aiPf *PanelsFrame
+	var aiPf *panel.PanelsFrame
 	for i, s := range fm.Screens {
 		if len(s.Frames) > 0 {
-			if screenPf, ok := s.Frames[len(s.Frames)-1].(*PanelsFrame); ok {
+			if screenPf, ok := s.Frames[len(s.Frames)-1].(*panel.PanelsFrame); ok {
 				aiIdx := -1
-				for idx, p := range screenPf.panels {
-					if fsp, ok := p.(*FileSystemPanel); ok && fsp != nil && fsp.vfs != nil {
-						if _, isAI := fsp.vfs.(*aiVFSWrapper); isAI {
+				for idx, p := range screenPf.Panels {
+					if fsp, ok := p.(*panel.FileSystemPanel); ok && fsp != nil && fsp.Vfs != nil {
+						if _, isAI := fsp.Vfs.(*aiVFSWrapper); isAI {
 							aiIdx = idx
 							break
 						}
@@ -430,53 +410,53 @@ func aiAskAction() bool {
 	}
 
 	if aiPf == nil && pf != nil {
-		// Fork current PanelsFrame into a new workspace
+		// Fork current panel.PanelsFrame into a new workspace
 		fm.EmitCommand(vtui.CmResize, "fork")
-		if topPf, ok := fm.GetTopFrame().(*PanelsFrame); ok {
+		if topPf, ok := fm.GetTopFrame().(*panel.PanelsFrame); ok {
 			aiPf = topPf
-			idx := 1 - aiPf.activeIdx
-			fsp := aiPf.panels[idx].(*FileSystemPanel)
-			aiPrevPath[idx] = fsp.vfs.GetPath()
+			idx := 1 - aiPf.ActiveIdx
+			fsp := aiPf.Panels[idx].(*panel.FileSystemPanel)
+			panel.AIPrevPath[idx] = fsp.Vfs.GetPath()
 			vtvibeConfig()
-			aiPf.switchToVFS(fsp, &aiVFSWrapper{vtvibe.NewVFS(aiSession())})
+			aiPf.SwitchToVFS(fsp, &aiVFSWrapper{vtvibe.NewVFS(aiSession())})
 		}
 	}
 
 	if aiPf == nil && pf != nil {
-		// Fork current PanelsFrame into a new workspace
+		// Fork current panel.PanelsFrame into a new workspace
 		fm.EmitCommand(vtui.CmResize, "fork")
-		if topPf, ok := fm.GetTopFrame().(*PanelsFrame); ok {
+		if topPf, ok := fm.GetTopFrame().(*panel.PanelsFrame); ok {
 			aiPf = topPf
-			idx := 1 - aiPf.activeIdx
-			fsp := aiPf.panels[idx].(*FileSystemPanel)
-			aiPrevPath[idx] = fsp.vfs.GetPath()
+			idx := 1 - aiPf.ActiveIdx
+			fsp := aiPf.Panels[idx].(*panel.FileSystemPanel)
+			panel.AIPrevPath[idx] = fsp.Vfs.GetPath()
 			vtvibeConfig()
-			aiPf.switchToVFS(fsp, &aiVFSWrapper{vtvibe.NewVFS(aiSession())})
-			aiPf.setWidePanel(idx)
+			aiPf.SwitchToVFS(fsp, &aiVFSWrapper{vtvibe.NewVFS(aiSession())})
+			aiPf.SetWidePanel(idx)
 		}
 	} else if aiPf != nil {
 		// Ensure the AI panel is active and wide in the existing workspace
 		aiIdx := -1
-		for idx, p := range aiPf.panels {
-			if fsp, ok := p.(*FileSystemPanel); ok && fsp != nil && fsp.vfs != nil {
-				if _, isAI := fsp.vfs.(*aiVFSWrapper); isAI {
+		for idx, p := range aiPf.Panels {
+			if fsp, ok := p.(*panel.FileSystemPanel); ok && fsp != nil && fsp.Vfs != nil {
+				if _, isAI := fsp.Vfs.(*aiVFSWrapper); isAI {
 					aiIdx = idx
 					break
 				}
 			}
 		}
 		if aiIdx != -1 {
-			aiPf.activeIdx = aiIdx
+			aiPf.ActiveIdx = aiIdx
 		}
 	}
 
 	// 3. Set up the chat, inject context, and start a new session
 	if aiPf != nil {
-		AiSetViewModePanel(aiPf, aiPf.activeIdx, "ai://chat", true)
+		AiSetViewModePanel(aiPf, aiPf.ActiveIdx, "ai://chat", true)
 		aiSession().Reset(true) // Keep files in ctx/, clear chat history
 
-		if aiPf.altPanels[aiPf.activeIdx] != nil {
-			if cp, ok := aiPf.altPanels[aiPf.activeIdx].(*AIChatPanel); ok {
+		if aiPf.AltPanels[aiPf.ActiveIdx] != nil {
+			if cp, ok := aiPf.AltPanels[aiPf.ActiveIdx].(*AIChatPanel); ok {
 				prompt := ""
 				if len(ctxParts) > 0 {
 					prompt = "[" + strings.Join(ctxParts, ", ") + "]\n"
@@ -496,7 +476,7 @@ func aiAskAction() bool {
 
 // aiSetupDialog is the whole first-run wizard at MVP scale: paste a key, name
 // a model, done. Both steps may be skipped with an empty answer.
-func aiSetupDialog(pf *PanelsFrame) {
+func aiSetupDialog(pf *panel.PanelsFrame) {
 	cfg, _ := vtvibeConfig()
 	vtui.InputBox(i18n.Msg("AI.Title"), i18n.Msg("AI.KeyPrompt"), "", func(key string) {
 		if key = strings.TrimSpace(key); key != "" {
@@ -522,7 +502,7 @@ func aiSetupDialog(pf *PanelsFrame) {
 // aiCommand handles everything typed after "ai:" in the command line. Plain
 // text is a question; the few reserved words are the settings the MVP needs.
 func aiCommand(app vfs.App, arg string) {
-	pf := findPanelsFrameAnyScreen()
+	pf := panel.FindPanelsFrameAnyScreen()
 	if pf == nil {
 		return
 	}
@@ -568,7 +548,7 @@ func aiCommand(app vfs.App, arg string) {
 
 // aiSend runs the round trip through the background task manager: the UI
 // thread never blocks and Cancel actually cancels the HTTP request.
-func aiSend(pf *PanelsFrame, question string) {
+func aiSend(pf *panel.PanelsFrame, question string) {
 	cfg, keySource := vtvibeConfig()
 	if cfg.APIKey == "" && keySource == "" && !strings.Contains(cfg.BaseURL, "127.0.0.1") &&
 		!strings.Contains(cfg.BaseURL, "localhost") {
@@ -602,8 +582,8 @@ func aiSend(pf *PanelsFrame, question string) {
 				return
 			}
 			pf.RefreshAll()
-			if pf.altPanels[pf.activeIdx] != nil && pf.altPanels[pf.activeIdx].Kind() == "ai_chat" {
-				if cp, ok := pf.altPanels[pf.activeIdx].(*AIChatPanel); ok {
+			if pf.AltPanels[pf.ActiveIdx] != nil && pf.AltPanels[pf.ActiveIdx].Kind() == "ai_chat" {
+				if cp, ok := pf.AltPanels[pf.ActiveIdx].(*AIChatPanel); ok {
 					cp.ScrollToBottom()
 				}
 				vtui.FrameManager.Redraw()
@@ -622,7 +602,7 @@ func aiLastAnswerPath(s *vtvibe.Session) string {
 	return fmt.Sprintf("/chat/%04d-model.md", n)
 }
 
-func aiListModels(pf *PanelsFrame) {
+func aiListModels(pf *panel.PanelsFrame) {
 	cfg, _ := vtvibeConfig()
 	var models []string
 	pf.RunProgressTask(i18n.Msg("AI.Title"), i18n.Msg("AI.Sending"), false,
@@ -671,5 +651,23 @@ func openBrowser(url string) {
 	}
 	if err != nil {
 		vtui.DebugLog("VTVIBE: failed to open browser: %v", err)
+	}
+}
+
+// aiSetViewMode fills panel.AISetViewMode: it finds which side the panel is
+// on, because AiSetViewModePanel addresses a panel by index.
+func aiSetViewMode(fsp *panel.FileSystemPanel, path string, isChat bool) {
+	pf := panel.FindPanelsFrameAnyScreen()
+	if pf != nil {
+		idx := -1
+		if pf.Panels[0] == fsp {
+			idx = 0
+		}
+		if pf.Panels[1] == fsp {
+			idx = 1
+		}
+		if idx != -1 {
+			AiSetViewModePanel(pf, idx, path, isChat)
+		}
 	}
 }

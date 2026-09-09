@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/paneltest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,7 +23,7 @@ func TestSaveSettingsGroupsKeepUnselectedValues(t *testing.T) {
 	oldUserPath := config.GetUserConfigIniPath
 	oldConfigPaths := config.GetConfigIniPaths
 	oldSessionPath := getSessionIniPath
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	defer func() {
 		config.App = oldConfig
 		config.GetUserConfigIniPath = oldUserPath
@@ -118,10 +119,10 @@ func TestSaveSessionDisabled(t *testing.T) {
 // The debounced save reads vtui.FrameManager half a second after it is armed,
 // from the timer's own goroutine. Nothing keeps a test alive that long, so the
 // read lands in whichever test is running by then, and the write it races is
-// that test's swapFrameManager -- which is why the report names a test that has
+// that test's paneltest.SwapFrameManager -- which is why the report names a test that has
 // nothing to do with saving settings.
 func TestRequestSaveConfigPostsToTheFrameManagerItWasArmedWith(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	arming := vtui.FrameManager
 

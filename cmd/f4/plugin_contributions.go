@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/panel"
 	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/f4/vfs"
 	"github.com/unxed/vtui"
@@ -20,7 +21,7 @@ func (c *coreAPI) RegisterPanelProvider(provider vfs.PanelProvider) (vfs.Registr
 	return plughost.RegisterPanelProvider(provider)
 }
 
-func actionPluginConfiguration(pf *PanelsFrame) {
+func actionPluginConfiguration(pf *panel.PanelsFrame) {
 	commands := plughost.PluginCommandsSnapshot(vfs.PluginCommandConfig, pf)
 	if len(commands) == 0 {
 		vtui.ShowMessage(i18n.Msg("Plugins.ConfigTitle"), i18n.Msg("Plugins.ConfigEmpty"), []string{i18n.Msg("vtui.Ok")})

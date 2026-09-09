@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/unxed/f4/internal/cmdline"
+	"github.com/unxed/f4/internal/panel"
 
 	"strings"
 	"testing"
@@ -18,7 +19,7 @@ func TestIsTranslatorMouseEvent(t *testing.T) {
 		KeyDown:         true,
 		MouseEventFlags: 0,
 	}
-	if !isTranslatorMouseEvent(base) {
+	if !panel.IsTranslatorMouseEvent(base) {
 		t.Fatal("Ctrl+Alt right-button press was not recognized")
 	}
 
@@ -44,7 +45,7 @@ func TestIsTranslatorMouseEvent(t *testing.T) {
 			return &e
 		}(),
 	} {
-		if isTranslatorMouseEvent(event) {
+		if panel.IsTranslatorMouseEvent(event) {
 			t.Errorf("%s event was incorrectly recognized", name)
 		}
 	}
@@ -57,7 +58,7 @@ func TestTranslatorVMenuTarget(t *testing.T) {
 	menu.SetHelp("Menu.File")
 	menu.AddItem(vtui.MenuItem{Text: "&Open"})
 
-	target := translatorFrameTarget(menu, 5, 3)
+	target := panel.TranslatorFrameTarget(menu, 5, 3)
 	if target == nil {
 		t.Fatal("translator did not find the visible menu row")
 	}
@@ -69,7 +70,7 @@ func TestTranslatorVMenuTarget(t *testing.T) {
 		}
 		t.Fatalf("menu target text = %q, want %q", got, "&Open")
 	}
-	report := formatTranslatorReport(target)
+	report := panel.FormatTranslatorReport(target)
 	if !strings.Contains(report, "Text: &Open") || !strings.Contains(report, "Help Context: Menu.File") {
 		t.Fatalf("translator report = %q", report)
 	}
@@ -80,11 +81,11 @@ func TestTranslatorPanelsFrameCommandLineTarget(t *testing.T) {
 	prompt.SetPosition(0, 4, 30, 4)
 	prompt.Edit.SetText("dir")
 
-	frame := &PanelsFrame{}
+	frame := &panel.PanelsFrame{}
 	frame.SetHelp("Panels")
-	frame.cmdLine = prompt
+	frame.CmdLine = prompt
 
-	target := frame.translatorElementAt(8, 4)
+	target := frame.TranslatorElementAt(8, 4)
 	if target == nil {
 		t.Fatal("translator did not find the command line")
 	}
@@ -96,7 +97,7 @@ func TestTranslatorPanelsFrameCommandLineTarget(t *testing.T) {
 		}
 		t.Fatalf("command-line target text = %q, want %q", got, "dir")
 	}
-	if got := formatTranslatorReport(target); !strings.Contains(got, "Help Context: Panels") || strings.Contains(got, "Panels -> Panels") {
+	if got := panel.FormatTranslatorReport(target); !strings.Contains(got, "Help Context: Panels") || strings.Contains(got, "Panels -> Panels") {
 		t.Fatalf("command-line report = %q", got)
 	}
 }
@@ -106,7 +107,7 @@ func TestTranslatorMenuBarTarget(t *testing.T) {
 	menu.SetPosition(0, 0, 40, 0)
 	menu.SetVisible(true)
 
-	target := translatorMenuBarTarget(menu, 4, 0)
+	target := panel.TranslatorMenuBarTarget(menu, 4, 0)
 	if target == nil {
 		t.Fatal("translator did not find the menu-bar item")
 	}

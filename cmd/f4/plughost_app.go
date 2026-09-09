@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/unxed/f4/internal/panel"
 
 	"github.com/unxed/f4/internal/fileops"
 	"github.com/unxed/f4/internal/plughost"
@@ -19,7 +20,7 @@ import (
 type hostApplication struct{}
 
 func (hostApplication) Current() vfs.App {
-	pf := findPanelsFrame()
+	pf := panel.FindPanelsFrame()
 	if pf == nil {
 		// A typed nil inside the interface would pass the caller's nil check.
 		return nil
@@ -28,18 +29,18 @@ func (hostApplication) Current() vfs.App {
 }
 
 func (hostApplication) OpenPanelProvider(app vfs.App, providerID string) {
-	openRegisteredPanelProvider(app, providerID)
+	panel.OpenRegisteredPanelProvider(app, providerID)
 }
 
 func (hostApplication) IsStale(app vfs.App) bool {
-	panels, ok := app.(*PanelsFrame)
+	panels, ok := app.(*panel.PanelsFrame)
 	if !ok {
 		// Not a frame this application manages — a plugin's own app object or
 		// a test double. There is nothing here to have gone stale.
 		return false
 	}
-	return panels == nil || panels.closed ||
-		vtui.FrameManager != nil && findPanelsFrameAnyScreen() != panels
+	return panels == nil || panels.Closed ||
+		vtui.FrameManager != nil && panel.FindPanelsFrameAnyScreen() != panels
 }
 
 func (hostApplication) SetupUI() { SetupUI() }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -54,7 +55,7 @@ type commandPaletteEntry struct {
 	pluginLocation vfs.PluginCommandLocation
 	legacyIndex    int
 	menuCommands   []string
-	panels         *PanelsFrame
+	panels         *panel.PanelsFrame
 }
 
 // ShowCommandPalette opens the palette from every full-screen work area.
@@ -99,13 +100,13 @@ func ShowCommandPalette() bool {
 		return true
 	}
 
-	pf := findPanelsFrameAnyScreen()
-	var fastFindPanel *FileSystemPanel
+	pf := panel.FindPanelsFrameAnyScreen()
+	var fastFindPanel *panel.FileSystemPanel
 	fastFindText := ""
-	if topPanels, ok := vtui.FrameManager.GetTopFrame().(*PanelsFrame); ok && topPanels == pf && !pf.closed {
-		if active := pf.getActivePanel(); active != nil && active.fastFindMode {
+	if topPanels, ok := vtui.FrameManager.GetTopFrame().(*panel.PanelsFrame); ok && topPanels == pf && !pf.Closed {
+		if active := pf.GetActivePanel(); active != nil && active.FastFindMode {
 			fastFindPanel = active
-			fastFindText = active.fastFindStr
+			fastFindText = active.FastFindStr
 		}
 	}
 	entries := buildCommandPaletteEntries(area, pf)
@@ -125,9 +126,9 @@ func ShowCommandPalette() bool {
 	// must keep that mode alive until the user either runs it, cancels the
 	// palette, or chooses an ordinary action (RunAction then performs the normal
 	// cancellation). Revalidate the original panel before restoring the snapshot.
-	if fastFindPanel != nil && !pf.closed && pf.getActivePanel() == fastFindPanel {
-		fastFindPanel.fastFindMode = true
-		fastFindPanel.fastFindStr = fastFindText
+	if fastFindPanel != nil && !pf.Closed && pf.GetActivePanel() == fastFindPanel {
+		fastFindPanel.FastFindMode = true
+		fastFindPanel.FastFindStr = fastFindText
 	}
 	return true
 }
@@ -151,13 +152,13 @@ func commandPaletteLegacyShortcut(area string, e *vtinput.InputEvent) bool {
 	if e == nil || !e.KeyDown || keymap.EventToHotkeyString(e) != commandPaletteLegacyKey {
 		return false
 	}
-	if GlobalHotkeysMgr == nil {
+	if keymap.GlobalHotkeysMgr == nil {
 		return true
 	}
-	return configuredHotkeyAction(GlobalHotkeysMgr, area, commandPaletteLegacyKey) == ""
+	return keymap.ConfiguredHotkeyAction(keymap.GlobalHotkeysMgr, area, commandPaletteLegacyKey) == ""
 }
 
-func buildCommandPaletteEntries(area string, pf *PanelsFrame) []commandPaletteEntry {
+func buildCommandPaletteEntries(area string, pf *panel.PanelsFrame) []commandPaletteEntry {
 	entries := commandPaletteActionEntries(area)
 	entries = append(entries, commandPaletteFrameEntries()...)
 	entries = append(entries, commandPaletteWorkspaceEntries()...)
@@ -176,7 +177,7 @@ func buildCommandPaletteEntries(area string, pf *PanelsFrame) []commandPaletteEn
 }
 
 func commandPaletteCanIncludeUserMenu(area string) bool {
-	return area != "Terminal" || commandPaletteConditionTrue("TerminalQuiet")
+	return area != "Terminal" || keymap.ConditionTrue("TerminalQuiet")
 }
 
 func commandPaletteActionEntries(area string) []commandPaletteEntry {
@@ -199,9 +200,9 @@ func commandPaletteActionEntries(area string) []commandPaletteEntry {
 		label := action.PlainLabel(act.DisplayLabel())
 		englishLabel := action.PlainLabel(act.Label)
 		category := commandPaletteActionCategory(act)
-		shortcuts := mergeCommandPaletteShortcuts(
+		shortcuts := keymap.MergeShortcuts(
 			commandPaletteActionShortcuts(area, act.Name),
-			NativeShortcutsForAction(area, act),
+			keymap.NativeShortcutsForAction(area, act),
 		)
 		searchFields := []string{act.Area, act.MenuPath, area}
 		translationKeys := append([]string{act.LabelKey, act.DescKey}, act.SearchKeys...)
@@ -227,28 +228,11 @@ func commandPaletteActionEntries(area string) []commandPaletteEntry {
 	return entries
 }
 
-func mergeCommandPaletteShortcuts(groups ...[]string) []string {
-	seen := make(map[string]bool)
-	var merged []string
-	for _, group := range groups {
-		for _, shortcut := range group {
-			shortcut = strings.TrimSpace(shortcut)
-			if shortcut == "" || seen[shortcut] {
-				continue
-			}
-			seen[shortcut] = true
-			merged = append(merged, shortcut)
-		}
-	}
-	sort.Strings(merged)
-	return merged
-}
-
 func commandPaletteActionApplies(action action.Action, area string) bool {
 	if strings.EqualFold(action.Area, "Common") || strings.EqualFold(action.Area, area) {
 		return true
 	}
-	// Shell commands operate on the PanelsFrame found beneath an editor or
+	// Shell commands operate on the panel.PanelsFrame found beneath an editor or
 	// viewer and include application settings, sorting and plugin management.
 	// Keeping them global is what makes the palette an escape hatch for
 	// commands otherwise hidden in another area's menu bar.
@@ -264,7 +248,7 @@ func commandPaletteActionApplies(action action.Action, area string) bool {
 		hasApplicableKey := false
 		for _, keySpec := range action.DefaultKeys {
 			_, condition, _ := strings.Cut(keySpec, ":")
-			if condition == "" || commandPaletteConditionTrue(condition) {
+			if condition == "" || keymap.ConditionTrue(condition) {
 				hasApplicableKey = true
 				break
 			}
@@ -272,11 +256,6 @@ func commandPaletteActionApplies(action action.Action, area string) bool {
 		return hasApplicableKey
 	}
 	return false
-}
-
-func commandPaletteConditionTrue(name string) bool {
-	condition, ok := conditionRegistry[strings.ToLower(strings.TrimSpace(name))]
-	return !ok || condition()
 }
 
 func commandPaletteActionCategory(act action.Action) string {
@@ -306,10 +285,10 @@ func commandPaletteActionCategoryKeys(action action.Action) []string {
 }
 
 func commandPaletteActionShortcuts(area, actionName string) []string {
-	if GlobalHotkeysMgr == nil {
+	if keymap.GlobalHotkeysMgr == nil {
 		return nil
 	}
-	active := GlobalHotkeysMgr.GetActiveBindings()
+	active := keymap.GlobalHotkeysMgr.GetActiveBindings()
 	areas := []string{area}
 	if !strings.EqualFold(area, "Common") {
 		areas = append(areas, "Common")
@@ -322,12 +301,12 @@ func commandPaletteActionShortcuts(area, actionName string) []string {
 			if !strings.EqualFold(name, actionName) {
 				continue
 			}
-			if condition != "" && !commandPaletteConditionTrue(condition) {
+			if condition != "" && !keymap.ConditionTrue(condition) {
 				continue
 			}
 			if !seen[key] {
 				seen[key] = true
-				keys = append(keys, FormatKeyForUI(key))
+				keys = append(keys, keymap.FormatKeyForUI(key))
 			}
 		}
 	}
@@ -335,7 +314,7 @@ func commandPaletteActionShortcuts(area, actionName string) []string {
 	return keys
 }
 
-func commandPalettePluginEntries(pf *PanelsFrame) []commandPaletteEntry {
+func commandPalettePluginEntries(pf *panel.PanelsFrame) []commandPaletteEntry {
 	var entries []commandPaletteEntry
 	for _, location := range []vfs.PluginCommandLocation{vfs.PluginCommandPanel, vfs.PluginCommandConfig} {
 		categoryKey := "CommandPalette.CategoryPlugin"
@@ -366,7 +345,7 @@ func commandPalettePluginEntries(pf *PanelsFrame) []commandPaletteEntry {
 				EnglishDescription: englishDescription,
 				ID:                 command.ID,
 				Category:           category,
-				Shortcut:           pluginCommandShortcut(command),
+				Shortcut:           panel.PluginCommandShortcut(command),
 				SearchFields:       searchFields,
 				source:             commandPaletteSourcePlugin,
 				pluginLocation:     location,
@@ -374,10 +353,10 @@ func commandPalettePluginEntries(pf *PanelsFrame) []commandPaletteEntry {
 			})
 		}
 	}
-	for index, item := range pluginMenuItemsSnapshot() {
+	for index, item := range plughost.PluginMenuItemsSnapshot() {
 		actionName := item.ActionName
 		if actionName == "" {
-			actionName = legacyPluginActionName(index)
+			actionName = keymap.LegacyPluginActionName(index)
 		}
 		label := action.PlainLabel(item.Label)
 		searchFields := []string{i18n.Msg("CommandPalette.CategoryLegacyPlugin")}
@@ -390,7 +369,7 @@ func commandPalettePluginEntries(pf *PanelsFrame) []commandPaletteEntry {
 			Label:        label,
 			EnglishLabel: label,
 			Category:     i18n.Msg("CommandPalette.CategoryPlugin"),
-			Shortcut:     pluginActionShortcut(actionName),
+			Shortcut:     panel.PluginActionShortcut(actionName),
 			SearchFields: searchFields,
 			source:       commandPaletteSourceLegacyPlugin,
 			legacyIndex:  index,
@@ -401,20 +380,20 @@ func commandPalettePluginEntries(pf *PanelsFrame) []commandPaletteEntry {
 }
 
 type commandPaletteUserMenuSource struct {
-	mode  MenuMode
+	mode  panel.MenuMode
 	title string
 	path  string
-	items []UserMenuItem
+	items []panel.UserMenuItem
 }
 
-func commandPaletteUserMenuEntries(pf *PanelsFrame) []commandPaletteEntry {
+func commandPaletteUserMenuEntries(pf *panel.PanelsFrame) []commandPaletteEntry {
 	if pf == nil {
 		return nil
 	}
 	var sources []commandPaletteUserMenuSource
 	seenSources := make(map[string]bool)
-	for _, mode := range []MenuMode{MenuModeLocal, MenuModeFar, MenuModeMain} {
-		items, title, path, ok := loadMenuForMode(pf, mode)
+	for _, mode := range []panel.MenuMode{panel.MenuModeLocal, panel.MenuModeFar, panel.MenuModeMain} {
+		items, title, path, ok := panel.LoadMenuForMode(pf, mode)
 		if !ok || len(items) == 0 || path == "" {
 			continue
 		}
@@ -433,10 +412,10 @@ func commandPaletteUserMenuEntries(pf *PanelsFrame) []commandPaletteEntry {
 	return entries
 }
 
-func flattenCommandPaletteUserMenu(source commandPaletteUserMenuSource, pf *PanelsFrame) []commandPaletteEntry {
+func flattenCommandPaletteUserMenu(source commandPaletteUserMenuSource, pf *panel.PanelsFrame) []commandPaletteEntry {
 	var entries []commandPaletteEntry
-	var walk func(items []UserMenuItem, labels []string, indexes []int)
-	walk = func(items []UserMenuItem, labels []string, indexes []int) {
+	var walk func(items []panel.UserMenuItem, labels []string, indexes []int)
+	walk = func(items []panel.UserMenuItem, labels []string, indexes []int) {
 		for index := range items {
 			item := items[index]
 			if item.IsSeparator() {
@@ -482,11 +461,11 @@ func flattenCommandPaletteUserMenu(source commandPaletteUserMenuSource, pf *Pane
 	return entries
 }
 
-func commandPaletteUserMenuTitleKey(mode MenuMode) string {
+func commandPaletteUserMenuTitleKey(mode panel.MenuMode) string {
 	switch mode {
-	case MenuModeLocal:
+	case panel.MenuModeLocal:
 		return "UserMenu.LocalMenuTitle"
-	case MenuModeFar, MenuModeMain:
+	case panel.MenuModeFar, panel.MenuModeMain:
 		return "UserMenu.MainMenuTitle"
 	default:
 		return ""
@@ -496,7 +475,7 @@ func commandPaletteUserMenuTitleKey(mode MenuMode) string {
 func commandPaletteMenuHasExecutableCommands(commands []string) bool {
 	for _, command := range commands {
 		trimmed := strings.TrimSpace(command)
-		if trimmed != "" && !isMenuComment(trimmed) {
+		if trimmed != "" && !panel.IsMenuComment(trimmed) {
 			return true
 		}
 	}
@@ -520,7 +499,7 @@ func executeCommandPaletteEntry(entry commandPaletteEntry) bool {
 	// transient search itself. Every other selection leaves that mode, including
 	// dynamic/plugin commands that do not pass through RunAction.
 	if !strings.EqualFold(entry.ID, "FastFind.ToggleMatchMode") {
-		if pf := findPanelsFrame(); pf != nil && pf.cancelFastFind() && vtui.FrameManager != nil {
+		if pf := panel.FindPanelsFrame(); pf != nil && pf.CancelFastFind() && vtui.FrameManager != nil {
 			vtui.FrameManager.Redraw()
 		}
 	}
@@ -533,14 +512,14 @@ func executeCommandPaletteEntry(entry commandPaletteEntry) bool {
 	case commandPaletteSourcePlugin:
 		return plughost.ExecutePluginCommand(entry.pluginLocation, entry.ID, entry.panels)
 	case commandPaletteSourceLegacyPlugin:
-		items := pluginMenuItemsSnapshot()
+		items := plughost.PluginMenuItemsSnapshot()
 		if entry.legacyIndex >= 0 && entry.legacyIndex < len(items) && items[entry.legacyIndex].Handler != nil {
 			items[entry.legacyIndex].Handler(entry.panels)
 			return true
 		}
 	case commandPaletteSourceUserMenu:
 		if entry.panels != nil && commandPaletteMenuHasExecutableCommands(entry.menuCommands) {
-			return executeMenuCommandsWithResult(entry.panels, entry.menuCommands)
+			return panel.ExecuteMenuCommandsWithResult(entry.panels, entry.menuCommands)
 		}
 	}
 	return false

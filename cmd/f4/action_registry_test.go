@@ -1,6 +1,9 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"testing"
 
 	"github.com/unxed/f4/internal/action"
@@ -75,8 +78,8 @@ func TestRegistry_HexModeAndWorkspaceActions(t *testing.T) {
 }
 
 func TestHotkeyManager_BookmarksDefault(t *testing.T) {
-	hm := NewHotkeyManager("")
-	hm.initDefaults()
+	hm := keymap.NewHotkeyManager("")
+	hm.InitDefaults()
 
 	if got := hm.GetAction("Shell", "CtrlShiftVK_DC"); got != "Panel.Bookmarks" {
 		t.Fatalf("Shell/CtrlShiftVK_DC = %q, want Panel.Bookmarks", got)
@@ -84,8 +87,8 @@ func TestHotkeyManager_BookmarksDefault(t *testing.T) {
 }
 
 func TestHotkeyManager_PanelPathDefaults(t *testing.T) {
-	hm := NewHotkeyManager("")
-	hm.initDefaults()
+	hm := keymap.NewHotkeyManager("")
+	hm.InitDefaults()
 
 	if got := hm.GetAction("Shell", "CtrlD"); got != "Panel.CopyPath" {
 		t.Fatalf("Shell/CtrlD = %q, want Panel.CopyPath", got)
@@ -96,8 +99,8 @@ func TestHotkeyManager_PanelPathDefaults(t *testing.T) {
 }
 
 func TestHotkeyManager_ViewerEditorSearchDirections(t *testing.T) {
-	hm := NewHotkeyManager("")
-	hm.initDefaults()
+	hm := keymap.NewHotkeyManager("")
+	hm.InitDefaults()
 
 	cases := []struct {
 		area, key, want string
@@ -116,7 +119,7 @@ func TestHotkeyManager_ViewerEditorSearchDirections(t *testing.T) {
 
 func TestAction_PanelToggleHidden(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 	vtui.FrameManager.Push(pf)
@@ -140,11 +143,11 @@ func TestAction_PanelToggleHidden(t *testing.T) {
 }
 
 func TestActionPanelToggleTargetsActiveWorkspace(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
-	first := &PanelsFrame{showPanels: true, showLeftPanel: true, showRightPanel: true}
-	active := &PanelsFrame{showPanels: true, showLeftPanel: true, showRightPanel: true}
+	first := &panel.PanelsFrame{ShowPanels: true, ShowLeftPanel: true, ShowRightPanel: true}
+	active := &panel.PanelsFrame{ShowPanels: true, ShowLeftPanel: true, ShowRightPanel: true}
 	t.Cleanup(testutil.SetFrameManagerScreens(t, []*vtui.AppScreen{
 		{Number: 1, Frames: []vtui.Frame{first}},
 		{Number: 2, Frames: []vtui.Frame{active}},
@@ -153,18 +156,18 @@ func TestActionPanelToggleTargetsActiveWorkspace(t *testing.T) {
 	if !RunAction("Panel.Toggle") {
 		t.Fatal("Panel.Toggle did not run")
 	}
-	if active.showPanels {
+	if active.ShowPanels {
 		t.Fatal("Panel.Toggle did not hide panels in the active workspace")
 	}
-	if !first.showPanels {
+	if !first.ShowPanels {
 		t.Fatal("Panel.Toggle changed panels in the first, inactive workspace")
 	}
 }
 
 func TestActionPanelToggleRightPanelUsesFullWidth(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 	vtui.FrameManager.Push(pf)
@@ -172,20 +175,20 @@ func TestActionPanelToggleRightPanelUsesFullWidth(t *testing.T) {
 	if !RunAction("Panel.ToggleRightPanel") {
 		t.Fatal("Panel.ToggleRightPanel did not run")
 	}
-	if pf.showRightPanel {
+	if pf.ShowRightPanel {
 		t.Fatal("Panel.ToggleRightPanel did not hide the right panel")
 	}
-	if x1, _, x2, _ := pf.panels[0].GetPosition(); x1 != 0 || x2 != 79 {
+	if x1, _, x2, _ := pf.Panels[0].GetPosition(); x1 != 0 || x2 != 79 {
 		t.Fatalf("visible left panel geometry = %d..%d, want 0..79", x1, x2)
 	}
 
 	if !RunAction("Panel.ToggleRightPanel") {
 		t.Fatal("Panel.ToggleRightPanel did not restore the right panel")
 	}
-	if !pf.showRightPanel {
+	if !pf.ShowRightPanel {
 		t.Fatal("Panel.ToggleRightPanel second call did not restore the right panel")
 	}
-	if x1, _, x2, _ := pf.panels[0].GetPosition(); x1 != 0 || x2 != 39 {
+	if x1, _, x2, _ := pf.Panels[0].GetPosition(); x1 != 0 || x2 != 39 {
 		t.Fatalf("restored left panel geometry = %d..%d, want 0..39", x1, x2)
 	}
 }

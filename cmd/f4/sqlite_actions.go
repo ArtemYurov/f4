@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/unxed/f4/internal/action"
+	"github.com/unxed/f4/internal/panel"
 	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/f4/vfs"
 )
@@ -25,7 +26,7 @@ const sqlitePluginCommandID = "f4.sqlite.open"
 // plugin that says the cursor is not on a database, and it can be specific
 // about which files it accepts.
 func actionSQLiteClient() bool {
-	pf := findPanelsFrameAnyScreen()
+	pf := panel.FindPanelsFrameAnyScreen()
 	if pf == nil {
 		return false
 	}

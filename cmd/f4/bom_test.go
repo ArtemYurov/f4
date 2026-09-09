@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/unxed/f4/internal/panel"
 	"os"
 	"path/filepath"
 	"testing"
@@ -31,9 +32,9 @@ func TestShowEditor_UTF8BOMIsNotDisplayedOrLostOnSave(t *testing.T) {
 			defer func() { config.App.EditorMemoryMap = oldMemoryMap }()
 
 			filesystem := vfs.NewOSVFS(dir)
-			pf := NewPanelsFrame()
-			pf.panels[0] = NewFileSystemPanel(0, 0, 40, 20, filesystem)
-			pf.panels[1] = NewFileSystemPanel(40, 0, 40, 20, filesystem.Clone())
+			pf := panel.NewPanelsFrame()
+			pf.Panels[0] = panel.NewFileSystemPanel(0, 0, 40, 20, filesystem)
+			pf.Panels[1] = panel.NewFileSystemPanel(40, 0, 40, 20, filesystem.Clone())
 			pf.ResizeConsole(120, 60)
 			vtui.FrameManager.Push(pf)
 
@@ -101,14 +102,14 @@ func TestQuickView_UTF8BOMIsNotDisplayed(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result := loadDefaultQuickView(context.Background(), vfs.NewOSVFS(dir), path)
-	if result.err != nil {
-		t.Fatalf("quick view load: %v", result.err)
+	result := panel.LoadDefaultQuickView(context.Background(), vfs.NewOSVFS(dir), path)
+	if result.Err != nil {
+		t.Fatalf("quick view load: %v", result.Err)
 	}
-	if result.binary {
+	if result.Binary {
 		t.Fatal("BOM-marked UTF-8 text opened as binary in Quick View")
 	}
-	if len(result.lines) < 2 || result.lines[0] != "first" || result.lines[1] != "second" {
-		t.Fatalf("quick view lines = %#v, want first/second", result.lines)
+	if len(result.Lines) < 2 || result.Lines[0] != "first" || result.Lines[1] != "second" {
+		t.Fatalf("quick view lines = %#v, want first/second", result.Lines)
 	}
 }

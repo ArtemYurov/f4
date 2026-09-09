@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
+	"github.com/unxed/f4/internal/plughost"
 	"testing"
 
 	"github.com/unxed/f4/internal/cmdline"
@@ -40,33 +43,33 @@ func (*directPalettePTY) Wait() error                 { return nil }
 func (*directPalettePTY) Run(string, ...string) error { return nil }
 func (*directPalettePTY) IsBusy() bool                { return true }
 
-func newDirectPalettePanelsFrame(left, right *FileSystemPanel) *PanelsFrame {
-	return &PanelsFrame{
-		panels:         [2]Panel{left, right},
-		activeIdx:      0,
-		showPanels:     true,
-		showLeftPanel:  true,
-		showRightPanel: true,
-		cmdLine:        cmdline.NewCommandLine("$ "),
-		termView:       terminal.NewTerminalView(80, 24),
+func newDirectPalettePanelsFrame(left, right *panel.FileSystemPanel) *panel.PanelsFrame {
+	return &panel.PanelsFrame{
+		Panels:         [2]panel.Panel{left, right},
+		ActiveIdx:      0,
+		ShowPanels:     true,
+		ShowLeftPanel:  true,
+		ShowRightPanel: true,
+		CmdLine:        cmdline.NewCommandLine("$ "),
+		TermView:       terminal.NewTerminalView(80, 24),
 	}
 }
 
 func TestCommandPaletteRemoteInterruptHonorsPluginPriorityAndStalePTY(t *testing.T) {
-	oldHotkeys := GlobalHotkeys
-	GlobalHotkeys = nil
-	t.Cleanup(func() { GlobalHotkeys = oldHotkeys })
+	oldHotkeys := plughost.GlobalHotkeys
+	plughost.GlobalHotkeys = nil
+	t.Cleanup(func() { plughost.GlobalHotkeys = oldHotkeys })
 
 	remote := &directPaletteRemoteVFS{VFS: vfs.NewNullVFS(0), interrupt: []byte{0x03}}
-	left := &FileSystemPanel{vfs: remote}
-	right := &FileSystemPanel{vfs: vfs.NewNullVFS(0)}
+	left := &panel.FileSystemPanel{Vfs: remote}
+	right := &panel.FileSystemPanel{Vfs: vfs.NewNullVFS(0)}
 	pty := &directPalettePTY{}
 	pf := newDirectPalettePanelsFrame(left, right)
-	pf.remotePtys = map[vfs.VFS]terminal.PtyBackend{remote: pty}
+	pf.RemotePtys = map[vfs.VFS]terminal.PtyBackend{remote: pty}
 	setDirectPaletteTopFrame(t, pf)
 
 	pluginCalls := 0
-	RegisterGlobalHotkey(vtinput.VK_C, vtinput.LeftCtrlPressed, func(vfs.App) { pluginCalls++ })
+	plughost.RegisterGlobalHotkey(vtinput.VK_C, vtinput.LeftCtrlPressed, func(vfs.App) { pluginCalls++ })
 	ctrlC := &vtinput.InputEvent{
 		Type:            vtinput.KeyEventType,
 		KeyDown:         true,
@@ -76,7 +79,7 @@ func TestCommandPaletteRemoteInterruptHonorsPluginPriorityAndStalePTY(t *testing
 	if !pf.InterceptPluginKey(ctrlC) || pluginCalls != 1 || len(pty.writes) != 0 {
 		t.Fatalf("plugin priority = calls %d, term.PTY writes %v", pluginCalls, pty.writes)
 	}
-	GlobalHotkeys = nil
+	plughost.GlobalHotkeys = nil
 	if !pf.InterceptPluginKey(ctrlC) || string(pty.writes) != string([]byte{0x03}) {
 		t.Fatalf("remote Ctrl+C fallback writes = %v", pty.writes)
 	}
@@ -86,7 +89,7 @@ func TestCommandPaletteRemoteInterruptHonorsPluginPriorityAndStalePTY(t *testing
 		t.Fatal("Panel.InterruptRemoteCommand is missing for a live remote term.PTY")
 	}
 	replacement := &directPalettePTY{}
-	pf.remotePtys[remote] = replacement
+	pf.RemotePtys[remote] = replacement
 	if executeCommandPaletteEntry(entry) || len(replacement.writes) != 0 {
 		t.Fatal("stale remote interrupt targeted a replacement term.PTY")
 	}
@@ -97,8 +100,8 @@ func TestCommandPaletteRemoteInterruptHonorsPluginPriorityAndStalePTY(t *testing
 }
 
 func TestCommandPaletteFastFindSurvivesOpeningAndTogglesMatchMode(t *testing.T) {
-	_, panel := newFastFindPanelsFrame(t)
-	original := panel.fastFindStr
+	_, pnl := newFastFindPanelsFrame(t)
+	original := pnl.FastFindStr
 	if !RunAction(commandPaletteActionName) {
 		t.Fatal("App.CommandPalette was not handled")
 	}
@@ -110,13 +113,13 @@ func TestCommandPaletteFastFindSurvivesOpeningAndTogglesMatchMode(t *testing.T) 
 	if !found {
 		t.Fatal("palette opened from Fast Find without FastFind.ToggleMatchMode")
 	}
-	if !panel.fastFindMode || panel.fastFindStr != original {
-		t.Fatalf("opening palette canceled Fast Find: mode=%v query=%q", panel.fastFindMode, panel.fastFindStr)
+	if !pnl.FastFindMode || pnl.FastFindStr != original {
+		t.Fatalf("opening palette canceled Fast Find: mode=%v query=%q", pnl.FastFindMode, pnl.FastFindStr)
 	}
 
 	vtui.FrameManager.Pop()
-	if !executeCommandPaletteEntry(entry) || panel.fastFindStr != "*"+original {
-		t.Fatalf("FastFind.ToggleMatchMode query = %q, want %q", panel.fastFindStr, "*"+original)
+	if !executeCommandPaletteEntry(entry) || pnl.FastFindStr != "*"+original {
+		t.Fatalf("FastFind.ToggleMatchMode query = %q, want %q", pnl.FastFindStr, "*"+original)
 	}
 
 	ordinaryRan := false
@@ -126,13 +129,13 @@ func TestCommandPaletteFastFindSurvivesOpeningAndTogglesMatchMode(t *testing.T) 
 	}}) || !ordinaryRan {
 		t.Fatal("ordinary dynamic palette command did not run")
 	}
-	if panel.fastFindMode {
+	if pnl.FastFindMode {
 		t.Fatal("ordinary dynamic palette command left Fast Find active")
 	}
 }
 
 func TestCommandPalettePendingProviderCancelRevalidatesTask(t *testing.T) {
-	pf, panel, _ := newSearchFirstTestFrame(t)
+	pf, pnl, _ := newSearchFirstTestFrame(t)
 	setDirectPaletteTopFrame(t, pf)
 
 	newTask := func() *vtui.TaskContext {
@@ -140,20 +143,20 @@ func TestCommandPalettePendingProviderCancelRevalidatesTask(t *testing.T) {
 		return &vtui.TaskContext{Context: ctx, Cancel: cancel}
 	}
 	first := newTask()
-	panel.providerOpenTask = first
-	panel.providerOpenSourceSelect = "source"
+	pnl.ProviderOpenTask = first
+	pnl.ProviderOpenSourceSelect = "source"
 	entry, found := commandPaletteTestEntryByID(commandPalettePanelsContextEntries(pf), "Provider.CancelOpen")
 	if !found {
 		t.Fatal("Provider.CancelOpen is missing while a provider is pending")
 	}
 	second := newTask()
-	panel.providerOpenTask = second
-	if executeCommandPaletteEntry(entry) || panel.providerOpenTask != second {
+	pnl.ProviderOpenTask = second
+	if executeCommandPaletteEntry(entry) || pnl.ProviderOpenTask != second {
 		t.Fatal("stale provider cancel stopped a replacement task")
 	}
 
 	entry, _ = commandPaletteTestEntryByID(commandPalettePanelsContextEntries(pf), "Provider.CancelOpen")
-	if !executeCommandPaletteEntry(entry) || panel.providerOpenTask != nil {
+	if !executeCommandPaletteEntry(entry) || pnl.ProviderOpenTask != nil {
 		t.Fatal("Provider.CancelOpen did not cancel the current task")
 	}
 }
@@ -169,7 +172,7 @@ func TestCommandPaletteSearchFirstFocusToggleIsStateSpecific(t *testing.T) {
 	if !found || entry.Checked || entry.Shortcut != "` / ~ / ё" {
 		t.Fatalf("initial focus-toggle entry = %#v", entry)
 	}
-	if !executeCommandPaletteEntry(entry) || !pf.commandLineFocused {
+	if !executeCommandPaletteEntry(entry) || !pf.CommandLineFocused {
 		t.Fatal("focus-toggle command did not focus the command line")
 	}
 	if executeCommandPaletteEntry(entry) {
@@ -177,24 +180,24 @@ func TestCommandPaletteSearchFirstFocusToggleIsStateSpecific(t *testing.T) {
 	}
 
 	entry, _ = commandPaletteTestEntryByID(commandPalettePanelsContextEntries(pf), "Panel.ToggleCommandLineFocus")
-	if !entry.Checked || !executeCommandPaletteEntry(entry) || pf.commandLineFocused {
+	if !entry.Checked || !executeCommandPaletteEntry(entry) || pf.CommandLineFocused {
 		t.Fatal("fresh focus-toggle command did not restore panel focus")
 	}
 }
 
 func TestCommandPaletteAISendDraftOnlyForCurrentNonEmptyInput(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	left := NewFileSystemPanel(0, 0, 40, 20, vfs.NewNullVFS(0))
-	right := NewFileSystemPanel(40, 0, 80, 20, vfs.NewNullVFS(0))
-	waitForLoad(t, left)
-	waitForLoad(t, right)
+	left := panel.NewFileSystemPanel(0, 0, 40, 20, vfs.NewNullVFS(0))
+	right := panel.NewFileSystemPanel(40, 0, 80, 20, vfs.NewNullVFS(0))
+	paneltest.WaitForLoad(t, left)
+	paneltest.WaitForLoad(t, right)
 	pf := newDirectPalettePanelsFrame(left, right)
 	chat := NewAIChatPanel(left)
 	chat.SetFocus(true)
 	chat.focusedLinkIdx = -1
 	chat.input.SetText("review this patch")
-	pf.altPanels[0] = chat
+	pf.AltPanels[0] = chat
 	vtui.FrameManager.Push(pf)
 
 	entry, found := commandPaletteTestEntryByID(commandPalettePanelsContextEntries(pf), "AI.SendDraft")

@@ -1,12 +1,13 @@
 package main
 
-// The subject is cancelOperationsForShutdown, which lives here: the test walks
+// The subject is panel.CancelOperationsForShutdown, which lives here: the test walks
 // a queued operation and a background job through one shutdown and asks that
 // both were cancelled. It reaches two packages to do that, which is why it
 // cannot sit inside either.
 
 import (
 	"context"
+	"github.com/unxed/f4/internal/panel"
 	"testing"
 
 	"github.com/unxed/f4/internal/fileops"
@@ -35,7 +36,7 @@ func TestCancelOperationsForShutdownCancelsQueueAndBackgroundJobs(t *testing.T) 
 		background.Finish()
 	})
 
-	cancelOperationsForShutdown()
+	panel.CancelOperationsForShutdown()
 
 	state, _, _ := queued.Status()
 	if state != "Cancelled" || ctx.Err() != context.Canceled {

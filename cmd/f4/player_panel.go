@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,7 +42,7 @@ import (
 // volume work anywhere in the panel.
 type PlayerPanel struct {
 	vtui.ScreenObject
-	src     *FileSystemPanel
+	src     *panel.FileSystemPanel
 	frame   *vtui.BorderedFrame
 	focused bool
 
@@ -94,7 +95,7 @@ const (
 
 const playerControlRows = 5 // title, time/info, spectrum×2, buttons
 
-func NewPlayerPanel(src *FileSystemPanel) *PlayerPanel {
+func NewPlayerPanel(src *panel.FileSystemPanel) *PlayerPanel {
 	x1, y1, x2, y2 := src.GetPosition()
 	pp := &PlayerPanel{
 		src:    src,
@@ -122,10 +123,10 @@ func (pp *PlayerPanel) SetPosition(x1, y1, x2, y2 int) {
 	}
 }
 
-func (pp *PlayerPanel) Source() *FileSystemPanel { return pp.src }
-func (pp *PlayerPanel) Kind() string             { return "player" }
-func (pp *PlayerPanel) SetFocus(f bool)          { pp.focused = f }
-func (pp *PlayerPanel) IsFocused() bool          { return pp.focused }
+func (pp *PlayerPanel) Source() *panel.FileSystemPanel { return pp.src }
+func (pp *PlayerPanel) Kind() string                   { return "player" }
+func (pp *PlayerPanel) SetFocus(f bool)                { pp.focused = f }
+func (pp *PlayerPanel) IsFocused() bool                { return pp.focused }
 func (pp *PlayerPanel) ProcessMouse(*vtinput.InputEvent) bool {
 	return false
 }

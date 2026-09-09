@@ -5,6 +5,7 @@ package main
 // they used to share a file with went to internal/fileops with theirs.
 
 import (
+	"github.com/unxed/f4/internal/panel"
 	"testing"
 
 	"github.com/unxed/f4/internal/i18n"
@@ -33,7 +34,7 @@ func TestLayout_FileAssociationEditor_AllLanguages(t *testing.T) {
 		screen := vtui.NewSilentScreenBuf()
 		screen.AllocBuf(120, 60)
 		vtui.FrameManager.Init(screen)
-		(&assocEditorState{}).editAt(0, true)
+		(&panel.AssocEditorState{}).EditAt(0, true)
 		if top := vtui.FrameManager.GetTopFrame(); top != nil {
 			if dlg, ok := top.(vtui.Container); ok {
 				return dlg

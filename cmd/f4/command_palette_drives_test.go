@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
 	"strings"
 	"testing"
 
@@ -23,7 +24,7 @@ func TestCommandPaletteDriveEntriesExposeRegistryNamesForBothPanels(t *testing.T
 	})
 	t.Cleanup(restore)
 
-	pf := &PanelsFrame{panels: [2]Panel{&FileSystemPanel{}, &FileSystemPanel{}}}
+	pf := &panel.PanelsFrame{Panels: [2]panel.Panel{&panel.FileSystemPanel{}, &panel.FileSystemPanel{}}}
 	setCommandPaletteActivePanelsForTest(t, pf)
 	var entries []commandPaletteEntry
 	for _, entry := range commandPaletteDriveEntries(pf) {
@@ -63,7 +64,7 @@ func TestCommandPaletteDriveEntryReResolvesFactoryAndRejectsRemoval(t *testing.T
 	}})
 	t.Cleanup(restore)
 
-	pf := &PanelsFrame{panels: [2]Panel{&FileSystemPanel{}, &FileSystemPanel{}}}
+	pf := &panel.PanelsFrame{Panels: [2]panel.Panel{&panel.FileSystemPanel{}, &panel.FileSystemPanel{}}}
 	setCommandPaletteActivePanelsForTest(t, pf)
 	var entries []commandPaletteEntry
 	for _, entry := range commandPaletteDriveEntries(pf) {
@@ -112,7 +113,7 @@ func TestCommandPaletteDriveEntryDoesNotResolveAgainstClosedPanels(t *testing.T)
 	}})
 	t.Cleanup(restore)
 
-	pf := &PanelsFrame{closed: true, panels: [2]Panel{&FileSystemPanel{}, &FileSystemPanel{}}}
+	pf := &panel.PanelsFrame{Closed: true, Panels: [2]panel.Panel{&panel.FileSystemPanel{}, &panel.FileSystemPanel{}}}
 	var entries []commandPaletteEntry
 	for _, entry := range commandPaletteDriveEntries(pf) {
 		if entry.ID == "Closed panels drive" {

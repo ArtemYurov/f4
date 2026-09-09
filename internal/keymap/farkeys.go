@@ -165,7 +165,7 @@ func EventToHotkeyString(e *vtinput.InputEvent) string {
 	return key
 }
 
-// configuredHotkeyAction resolves a hotkey the way Far users expect: Right
+// keymap.ConfiguredHotkeyAction resolves a hotkey the way Far users expect: Right
 // Ctrl is the same modifier as Ctrl unless something is bound on the RCtrl
 // spelling specifically. For an "RCtrl…" key the precedence is:
 //

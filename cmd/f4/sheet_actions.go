@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/unxed/f4/internal/panel"
 	"path/filepath"
 	"strings"
 
@@ -17,13 +18,13 @@ import (
 // menu dropdown or the command palette is open, that popup is the top frame,
 // and a check against the top frame alone reports that there are no panels
 // exactly when the user is choosing this command.
-func activePanelsFrame() *PanelsFrame {
+func activePanelsFrame() *panel.PanelsFrame {
 	if vtui.FrameManager == nil {
 		return nil
 	}
 	frames := vtui.FrameManager.GetActiveFrames(vtui.FrameManager.ActiveIdx)
 	for index := len(frames) - 1; index >= 0; index-- {
-		if pf, ok := frames[index].(*PanelsFrame); ok {
+		if pf, ok := frames[index].(*panel.PanelsFrame); ok {
 			return pf
 		}
 	}

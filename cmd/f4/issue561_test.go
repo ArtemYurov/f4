@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
@@ -20,7 +22,7 @@ func (*issue561ViewportRenderer) Flush()                                        
 func TestIssue561PanelSettingsRequestsViewportLargeEnoughForDialog(t *testing.T) {
 	oldConfig := config.App
 	t.Cleanup(func() { config.App = oldConfig })
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(100, 30)
@@ -28,7 +30,7 @@ func TestIssue561PanelSettingsRequestsViewportLargeEnoughForDialog(t *testing.T)
 	scr.Renderer = renderer
 	vtui.FrameManager.Init(scr)
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	t.Cleanup(pf.Close)
 	vtui.FrameManager.Push(pf)
 	actionPanelSettings(pf)

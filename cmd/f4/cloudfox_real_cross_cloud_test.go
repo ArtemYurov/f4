@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
 	"io"
 	"os"
 	"path/filepath"
@@ -677,15 +678,15 @@ func runRealCrossCloudF5(t *testing.T, source, destination *realCrossCloudEndpoi
 
 	pf := realCloudFoxUIPanels(t, sourceVFS, destinationVFS)
 	defer pf.Close()
-	left := pf.panels[0].(*FileSystemPanel)
-	right := pf.panels[1].(*FileSystemPanel)
+	left := pf.Panels[0].(*panel.FileSystemPanel)
+	right := pf.Panels[1].(*panel.FileSystemPanel)
 	realCloudFoxUIWaitPanelName(t, left, name, 3*time.Minute)
 	if conflict != nil {
 		realCloudFoxUIWaitPanelName(t, right, name, 3*time.Minute)
 	} else {
-		realCloudFoxUIWait(t, 3*time.Minute, "cross-cloud destination panel to load", func() bool { return !right.isLoading })
+		realCloudFoxUIWait(t, 3*time.Minute, "cross-cloud destination panel to load", func() bool { return !right.IsLoading })
 	}
-	pf.activeIdx = 0
+	pf.ActiveIdx = 0
 	left.SetFocus(true)
 	right.SetFocus(false)
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
 	"testing"
 
 	"github.com/unxed/f4/vfs"
@@ -20,13 +21,13 @@ func (r *recordingPanelActionVFS) HandlePanelAction(_ vfs.App, action vfs.PanelA
 
 func TestDispatchPanelActionUsesSemanticActionAndFullPaths(t *testing.T) {
 	fs := &recordingPanelActionVFS{NullVFS: vfs.NewNullVFS(0)}
-	fsp := &FileSystemPanel{
-		vfs:     fs,
-		entries: []*fileEntry{{VFSItem: vfs.VFSItem{Name: "profile row"}}},
+	fsp := &panel.FileSystemPanel{
+		Vfs:     fs,
+		Entries: []*panel.FileEntry{{VFSItem: vfs.VFSItem{Name: "profile row"}}},
 	}
-	pf := &PanelsFrame{panels: [2]Panel{fsp, nil}, activeIdx: 0}
-	paths := selectedPanelActionPaths(fsp)
-	if !dispatchPanelAction(pf, vfs.PanelActionEdit, paths) {
+	pf := &panel.PanelsFrame{Panels: [2]panel.Panel{fsp, nil}, ActiveIdx: 0}
+	paths := panel.SelectedPanelActionPaths(fsp)
+	if !panel.DispatchPanelAction(pf, vfs.PanelActionEdit, paths) {
 		t.Fatal("handler did not consume action")
 	}
 	wantPath := fs.Join(fs.GetPath(), "profile row")
@@ -40,9 +41,9 @@ func TestDispatchPanelActionUsesSemanticActionAndFullPaths(t *testing.T) {
 }
 
 func TestDispatchPanelActionFallsBackForOrdinaryVFS(t *testing.T) {
-	fsp := &FileSystemPanel{vfs: vfs.NewNullVFS(0)}
-	pf := &PanelsFrame{panels: [2]Panel{fsp, nil}, activeIdx: 0}
-	if dispatchPanelAction(pf, vfs.PanelActionCreate, []string{"/"}) {
+	fsp := &panel.FileSystemPanel{Vfs: vfs.NewNullVFS(0)}
+	pf := &panel.PanelsFrame{Panels: [2]panel.Panel{fsp, nil}, ActiveIdx: 0}
+	if panel.DispatchPanelAction(pf, vfs.PanelActionCreate, []string{"/"}) {
 		t.Fatal("ordinary VFS consumed semantic action")
 	}
 }

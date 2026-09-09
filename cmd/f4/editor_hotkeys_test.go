@@ -7,6 +7,7 @@ package main
 // here, so the wiring is what these exercise.
 
 import (
+	"github.com/unxed/f4/internal/keymap"
 	"testing"
 
 	"github.com/unxed/f4/internal/editor"
@@ -21,12 +22,12 @@ import (
 // through macro.MacroMgr.Filter, but a key-bar click calls editor.EditorView.ProcessKey
 // directly; Hex mode must still honor a user binding such as F9 -> Hex Mode.
 func TestEditorView_HexMode_KeyBarClickDispatchesConfiguredAction(t *testing.T) {
-	oldHotkeys := GlobalHotkeysMgr
+	oldHotkeys := keymap.GlobalHotkeysMgr
 	oldMacro := macro.MacroMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
 	macro.MacroMgr = &macro.MacroManager{}
 	t.Cleanup(func() {
-		GlobalHotkeysMgr = oldHotkeys
+		keymap.GlobalHotkeysMgr = oldHotkeys
 		macro.MacroMgr = oldMacro
 	})
 
@@ -39,7 +40,7 @@ func TestEditorView_HexMode_KeyBarClickDispatchesConfiguredAction(t *testing.T) 
 	if !RunAction("Editor.HexMode") {
 		t.Fatal("failed to enter Hex mode")
 	}
-	GlobalHotkeysMgr.Bind("Editor", "F9", "Editor.HexMode")
+	keymap.GlobalHotkeysMgr.Bind("Editor", "F9", "Editor.HexMode")
 	if labels := ev.GetKeyLabels(); labels.Normal[8] != "Hex Mode" {
 		t.Fatalf("F9 key-bar label = %q, want Hex Mode", labels.Normal[8])
 	}
@@ -58,9 +59,9 @@ func TestEditorView_HexMode_KeyBarClickDispatchesConfiguredAction(t *testing.T) 
 }
 
 func TestEditorView_Labels(t *testing.T) {
-	oldHotkeys := GlobalHotkeysMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	t.Cleanup(func() { GlobalHotkeysMgr = oldHotkeys })
+	oldHotkeys := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	t.Cleanup(func() { keymap.GlobalHotkeysMgr = oldHotkeys })
 
 	Pt := piecetable.New([]byte(""))
 	ev := editor.NewEditorView(Pt, nil, "test.txt")

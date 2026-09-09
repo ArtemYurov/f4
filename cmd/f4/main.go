@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -121,7 +122,7 @@ func startupDirs() (left, right string) {
 var editFilePath string
 
 // openDashEFileIfRequested opens -e's target file in the editor on the
-// current top PanelsFrame, if -e was given. Called from every entry point
+// current top panel.PanelsFrame, if -e was given. Called from every entry point
 // where SetupUI() (or InitCore(), which calls it) already ran in the one
 // process that's actually going to render -- every GUI backend, and the
 // tty path on Windows (session_windows.go). The Unix tty path is the odd
@@ -134,7 +135,7 @@ func openDashEFileIfRequested() {
 		return
 	}
 	if top := vtui.FrameManager.GetTopFrame(); top != nil {
-		if pf, ok := top.(*PanelsFrame); ok && pf != nil {
+		if pf, ok := top.(*panel.PanelsFrame); ok && pf != nil {
 			openEditFileIn(pf, editFilePath)
 		}
 	}
@@ -144,7 +145,7 @@ func openDashEFileIfRequested() {
 // editor via the normal action_registry path (the same one F4/double-click
 // use), so -e behaves identically to a user opening the file by hand --
 // same "already open?" dialog, same history entry, same everything.
-func openEditFileIn(pf *PanelsFrame, path string) {
+func openEditFileIn(pf *panel.PanelsFrame, path string) {
 	abs, err := filepath.Abs(path)
 	if err != nil {
 		vtui.DebugLog("MAIN: -e %q: filepath.Abs failed: %v", path, err)
@@ -249,7 +250,7 @@ func main() {
 		if plughost.GlobalPluginManager != nil {
 			plughost.GlobalPluginManager.CloseAll()
 		}
-		shutdownProcessEnvironmentRuntime()
+		panel.ShutdownProcessEnvironmentRuntime()
 		if fileops.GlobalFileState != nil {
 			fileops.GlobalFileState.Flush()
 		}
@@ -777,8 +778,8 @@ func SetupUI() {
 	theme.SetDefaultF4Palette()
 	config.LoadConfig()
 	config.ApplyWheelSettings()
-	vtui.PathHintProvider = pathHintProvider
-	applyPathHintSettings()
+	vtui.PathHintProvider = panel.PathHintProvider
+	panel.ApplyPathHintSettings()
 	ctrlTabMode := vtui.WorkspaceCtrlTabDirect
 	if config.App.CtrlTabShowsMenu {
 		ctrlTabMode = vtui.WorkspaceCtrlTabMenu
@@ -793,13 +794,13 @@ func SetupUI() {
 		_ = theme.ApplyColorStyle(config.App.ColorStyle)
 	}
 	vtui.GlobalHistoryProvider = history.NewF4HistoryProvider(config.GetF4ConfigDir())
-	history.SamePath = sameFolderHistoryPath
+	history.SamePath = panel.SameFolderHistoryPath
 	fileops.GlobalFileState = fileops.NewF4FileStateProvider()
 	// A file operation sent to the background keeps its progress dialog; the
 	// dialog needs a workspace behind it, and a copy is what lets the user go
 	// on working in the original.
 	fileops.BackgroundWorkspace = func() vtui.Frame {
-		pf := findPanelsFrame()
+		pf := panel.FindPanelsFrame()
 		if pf == nil {
 			return nil
 		}
@@ -815,17 +816,39 @@ func SetupUI() {
 	editor.LookupHotkey = func(e *vtinput.InputEvent) bool { return macroLookupHotkey(macro.MacroMgr, e) }
 	editor.MenuBarItems = BuildMenuBarItems
 	editor.CrossAttrs = EditorCrossAttrs
-	editor.KeyBarLabels = KeyBarLabelsForArea
+	editor.KeyBarLabels = keymap.KeyBarLabelsForArea
 	editor.HotkeyAction = func(area, key string) string {
-		if GlobalHotkeysMgr == nil {
+		if keymap.GlobalHotkeysMgr == nil {
 			return ""
 		}
-		return GlobalHotkeysMgr.GetAction(area, key)
+		return keymap.GlobalHotkeysMgr.GetAction(area, key)
 	}
 	editor.RememberEdited = func(v vfs.VFS, path string) { rememberViewerEditorHistory(v, path, historyModeEdit) }
 	editor.SaveSession = SaveSession
 	editor.HandleWorkspaceFork = handleWorkspaceForkCommand
 	editor.SwitchToViewer = actionSwitchEditorToViewer
+	// internal/panel declares what it needs from the application above it; this
+	// is the root filling it in. Every default is inert, so an unwired panel
+	// declines the command rather than doing the wrong thing.
+	panel.AppCommand = handlePanelsAppCommand
+	panel.RunAction = RunAction
+	panel.BuildMenuBarItems = BuildMenuBarItems
+	panel.SaveSession = SaveSession
+	panel.OpenEditor = actionOpenEditor
+	panel.OpenViewer = actionOpenViewer
+	panel.OpenViewerInternal = openViewerInternal
+	panel.OpenEditFileIn = openEditFileIn
+	panel.ShowViewer = showViewer
+	panel.ShowEditor = showEditor
+	panel.FindOpenedEditor = findOpenedEditor
+	panel.Execute = actionExecute
+	panel.SortMenuForPanel = actionSortMenuForPanel
+	panel.WorkspaceClose = actionWorkspaceClose
+	panel.Arkanoid = actionArkanoid
+	panel.CurrentArea = macroCurrentArea
+	panel.MacroHotkey = func(e *vtinput.InputEvent) bool { return macroLookupHotkey(macro.MacroMgr, e) }
+	panel.KeyFilter = func(e *vtinput.InputEvent) bool { return macroFilter(macro.MacroMgr, e) }
+	panel.AISetViewMode = aiSetViewMode
 	vtinput.Logger = vtui.DebugLog // Pipe vtinput logs to vtui's debug logger
 	vtui.GlobalClipboardAccessManager = terminal.NewF4ClipboardAuth()
 	// sysinfo.RegisterDrive("Null VFS", func() vfs.VFS { return vfs.NewNullVFS(50 * 1024 * 1024) }) // 50 MB/s
@@ -842,7 +865,7 @@ func SetupUI() {
 		theme.GlobalFileHighlighter.LoadFromIni(highlightIni)
 		// Sort groups share the file (and the rule syntax) with highlighting,
 		// the way far keeps both in one dialog. Themes may not define them.
-		GlobalSortGroups.LoadFromIni(highlightIni)
+		panel.GlobalSortGroups.LoadFromIni(highlightIni)
 	}
 
 	// CrashDirFull задаётся рано (см. main()); здесь только повторная
@@ -850,7 +873,7 @@ func SetupUI() {
 	vfs.CustomConfigDir = configDir
 
 	os.MkdirAll(configDir, 0755)
-	GlobalHotkeysMgr = NewHotkeyManager(filepath.Join(configDir, "hotkeys.ini"))
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager(filepath.Join(configDir, "hotkeys.ini"))
 	keymapPath := filepath.Join(configDir, "keymap.ini")
 	if _, err := os.Stat(keymapPath); os.IsNotExist(err) {
 		// The file is the documentation: a user fighting a multiplexer has to
@@ -892,29 +915,29 @@ func SetupUI() {
 	width := vtui.FrameManager.GetScreenSize()
 	height := vtui.FrameManager.GetScreenHeight()
 
-	panels := NewPanelsFrame()
+	panels := panel.NewPanelsFrame()
 	panels.ResizeConsole(width, height)
-	states, activeWorkspace := workspaceSessionsForRestore(
-		LastWorkspaceSessions, LastActiveWorkspace, config.App.RestoreWorkspaceTabs,
+	states, activeWorkspace := panel.WorkspaceSessionsForRestore(
+		panel.LastWorkspaceSessions, panel.LastActiveWorkspace, config.App.RestoreWorkspaceTabs,
 	)
 	if len(states) == 0 && config.App.SavePanelPaths {
-		states = []workspaceSessionState{legacyWorkspaceSession()}
+		states = []panel.WorkspaceSessionState{panel.LegacyWorkspaceSession()}
 	}
 	if len(states) > 0 {
-		applyWorkspaceSession(panels, states[0], width, height, config.App.SavePanelPaths)
+		panel.ApplyWorkspaceSession(panels, states[0], width, height, config.App.SavePanelPaths)
 	}
 	// The startup directories outrank the restored paths. A client attaching to
 	// a running daemon brings its own instead -- see attachPayload.
 	startLeft, startRight := startupDirs()
-	applyStartupDirs(panels, startLeft, startRight)
+	panel.ApplyStartupDirs(panels, startLeft, startRight)
 	vtui.FrameManager.Push(panels)
 	if len(states) > 1 {
 		// AddScreenBackground inserts immediately after the active workspace;
 		// restore from right to left to preserve the saved tab order.
 		for i := len(states) - 1; i >= 1; i-- {
 			state := states[i]
-			extra := NewPanelsFrame()
-			applyWorkspaceSession(extra, state, width, height, config.App.SavePanelPaths)
+			extra := panel.NewPanelsFrame()
+			panel.ApplyWorkspaceSession(extra, state, width, height, config.App.SavePanelPaths)
 			vtui.FrameManager.AddScreenBackground(extra)
 		}
 	}
@@ -926,7 +949,7 @@ func SetupUI() {
 			}
 			vtui.FrameManager.RestoreScreenNumbers(numbers)
 		} else {
-			renumberWorkspaceScreens()
+			panel.RenumberWorkspaceScreens()
 		}
 		if activeWorkspace > 0 && activeWorkspace < len(vtui.FrameManager.Screens) {
 			vtui.FrameManager.SwitchScreen(activeWorkspace)
@@ -934,7 +957,7 @@ func SetupUI() {
 	}
 	previousEventFilter := vtui.FrameManager.EventFilter
 	vtui.FrameManager.EventFilter = func(e *vtinput.InputEvent) bool {
-		if handleTranslatorMouseEvent(e) {
+		if panel.HandleTranslatorMouseEvent(e) {
 			return true
 		}
 		if previousEventFilter != nil && previousEventFilter(e) {
@@ -946,24 +969,24 @@ func SetupUI() {
 		if history.HandleMenuHistoryEvent(e) {
 			return true
 		}
-		if handlePanelPathEditHotkey(e) {
+		if panel.HandlePanelPathEditHotkey(e) {
 			return true
 		}
 		if dialog.HandleHelpSearchHotkey(e) {
 			return true
 		}
-		if panels.shellMode == terminal.ShellModeSimpleInline && panels.consoleViewActive() && panels.isTopFrame() {
+		if panels.ShellMode == terminal.ShellModeSimpleInline && panels.ConsoleViewActive() && panels.IsTopFrame() {
 			if e.Type == vtinput.KeyEventType && e.KeyDown {
 				vtui.FrameManager.PostTask(func() {
-					panels.drawConsoleOverlay()
+					panels.DrawConsoleOverlay()
 				})
 			}
 		}
 		return false
 	}
 
-	vtui.FrameManager.MenuBar = panels.menuBar
-	vtui.FrameManager.KeyBar = panels.keyBar
+	vtui.FrameManager.MenuBar = panels.MenuBar
+	vtui.FrameManager.KeyBar = panels.KeyBar
 	// consoleOverlayOwnedScreen tracks whether panels was the top frame the
 	// last time OnRender checked, so a foreign frame (editor/viewer/dialog
 	// opened via F3/F4 or similar while the console view is showing) giving
@@ -979,17 +1002,17 @@ func SetupUI() {
 	consoleOverlayOwnedScreen := true
 	vtui.FrameManager.OnRender = func(scr *vtui.ScreenBuf) {
 		if config.App.WorkspaceTabNumbering == config.WorkspaceTabNumbersOrder {
-			renumberWorkspaceScreens()
+			panel.RenumberWorkspaceScreens()
 		}
 		UpdateWindowTitle(scr)
 		dialog.RenderHelpSearch(scr)
-		if panels.shellMode == terminal.ShellModeSimpleInline && panels.consoleViewActive() {
-			onTop := panels.isTopFrame()
+		if panels.ShellMode == terminal.ShellModeSimpleInline && panels.ConsoleViewActive() {
+			onTop := panels.IsTopFrame()
 			if onTop {
 				if !consoleOverlayOwnedScreen {
-					terminal.ClearConsoleViewBackground(panels.lastW, panels.lastH)
+					terminal.ClearConsoleViewBackground(panels.LastW, panels.LastH)
 				}
-				panels.drawConsoleOverlay()
+				panels.DrawConsoleOverlay()
 			}
 			consoleOverlayOwnedScreen = onTop
 		}
@@ -1073,33 +1096,33 @@ func LoadSession() {
 	LastFindFileSymlinks = ini.GetString("FindFile", "Symlinks", "0") == "1"
 
 	// Восстанавливаем состояние левой панели
-	LastLeftPath = ini.GetString("Panel/Left", "Folder", "")
-	LastLeftCursor = ini.GetString("Panel/Left", "CurFile", "")
-	fmt.Sscanf(ini.GetString("Panel/Left", "ViewMode", "0"), "%d", &LastLeftViewMode)
-	fmt.Sscanf(ini.GetString("Panel/Left", "SortMode", "0"), "%d", &LastLeftSortMode)
-	LastLeftSortRev = ini.GetString("Panel/Left", "SortReverse", "0") == "1"
-	LastLeftSortGroups = ini.GetString("Panel/Left", "UseSortGroups", "0") == "1"
+	panel.LastLeftPath = ini.GetString("Panel/Left", "Folder", "")
+	panel.LastLeftCursor = ini.GetString("Panel/Left", "CurFile", "")
+	_, _ = fmt.Sscanf(ini.GetString("Panel/Left", "ViewMode", "0"), "%d", &panel.LastLeftViewMode)
+	_, _ = fmt.Sscanf(ini.GetString("Panel/Left", "SortMode", "0"), "%d", &panel.LastLeftSortMode)
+	panel.LastLeftSortRev = ini.GetString("Panel/Left", "SortReverse", "0") == "1"
+	panel.LastLeftSortGroups = ini.GetString("Panel/Left", "UseSortGroups", "0") == "1"
 
 	// Восстанавливаем состояние правой панели
-	LastRightPath = ini.GetString("Panel/Right", "Folder", "")
-	LastRightCursor = ini.GetString("Panel/Right", "CurFile", "")
-	fmt.Sscanf(ini.GetString("Panel/Right", "ViewMode", "0"), "%d", &LastRightViewMode)
-	fmt.Sscanf(ini.GetString("Panel/Right", "SortMode", "0"), "%d", &LastRightSortMode)
-	LastRightSortRev = ini.GetString("Panel/Right", "SortReverse", "0") == "1"
-	LastRightSortGroups = ini.GetString("Panel/Right", "UseSortGroups", "0") == "1"
+	panel.LastRightPath = ini.GetString("Panel/Right", "Folder", "")
+	panel.LastRightCursor = ini.GetString("Panel/Right", "CurFile", "")
+	_, _ = fmt.Sscanf(ini.GetString("Panel/Right", "ViewMode", "0"), "%d", &panel.LastRightViewMode)
+	_, _ = fmt.Sscanf(ini.GetString("Panel/Right", "SortMode", "0"), "%d", &panel.LastRightSortMode)
+	panel.LastRightSortRev = ini.GetString("Panel/Right", "SortReverse", "0") == "1"
+	panel.LastRightSortGroups = ini.GetString("Panel/Right", "UseSortGroups", "0") == "1"
 
 	// Восстанавливаем глобальное состояние сессии
 	activeStr := ini.GetString("Session", "ActivePanel", "1")
-	fmt.Sscanf(activeStr, "%d", &LastActivePanel)
-	LastWidePanel = -1
-	fmt.Sscanf(ini.GetString("Session", "WidePanel", "-1"), "%d", &LastWidePanel)
-	if LastWidePanel < -1 || LastWidePanel > 1 {
-		LastWidePanel = -1
+	_, _ = fmt.Sscanf(activeStr, "%d", &panel.LastActivePanel)
+	panel.LastWidePanel = -1
+	_, _ = fmt.Sscanf(ini.GetString("Session", "WidePanel", "-1"), "%d", &panel.LastWidePanel)
+	if panel.LastWidePanel < -1 || panel.LastWidePanel > 1 {
+		panel.LastWidePanel = -1
 	}
-	LastShowPanels = ini.GetString("Session", "ShowPanels", "1") == "1"
-	LastShowLeft = ini.GetString("Session", "ShowLeft", "1") == "1"
-	LastShowRight = ini.GetString("Session", "ShowRight", "1") == "1"
-	LastWorkspaceSessions, LastActiveWorkspace = loadWorkspaceSessions(ini)
+	panel.LastShowPanels = ini.GetString("Session", "ShowPanels", "1") == "1"
+	panel.LastShowLeft = ini.GetString("Session", "ShowLeft", "1") == "1"
+	panel.LastShowRight = ini.GetString("Session", "ShowRight", "1") == "1"
+	panel.LastWorkspaceSessions, panel.LastActiveWorkspace = panel.LoadWorkspaceSessions(ini)
 
 	vtui.DebugLog("SESSION: Loaded state from %s", path)
 }
@@ -1170,12 +1193,12 @@ func captureCurrentWindowPosition() bool {
 	return true
 }
 
-func mergeWorkspaceSessionSave(previous []workspaceSessionState, previousActive int, current []workspaceSessionState, currentActive int, savePanelSettings, saveCurrentPanel bool) ([]workspaceSessionState, int) {
+func mergeWorkspaceSessionSave(previous []panel.WorkspaceSessionState, previousActive int, current []panel.WorkspaceSessionState, currentActive int, savePanelSettings, saveCurrentPanel bool) ([]panel.WorkspaceSessionState, int) {
 	if len(previous) == 0 || (savePanelSettings && saveCurrentPanel) {
 		return current, currentActive
 	}
-	merged := append([]workspaceSessionState(nil), previous...)
-	findPrevious := func(state workspaceSessionState, index int) int {
+	merged := append([]panel.WorkspaceSessionState(nil), previous...)
+	findPrevious := func(state panel.WorkspaceSessionState, index int) int {
 		for i := range merged {
 			if state.Number != 0 && merged[i].Number == state.Number {
 				return i
@@ -1226,17 +1249,17 @@ func saveSessionFileWithOptions(path string, savePanelSettings, saveCurrentPanel
 	os.MkdirAll(filepath.Dir(path), 0755)
 
 	if vtui.FrameManager != nil {
-		if states, active := captureWorkspaceSessions(); len(states) > 0 {
-			states, active = mergeWorkspaceSessionSave(LastWorkspaceSessions, LastActiveWorkspace, states, active, savePanelSettings, saveCurrentPanel)
+		if states, active := panel.CaptureWorkspaceSessions(); len(states) > 0 {
+			states, active = mergeWorkspaceSessionSave(panel.LastWorkspaceSessions, panel.LastActiveWorkspace, states, active, savePanelSettings, saveCurrentPanel)
 			if !config.App.SavePanelPaths {
 				for i := range states {
 					states[i].Left.Path, states[i].Right.Path = "", ""
 					states[i].Left.Cursor, states[i].Right.Cursor = "", ""
 				}
 			}
-			LastWorkspaceSessions, LastActiveWorkspace = states, active
+			panel.LastWorkspaceSessions, panel.LastActiveWorkspace = states, active
 			if config.App.SavePanelPaths {
-				setLegacyWorkspaceSession(states[0])
+				panel.SetLegacyWorkspaceSession(states[0])
 			}
 		}
 	}
@@ -1261,28 +1284,28 @@ func saveSessionFileWithOptions(path string, savePanelSettings, saveCurrentPanel
 	fmt.Fprintf(&sb, "Symlinks = %d\n", boolToCheckboxState(LastFindFileSymlinks))
 
 	sb.WriteString("\n[Session]\n")
-	fmt.Fprintf(&sb, "ActivePanel = %d\n", LastActivePanel)
-	fmt.Fprintf(&sb, "WidePanel = %d\n", LastWidePanel)
-	fmt.Fprintf(&sb, "ShowPanels = %d\n", map[bool]int{true: 1, false: 0}[LastShowPanels])
-	fmt.Fprintf(&sb, "ShowLeft = %d\n", map[bool]int{true: 1, false: 0}[LastShowLeft])
-	fmt.Fprintf(&sb, "ShowRight = %d\n", map[bool]int{true: 1, false: 0}[LastShowRight])
+	fmt.Fprintf(&sb, "ActivePanel = %d\n", panel.LastActivePanel)
+	fmt.Fprintf(&sb, "WidePanel = %d\n", panel.LastWidePanel)
+	fmt.Fprintf(&sb, "ShowPanels = %d\n", map[bool]int{true: 1, false: 0}[panel.LastShowPanels])
+	fmt.Fprintf(&sb, "ShowLeft = %d\n", map[bool]int{true: 1, false: 0}[panel.LastShowLeft])
+	fmt.Fprintf(&sb, "ShowRight = %d\n", map[bool]int{true: 1, false: 0}[panel.LastShowRight])
 
 	sb.WriteString("\n[Panel/Left]\n")
-	fmt.Fprintf(&sb, "Folder = %s\n", LastLeftPath)
-	fmt.Fprintf(&sb, "CurFile = %s\n", LastLeftCursor)
-	fmt.Fprintf(&sb, "ViewMode = %d\n", LastLeftViewMode)
-	fmt.Fprintf(&sb, "SortMode = %d\n", LastLeftSortMode)
-	fmt.Fprintf(&sb, "SortReverse = %d\n", map[bool]int{true: 1, false: 0}[LastLeftSortRev])
-	fmt.Fprintf(&sb, "UseSortGroups = %d\n", map[bool]int{true: 1, false: 0}[LastLeftSortGroups])
+	fmt.Fprintf(&sb, "Folder = %s\n", panel.LastLeftPath)
+	fmt.Fprintf(&sb, "CurFile = %s\n", panel.LastLeftCursor)
+	fmt.Fprintf(&sb, "ViewMode = %d\n", panel.LastLeftViewMode)
+	fmt.Fprintf(&sb, "SortMode = %d\n", panel.LastLeftSortMode)
+	fmt.Fprintf(&sb, "SortReverse = %d\n", map[bool]int{true: 1, false: 0}[panel.LastLeftSortRev])
+	fmt.Fprintf(&sb, "UseSortGroups = %d\n", map[bool]int{true: 1, false: 0}[panel.LastLeftSortGroups])
 
 	sb.WriteString("\n[Panel/Right]\n")
-	fmt.Fprintf(&sb, "Folder = %s\n", LastRightPath)
-	fmt.Fprintf(&sb, "CurFile = %s\n", LastRightCursor)
-	fmt.Fprintf(&sb, "ViewMode = %d\n", LastRightViewMode)
-	fmt.Fprintf(&sb, "SortMode = %d\n", LastRightSortMode)
-	fmt.Fprintf(&sb, "SortReverse = %d\n", map[bool]int{true: 1, false: 0}[LastRightSortRev])
-	fmt.Fprintf(&sb, "UseSortGroups = %d\n", map[bool]int{true: 1, false: 0}[LastRightSortGroups])
-	writeWorkspaceSessions(&sb, LastWorkspaceSessions, LastActiveWorkspace)
+	fmt.Fprintf(&sb, "Folder = %s\n", panel.LastRightPath)
+	fmt.Fprintf(&sb, "CurFile = %s\n", panel.LastRightCursor)
+	fmt.Fprintf(&sb, "ViewMode = %d\n", panel.LastRightViewMode)
+	fmt.Fprintf(&sb, "SortMode = %d\n", panel.LastRightSortMode)
+	fmt.Fprintf(&sb, "SortReverse = %d\n", map[bool]int{true: 1, false: 0}[panel.LastRightSortRev])
+	fmt.Fprintf(&sb, "UseSortGroups = %d\n", map[bool]int{true: 1, false: 0}[panel.LastRightSortGroups])
+	panel.WriteWorkspaceSessions(&sb, panel.LastWorkspaceSessions, panel.LastActiveWorkspace)
 
 	err := os.WriteFile(path, []byte(sb.String()), 0600)
 	if err != nil {

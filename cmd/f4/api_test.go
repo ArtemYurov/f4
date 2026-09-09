@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/unxed/f4/internal/plughost"
 	"github.com/unxed/f4/internal/sysinfo"
 	"github.com/unxed/f4/internal/theme"
 	"github.com/unxed/f4/vfs"
@@ -94,16 +95,10 @@ Loop:
 func TestCoreAPI_Registrations(t *testing.T) {
 	api := &coreAPI{}
 	restoreDrives := sysinfo.SnapshotDrives()
-	pluginRegistryMu.Lock()
-	initialHotkeyEntries := append([]HotkeyEntry(nil), GlobalHotkeys...)
-	initialMenuItems := append([]PluginMenuItem(nil), PluginMenuItems...)
-	pluginRegistryMu.Unlock()
+	restorePlugins := plughost.SnapshotPluginRegistries()
 	t.Cleanup(func() {
 		restoreDrives()
-		pluginRegistryMu.Lock()
-		GlobalHotkeys = initialHotkeyEntries
-		PluginMenuItems = initialMenuItems
-		pluginRegistryMu.Unlock()
+		restorePlugins()
 	})
 
 	// 1. RegisterVFSProvider
@@ -140,17 +135,17 @@ func TestCoreAPI_Registrations(t *testing.T) {
 		t.Error("URI provider was not registered correctly")
 	}
 
-	// 5. RegisterGlobalHotkey
-	initialHotkeys := len(GlobalHotkeys)
+	// 5. plughost.RegisterGlobalHotkey
+	initialHotkeys := len(plughost.GlobalHotkeys)
 	api.RegisterGlobalHotkey(0x41, vtinput.ShiftPressed, func(app vfs.App) {})
-	if len(GlobalHotkeys) != initialHotkeys+1 || GlobalHotkeys[len(GlobalHotkeys)-1].VK != 0x41 {
+	if len(plughost.GlobalHotkeys) != initialHotkeys+1 || plughost.GlobalHotkeys[len(plughost.GlobalHotkeys)-1].VK != 0x41 {
 		t.Error("Hotkey was not registered correctly")
 	}
 
-	// 6. RegisterPluginMenuItem
-	initialPlugins := len(PluginMenuItems)
+	// 6. plughost.RegisterPluginMenuItem
+	initialPlugins := len(plughost.PluginMenuItems)
 	api.RegisterPluginMenuItem("My Plugin", func(app vfs.App) {})
-	if len(PluginMenuItems) != initialPlugins+1 || PluginMenuItems[len(PluginMenuItems)-1].Label != "My Plugin" {
+	if len(plughost.PluginMenuItems) != initialPlugins+1 || plughost.PluginMenuItems[len(plughost.PluginMenuItems)-1].Label != "My Plugin" {
 		t.Error("Plugin menu item was not registered correctly")
 	}
 }

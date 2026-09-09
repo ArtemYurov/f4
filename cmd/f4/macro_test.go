@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/paneltest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -141,7 +142,7 @@ func TestMacro_GetCurrentArea(t *testing.T) {
 	vtui.FrameManager.Pop()
 }
 func TestMacroRecordingAndPlayback(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
 	tmpFile := "test_macros.ini"
@@ -306,8 +307,8 @@ func TestEventToHotkeyStringNamesPunctuationByVirtualKey(t *testing.T) {
 // terminal in kitty keyboard mode sends to the action the default bindings
 // give it.
 func TestKittyBackslashReachesBookmarks(t *testing.T) {
-	hm := NewHotkeyManager("")
-	hm.initDefaults()
+	hm := keymap.NewHotkeyManager("")
+	hm.InitDefaults()
 
 	cases := []struct {
 		seq  string
@@ -325,29 +326,29 @@ func TestKittyBackslashReachesBookmarks(t *testing.T) {
 			t.Fatalf("ParseKitty(%q) gave VK 0x%X, want VK_OEM_5", tc.seq, event.VirtualKeyCode)
 		}
 		key := keymap.EventToHotkeyString(event)
-		if got := configuredHotkeyAction(hm, "Shell", key); got != tc.want {
+		if got := keymap.ConfiguredHotkeyAction(hm, "Shell", key); got != tc.want {
 			t.Errorf("ParseKitty(%q) -> %q -> %q, want %q", tc.seq, key, got, tc.want)
 		}
 	}
 }
 
 func TestConfiguredHotkeyActionRightCtrlFallback(t *testing.T) {
-	hm := NewHotkeyManager("")
+	hm := keymap.NewHotkeyManager("")
 
-	if got := configuredHotkeyAction(hm, "Shell", "RCtrlF3"); got != "Panel.SortByName" {
+	if got := keymap.ConfiguredHotkeyAction(hm, "Shell", "RCtrlF3"); got != "Panel.SortByName" {
 		t.Fatalf("right Ctrl should fall back to Ctrl binding: got %q, want Panel.SortByName", got)
 	}
 
 	// Unbinding the RCtrl spelling only drops the RCtrl-specific shortcut;
 	// Right Ctrl then behaves like plain Ctrl rather than becoming a dead key.
 	hm.Bind("Shell", "RCtrlF3", "None")
-	if got := configuredHotkeyAction(hm, "Shell", "RCtrlF3"); got != "Panel.SortByName" {
+	if got := keymap.ConfiguredHotkeyAction(hm, "Shell", "RCtrlF3"); got != "Panel.SortByName" {
 		t.Fatalf("RCtrl unbind should fall back to the Ctrl binding: got %q, want Panel.SortByName", got)
 	}
 
 	// Silencing the key for both Ctrl spellings is done on the plain one.
 	hm.Bind("Shell", "CtrlF3", "None")
-	if got := configuredHotkeyAction(hm, "Shell", "RCtrlF3"); got != "None" {
+	if got := keymap.ConfiguredHotkeyAction(hm, "Shell", "RCtrlF3"); got != "None" {
 		t.Fatalf("explicit CtrlF3 unbind should silence RCtrlF3 too: got %q, want None", got)
 	}
 }
@@ -356,28 +357,28 @@ func TestConfiguredHotkeyActionRightCtrlFallback(t *testing.T) {
 // #492: after the user unbinds the built-in RCtrlA AI shortcut, Right Ctrl+A
 // must act as Ctrl+A (File.Attributes) instead of being swallowed.
 func TestConfiguredHotkeyActionUnboundBuiltInRightCtrlFallsBackToCtrl(t *testing.T) {
-	hm := NewHotkeyManager("")
+	hm := keymap.NewHotkeyManager("")
 
 	hm.Bind("Shell", "RCtrlA", "None")
-	if got := configuredHotkeyAction(hm, "Shell", "RCtrlA"); got != "File.Attributes" {
+	if got := keymap.ConfiguredHotkeyAction(hm, "Shell", "RCtrlA"); got != "File.Attributes" {
 		t.Fatalf("unbound RCtrlA = %q, want File.Attributes (the CtrlA default)", got)
 	}
-	if got := configuredHotkeyAction(hm, "Shell", "CtrlA"); got != "File.Attributes" {
+	if got := keymap.ConfiguredHotkeyAction(hm, "Shell", "CtrlA"); got != "File.Attributes" {
 		t.Fatalf("CtrlA = %q, want File.Attributes", got)
 	}
 
 	// The same holds for the removal form the settings dialog persists.
 	hm.Unbind("Shell", "RCtrlA")
-	if got := configuredHotkeyAction(hm, "Shell", "RCtrlA"); got != "File.Attributes" {
+	if got := keymap.ConfiguredHotkeyAction(hm, "Shell", "RCtrlA"); got != "File.Attributes" {
 		t.Fatalf("removed RCtrlA = %q, want File.Attributes", got)
 	}
 
 	// An explicit RCtrl-specific action still wins over the Ctrl binding.
 	hm.Bind("Shell", "RCtrlA", "Panel.Toggle")
-	if got := configuredHotkeyAction(hm, "Shell", "RCtrlA"); got != "Panel.Toggle" {
+	if got := keymap.ConfiguredHotkeyAction(hm, "Shell", "RCtrlA"); got != "Panel.Toggle" {
 		t.Fatalf("explicit RCtrlA = %q, want Panel.Toggle", got)
 	}
-	if got := configuredHotkeyAction(hm, "Shell", "CtrlA"); got != "File.Attributes" {
+	if got := keymap.ConfiguredHotkeyAction(hm, "Shell", "CtrlA"); got != "File.Attributes" {
 		t.Fatalf("CtrlA must stay File.Attributes next to an explicit RCtrlA: got %q", got)
 	}
 
@@ -387,33 +388,33 @@ func TestConfiguredHotkeyActionUnboundBuiltInRightCtrlFallsBackToCtrl(t *testing
 	if err := os.WriteFile(path, []byte("[Shell]\nRCtrlA=None\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	loaded := NewHotkeyManager(path)
+	loaded := keymap.NewHotkeyManager(path)
 	loaded.Load()
-	if got := configuredHotkeyAction(loaded, "Shell", "RCtrlA"); got != "File.Attributes" {
+	if got := keymap.ConfiguredHotkeyAction(loaded, "Shell", "RCtrlA"); got != "File.Attributes" {
 		t.Fatalf("RCtrlA=None from ini = %q, want File.Attributes", got)
 	}
 }
 
 func TestConfiguredHotkeyActionExplicitCtrlOverridesBuiltInRightCtrl(t *testing.T) {
-	hm := NewHotkeyManager("")
+	hm := keymap.NewHotkeyManager("")
 
-	if got := configuredHotkeyAction(hm, "Shell", "RCtrlA"); got != "AI.TogglePanel" {
+	if got := keymap.ConfiguredHotkeyAction(hm, "Shell", "RCtrlA"); got != "AI.TogglePanel" {
 		t.Fatalf("built-in RCtrlA action = %q, want AI.TogglePanel", got)
 	}
 
 	hm.Bind("Shell", "CtrlA", "Panel.Toggle")
-	if got := configuredHotkeyAction(hm, "Shell", "RCtrlA"); got != "Panel.Toggle" {
+	if got := keymap.ConfiguredHotkeyAction(hm, "Shell", "RCtrlA"); got != "Panel.Toggle" {
 		t.Fatalf("explicit CtrlA should override built-in RCtrlA: got %q, want Panel.Toggle", got)
 	}
 
 	hm.Bind("Shell", "CtrlA", "None")
-	if got := configuredHotkeyAction(hm, "Shell", "RCtrlA"); got != "None" {
+	if got := keymap.ConfiguredHotkeyAction(hm, "Shell", "RCtrlA"); got != "None" {
 		t.Fatalf("explicit CtrlA unbind should override built-in RCtrlA: got %q, want None", got)
 	}
 }
 
 func TestConfigurableHotkeyCanOverrideRightCtrlBookmark(t *testing.T) {
-	hm := NewHotkeyManager("")
+	hm := keymap.NewHotkeyManager("")
 	for _, key := range []uint16{vtinput.VK_1, vtinput.VK_2, vtinput.VK_3, vtinput.VK_4} {
 		e := &vtinput.InputEvent{
 			Type:            vtinput.KeyEventType,
@@ -421,7 +422,7 @@ func TestConfigurableHotkeyCanOverrideRightCtrlBookmark(t *testing.T) {
 			VirtualKeyCode:  key,
 			ControlKeyState: vtinput.RightCtrlPressed,
 		}
-		if configurableHotkeyOwnsPanelBookmark(hm, "Shell", e) {
+		if keymap.ConfigurableHotkeyOwnsPanelBookmark(hm, "Shell", e) {
 			t.Fatalf("built-in Ctrl%c should leave RightCtrl+%c owned by bookmarks", key, key)
 		}
 	}
@@ -434,10 +435,10 @@ func TestConfigurableHotkeyCanOverrideRightCtrlBookmark(t *testing.T) {
 	}
 
 	hm.Bind("Shell", "Ctrl3", "File.Attributes")
-	if !configurableHotkeyOwnsPanelBookmark(hm, "Shell", rightCtrl3) {
+	if !keymap.ConfigurableHotkeyOwnsPanelBookmark(hm, "Shell", rightCtrl3) {
 		t.Fatal("explicit Ctrl3 should make RightCtrl+3 configurable")
 	}
-	if got := configuredHotkeyAction(hm, "Shell", "RCtrl3"); got != "File.Attributes" {
+	if got := keymap.ConfiguredHotkeyAction(hm, "Shell", "RCtrl3"); got != "File.Attributes" {
 		t.Fatalf("RightCtrl+3 fallback = %q, want File.Attributes", got)
 	}
 }
@@ -466,7 +467,7 @@ func TestPanelBookmarkHotkeysKeepRightCtrlDistinct(t *testing.T) {
 				VirtualKeyCode:  tc.key,
 				ControlKeyState: tc.mods,
 			}
-			if got := isPanelBookmarkHotkey(e); got != tc.want {
+			if got := keymap.IsPanelBookmarkHotkey(e); got != tc.want {
 				t.Fatalf("isPanelBookmarkHotkey() = %v, want %v", got, tc.want)
 			}
 		})
@@ -475,11 +476,11 @@ func TestPanelBookmarkHotkeysKeepRightCtrlDistinct(t *testing.T) {
 
 func TestMacroFastFindEscapeBypassesPanelToggle(t *testing.T) {
 	oldCfg := config.App
-	oldHotkeys := GlobalHotkeysMgr
+	oldHotkeys := keymap.GlobalHotkeysMgr
 	oldMacroMgr := macro.MacroMgr
 	defer func() {
 		config.App = oldCfg
-		GlobalHotkeysMgr = oldHotkeys
+		keymap.GlobalHotkeysMgr = oldHotkeys
 		macro.MacroMgr = oldMacroMgr
 	}()
 
@@ -493,8 +494,8 @@ func TestMacroFastFindEscapeBypassesPanelToggle(t *testing.T) {
 		vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	}()
 
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	GlobalHotkeysMgr.Bind("Shell", "Esc", "Panel.Toggle")
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	keymap.GlobalHotkeysMgr.Bind("Shell", "Esc", "Panel.Toggle")
 	mgr := macro.NewMacroManager("")
 	escape := &vtinput.InputEvent{
 		Type:           vtinput.KeyEventType,
@@ -502,39 +503,39 @@ func TestMacroFastFindEscapeBypassesPanelToggle(t *testing.T) {
 		VirtualKeyCode: vtinput.VK_ESCAPE,
 	}
 
-	left.fastFindMode = true
-	left.fastFindStr = "a"
+	left.FastFindMode = true
+	left.FastFindStr = "a"
 	if macroFilter(mgr, escape) {
 		t.Fatal("macro filter consumed Esc while Fast Find was active")
 	}
-	if !pf.showPanels {
+	if !pf.ShowPanels {
 		t.Fatal("Panel.Toggle hid panels before Fast Find handled Esc")
 	}
 	if !pf.ProcessKey(escape) {
 		t.Fatal("PanelsFrame did not handle Fast Find Esc")
 	}
-	if left.fastFindMode || left.fastFindStr != "" || !pf.showPanels {
-		t.Fatalf("Esc result: mode=%v text=%q panels=%v", left.fastFindMode, left.fastFindStr, pf.showPanels)
+	if left.FastFindMode || left.FastFindStr != "" || !pf.ShowPanels {
+		t.Fatalf("Esc result: mode=%v text=%q panels=%v", left.FastFindMode, left.FastFindStr, pf.ShowPanels)
 	}
 
 	// The bypass is contextual: without Fast Find, the configured Esc action
 	// must still run normally.
-	pf.showPanels = true
+	pf.ShowPanels = true
 	if !macroFilter(mgr, escape) {
 		t.Fatal("Esc without Fast Find did not invoke Panel.Toggle")
 	}
-	if pf.showPanels {
+	if pf.ShowPanels {
 		t.Fatal("Panel.Toggle did not hide panels without Fast Find")
 	}
 }
 
 func TestMacroFastFindDeleteBypassesPanelToggle(t *testing.T) {
 	oldCfg := config.App
-	oldHotkeys := GlobalHotkeysMgr
+	oldHotkeys := keymap.GlobalHotkeysMgr
 	oldMacroMgr := macro.MacroMgr
 	defer func() {
 		config.App = oldCfg
-		GlobalHotkeysMgr = oldHotkeys
+		keymap.GlobalHotkeysMgr = oldHotkeys
 		macro.MacroMgr = oldMacroMgr
 	}()
 
@@ -549,7 +550,7 @@ func TestMacroFastFindDeleteBypassesPanelToggle(t *testing.T) {
 		vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	}()
 
-	GlobalHotkeysMgr = NewHotkeyManager("")
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
 	mgr := macro.NewMacroManager("")
 	deleteKey := &vtinput.InputEvent{
 		Type:            vtinput.KeyEventType,
@@ -558,40 +559,40 @@ func TestMacroFastFindDeleteBypassesPanelToggle(t *testing.T) {
 		ControlKeyState: vtinput.EnhancedKey,
 	}
 
-	left.fastFindMode = true
-	left.fastFindStr = "a"
+	left.FastFindMode = true
+	left.FastFindStr = "a"
 	if macroFilter(mgr, deleteKey) {
 		t.Fatal("macro filter consumed Delete while Fast Find was active")
 	}
 	if !pf.ProcessKey(deleteKey) {
 		t.Fatal("PanelsFrame did not handle Fast Find Delete")
 	}
-	if !left.fastFindMode || left.fastFindStr != "a" || !pf.showPanels {
-		t.Fatalf("Delete changed Fast Find: mode=%v text=%q panels=%v", left.fastFindMode, left.fastFindStr, pf.showPanels)
+	if !left.FastFindMode || left.FastFindStr != "a" || !pf.ShowPanels {
+		t.Fatalf("Delete changed Fast Find: mode=%v text=%q panels=%v", left.FastFindMode, left.FastFindStr, pf.ShowPanels)
 	}
 
-	left.fastFindMode = false
+	left.FastFindMode = false
 	if !macroFilter(mgr, deleteKey) {
 		t.Fatal("Delete without Fast Find did not invoke Panel.Toggle")
 	}
-	if pf.showPanels {
+	if pf.ShowPanels {
 		t.Fatal("Panel.Toggle did not hide panels without Fast Find")
 	}
 }
 
 func TestMacroShellDoesNotRunDuringFastFind(t *testing.T) {
 	oldCfg := config.App
-	oldHotkeys := GlobalHotkeysMgr
+	oldHotkeys := keymap.GlobalHotkeysMgr
 	oldMacroMgr := macro.MacroMgr
 	defer func() {
 		config.App = oldCfg
-		GlobalHotkeysMgr = oldHotkeys
+		keymap.GlobalHotkeysMgr = oldHotkeys
 		macro.MacroMgr = oldMacroMgr
 	}()
 
 	config.App.NavigationMode = config.NavigationClassic
 	macro.MacroMgr = nil
-	GlobalHotkeysMgr = NewHotkeyManager("")
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
 	pf, left, _ := newSearchFirstTestFrame(t)
 	vtui.FrameManager.Push(pf)
 	vtui.FrameManager.SyncCurrentScreen()
@@ -612,7 +613,7 @@ func TestMacroShellDoesNotRunDuringFastFind(t *testing.T) {
 		keyStr: {{Type: vtinput.KeyEventType, KeyDown: true, Char: 'x', VirtualKeyCode: vtinput.VK_X}},
 	}
 
-	left.fastFindMode = true
+	left.FastFindMode = true
 	if macroFilter(mgr, key) {
 		t.Fatal("Shell macro consumed input while Fast Find was active")
 	}
@@ -851,7 +852,7 @@ func TestMacro_CharTrigger(t *testing.T) {
 }
 
 func TestMacro_BoundActionConsumesEventWhenHandlerFails_Issue983(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	preserveActionRegistry(t)
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
@@ -864,14 +865,14 @@ func TestMacro_BoundActionConsumesEventWhenHandlerFails_Issue983(t *testing.T) {
 			return false
 		},
 	})
-	previousHotkeys := GlobalHotkeysMgr
-	GlobalHotkeysMgr = &HotkeyManager{
+	previousHotkeys := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = &keymap.HotkeyManager{
 		Bindings: map[string]map[string]string{
 			"Common": {"CtrlF9": "Test.FailedHotkey"},
 		},
 		Defaults: map[string]map[string]string{},
 	}
-	t.Cleanup(func() { GlobalHotkeysMgr = previousHotkeys })
+	t.Cleanup(func() { keymap.GlobalHotkeysMgr = previousHotkeys })
 
 	mgr := &macro.MacroManager{Macros: make(map[string]map[string][]*vtinput.InputEvent)}
 	event := &vtinput.InputEvent{
@@ -896,7 +897,7 @@ func TestMacro_BoundActionConsumesEventWhenHandlerFails_Issue983(t *testing.T) {
 }
 
 func TestMacro_AssignFrame_Structure(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)

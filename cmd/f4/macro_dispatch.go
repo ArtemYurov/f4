@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
 	"strings"
 
 	"github.com/unxed/f4/internal/keymap"
@@ -13,54 +14,6 @@ import (
 // with it, but everything it asks afterwards — the hotkey manager, the action
 // registry, the plugin actions, the panels — is the application's. The engine
 // keeps the recording and playback; the dispatching is here.
-
-func configuredHotkeyAction(hm *HotkeyManager, area, key string) string {
-	if hm == nil {
-		return ""
-	}
-	action := hm.GetAction(area, key)
-	if !strings.HasPrefix(key, "RCtrl") {
-		return action
-	}
-
-	plainKey := "Ctrl" + strings.TrimPrefix(key, "RCtrl")
-	rctrlExplicit := hm.hasExplicitBinding(area, key)
-	if rctrlExplicit && action != "" && !strings.EqualFold(action, "none") {
-		return action
-	}
-	if hm.hasExplicitBinding(area, plainKey) {
-		if plainAction := hm.GetAction(area, plainKey); plainAction != "" {
-			return plainAction
-		}
-	}
-	if rctrlExplicit {
-		// The RCtrl spelling was explicitly unbound (or its condition is not
-		// met): it no longer claims the key, so Right Ctrl acts as plain Ctrl.
-		return hm.GetAction(area, plainKey)
-	}
-	if action != "" {
-		return action
-	}
-	return hm.GetAction(area, plainKey)
-}
-
-// configurableHotkeyOwnsPanelBookmark lets an explicit configurable binding
-// take the place of far2l's built-in Right Ctrl/Ctrl+Alt bookmark shortcuts.
-// Unmodified defaults keep their historical bookmark behavior, while a user
-// binding on either Ctrl spelling is honored without requiring both spellings.
-func configurableHotkeyOwnsPanelBookmark(hm *HotkeyManager, area string, e *vtinput.InputEvent) bool {
-	if hm == nil || e == nil || !isPanelBookmarkHotkey(e) {
-		return false
-	}
-	key := keymap.EventToHotkeyString(e)
-	if hm.hasExplicitBinding(area, key) {
-		return true
-	}
-	if strings.HasPrefix(key, "RCtrl") {
-		return hm.hasExplicitBinding(area, "Ctrl"+strings.TrimPrefix(key, "RCtrl"))
-	}
-	return false
-}
 
 func macroCurrentArea() string {
 	if vtui.FrameManager == nil {
@@ -81,8 +34,8 @@ func macroCurrentArea() string {
 		}
 		return "Menu"
 	case vtui.TypeUser + 1:
-		if pf, ok := top.(*PanelsFrame); ok {
-			if !pf.showPanels {
+		if pf, ok := top.(*panel.PanelsFrame); ok {
+			if !pf.ShowPanels {
 				return "Terminal"
 			}
 		}
@@ -95,31 +48,8 @@ func macroCurrentArea() string {
 	return "Other"
 }
 
-// isPanelBookmarkHotkey identifies far2l-compatible folder bookmark keys.
-// Built-in bookmark combinations reach PanelsFrame before macro and
-// configurable hotkey handling, because keymap.EventToFarString intentionally
-// normalizes left and right Ctrl. Explicit configurable bindings are allowed
-// to reclaim the combination before this handoff.
-func isPanelBookmarkHotkey(e *vtinput.InputEvent) bool {
-	if e.Type != vtinput.KeyEventType || !e.KeyDown {
-		return false
-	}
-
-	rctrl := (e.ControlKeyState & vtinput.RightCtrlPressed) != 0
-	lctrl := (e.ControlKeyState & vtinput.LeftCtrlPressed) != 0
-	alt := (e.ControlKeyState & (vtinput.LeftAltPressed | vtinput.RightAltPressed)) != 0
-	shift := (e.ControlKeyState & vtinput.ShiftPressed) != 0
-	isGoto := (rctrl && !shift && !alt) || ((lctrl || rctrl) && alt && !shift)
-	isSave := (rctrl && shift && !alt) || ((lctrl || rctrl) && alt && shift)
-
-	if e.VirtualKeyCode >= vtinput.VK_0 && e.VirtualKeyCode <= vtinput.VK_9 {
-		return isGoto || isSave
-	}
-	return e.VirtualKeyCode == vtinput.VK_OEM_3 && isGoto
-}
-
 // isPanelFastFindToggleKey identifies contextual panel-toggle keys owned by
-// Fast Find. They must reach PanelsFrame before macros and configurable
+// Fast Find. They must reach panel.PanelsFrame before macros and configurable
 // hotkeys, otherwise Esc/Del -> Panel.Toggle hides the panels first.
 func isPanelFastFindToggleKey(e *vtinput.InputEvent) bool {
 	if e.Type != vtinput.KeyEventType || !e.KeyDown ||
@@ -131,24 +61,24 @@ func isPanelFastFindToggleKey(e *vtinput.InputEvent) bool {
 	if mods != 0 || vtui.FrameManager == nil {
 		return false
 	}
-	pf, ok := vtui.FrameManager.GetTopFrame().(*PanelsFrame)
-	if !ok || !pf.showPanels {
+	pf, ok := vtui.FrameManager.GetTopFrame().(*panel.PanelsFrame)
+	if !ok || !pf.ShowPanels {
 		return false
 	}
-	fsp := pf.getActivePanel()
-	return fsp != nil && fsp.fastFindMode
+	fsp := pf.GetActivePanel()
+	return fsp != nil && fsp.FastFindMode
 }
 
 func isPanelFastFindActive() bool {
 	if vtui.FrameManager == nil {
 		return false
 	}
-	pf, ok := vtui.FrameManager.GetTopFrame().(*PanelsFrame)
-	if !ok || !pf.showPanels {
+	pf, ok := vtui.FrameManager.GetTopFrame().(*panel.PanelsFrame)
+	if !ok || !pf.ShowPanels {
 		return false
 	}
-	fsp := pf.getActivePanel()
-	return fsp != nil && fsp.fastFindMode
+	fsp := pf.GetActivePanel()
+	return fsp != nil && fsp.FastFindMode
 }
 
 func macroFilter(m *macro.MacroManager, e *vtinput.InputEvent) bool {
@@ -183,8 +113,8 @@ func macroFilter(m *macro.MacroManager, e *vtinput.InputEvent) bool {
 	if e.KeyDown {
 		currentArea := macroCurrentArea()
 		hotkeyStr := keymap.EventToHotkeyString(e)
-		if hm := GlobalHotkeysMgr; hm != nil {
-			if actionName := configuredHotkeyAction(hm, currentArea, hotkeyStr); strings.EqualFold(actionName, commandPaletteActionName) {
+		if hm := keymap.GlobalHotkeysMgr; hm != nil {
+			if actionName := keymap.ConfiguredHotkeyAction(hm, currentArea, hotkeyStr); strings.EqualFold(actionName, commandPaletteActionName) {
 				RunAction(actionName)
 				return true
 			}
@@ -228,11 +158,11 @@ func macroFilter(m *macro.MacroManager, e *vtinput.InputEvent) bool {
 	currentArea := macroCurrentArea()
 	if currentArea == "Shell" && isPanelFastFindActive() {
 		// zoin-bot: Fast Find is a transient panel input mode, so Shell macros
-		// must not consume keys before PanelsFrame can update its query.
+		// must not consume keys before panel.PanelsFrame can update its query.
 		return false
 	}
 	if currentArea == "Shell" &&
-		((isPanelBookmarkHotkey(e) && !configurableHotkeyOwnsPanelBookmark(GlobalHotkeysMgr, currentArea, e)) ||
+		((keymap.IsPanelBookmarkHotkey(e) && !keymap.ConfigurableHotkeyOwnsPanelBookmark(keymap.GlobalHotkeysMgr, currentArea, e)) ||
 			isPanelFastFindToggleKey(e)) {
 		return false
 	}
@@ -290,16 +220,16 @@ func macroFilter(m *macro.MacroManager, e *vtinput.InputEvent) bool {
 	}
 
 	// Hotkey Manager evaluation (System actions)
-	if hm := GlobalHotkeysMgr; hm != nil {
+	if hm := keymap.GlobalHotkeysMgr; hm != nil {
 		keyStr := keymap.EventToHotkeyString(e)
-		if actionName := configuredHotkeyAction(hm, currentArea, keyStr); actionName != "" {
+		if actionName := keymap.ConfiguredHotkeyAction(hm, currentArea, keyStr); actionName != "" {
 			// F4-assigned plugin shortcuts are menu accelerators, matching
 			// far2l: the F11 plugin menu renders them as ampersand hotkeys.
 			// They must not steal printable characters from the panel command
 			// line while remaining persisted for that menu and its display.
 			// A chord assigned in the hotkey dialog (Ctrl+F9 and friends) is a
 			// real hotkey and keeps being dispatched here.
-			if isPluginActionName(actionName) && isPluginMenuHotkey(keyStr) {
+			if keymap.IsPluginActionName(actionName) && panel.IsPluginMenuHotkey(keyStr) {
 				return false
 			}
 			if strings.EqualFold(actionName, "none") {
@@ -326,7 +256,7 @@ func macroLookupHotkey(m *macro.MacroManager, e *vtinput.InputEvent) bool {
 	if m == nil || e == nil || e.Type != vtinput.KeyEventType || !e.KeyDown {
 		return false
 	}
-	hm := GlobalHotkeysMgr
+	hm := keymap.GlobalHotkeysMgr
 	if hm == nil {
 		return false
 	}
@@ -335,14 +265,14 @@ func macroLookupHotkey(m *macro.MacroManager, e *vtinput.InputEvent) bool {
 		return false
 	}
 	area := macroCurrentArea()
-	actionName := configuredHotkeyAction(hm, area, keyStr)
+	actionName := keymap.ConfiguredHotkeyAction(hm, area, keyStr)
 	if actionName == "" {
 		return false
 	}
 	// Plugin menu accelerators are activated by the F11 menu's ampersand
 	// hotkeys. They are deliberately not global Shell hotkeys, so an injected
 	// key (for example from a key-bar click) must not bypass that rule either.
-	if isPluginActionName(actionName) && isPluginMenuHotkey(keyStr) {
+	if keymap.IsPluginActionName(actionName) && panel.IsPluginMenuHotkey(keyStr) {
 		return false
 	}
 	if strings.EqualFold(actionName, "none") {

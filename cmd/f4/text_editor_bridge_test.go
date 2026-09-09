@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/unxed/f4/internal/panel"
 	"os"
 	"path/filepath"
 	"testing"
@@ -37,7 +38,7 @@ func TestOpenTextEditorCreatesUnsavedVFSBuffer(t *testing.T) {
 	dir := t.TempDir()
 	filesystem := vfs.NewOSVFS(dir)
 	target := filepath.Join(dir, "clip.mkv.MediaInfo.txt")
-	pf := &PanelsFrame{lastW: 100, lastH: 30}
+	pf := &panel.PanelsFrame{LastW: 100, LastH: 30}
 	content := []byte("General\nFormat : Matroska\n")
 	if err := pf.OpenTextEditor(vfs.TextEditorRequest{
 		VFS:      filesystem,
@@ -80,7 +81,7 @@ func TestOpenTextEditorTemporaryFileIsRemovedOnClose(t *testing.T) {
 	fileops.GlobalFileState = nil
 	t.Cleanup(func() { fileops.GlobalFileState = oldFileState })
 
-	pf := &PanelsFrame{lastW: 80, lastH: 25}
+	pf := &panel.PanelsFrame{LastW: 80, LastH: 25}
 	if err := pf.OpenTextEditor(vfs.TextEditorRequest{Temporary: true, Content: []byte("temporary")}); err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +102,7 @@ func TestOpenTextEditorRejectsExistingCreateNewTarget(t *testing.T) {
 	if err := os.WriteFile(target, []byte("keep"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	pf := &PanelsFrame{}
+	pf := &panel.PanelsFrame{}
 	if err := pf.OpenTextEditor(vfs.TextEditorRequest{VFS: vfs.NewOSVFS(dir), Path: target, Content: []byte("replace")}); err == nil {
 		t.Fatal("existing target was accepted")
 	}
@@ -115,7 +116,7 @@ func TestTextEditorTargetCheckIsBoundedWhenVFSIgnoresContext(t *testing.T) {
 	release := make(chan struct{})
 	filesystem := &blockingTextEditorStatVFS{release: release}
 	start := time.Now()
-	_, err := statTextEditorTarget(filesystem, "report.txt", 25*time.Millisecond)
+	_, err := panel.StatTextEditorTarget(filesystem, "report.txt", 25*time.Millisecond)
 	close(release)
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("target check error = %v, want deadline exceeded", err)
@@ -139,7 +140,7 @@ func TestOpenTextEditorSkipsRedundantCheckedTargetStat(t *testing.T) {
 		release: release,
 		called:  called,
 	}
-	pf := &PanelsFrame{lastW: 80, lastH: 25}
+	pf := &panel.PanelsFrame{LastW: 80, LastH: 25}
 	if err := pf.OpenTextEditor(vfs.TextEditorRequest{
 		VFS:               filesystem,
 		Path:              filepath.Join(dir, "report.txt"),

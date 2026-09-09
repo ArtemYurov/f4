@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
 	"regexp"
 	"strings"
 	"sync"
@@ -16,24 +17,24 @@ import (
 	"github.com/unxed/vtui"
 )
 
-func actionShareLink(pf *PanelsFrame) {
+func actionShareLink(pf *panel.PanelsFrame) {
 	if pf == nil {
 		return
 	}
-	panel := pf.getActivePanel()
-	if panel == nil || panel.vfs == nil {
+	pnl := pf.GetActivePanel()
+	if pnl == nil || pnl.Vfs == nil {
 		return
 	}
-	provider, ok := panel.vfs.(vfs.ShareLinkProvider)
+	provider, ok := pnl.Vfs.(vfs.ShareLinkProvider)
 	if !ok {
 		return
 	}
-	names := panel.GetSelectedNames()
+	names := pnl.GetSelectedNames()
 	if len(names) != 1 {
 		vtui.ShowMessageOn(pf, i18n.Msg("Share.Title"), i18n.Msg("Share.SelectOne"), []string{i18n.Msg("vtui.Ok")})
 		return
 	}
-	path := panel.vfs.Join(panel.vfs.GetPath(), names[0])
+	path := pnl.Vfs.Join(pnl.Vfs.GetPath(), names[0])
 	var info vfs.ShareLinkInfo
 	pf.RunProgressTask(i18n.Msg("Share.LoadTitle"), i18n.Msg("Share.Loading"), false, func(ctx context.Context, _ func(string, int)) error {
 		var err error
@@ -56,7 +57,7 @@ func actionShareLink(pf *PanelsFrame) {
 }
 
 type shareLinkDialog struct {
-	app      *PanelsFrame
+	app      *panel.PanelsFrame
 	provider vfs.ShareLinkProvider
 	path     string
 	info     vfs.ShareLinkInfo
@@ -82,7 +83,7 @@ type shareLinkDialog struct {
 	setClipboard     func(string)
 }
 
-func showShareLinkDialog(app *PanelsFrame, provider vfs.ShareLinkProvider, path string, info vfs.ShareLinkInfo) *shareLinkDialog {
+func showShareLinkDialog(app *panel.PanelsFrame, provider vfs.ShareLinkProvider, path string, info vfs.ShareLinkInfo) *shareLinkDialog {
 	d := &shareLinkDialog{app: app, provider: provider, path: path, info: info}
 	d.dialog = vtui.NewCenteredDialog(78, 19, i18n.Msg("Share.Title"))
 	d.dialog.ShowClose = true

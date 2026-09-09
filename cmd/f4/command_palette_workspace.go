@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/unxed/f4/internal/keymap"
 	"strconv"
 	"strings"
 
@@ -99,9 +100,9 @@ func workspaceNumberShortcuts(number int) []string {
 	if vtui.FrameManager == nil || !vtui.FrameManager.WorkspaceAltNumberSwitch || number < 1 || number > 9 {
 		return nil
 	}
-	shortcuts := []string{FormatKeyForUI(fmt.Sprintf("Alt%d", number))}
+	shortcuts := []string{keymap.FormatKeyForUI(fmt.Sprintf("Alt%d", number))}
 	if vtui.FrameManager.WorkspaceTabMode == vtui.WorkspaceTabsOnCtrl {
-		shortcuts = append(shortcuts, FormatKeyForUI(fmt.Sprintf("CtrlAlt%d", number)))
+		shortcuts = append(shortcuts, keymap.FormatKeyForUI(fmt.Sprintf("CtrlAlt%d", number)))
 	}
-	return mergeCommandPaletteShortcuts(shortcuts)
+	return keymap.MergeShortcuts(shortcuts)
 }

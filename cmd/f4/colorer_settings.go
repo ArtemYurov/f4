@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
 	"strings"
 
 	"github.com/unxed/f4/internal/config"
@@ -84,7 +85,7 @@ func EditorCrossAttrs() (horz, vert bool, horzAttr, vertAttr uint64) {
 		colorerCrossAttr(colorerVertCrossRegion, base)
 }
 
-func actionColorerSettings(pf *PanelsFrame) {
+func actionColorerSettings(pf *panel.PanelsFrame) {
 	width, height := 74, 19
 	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("ColorerSettings.Title"))
 	dlg.ShowClose = true

@@ -3,9 +3,11 @@ package main
 // Two file-operation tests whose subject is the panels frame rather than the
 // operation: one asks that a refresh survives an undocked panel, the other
 // that a backgrounded operation forks the workspace. Both go where
-// PanelsFrame is.
+// panel.PanelsFrame is.
 
 import (
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -18,7 +20,7 @@ import (
 )
 
 func TestFileOps_RefreshAllNoPanic(t *testing.T) {
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	// Ensure refresh doesn't crash even if panels are not fully docked
 	pf.RefreshAll()
@@ -27,7 +29,7 @@ func TestFileOps_RefreshAllNoPanic(t *testing.T) {
 func TestFileOps_ForkedWorkspace(t *testing.T) {
 	t.Cleanup(testutil.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	vtui.FrameManager.Push(pf)
 	initialScreens := len(vtui.FrameManager.Screens)
@@ -57,13 +59,13 @@ pump4:
 	}
 	for _, screen := range vtui.FrameManager.Screens {
 		for _, frame := range screen.Frames {
-			clone, ok := frame.(*PanelsFrame)
+			clone, ok := frame.(*panel.PanelsFrame)
 			if !ok {
 				continue
 			}
-			for _, panel := range clone.panels {
-				if fsp, ok := panel.(*FileSystemPanel); ok {
-					waitForLoad(t, fsp)
+			for _, pnl := range clone.Panels {
+				if fsp, ok := pnl.(*panel.FileSystemPanel); ok {
+					paneltest.WaitForLoad(t, fsp)
 				}
 			}
 		}

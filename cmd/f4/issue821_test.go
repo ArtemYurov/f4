@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/paneltest"
 	"strings"
 	"testing"
 
@@ -12,7 +13,7 @@ import (
 )
 
 func TestIssue821CommandHistoryEnterPastesSelectedEntry(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
 
@@ -20,10 +21,10 @@ func TestIssue821CommandHistoryEnterPastesSelectedEntry(t *testing.T) {
 	vtui.GlobalHistoryProvider = stubHistoryProvider{}
 	t.Cleanup(func() { vtui.GlobalHistoryProvider = previousHistory })
 
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	t.Cleanup(pf.Close)
 	pf.ResizeConsole(80, 25)
-	pf.cmdLine.Edit.History = []string{"pbrush.exe", "selected-command", "older-command"}
+	pf.CmdLine.Edit.History = []string{"pbrush.exe", "selected-command", "older-command"}
 
 	actionCommandHistory(pf)
 	menu, ok := vtui.FrameManager.GetTopFrame().(*vtui.VMenu)
@@ -39,7 +40,7 @@ func TestIssue821CommandHistoryEnterPastesSelectedEntry(t *testing.T) {
 		VirtualKeyCode: vtinput.VK_RETURN,
 	})
 
-	if got := pf.cmdLine.Edit.GetText(); got != "selected-command" {
+	if got := pf.CmdLine.Edit.GetText(); got != "selected-command" {
 		t.Fatalf("selected history entry pasted %q, want %q", got, "selected-command")
 	}
 }

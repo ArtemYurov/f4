@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,7 +16,7 @@ import (
 )
 
 func TestIssue95_HostConsoleTabCompletesBareDirectory(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	oldConfig := config.App
 	t.Cleanup(func() { config.App = oldConfig })
 	oldProvider := vtui.PathHintProvider
@@ -25,26 +27,26 @@ func TestIssue95_HostConsoleTabCompletesBareDirectory(t *testing.T) {
 	config.App.CommandLineAutoComplete = true
 	config.App.ConsoleMode = terminal.ConsoleViewFar
 	config.App.ConsoleOverlayUI = true
-	vtui.PathHintProvider = pathHintProvider
+	vtui.PathHintProvider = panel.PathHintProvider
 	vtui.AutoCompleteEnabled = true
 
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	defer pf.Close()
-	pf.shellMode = terminal.ShellModeHost
-	pf.showPanels = false
+	pf.ShellMode = terminal.ShellModeHost
+	pf.ShowPanels = false
 	pf.ResizeConsole(80, 25)
 	root := t.TempDir()
 	if err := os.Mkdir(filepath.Join(root, "subdir"), 0700); err != nil {
 		t.Fatal(err)
 	}
-	pf.getActivePanel().vfs = vfs.NewOSVFS(root)
-	pf.cmdLine.Edit.SetText("cd sub")
+	pf.GetActivePanel().Vfs = vfs.NewOSVFS(root)
+	pf.CmdLine.Edit.SetText("cd sub")
 	vtui.FrameManager.Push(pf)
-	pf.enterHostConsole()
+	pf.EnterHostConsole()
 
-	mock := pf.pty.(*mockPty)
+	mock := pf.Pty.(*paneltest.MockPty)
 	beforePTY := mock.String()
 	if handled := pf.ProcessKey(&vtinput.InputEvent{
 		Type:           vtinput.KeyEventType,
@@ -54,7 +56,7 @@ func TestIssue95_HostConsoleTabCompletesBareDirectory(t *testing.T) {
 		t.Fatal("host console should consume Tab for command completion")
 	}
 	want := "cd subdir" + string(filepath.Separator)
-	if got := pf.cmdLine.Edit.GetText(); got != want {
+	if got := pf.CmdLine.Edit.GetText(); got != want {
 		t.Fatalf("Tab completion text = %q, want %q", got, want)
 	}
 	if got := mock.String(); got != beforePTY {

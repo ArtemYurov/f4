@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"testing"
 
 	"github.com/unxed/f4/internal/terminal"
@@ -14,19 +16,19 @@ func TestPanelsFrame_NewTerminalWorkspaceKeepsPanelsWhereTheyAre(t *testing.T) {
 	fm := vtui.FrameManager
 	fm.Init(vtui.NewSilentScreenBuf())
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	pf.shellMode = terminal.ShellModeOwn
+	pf.ShellMode = terminal.ShellModeOwn
 	fm.Push(pf)
 
-	if !actionWorkspaceNewTerminal() {
+	if !panel.ActionWorkspaceNewTerminal() {
 		t.Fatal("Workspace.NewTerminal reported the request as unhandled")
 	}
 	if len(fm.Screens) != 2 {
 		t.Fatalf("action created %d workspaces, want 2", len(fm.Screens))
 	}
-	clone, ok := fm.GetTopFrame().(*PanelsFrame)
+	clone, ok := fm.GetTopFrame().(*panel.PanelsFrame)
 	if !ok {
 		t.Fatalf("new workspace top frame = %T, want *PanelsFrame", fm.GetTopFrame())
 	}
@@ -34,20 +36,20 @@ func TestPanelsFrame_NewTerminalWorkspaceKeepsPanelsWhereTheyAre(t *testing.T) {
 	if clone == pf {
 		t.Fatal("the action reused the original panels instead of forking them")
 	}
-	if clone.showPanels {
+	if clone.ShowPanels {
 		t.Error("the new workspace did not switch to its console view")
 	}
-	if !pf.showPanels {
+	if !pf.ShowPanels {
 		t.Error("opening a terminal workspace must leave the original panels visible")
 	}
 	if got := clone.GetWorkspaceTabTitle(); got != "Terminal" {
 		t.Errorf("workspace tab title = %q, want \"Terminal\"", got)
 	}
 
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
-	waitForLoad(t, clone.panels[0].(*FileSystemPanel))
-	waitForLoad(t, clone.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, clone.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, clone.Panels[1].(*panel.FileSystemPanel))
 }
 
 // Where command output can only be captured into a dialog there is no console
@@ -57,22 +59,22 @@ func TestPanelsFrame_NewTerminalWorkspaceSkippedWithoutConsoleView(t *testing.T)
 	fm := vtui.FrameManager
 	fm.Init(vtui.NewSilentScreenBuf())
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	pf.shellMode = terminal.ShellModeSimpleCaptured
+	pf.ShellMode = terminal.ShellModeSimpleCaptured
 	fm.Push(pf)
 
-	if !actionWorkspaceNewTerminal() {
+	if !panel.ActionWorkspaceNewTerminal() {
 		t.Fatal("Workspace.NewTerminal reported the request as unhandled")
 	}
 	if len(fm.Screens) != 1 {
 		t.Fatalf("captured-output environment created %d workspaces, want 1", len(fm.Screens))
 	}
-	if !pf.showPanels {
+	if !pf.ShowPanels {
 		t.Error("panels must stay visible where no console view exists")
 	}
 
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
 }

@@ -1,10 +1,17 @@
 package main
 
-import "github.com/unxed/f4/internal/sysinfo"
+import (
+	"errors"
+	"fmt"
+	"strings"
 
-import "github.com/unxed/vtui"
-import "github.com/unxed/f4/vfs"
-import "github.com/unxed/vtinput"
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/plughost"
+	"github.com/unxed/f4/internal/sysinfo"
+	"github.com/unxed/f4/vfs"
+	"github.com/unxed/vtinput"
+	"github.com/unxed/vtui"
+)
 
 // HostAPI defines the functions f4 exposes to plugins.
 // coreAPI implements vfs.HostAPI.
@@ -45,11 +52,11 @@ func (c *coreAPI) RegisterDrive(name string, factory func() vfs.VFS) {
 }
 
 func (c *coreAPI) RegisterGlobalHotkey(vk uint16, mods vtinput.ControlKeyState, handler func(app vfs.App)) {
-	RegisterGlobalHotkey(vk, mods, handler)
+	plughost.RegisterGlobalHotkey(vk, mods, handler)
 }
 
 func (c *coreAPI) RegisterPluginMenuItem(label string, handler func(app vfs.App)) {
-	RegisterPluginMenuItem(label, handler)
+	plughost.RegisterPluginMenuItem(label, handler)
 }
 func (c *coreAPI) RunAction(name string) bool {
 	resChan := make(chan bool, 1)
@@ -57,4 +64,33 @@ func (c *coreAPI) RunAction(name string) bool {
 		resChan <- RunAction(name)
 	})
 	return <-resChan
+}
+
+func (c *coreAPI) RegisterCommandPrefix(id, prefix string, handler func(vfs.App, string)) (vfs.CommandPrefixRegistration, error) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return nil, errors.New("command prefix registration ID is empty")
+	}
+	if handler == nil {
+		return nil, fmt.Errorf("command prefix %q has no handler", id)
+	}
+	normalized, err := panel.NormalizeCommandPrefix(prefix)
+	if err != nil {
+		return nil, err
+	}
+
+	registration := &panel.CommandPrefixRegistration{Id: id, Prefix: normalized, Handler: handler, Active: true}
+	panel.CommandPrefixRegistry.Lock()
+	defer panel.CommandPrefixRegistry.Unlock()
+	if _, exists := panel.CommandPrefixRegistry.ByID[id]; exists {
+		return nil, fmt.Errorf("command prefix registration %q already exists", id)
+	}
+	if owner, exists := panel.CommandPrefixRegistry.ByPrefix[normalized]; normalized != "" && exists {
+		return nil, fmt.Errorf("command prefix %q is already registered by %q", prefix, owner.Id)
+	}
+	panel.CommandPrefixRegistry.ByID[id] = registration
+	if normalized != "" {
+		panel.CommandPrefixRegistry.ByPrefix[normalized] = registration
+	}
+	return registration, nil
 }

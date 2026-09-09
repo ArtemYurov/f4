@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"strings"
 	"testing"
 	"time"
@@ -24,9 +26,9 @@ type commandPaletteOtherFrame struct{ vtui.BaseFrame }
 
 func (*commandPaletteOtherFrame) GetType() vtui.FrameType { return vtui.TypeUser + 7 }
 
-func setCommandPaletteActivePanelsForTest(t *testing.T, pf *PanelsFrame) {
+func setCommandPaletteActivePanelsForTest(t *testing.T, pf *panel.PanelsFrame) {
 	t.Helper()
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	screen := vtui.NewSilentScreenBuf()
 	screen.AllocBuf(100, 30)
 	vtui.FrameManager.Init(screen)
@@ -169,7 +171,7 @@ func TestCommandPaletteCommandPrefixReResolvesBeforeInsertion(t *testing.T) {
 	}
 	t.Cleanup(registration.Unregister)
 
-	pf := &PanelsFrame{cmdLine: cmdline.NewCommandLine("")}
+	pf := &panel.PanelsFrame{CmdLine: cmdline.NewCommandLine("")}
 	setCommandPaletteActivePanelsForTest(t, pf)
 	entries := commandPalettePrefixEntries("Shell", pf)
 	var entry commandPaletteEntry
@@ -182,12 +184,12 @@ func TestCommandPaletteCommandPrefixReResolvesBeforeInsertion(t *testing.T) {
 	if entry.ID == "" || entry.Label != "deploy:" {
 		t.Fatalf("test prefix is missing from %#v", entries)
 	}
-	if !executeCommandPaletteEntry(entry) || pf.cmdLine.Edit.GetText() != "deploy:" {
-		t.Fatalf("prefix execution produced %q", pf.cmdLine.Edit.GetText())
+	if !executeCommandPaletteEntry(entry) || pf.CmdLine.Edit.GetText() != "deploy:" {
+		t.Fatalf("prefix execution produced %q", pf.CmdLine.Edit.GetText())
 	}
 	registration.Unregister()
-	pf.cmdLine.Edit.SetText("")
-	if executeCommandPaletteEntry(entry) || pf.cmdLine.Edit.GetText() != "" {
+	pf.CmdLine.Edit.SetText("")
+	if executeCommandPaletteEntry(entry) || pf.CmdLine.Edit.GetText() != "" {
 		t.Fatal("stale command-prefix entry executed after unregister")
 	}
 
@@ -196,8 +198,8 @@ func TestCommandPaletteCommandPrefixReResolvesBeforeInsertion(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(registration.Unregister)
-	pf.closed = true
-	if executeCommandPaletteEntry(entry) || pf.cmdLine.Edit.GetText() != "" {
+	pf.Closed = true
+	if executeCommandPaletteEntry(entry) || pf.CmdLine.Edit.GetText() != "" {
 		t.Fatal("command-prefix entry mutated a closed panels frame")
 	}
 }
@@ -210,9 +212,9 @@ func TestCommandPalettePrefixAndDriveRejectPreviousWorkspace(t *testing.T) {
 	}
 	t.Cleanup(registration.Unregister)
 
-	pf := &PanelsFrame{
-		cmdLine: cmdline.NewCommandLine(""),
-		panels:  [2]Panel{&FileSystemPanel{}, &FileSystemPanel{}},
+	pf := &panel.PanelsFrame{
+		CmdLine: cmdline.NewCommandLine(""),
+		Panels:  [2]panel.Panel{&panel.FileSystemPanel{}, &panel.FileSystemPanel{}},
 	}
 	setCommandPaletteActivePanelsForTest(t, pf)
 	prefixEntries := commandPalettePrefixEntries("Shell", pf)
@@ -247,9 +249,9 @@ func TestCommandPalettePrefixAndDriveRejectPreviousWorkspace(t *testing.T) {
 		t.Fatal("stale-workspace drive entry is missing")
 	}
 
-	current := &PanelsFrame{cmdLine: cmdline.NewCommandLine(""), panels: [2]Panel{&FileSystemPanel{}, &FileSystemPanel{}}}
+	current := &panel.PanelsFrame{CmdLine: cmdline.NewCommandLine(""), Panels: [2]panel.Panel{&panel.FileSystemPanel{}, &panel.FileSystemPanel{}}}
 	t.Cleanup(testutil.AppendFrameManagerScreen(t, &vtui.AppScreen{Number: 2, Frames: []vtui.Frame{current}}, 1))
-	if executeCommandPaletteEntry(prefixEntry) || pf.cmdLine.Edit.GetText() != "" {
+	if executeCommandPaletteEntry(prefixEntry) || pf.CmdLine.Edit.GetText() != "" {
 		t.Fatal("stale prefix entry mutated the previous workspace")
 	}
 	if executeCommandPaletteEntry(driveEntry) || factoryCalls != 0 {
@@ -258,21 +260,21 @@ func TestCommandPalettePrefixAndDriveRejectPreviousWorkspace(t *testing.T) {
 }
 
 func TestCommandPaletteKeysAreNotCapturedWhileRecording(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	screen := vtui.NewSilentScreenBuf()
 	screen.AllocBuf(100, 30)
 	vtui.FrameManager.Init(screen)
 	vtui.FrameManager.Push(&commandPaletteOtherFrame{})
 
-	previousHotkeys, previousMacro := GlobalHotkeysMgr, macro.MacroMgr
-	GlobalHotkeysMgr = &HotkeyManager{
+	previousHotkeys, previousMacro := keymap.GlobalHotkeysMgr, macro.MacroMgr
+	keymap.GlobalHotkeysMgr = &keymap.HotkeyManager{
 		Defaults: map[string]map[string]string{"Common": {"CtrlShiftP": commandPaletteActionName}},
 		Bindings: map[string]map[string]string{"Common": {"CtrlShiftP": commandPaletteActionName}},
 	}
 	manager := &macro.MacroManager{Recording: true, Buffer: make([]*vtinput.InputEvent, 0)}
 	macro.MacroMgr = manager
 	t.Cleanup(func() {
-		GlobalHotkeysMgr = previousHotkeys
+		keymap.GlobalHotkeysMgr = previousHotkeys
 		macro.MacroMgr = previousMacro
 	})
 
@@ -305,21 +307,21 @@ func TestCommandPaletteKeysAreNotCapturedWhileRecording(t *testing.T) {
 }
 
 func TestCommandPaletteOpensInOtherFullScreenAreas(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	screen := vtui.NewSilentScreenBuf()
 	screen.AllocBuf(100, 30)
 	vtui.FrameManager.Init(screen)
 	vtui.FrameManager.Push(&commandPaletteOtherFrame{})
 
-	previousHotkeys, previousMacro := GlobalHotkeysMgr, macro.MacroMgr
-	GlobalHotkeysMgr = &HotkeyManager{
+	previousHotkeys, previousMacro := keymap.GlobalHotkeysMgr, macro.MacroMgr
+	keymap.GlobalHotkeysMgr = &keymap.HotkeyManager{
 		Defaults: map[string]map[string]string{"Common": {"CtrlShiftP": commandPaletteActionName}},
 		Bindings: map[string]map[string]string{"Common": {"CtrlShiftP": commandPaletteActionName}},
 	}
 	manager := &macro.MacroManager{Macros: make(map[string]map[string][]*vtinput.InputEvent)}
 	macro.MacroMgr = manager
 	t.Cleanup(func() {
-		GlobalHotkeysMgr = previousHotkeys
+		keymap.GlobalHotkeysMgr = previousHotkeys
 		macro.MacroMgr = previousMacro
 	})
 
@@ -372,9 +374,9 @@ func TestCommandPaletteIndexesImageAndQueueFrameCommands(t *testing.T) {
 
 func TestCommandPaletteImageGalleryCommandsUseGalleryCursor(t *testing.T) {
 	initFrameworkActionTestScreen(t)
-	previousHotkeys := GlobalHotkeysMgr
-	GlobalHotkeysMgr = nil
-	t.Cleanup(func() { GlobalHotkeysMgr = previousHotkeys })
+	previousHotkeys := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = nil
+	t.Cleanup(func() { keymap.GlobalHotkeysMgr = previousHotkeys })
 
 	image := media.NewGalleryView("first.png", []string{"first.png", "second.png", "third.png"}, 0, 1)
 	var selectedPath string
@@ -438,11 +440,11 @@ func TestCommandPaletteImageGalleryCommandsUseGalleryCursor(t *testing.T) {
 	}
 
 	workspaceList, _ := GetAction("Workspace.List")
-	if got := NativeShortcutsForAction("Other", workspaceList); len(got) != 0 {
+	if got := keymap.NativeShortcutsForAction("Other", workspaceList); len(got) != 0 {
 		t.Fatalf("image context advertised gallery-owned F12 for Workspace.List: %v", got)
 	}
 	workspaceNew, _ := GetAction("Workspace.New")
-	if got := NativeShortcutsForAction("Other", workspaceNew); len(got) != 0 {
+	if got := keymap.NativeShortcutsForAction("Other", workspaceNew); len(got) != 0 {
 		t.Fatalf("image context advertised inactive-stack Ctrl+N fallback: %v", got)
 	}
 }
@@ -450,11 +452,11 @@ func TestCommandPaletteImageGalleryCommandsUseGalleryCursor(t *testing.T) {
 func TestCommandPaletteQueueClosePreservesVetoAndClosesWhenIdle(t *testing.T) {
 	initFrameworkActionTestScreen(t)
 	previousQueue := fileops.GlobalQueueManager
-	previousHotkeys := GlobalHotkeysMgr
-	GlobalHotkeysMgr = nil
+	previousHotkeys := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = nil
 	t.Cleanup(func() {
 		fileops.GlobalQueueManager = previousQueue
-		GlobalHotkeysMgr = previousHotkeys
+		keymap.GlobalHotkeysMgr = previousHotkeys
 	})
 
 	vtui.FrameManager.Push(&commandPaletteOtherFrame{})
@@ -481,12 +483,12 @@ func TestCommandPaletteQueueClosePreservesVetoAndClosesWhenIdle(t *testing.T) {
 		t.Fatal("Queue.Close bypassed the active queue veto")
 	}
 	workspaceClose, _ := GetAction("Workspace.Close")
-	if got := NativeShortcutsForAction("Other", workspaceClose); len(got) != 0 {
+	if got := keymap.NativeShortcutsForAction("Other", workspaceClose); len(got) != 0 {
 		t.Fatalf("active queue advertised veto-owned Ctrl+W workspace close: %v", got)
 	}
 
 	task.SetState("Done")
-	if got := NativeShortcutsForAction("Other", workspaceClose); len(got) != 1 || got[0] != "Ctrl+W" {
+	if got := keymap.NativeShortcutsForAction("Other", workspaceClose); len(got) != 1 || got[0] != "Ctrl+W" {
 		t.Fatalf("idle queue workspace-close shortcut = %v, want [Ctrl+W]", got)
 	}
 	if !executeCommandPaletteEntry(closeEntry) {
@@ -498,8 +500,8 @@ func TestCommandPaletteQueueClosePreservesVetoAndClosesWhenIdle(t *testing.T) {
 }
 
 func TestCommandPaletteIndexesPanelContextAndPlatformDriveCommands(t *testing.T) {
-	left, right := &FileSystemPanel{}, &FileSystemPanel{}
-	pf := &PanelsFrame{showPanels: true, panels: [2]Panel{left, right}}
+	left, right := &panel.FileSystemPanel{}, &panel.FileSystemPanel{}
+	pf := &panel.PanelsFrame{ShowPanels: true, Panels: [2]panel.Panel{left, right}}
 	entries := commandPalettePanelsContextEntries(pf)
 	want := map[string]bool{
 		"Panel.ActivateSelected": true,
@@ -523,9 +525,9 @@ func TestCommandPaletteIndexesPanelContextAndPlatformDriveCommands(t *testing.T)
 		t.Fatalf("localized panel activation metadata = %#v", activateEntry)
 	}
 
-	quick := NewQuickViewPanel(left)
+	quick := panel.NewQuickViewPanel(left)
 	quick.SetFocus(true)
-	pf.altPanels[0] = quick
+	pf.AltPanels[0] = quick
 	entries = commandPalettePanelsContextEntries(pf)
 	foundQuickView := false
 	for _, entry := range entries {
@@ -567,18 +569,18 @@ func TestCommandPaletteBookmarksRejectPluginOnlyAndStalePanelTargets(t *testing.
 	config.UserConfigDir = func() (string, error) { return configRoot, nil }
 	t.Cleanup(func() { config.UserConfigDir = oldUserConfigDir })
 
-	bookmarks := BookmarkSet{}
-	bookmarks[1] = Bookmark{Plugin: "legacy-plugin", PluginData: "opaque"}
-	bookmarks[2] = Bookmark{Path: `C:\valid`}
-	if err := SaveBookmarks(BookmarksFilePath(), bookmarks); err != nil {
+	bookmarks := panel.BookmarkSet{}
+	bookmarks[1] = panel.Bookmark{Plugin: "legacy-plugin", PluginData: "opaque"}
+	bookmarks[2] = panel.Bookmark{Path: `C:\valid`}
+	if err := panel.SaveBookmarks(panel.BookmarksFilePath(), bookmarks); err != nil {
 		t.Fatalf("save bookmark fixture: %v", err)
 	}
 
-	pf := &PanelsFrame{
-		showPanels: true,
-		panels: [2]Panel{
-			&FileSystemPanel{vfs: vfs.NewNullVFS(0)},
-			&FileSystemPanel{vfs: vfs.NewNullVFS(0)},
+	pf := &panel.PanelsFrame{
+		ShowPanels: true,
+		Panels: [2]panel.Panel{
+			&panel.FileSystemPanel{Vfs: vfs.NewNullVFS(0)},
+			&panel.FileSystemPanel{Vfs: vfs.NewNullVFS(0)},
 		},
 	}
 	entries := commandPaletteBookmarkEntries(pf)
@@ -616,7 +618,7 @@ func TestCommandPaletteBookmarksRejectPluginOnlyAndStalePanelTargets(t *testing.
 			t.Errorf("bookmark command %s mutated a PanelsFrame that is no longer top", id)
 		}
 	}
-	after, err := LoadBookmarks(BookmarksFilePath())
+	after, err := panel.LoadBookmarks(panel.BookmarksFilePath())
 	if err != nil {
 		t.Fatalf("reload bookmark fixture: %v", err)
 	}
@@ -626,15 +628,15 @@ func TestCommandPaletteBookmarksRejectPluginOnlyAndStalePanelTargets(t *testing.
 }
 
 func TestCommandPaletteIndexesFocusedInfoAndAIChatCommands(t *testing.T) {
-	left, right := &FileSystemPanel{}, &FileSystemPanel{}
-	pf := &PanelsFrame{
-		showPanels: true,
-		activeIdx:  0,
-		panels:     [2]Panel{left, right},
+	left, right := &panel.FileSystemPanel{}, &panel.FileSystemPanel{}
+	pf := &panel.PanelsFrame{
+		ShowPanels: true,
+		ActiveIdx:  0,
+		Panels:     [2]panel.Panel{left, right},
 	}
 
-	info := &InfoPanel{focused: true}
-	pf.altPanels[0] = info
+	info := &panel.InfoPanel{Focused: true}
+	pf.AltPanels[0] = info
 	infoEntries := commandPalettePanelsContextEntries(pf)
 	infoEntry, found := commandPaletteTestEntryByID(infoEntries, "InfoPanel.CopyCurrent")
 	if !found {
@@ -647,7 +649,7 @@ func TestCommandPaletteIndexesFocusedInfoAndAIChatCommands(t *testing.T) {
 	if results := rankCommandPaletteEntries(infoEntries, "скопировать текущее значение информации", nil); len(results) == 0 || results[0].ID != "InfoPanel.CopyCurrent" {
 		t.Fatalf("Russian InfoPanel copy query = %#v", results)
 	}
-	info.focused = false
+	info.Focused = false
 	if commandPaletteTestHasID(commandPalettePanelsContextEntries(pf), "InfoPanel.CopyCurrent") {
 		t.Fatal("unfocused InfoPanel exposed its copy command")
 	}
@@ -657,7 +659,7 @@ func TestCommandPaletteIndexesFocusedInfoAndAIChatCommands(t *testing.T) {
 		focusedLinkIdx: 0,
 		visibleLinks:   []chatLink{{target: "ai://out/result.txt"}},
 	}
-	pf.altPanels[0] = chat
+	pf.AltPanels[0] = chat
 	linkEntries := commandPalettePanelsContextEntries(pf)
 	for _, id := range []string{"AI.CopyLastResponse", "AI.OpenFocusedLink", "AI.CopyFocusedLinkTarget"} {
 		if !commandPaletteTestHasID(linkEntries, id) {

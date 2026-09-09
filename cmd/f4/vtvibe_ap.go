@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
 	"io"
 	"net/http"
 	"os"
@@ -45,20 +46,20 @@ func aiPatcherPath() string {
 // aiPatchTargetDir picks the folder the patch applies to: the other panel,
 // because the AI panel itself holds the dialog, not the project. Paths inside
 // an ap patch are relative to that folder.
-func aiPatchTargetDir(pf *PanelsFrame) (string, bool) {
+func aiPatchTargetDir(pf *panel.PanelsFrame) (string, bool) {
 	if pf == nil {
 		return "", false
 	}
-	for _, p := range pf.panels {
-		fsp, ok := p.(*FileSystemPanel)
-		if !ok || fsp == nil || fsp.vfs == nil {
+	for _, p := range pf.Panels {
+		fsp, ok := p.(*panel.FileSystemPanel)
+		if !ok || fsp == nil || fsp.Vfs == nil {
 			continue
 		}
-		if _, isAI := fsp.vfs.(*aiVFSWrapper); isAI {
+		if _, isAI := fsp.Vfs.(*aiVFSWrapper); isAI {
 			continue
 		}
-		if _, isOS := fsp.vfs.(*vfs.OSVFS); isOS {
-			return fsp.vfs.GetPath(), true
+		if _, isOS := fsp.Vfs.(*vfs.OSVFS); isOS {
+			return fsp.Vfs.GetPath(), true
 		}
 	}
 	return "", false
@@ -66,7 +67,7 @@ func aiPatchTargetDir(pf *PanelsFrame) (string, bool) {
 
 // aiApplyPatch is the whole feature from the human side: confirm what will be
 // touched, then run the patcher.
-func aiApplyPatch(pf *PanelsFrame) {
+func aiApplyPatch(pf *panel.PanelsFrame) {
 	if pf == nil {
 		return
 	}
@@ -111,7 +112,7 @@ func aiApplyPatch(pf *PanelsFrame) {
 // aiRunPatcher writes the patch to a temporary file and hands it to ap.py.
 // The patch never touches the target folder itself: --dir is what decides
 // where the changes land.
-func aiRunPatcher(pf *PanelsFrame, patch *vtvibe.Patch, root string, dry bool) {
+func aiRunPatcher(pf *panel.PanelsFrame, patch *vtvibe.Patch, root string, dry bool) {
 	var output string
 	exitCode := 0
 
@@ -167,7 +168,7 @@ func aiRunPatcher(pf *PanelsFrame, patch *vtvibe.Patch, root string, dry bool) {
 
 // aiShowPatchResult reports what the patcher said. Exit codes come from ap.py:
 // 0 applied, 2 applied in part, anything else nothing was written.
-func aiShowPatchResult(pf *PanelsFrame, root string, dry bool, exitCode int, output string) {
+func aiShowPatchResult(pf *panel.PanelsFrame, root string, dry bool, exitCode int, output string) {
 	var head string
 	switch {
 	case exitCode == 0 && dry:
@@ -250,7 +251,7 @@ func aiAttachFailureReport(reportPath string) {
 		return
 	}
 	toast.Show(i18n.Msg("AI.PatchReportAttached"), 3*time.Second)
-	if pf := findPanelsFrameAnyScreen(); pf != nil {
+	if pf := panel.FindPanelsFrameAnyScreen(); pf != nil {
 		pf.RefreshAll()
 	}
 }
@@ -331,7 +332,7 @@ func aiEnsurePatcher(ctx context.Context, update func(msg string, percent int)) 
 
 // aiAttachAPSpec teaches the model the format: the specification goes into the
 // context and the dialog switches to asking for patches.
-func aiAttachAPSpec(pf *PanelsFrame) {
+func aiAttachAPSpec(pf *panel.PanelsFrame) {
 	if pf == nil {
 		return
 	}

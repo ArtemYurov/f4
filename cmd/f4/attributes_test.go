@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -87,12 +89,12 @@ func TestAttributesDialog_StatFailure(t *testing.T) {
 		VFS:     vfs.NewOSVFS(t.TempDir()),
 		statErr: os.ErrPermission,
 	}
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	fsp := pf.getActivePanel()
-	fsp.entries = []*fileEntry{{VFSItem: vfs.VFSItem{Name: "locked.txt"}}}
-	fsp.vfs = mockVFS
+	fsp := pf.GetActivePanel()
+	fsp.Entries = []*panel.FileEntry{{VFSItem: vfs.VFSItem{Name: "locked.txt"}}}
+	fsp.Vfs = mockVFS
 
 	// This should trigger an async Stat call that fails
 	actionFileAttributes(pf)
@@ -136,12 +138,12 @@ func TestActionFileAttributes_UsesLstat(t *testing.T) {
 		},
 	}
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 30)
-	fsp := pf.getActivePanel()
-	fsp.entries = []*fileEntry{{VFSItem: vfs.VFSItem{Name: "link.txt"}}}
-	fsp.vfs = mockVFS
+	fsp := pf.GetActivePanel()
+	fsp.Entries = []*panel.FileEntry{{VFSItem: vfs.VFSItem{Name: "link.txt"}}}
+	fsp.Vfs = mockVFS
 
 	actionFileAttributes(pf)
 
@@ -401,12 +403,12 @@ func TestActionFileAttributesUsesAllSelectedEntries(t *testing.T) {
 		onSetAttrPath: func(path string, _ vfs.VFSItem) { calls = append(calls, path) },
 	}
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	fsp := pf.getActivePanel()
-	fsp.vfs = mockVFS
-	fsp.entries = []*fileEntry{
+	fsp := pf.GetActivePanel()
+	fsp.Vfs = mockVFS
+	fsp.Entries = []*panel.FileEntry{
 		{VFSItem: vfs.VFSItem{Name: "first.txt"}},
 		{VFSItem: vfs.VFSItem{Name: "second.txt"}},
 	}
@@ -1218,7 +1220,7 @@ func TestAttributesDialog_SecurityButton(t *testing.T) {
 	fm.Pop()
 }
 func TestDialogTaskPump_OverlayResilience(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	fm := vtui.FrameManager
 	fm.Init(vtui.NewSilentScreenBuf())
 

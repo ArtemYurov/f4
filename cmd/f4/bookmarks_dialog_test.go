@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/panel"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,12 +10,12 @@ import (
 )
 
 func TestSwapSlots_MovesItemAndPreservesOthers(t *testing.T) {
-	var set BookmarkSet
-	set[3] = Bookmark{Path: "/three"}
-	set[4] = Bookmark{Path: "/four"}
-	set[7] = Bookmark{Path: "/seven"}
+	var set panel.BookmarkSet
+	set[3] = panel.Bookmark{Path: "/three"}
+	set[4] = panel.Bookmark{Path: "/four"}
+	set[7] = panel.Bookmark{Path: "/seven"}
 
-	set.swapSlots(3, 4)
+	set.SwapSlots(3, 4)
 
 	if set[3].Path != "/four" || set[4].Path != "/three" {
 		t.Fatalf("swap failed: [3]=%q [4]=%q", set[3].Path, set[4].Path)
@@ -30,16 +31,16 @@ func TestSwapSlots_MovesItemAndPreservesOthers(t *testing.T) {
 }
 
 func TestSwapSlots_ClampsWithinRange(t *testing.T) {
-	var set BookmarkSet
-	set[0] = Bookmark{Path: "/zero"}
-	set[9] = Bookmark{Path: "/nine"}
+	var set panel.BookmarkSet
+	set[0] = panel.Bookmark{Path: "/zero"}
+	set[9] = panel.Bookmark{Path: "/nine"}
 	before := set
 
 	// Out-of-range indices are ignored, so the caller can pass
 	// "cursor ± 1" from either end without checking first.
-	set.swapSlots(0, -1)
-	set.swapSlots(9, 10)
-	set.swapSlots(-5, 100)
+	set.SwapSlots(0, -1)
+	set.SwapSlots(9, 10)
+	set.SwapSlots(-5, 100)
 
 	if set != before {
 		t.Fatalf("out-of-range swap mutated the table:\ngot  %#v\nwant %#v", set, before)
@@ -47,36 +48,36 @@ func TestSwapSlots_ClampsWithinRange(t *testing.T) {
 }
 
 func TestDeleteAtSlot_ClearsCompletely(t *testing.T) {
-	var set BookmarkSet
-	set[2] = Bookmark{
+	var set panel.BookmarkSet
+	set[2] = panel.Bookmark{
 		Path:       "/some/path",
 		Plugin:     "NetRocks",
 		PluginData: "sftp://host",
 		PluginFile: "file.txt",
 	}
 
-	set.deleteAtSlot(2)
+	set.DeleteAtSlot(2)
 
 	if !set[2].IsEmpty() {
 		t.Fatalf("slot not empty after delete: %#v", set[2])
 	}
-	if set[2] != (Bookmark{}) {
+	if set[2] != (panel.Bookmark{}) {
 		t.Errorf("delete left residue behind: %#v", set[2])
 	}
 }
 
 func TestSetCurrentDir_ReplacesPathAndWipesPluginFields(t *testing.T) {
-	var set BookmarkSet
-	set[5] = Bookmark{
+	var set panel.BookmarkSet
+	set[5] = panel.Bookmark{
 		Path:       "/old",
 		Plugin:     "NetRocks",
 		PluginData: "sftp://host",
 		PluginFile: "file.txt",
 	}
 
-	set.setCurrentDir(5, "/new/cwd")
+	set.SetCurrentDir(5, "/new/cwd")
 
-	want := Bookmark{Path: "/new/cwd"}
+	want := panel.Bookmark{Path: "/new/cwd"}
 	if set[5] != want {
 		t.Fatalf("got %#v, want %#v", set[5], want)
 	}
@@ -89,7 +90,7 @@ func TestNewBookmarksDialog_LoadFailureReturnsError(t *testing.T) {
 	if err := os.Mkdir(path, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	d, err := newBookmarksDialog(nil, path)
+	d, err := panel.NewBookmarksDialog(nil, path)
 	if err == nil {
 		t.Fatalf("expected an error for an unreadable file, got dialog %#v", d)
 	}
@@ -99,14 +100,14 @@ func TestNewBookmarksDialog_LoadFailureReturnsError(t *testing.T) {
 }
 
 func TestBookmarksDialog_RowTextShowsPathOrEmptyMarker(t *testing.T) {
-	d := &bookmarksDialog{}
-	d.set[6] = Bookmark{Path: "/mnt/d/work & play"}
+	d := &panel.BookmarksDialog{}
+	d.Set[6] = panel.Bookmark{Path: "/mnt/d/work & play"}
 
-	filled := d.rowText(6)
+	filled := d.RowText(6)
 	if !strings.Contains(filled, "6") || !strings.Contains(filled, "/mnt/d/work && play") {
 		t.Errorf("row 6 = %q, want the slot digit and the escaped path", filled)
 	}
-	if empty := d.rowText(0); !strings.Contains(empty, i18n.Msg("Bookmarks.EmptySlot")) {
+	if empty := d.RowText(0); !strings.Contains(empty, i18n.Msg("Bookmarks.EmptySlot")) {
 		t.Errorf("row 0 = %q, want the empty marker", empty)
 	}
 }

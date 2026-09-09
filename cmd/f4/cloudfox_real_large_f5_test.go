@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
 	"io"
 	"os"
 	"path/filepath"
@@ -353,11 +354,11 @@ func runRealCloudFoxLargeF5Action(t *testing.T, source, destination vfs.VFS, nam
 	realCloudFoxUIResetScreen()
 	pf := realCloudFoxUIPanels(t, source, destination)
 	defer pf.Close()
-	left := pf.panels[0].(*FileSystemPanel)
-	right := pf.panels[1].(*FileSystemPanel)
+	left := pf.Panels[0].(*panel.FileSystemPanel)
+	right := pf.Panels[1].(*panel.FileSystemPanel)
 	realCloudFoxUIWaitPanelName(t, left, name, 3*time.Minute)
-	realCloudFoxUIWait(t, 3*time.Minute, "large F5 destination panel to load", func() bool { return !right.isLoading })
-	pf.activeIdx = 0
+	realCloudFoxUIWait(t, 3*time.Minute, "large F5 destination panel to load", func() bool { return !right.IsLoading })
+	pf.ActiveIdx = 0
 	left.SetFocus(true)
 	right.SetFocus(false)
 

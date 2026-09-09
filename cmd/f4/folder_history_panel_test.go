@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
 	"testing"
 
 	"github.com/unxed/f4/vfs"
@@ -16,19 +17,19 @@ func (v *nestedFolderHistoryVFS) GetPath() string    { return v.path }
 func (v *nestedFolderHistoryVFS) ParentVFS() vfs.VFS { return v.parent }
 
 func TestShouldRecordFolderHistorySkipsUnqualifiedNestedAbsolutePath(t *testing.T) {
-	panel := &FileSystemPanel{vfs: &nestedFolderHistoryVFS{
+	pnl := &panel.FileSystemPanel{Vfs: &nestedFolderHistoryVFS{
 		NullVFS: vfs.NewNullVFS(0),
 		parent:  vfs.NewNullVFS(0),
 		path:    "/home/user",
 	}}
 
-	if shouldRecordFolderHistory(panel, panel.vfs.GetPath()) {
+	if panel.ShouldRecordFolderHistory(pnl, pnl.Vfs.GetPath()) {
 		t.Fatal("unqualified absolute path from a nested VFS must not enter local folder history")
 	}
-	if !shouldRecordFolderHistory(panel, "remote-relative") {
+	if !panel.ShouldRecordFolderHistory(pnl, "remote-relative") {
 		t.Fatal("relative nested paths should retain the existing history behavior")
 	}
-	if !shouldRecordFolderHistory(panel, "netfox://site/home/user") {
+	if !panel.ShouldRecordFolderHistory(pnl, "netfox://site/home/user") {
 		t.Fatal("persistent URI paths must remain eligible for folder history")
 	}
 }

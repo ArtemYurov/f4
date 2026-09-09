@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"github.com/unxed/f4/internal/panel"
 	"reflect"
 	"runtime"
 	"strings"
@@ -12,9 +13,9 @@ import (
 	"github.com/unxed/f4/internal/testutil"
 )
 
-func parseFarMenuString(t *testing.T, s string) []UserMenuItem {
+func parseFarMenuString(t *testing.T, s string) []panel.UserMenuItem {
 	t.Helper()
-	items, err := ParseFarMenu(strings.NewReader(s))
+	items, err := panel.ParseFarMenu(strings.NewReader(s))
 	if err != nil {
 		t.Fatalf("ParseFarMenu: %v", err)
 	}
@@ -32,7 +33,7 @@ func TestParseFarMenu_Empty(t *testing.T) {
 
 func TestParseFarMenu_OneItem_OneCommand(t *testing.T) {
 	got := parseFarMenuString(t, "a:  Apple\r\n    eat\r\n")
-	want := []UserMenuItem{{HotKey: "a", Label: "Apple", Commands: []string{"eat"}}}
+	want := []panel.UserMenuItem{{HotKey: "a", Label: "Apple", Commands: []string{"eat"}}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %#v, want %#v", got, want)
 	}
@@ -159,7 +160,7 @@ func TestParseFarMenu_TabIndentedCommand(t *testing.T) {
 
 func TestParseFarMenu_UTF8WithBOM(t *testing.T) {
 	src := append([]byte{0xEF, 0xBB, 0xBF}, []byte("a:  Apple\r\n    cmd\r\n")...)
-	got, err := ParseFarMenu(bytes.NewReader(src))
+	got, err := panel.ParseFarMenu(bytes.NewReader(src))
 	if err != nil {
 		t.Fatalf("decode: %v", err)
 	}
@@ -179,7 +180,7 @@ func TestParseFarMenu_UTF16LEWithBOM(t *testing.T) {
 	for _, w := range u16 {
 		_ = binary.Write(&buf, binary.LittleEndian, w)
 	}
-	got, err := ParseFarMenu(&buf)
+	got, err := panel.ParseFarMenu(&buf)
 	if err != nil {
 		t.Fatalf("decode UTF-16LE: %v", err)
 	}
@@ -198,7 +199,7 @@ func TestParseFarMenu_UTF16BEWithBOM(t *testing.T) {
 	for _, w := range u16 {
 		_ = binary.Write(&buf, binary.BigEndian, w)
 	}
-	got, _ := ParseFarMenu(&buf)
+	got, _ := panel.ParseFarMenu(&buf)
 	if len(got) != 1 || got[0].HotKey != "a" || got[0].Label != "X" {
 		t.Fatalf("UTF-16BE decoded wrong: %#v", got)
 	}
@@ -215,7 +216,7 @@ func TestParseFarMenu_UTF32LEWithBOM(t *testing.T) {
 	for _, r := range body {
 		_ = binary.Write(&buf, binary.LittleEndian, testutil.Uint32Rune(r))
 	}
-	got, err := ParseFarMenu(&buf)
+	got, err := panel.ParseFarMenu(&buf)
 	if err != nil {
 		t.Fatalf("UTF-32LE decode: %v", err)
 	}
@@ -234,7 +235,7 @@ func TestParseFarMenu_UTF32LEWithCyrillic(t *testing.T) {
 	for _, r := range body {
 		_ = binary.Write(&buf, binary.LittleEndian, testutil.Uint32Rune(r))
 	}
-	got, _ := ParseFarMenu(&buf)
+	got, _ := panel.ParseFarMenu(&buf)
 	if len(got) != 1 || got[0].Label != "Яблоко" {
 		t.Fatalf("UTF-32LE cyrillic mangled: %#v", got)
 	}
@@ -249,7 +250,7 @@ func TestParseFarMenu_UTF32BEWithBOM(t *testing.T) {
 	for _, r := range body {
 		_ = binary.Write(&buf, binary.BigEndian, testutil.Uint32Rune(r))
 	}
-	got, _ := ParseFarMenu(&buf)
+	got, _ := panel.ParseFarMenu(&buf)
 	if len(got) != 1 || got[0].HotKey != "a" || got[0].Label != "X" {
 		t.Fatalf("UTF-32BE decoded wrong: %#v", got)
 	}
@@ -269,7 +270,7 @@ func TestParseFarMenu_UTF32LE_NotMistakenForUTF16LE(t *testing.T) {
 	for _, r := range body {
 		_ = binary.Write(&buf, binary.LittleEndian, testutil.Uint32Rune(r))
 	}
-	got, _ := ParseFarMenu(&buf)
+	got, _ := panel.ParseFarMenu(&buf)
 	if len(got) != 1 || got[0].Label != "Apple" {
 		t.Fatalf("UTF-32LE misparsed (likely as UTF-16LE): %#v", got)
 	}
@@ -290,13 +291,13 @@ func TestParseFarMenu_LoneCRLineEndings(t *testing.T) {
 }
 
 func TestParseFarMenu_InvalidUTF8(t *testing.T) {
-	if _, err := ParseFarMenu(bytes.NewReader([]byte{0x80, 0xFF, 0xC0})); err == nil {
+	if _, err := panel.ParseFarMenu(bytes.NewReader([]byte{0x80, 0xFF, 0xC0})); err == nil {
 		t.Errorf("expected error on garbage bytes with no BOM")
 	}
 }
 
 func TestRenderFarMenuText_OneItem(t *testing.T) {
-	got := renderFarMenuText([]UserMenuItem{
+	got := panel.RenderFarMenuText([]panel.UserMenuItem{
 		{HotKey: "a", Label: "Apple", Commands: []string{"eat"}},
 	})
 	want := "a:  Apple\r\n    eat\r\n"
@@ -306,8 +307,8 @@ func TestRenderFarMenuText_OneItem(t *testing.T) {
 }
 
 func TestRenderFarMenuText_Submenu(t *testing.T) {
-	got := renderFarMenuText([]UserMenuItem{
-		{HotKey: "m", Label: "Menu", Submenu: []UserMenuItem{
+	got := panel.RenderFarMenuText([]panel.UserMenuItem{
+		{HotKey: "m", Label: "Menu", Submenu: []panel.UserMenuItem{
 			{HotKey: "a", Label: "A", Commands: []string{"x"}},
 		}},
 	})
@@ -318,7 +319,7 @@ func TestRenderFarMenuText_Submenu(t *testing.T) {
 }
 
 func TestRenderFarMenuText_Separator(t *testing.T) {
-	got := renderFarMenuText([]UserMenuItem{
+	got := panel.RenderFarMenuText([]panel.UserMenuItem{
 		{HotKey: "--", Label: ""},
 	})
 	if got != "--:  \r\n" {
@@ -328,7 +329,7 @@ func TestRenderFarMenuText_Separator(t *testing.T) {
 
 func TestWriteFarMenu_PlatformEncodingHasBOM(t *testing.T) {
 	var buf bytes.Buffer
-	if err := WriteFarMenu(&buf, []UserMenuItem{
+	if err := panel.WriteFarMenu(&buf, []panel.UserMenuItem{
 		{HotKey: "a", Label: "Apple", Commands: []string{"eat"}},
 	}); err != nil {
 		t.Fatalf("write: %v", err)
@@ -348,7 +349,7 @@ func TestWriteFarMenu_PlatformEncodingHasBOM(t *testing.T) {
 		}
 	}
 	// Round-trip via the multi-encoding reader regardless of platform.
-	out, err := ParseFarMenu(bytes.NewReader(b))
+	out, err := panel.ParseFarMenu(bytes.NewReader(b))
 	if err != nil {
 		t.Fatalf("re-parse failed: %v", err)
 	}
@@ -358,7 +359,7 @@ func TestWriteFarMenu_PlatformEncodingHasBOM(t *testing.T) {
 }
 
 func TestEncodeUTF16LEWithBOM(t *testing.T) {
-	got := encodeUTF16LEWithBOM("c:")
+	got := panel.EncodeUTF16LEWithBOM("c:")
 	want := []byte{0xFF, 0xFE, 'c', 0x00, ':', 0x00}
 	if !bytes.Equal(got, want) {
 		t.Errorf("got %x, want %x", got, want)
@@ -366,7 +367,7 @@ func TestEncodeUTF16LEWithBOM(t *testing.T) {
 }
 
 func TestEncodeUTF32LEWithBOM(t *testing.T) {
-	got := encodeUTF32LEWithBOM("c:")
+	got := panel.EncodeUTF32LEWithBOM("c:")
 	want := []byte{
 		0xFF, 0xFE, 0x00, 0x00,
 		'c', 0x00, 0x00, 0x00,
@@ -383,10 +384,10 @@ func TestEncode_CyrillicSurvivesBothEncodings(t *testing.T) {
 		name string
 		fn   func(string) []byte
 	}{
-		{"UTF-16LE", encodeUTF16LEWithBOM},
-		{"UTF-32LE", encodeUTF32LEWithBOM},
+		{"UTF-16LE", panel.EncodeUTF16LEWithBOM},
+		{"UTF-32LE", panel.EncodeUTF32LEWithBOM},
 	} {
-		decoded, err := decodeFarMenuBytes(c.fn(src))
+		decoded, err := panel.DecodeFarMenuBytes(c.fn(src))
 		if err != nil {
 			t.Errorf("%s decode: %v", c.name, err)
 			continue
@@ -398,9 +399,9 @@ func TestEncode_CyrillicSurvivesBothEncodings(t *testing.T) {
 }
 
 func TestFarMenu_RoundTrip(t *testing.T) {
-	in := []UserMenuItem{
+	in := []panel.UserMenuItem{
 		{HotKey: "c", Label: "VSCode", Commands: []string{"code ."}},
-		{HotKey: "t", Label: "tmux", Submenu: []UserMenuItem{
+		{HotKey: "t", Label: "tmux", Submenu: []panel.UserMenuItem{
 			{HotKey: "l", Label: "list", Commands: []string{"tmux ls"}},
 			{HotKey: "a", Label: "attach", Commands: []string{"tmux attach"}},
 		}},
@@ -408,10 +409,10 @@ func TestFarMenu_RoundTrip(t *testing.T) {
 		{HotKey: "x", Label: "exit", Commands: []string{"exit"}},
 	}
 	var buf bytes.Buffer
-	if err := WriteFarMenu(&buf, in); err != nil {
+	if err := panel.WriteFarMenu(&buf, in); err != nil {
 		t.Fatalf("write: %v", err)
 	}
-	out, err := ParseFarMenu(bytes.NewReader(buf.Bytes()))
+	out, err := panel.ParseFarMenu(bytes.NewReader(buf.Bytes()))
 	if err != nil {
 		t.Fatalf("read: %v", err)
 	}
@@ -424,9 +425,9 @@ func TestFarMenu_CrossFormatRoundTrip(t *testing.T) {
 	// Same tree should survive: model -> FarMenu.ini -> model
 	//                          -> main_menu.ini -> model
 	// All three representations must reconstruct the same structure.
-	tree := []UserMenuItem{
+	tree := []panel.UserMenuItem{
 		{HotKey: "1", Label: "one", Commands: []string{"echo 1"}},
-		{HotKey: "g", Label: "group", Submenu: []UserMenuItem{
+		{HotKey: "g", Label: "group", Submenu: []panel.UserMenuItem{
 			{HotKey: "a", Label: "alpha", Commands: []string{"echo a", "echo b"}},
 		}},
 		{HotKey: "--", Label: ""},
@@ -434,10 +435,10 @@ func TestFarMenu_CrossFormatRoundTrip(t *testing.T) {
 	}
 
 	var txt bytes.Buffer
-	if err := WriteFarMenu(&txt, tree); err != nil {
+	if err := panel.WriteFarMenu(&txt, tree); err != nil {
 		t.Fatalf("WriteFarMenu: %v", err)
 	}
-	viaText, err := ParseFarMenu(bytes.NewReader(txt.Bytes()))
+	viaText, err := panel.ParseFarMenu(bytes.NewReader(txt.Bytes()))
 	if err != nil {
 		t.Fatalf("ParseFarMenu: %v", err)
 	}
@@ -446,10 +447,10 @@ func TestFarMenu_CrossFormatRoundTrip(t *testing.T) {
 	}
 
 	p := writeTemp(t, "")
-	if err := SaveMainMenu(p, tree); err != nil {
+	if err := panel.SaveMainMenu(p, tree); err != nil {
 		t.Fatalf("SaveMainMenu: %v", err)
 	}
-	viaINI, err := LoadMainMenu(p)
+	viaINI, err := panel.LoadMainMenu(p)
 	if err != nil {
 		t.Fatalf("LoadMainMenu: %v", err)
 	}
@@ -461,15 +462,15 @@ func TestFarMenu_CrossFormatRoundTrip(t *testing.T) {
 func TestRenderFarMenuText_MatchesFar2lLayout(t *testing.T) {
 	// Confirm the canonical text we render mirrors what far2l's
 	// MenuRegToFile emits modulo encoding. Reference is pieced together
-	// from usermenu.cpp:103-137. WriteFarMenu wraps this in the
+	// from usermenu.cpp:103-137. panel.WriteFarMenu wraps this in the
 	// platform's wide encoding; the layout itself must stay identical.
-	items := []UserMenuItem{
+	items := []panel.UserMenuItem{
 		{HotKey: "c", Label: "VSCode", Commands: []string{"code ."}},
-		{HotKey: "t", Label: "tmux", Submenu: []UserMenuItem{
+		{HotKey: "t", Label: "tmux", Submenu: []panel.UserMenuItem{
 			{HotKey: "l", Label: "list", Commands: []string{"tmux ls"}},
 		}},
 	}
-	got := renderFarMenuText(items)
+	got := panel.RenderFarMenuText(items)
 	want := "c:  VSCode\r\n" +
 		"    code .\r\n" +
 		"t:  tmux\r\n" +

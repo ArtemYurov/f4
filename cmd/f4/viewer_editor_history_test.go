@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/panel"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -40,7 +42,7 @@ func TestViewerEditorHistoryPersistsAndDeduplicatesByFile(t *testing.T) {
 }
 
 func TestViewerEditorHistoryActionAndMenuRegistration(t *testing.T) {
-	hm := NewHotkeyManager("")
+	hm := keymap.NewHotkeyManager("")
 	if got := hm.GetAction("Shell", "AltF11"); got != "Panel.ViewerEditorHistory" {
 		t.Fatalf("AltF11 action = %q, want Panel.ViewerEditorHistory", got)
 	}
@@ -59,7 +61,7 @@ func TestViewerEditorHistoryDialogDeletesEntry(t *testing.T) {
 
 	root := t.TempDir()
 	rememberViewerEditorHistory(vfs.NewOSVFS(root), filepath.Join(root, "file.txt"), historyModeView)
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(120, 40)
 	actionViewerEditorHistory(pf)
@@ -96,7 +98,7 @@ func TestViewerEditorHistoryInsertPersistsLockAndProtectsEntry(t *testing.T) {
 	path := filepath.Join(root, "pinned.txt")
 	fs := vfs.NewOSVFS(root)
 	rememberViewerEditorHistory(fs, path, historyModeView)
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(120, 40)
 	actionViewerEditorHistory(pf)
@@ -147,7 +149,7 @@ func TestViewerEditorHistoryStampsEntriesAndFiltersByDate(t *testing.T) {
 		t.Fatalf("viewer/editor entry was not stamped: %#v", entries)
 	}
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(120, 40)
 	actionViewerEditorHistory(pf)
@@ -207,7 +209,7 @@ func TestViewerEditorHistoryCtrlTCyclesTimeMode(t *testing.T) {
 	root := t.TempDir()
 	rememberViewerEditorHistory(vfs.NewOSVFS(root), filepath.Join(root, "note.txt"), historyModeEdit)
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(120, 40)
 	actionViewerEditorHistory(pf)

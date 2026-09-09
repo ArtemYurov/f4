@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"strings"
 	"testing"
 
@@ -13,8 +15,8 @@ import (
 )
 
 func TestMutedPTY_SilencesWrites(t *testing.T) {
-	mock := &mockPty{}
-	muted := mutedPTY{backend: mock}
+	mock := &paneltest.MockPty{}
+	muted := panel.MutedPTY{Backend: mock}
 
 	payload := []byte("\x1b[?1;2c")
 	n, err := muted.Write(payload)
@@ -24,8 +26,8 @@ func TestMutedPTY_SilencesWrites(t *testing.T) {
 	if n != len(payload) {
 		t.Fatalf("muted.Write returned n=%d, want %d", n, len(payload))
 	}
-	if len(mock.written) != 0 {
-		t.Fatalf("mutedPTY leaked write to underlying backend: %q", string(mock.written))
+	if len(mock.Written) != 0 {
+		t.Fatalf("mutedPTY leaked write to underlying backend: %q", string(mock.Written))
 	}
 }
 
@@ -37,14 +39,14 @@ func TestHostConsole_Transitions(t *testing.T) {
 	vtui.FrameManager.Init(scr)
 	theme.SetDefaultF4Palette()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
-	pf.shellMode = terminal.ShellModeHost
+	pf.ShellMode = terminal.ShellModeHost
 	pf.ResizeConsole(80, 25)
 
 	// 1. Enter host console
-	pf.enterHostConsole()
-	if !pf.isHostConsoleActive() {
+	pf.EnterHostConsole()
+	if !pf.IsHostConsoleActive() {
 		t.Fatal("hostConsoleActive should be true after enterHostConsole")
 	}
 	if !pf.IsBusy() {
@@ -53,8 +55,8 @@ func TestHostConsole_Transitions(t *testing.T) {
 
 	// 2. Leave host console
 	out.Reset()
-	pf.leaveHostConsole()
-	if pf.isHostConsoleActive() {
+	pf.LeaveHostConsole()
+	if pf.IsHostConsoleActive() {
 		t.Fatal("hostConsoleActive should be false after leaveHostConsole")
 	}
 	if pf.IsBusy() {
@@ -79,19 +81,19 @@ func TestHostConsole_OverlaySuppressesRegisteredKeyBar(t *testing.T) {
 	vtui.FrameManager.Init(scr)
 	defer func() { vtui.FrameManager.KeyBar = nil }()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
-	pf.shellMode = terminal.ShellModeHost
-	pf.showPanels = false
+	pf.ShellMode = terminal.ShellModeHost
+	pf.ShowPanels = false
 	pf.ResizeConsole(80, 25)
-	vtui.FrameManager.KeyBar = pf.keyBar
+	vtui.FrameManager.KeyBar = pf.KeyBar
 
-	pf.enterHostConsole()
+	pf.EnterHostConsole()
 	if vtui.FrameManager.KeyBar != nil {
 		t.Fatal("host console overlay must unregister the ScreenBuf keybar")
 	}
 
-	pf.leaveHostConsole()
+	pf.LeaveHostConsole()
 }
 
 func TestChildEnv_HostModeLeavesTERMUntouched(t *testing.T) {
@@ -133,13 +135,13 @@ func TestHostConsole_PanelToggleAction(t *testing.T) {
 	vtui.FrameManager.Init(scr)
 	theme.SetDefaultF4Palette()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
-	pf.shellMode = terminal.ShellModeHost
+	pf.ShellMode = terminal.ShellModeHost
 	pf.ResizeConsole(80, 25)
 	vtui.FrameManager.Push(pf)
 
-	if !pf.showPanels {
+	if !pf.ShowPanels {
 		t.Fatal("panels should be visible initially")
 	}
 
@@ -147,10 +149,10 @@ func TestHostConsole_PanelToggleAction(t *testing.T) {
 	if !RunAction("Panel.Toggle") {
 		t.Fatal("Panel.Toggle action failed")
 	}
-	if pf.showPanels {
+	if pf.ShowPanels {
 		t.Fatal("Panel.Toggle did not hide panels")
 	}
-	if !pf.isHostConsoleActive() {
+	if !pf.IsHostConsoleActive() {
 		t.Fatal("hostConsoleActive should be true after toggling panels off in host mode")
 	}
 
@@ -158,22 +160,22 @@ func TestHostConsole_PanelToggleAction(t *testing.T) {
 	if !RunAction("Panel.Toggle") {
 		t.Fatal("Panel.Toggle second action failed")
 	}
-	if !pf.showPanels {
+	if !pf.ShowPanels {
 		t.Fatal("Panel.Toggle second action did not show panels")
 	}
-	if pf.isHostConsoleActive() {
+	if pf.IsHostConsoleActive() {
 		t.Fatal("hostConsoleActive should be false after toggling panels back on in host mode")
 	}
 }
 
 func TestHostConsole_InputForwardingWhenIdle(t *testing.T) {
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	defer pf.Close()
-	pf.shellMode = terminal.ShellModeHost
-	pf.showPanels = false
-	pf.enterHostConsole()
+	pf.ShellMode = terminal.ShellModeHost
+	pf.ShowPanels = false
+	pf.EnterHostConsole()
 
-	mock := pf.pty.(*mockPty)
+	mock := pf.Pty.(*paneltest.MockPty)
 	mock.Reset()
 
 	// Send key 'x'
@@ -195,15 +197,15 @@ func TestHostConsole_CloseLeavesHostConsole(t *testing.T) {
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
 
-	pf := NewPanelsFrame()
-	pf.shellMode = terminal.ShellModeHost
-	pf.enterHostConsole()
-	if !pf.isHostConsoleActive() {
+	pf := panel.NewPanelsFrame()
+	pf.ShellMode = terminal.ShellModeHost
+	pf.EnterHostConsole()
+	if !pf.IsHostConsoleActive() {
 		t.Fatal("host console must be active before Close")
 	}
 
 	pf.Close()
-	if pf.isHostConsoleActive() {
+	if pf.IsHostConsoleActive() {
 		t.Fatal("Close must leave host console")
 	}
 }
@@ -211,26 +213,26 @@ func TestHostConsole_OverlayLines(t *testing.T) {
 	oldCfg := config.App
 	defer func() { config.App = oldCfg }()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 
 	// 1. ConsoleOverlayUI disabled -> 0 lines
 	config.App.ConsoleMode = "host"
 	config.App.ConsoleOverlayUI = false
-	if got := pf.overlayLines(); got != 0 {
+	if got := pf.OverlayLines(); got != 0 {
 		t.Errorf("overlayLines() with ConsoleOverlayUI=false = %d, want 0", got)
 	}
 
 	// 2. ConsoleOverlayUI enabled, showKeyBar = true -> 2 lines
 	config.App.ConsoleOverlayUI = true
-	pf.showKeyBar = true
-	if got := pf.overlayLines(); got != 2 {
+	pf.ShowKeyBar = true
+	if got := pf.OverlayLines(); got != 2 {
 		t.Errorf("overlayLines() with showKeyBar=true = %d, want 2", got)
 	}
 
 	// 3. ConsoleOverlayUI enabled, showKeyBar = false -> 1 line
-	pf.showKeyBar = false
-	if got := pf.overlayLines(); got != 1 {
+	pf.ShowKeyBar = false
+	if got := pf.OverlayLines(); got != 1 {
 		t.Errorf("overlayLines() with showKeyBar=false = %d, want 1", got)
 	}
 }
@@ -247,14 +249,14 @@ func TestHostConsole_FarStyleScrollRegion(t *testing.T) {
 	config.App.ConsoleMode = "host"
 	config.App.ConsoleOverlayUI = true
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
-	pf.shellMode = terminal.ShellModeHost
-	pf.showKeyBar = true
+	pf.ShellMode = terminal.ShellModeHost
+	pf.ShowKeyBar = true
 	pf.ResizeConsole(80, 25)
 
 	out.Reset()
-	pf.enterHostConsole()
+	pf.EnterHostConsole()
 
 	// Scroll region for 25 lines with 2 overlay lines should be rows 1..23 (\x1b[1;23r)
 	written := out.String()
@@ -264,7 +266,7 @@ func TestHostConsole_FarStyleScrollRegion(t *testing.T) {
 	}
 
 	out.Reset()
-	pf.leaveHostConsole()
+	pf.LeaveHostConsole()
 
 	// Leaving must restore scroll region (\x1b[r)
 	written = out.String()
@@ -279,16 +281,16 @@ func TestHostConsole_FarStylePTYSizing(t *testing.T) {
 	config.App.ConsoleMode = "host"
 	config.App.ConsoleOverlayUI = true
 
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	defer pf.Close()
-	pf.shellMode = terminal.ShellModeHost
-	pf.showKeyBar = true
+	pf.ShellMode = terminal.ShellModeHost
+	pf.ShowKeyBar = true
 
 	pf.ResizeConsole(80, 25)
 
 	// terminal.PTY should receive height 25 - 2 = 23
-	if pf.termView.Height != 23 {
-		t.Errorf("termView height in Far-style host mode = %d, want 23", pf.termView.Height)
+	if pf.TermView.Height != 23 {
+		t.Errorf("termView height in Far-style host mode = %d, want 23", pf.TermView.Height)
 	}
 }
 func TestHostConsole_DetachCleanupSimulation(t *testing.T) {
@@ -296,13 +298,13 @@ func TestHostConsole_DetachCleanupSimulation(t *testing.T) {
 	scr.AllocBuf(80, 25)
 	vtui.FrameManager.Init(scr)
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
-	pf.shellMode = terminal.ShellModeHost
+	pf.ShellMode = terminal.ShellModeHost
 	vtui.FrameManager.Push(pf)
-	pf.enterHostConsole()
+	pf.EnterHostConsole()
 
-	if !pf.isHostConsoleActive() {
+	if !pf.IsHostConsoleActive() {
 		t.Fatal("host console must be active")
 	}
 
@@ -312,15 +314,15 @@ func TestHostConsole_DetachCleanupSimulation(t *testing.T) {
 			continue
 		}
 		for _, f := range s.Frames {
-			if frame, ok := f.(*PanelsFrame); ok && frame != nil {
-				if frame.shellMode == terminal.ShellModeHost && frame.isHostConsoleActive() {
-					frame.leaveHostConsole()
+			if frame, ok := f.(*panel.PanelsFrame); ok && frame != nil {
+				if frame.ShellMode == terminal.ShellModeHost && frame.IsHostConsoleActive() {
+					frame.LeaveHostConsole()
 				}
 			}
 		}
 	}
 
-	if pf.isHostConsoleActive() {
+	if pf.IsHostConsoleActive() {
 		t.Error("host console must be left after server detach cleanup loop")
 	}
 }
@@ -335,7 +337,7 @@ func TestOverlayKeybarSlots_MatchesVtuiLayout(t *testing.T) {
 		"Make folder", "Delete", "ConfMenu", "Quit", "Plugin commands", "Screens",
 	}
 
-	slots := overlayKeybarSlots(labels, 120)
+	slots := panel.OverlayKeybarSlots(labels, 120)
 	if len(slots) != 12 {
 		t.Fatalf("overlayKeybarSlots(width=120) returned %d slots, want 12", len(slots))
 	}
@@ -361,7 +363,7 @@ func TestOverlayKeybarSlots_MatchesVtuiLayout(t *testing.T) {
 
 	// A narrow console must not panic or produce negative widths.
 	for _, w := range []int{0, 1, 12, 24, 79, 80} {
-		for _, s := range overlayKeybarSlots(labels, w) {
+		for _, s := range panel.OverlayKeybarSlots(labels, w) {
 			if s.Col < 0 || s.Col >= w {
 				t.Fatalf("width %d: slot column %d out of range", w, s.Col)
 			}

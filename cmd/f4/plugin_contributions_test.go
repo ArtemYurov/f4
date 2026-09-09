@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
 	"reflect"
 	"testing"
 
@@ -180,7 +181,7 @@ func TestPluginCommandExecutionRejectsClosedPanelsFrame(t *testing.T) {
 	}
 	t.Cleanup(registration.Unregister)
 
-	panels := &PanelsFrame{closed: true}
+	panels := &panel.PanelsFrame{Closed: true}
 	if plughost.ExecutePluginCommand(vfs.PluginCommandPanel, "TEST.CLOSED-PANELS-FRAME-COMMAND", panels) {
 		t.Fatal("command executed for a closed PanelsFrame")
 	}

@@ -1,6 +1,9 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"testing"
 
 	"github.com/unxed/f4/internal/macro"
@@ -16,7 +19,7 @@ import (
 // NoAltScreenApp condition so they fire in the panels-hidden idle
 // terminal but stay out of the way of full-screen apps.
 func TestHotkeys_ShellActionsBoundInTerminalArea_Issue354(t *testing.T) {
-	hm := NewHotkeyManager("")
+	hm := keymap.NewHotkeyManager("")
 
 	cases := []struct {
 		key    string
@@ -50,38 +53,38 @@ func TestHotkeys_ShellActionsBoundInTerminalArea_Issue354(t *testing.T) {
 // The gate is NoAltScreenApp, which returns true when panels are
 // shown OR no AltScreen mode is engaged.
 func TestHotkeys_ShellActions_TerminalArea_GatedByAltScreen_Issue354(t *testing.T) {
-	// Register a hidden-panels PanelsFrame with an AltScreen app active —
+	// Register a hidden-panels panel.PanelsFrame with an AltScreen app active —
 	// that's the state where the condition must fail. It is never popped, so
 	// it needs a manager of its own: left on the shared one it would keep
 	// answering for the top frame in every test that runs afterwards.
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	pf.showPanels = false
-	pf.termView.UseAltScreen = true
+	pf.ShowPanels = false
+	pf.TermView.UseAltScreen = true
 	vtui.FrameManager.Push(pf)
 
-	if GlobalHotkeysMgr == nil {
-		GlobalHotkeysMgr = NewHotkeyManager("")
+	if keymap.GlobalHotkeysMgr == nil {
+		keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
 	}
 
 	// With AltScreen active the condition NoAltScreenApp is false, so
 	// the Terminal-area binding must resolve to "" (fall-through to term.PTY).
-	if got := GlobalHotkeysMgr.GetAction("Terminal", "F2"); got != "" {
+	if got := keymap.GlobalHotkeysMgr.GetAction("Terminal", "F2"); got != "" {
 		t.Errorf("Terminal F2 with AltScreen active: got %q, want empty (must fall through to app)", got)
 	}
-	if got := GlobalHotkeysMgr.GetAction("Terminal", "F10"); got != "" {
+	if got := keymap.GlobalHotkeysMgr.GetAction("Terminal", "F10"); got != "" {
 		t.Errorf("Terminal F10 with AltScreen active: got %q, want empty (must fall through to app)", got)
 	}
 
 	// Clear AltScreen — condition now passes and the actions surface.
-	pf.termView.UseAltScreen = false
-	if got := GlobalHotkeysMgr.GetAction("Terminal", "F2"); got != "Panel.UserMenu" {
+	pf.TermView.UseAltScreen = false
+	if got := keymap.GlobalHotkeysMgr.GetAction("Terminal", "F2"); got != "Panel.UserMenu" {
 		t.Errorf("Terminal F2 without AltScreen: got %q, want Panel.UserMenu", got)
 	}
-	if got := GlobalHotkeysMgr.GetAction("Terminal", "F10"); got != "App.Quit" {
+	if got := keymap.GlobalHotkeysMgr.GetAction("Terminal", "F10"); got != "App.Quit" {
 		t.Errorf("Terminal F10 without AltScreen: got %q, want term.App.Quit", got)
 	}
 }
@@ -93,22 +96,22 @@ func TestPanelsFrame_F2_OpensUserMenu_WhenPanelsHidden_Issue354(t *testing.T) {
 	// The assertion below compares the top frame type before and after F2, so a
 	// menu left on the shared manager by an earlier test makes the push
 	// invisible. Start from a manager of our own.
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
-	previousHotkeys := GlobalHotkeysMgr
+	previousHotkeys := keymap.GlobalHotkeysMgr
 	previousMacros := macro.MacroMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
 	macro.MacroMgr = macro.NewMacroManager("")
 	t.Cleanup(func() {
-		GlobalHotkeysMgr = previousHotkeys
+		keymap.GlobalHotkeysMgr = previousHotkeys
 		macro.MacroMgr = previousMacros
 	})
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	pf.showPanels = false
-	pf.termView.UseAltScreen = false
+	pf.ShowPanels = false
+	pf.TermView.UseAltScreen = false
 
 	before := topFrameType()
 
@@ -129,18 +132,18 @@ func TestPanelsFrame_F2_OpensUserMenu_WhenPanelsHidden_Issue354(t *testing.T) {
 
 // TestPanelsFrame_CtrlL_RevealsHiddenPassivePanel_Issue354 exercises
 // the second bug from issue #354: with the passive panel hidden
-// (Ctrl+F1 or Ctrl+F2), Ctrl+L installed the InfoPanel into the
+// (Ctrl+F1 or Ctrl+F2), Ctrl+L installed the panel.InfoPanel into the
 // invisible slot and looked like a no-op. It must now un-hide the
 // slot so the info panel is actually visible.
 func TestPanelsFrame_CtrlL_RevealsHiddenPassivePanel_Issue354(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
-	// setupMockPanelsFrame gives activeIdx=1 (right). Hide the passive
+	// paneltest.SetupMockPanelsFrame gives activeIdx=1 (right). Hide the passive
 	// left panel — the state a user reaches via Ctrl+F1 in real life.
-	pf.showLeftPanel = false
+	pf.ShowLeftPanel = false
 
 	pressKey(pf, &vtinput.InputEvent{
 		Type:            vtinput.KeyEventType,
@@ -149,17 +152,17 @@ func TestPanelsFrame_CtrlL_RevealsHiddenPassivePanel_Issue354(t *testing.T) {
 		ControlKeyState: vtinput.LeftCtrlPressed,
 	})
 
-	if pf.altPanels[0] == nil {
+	if pf.AltPanels[0] == nil {
 		t.Fatal("Ctrl+L must install InfoPanel on the passive (left) slot")
 	}
-	if _, ok := pf.altPanels[0].(*InfoPanel); !ok {
-		t.Errorf("expected *InfoPanel on left slot, got %T", pf.altPanels[0])
+	if _, ok := pf.AltPanels[0].(*panel.InfoPanel); !ok {
+		t.Errorf("expected *InfoPanel on left slot, got %T", pf.AltPanels[0])
 	}
-	if !pf.showLeftPanel {
+	if !pf.ShowLeftPanel {
 		t.Error("Ctrl+L must un-hide the passive slot — otherwise the info panel is invisible")
 	}
-	if pf.activeIdx != 1 {
-		t.Errorf("Ctrl+L must not move active side; got activeIdx=%d, want 1", pf.activeIdx)
+	if pf.ActiveIdx != 1 {
+		t.Errorf("Ctrl+L must not move active side; got activeIdx=%d, want 1", pf.ActiveIdx)
 	}
 }
 

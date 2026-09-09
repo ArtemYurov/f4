@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/paneltest"
 	"testing"
 	"time"
 
@@ -31,7 +32,7 @@ func TestAction_AppCopyWindowTitle(t *testing.T) {
 
 	origTemplate := config.App.ConsoleTitleTemplate
 	defer func() { config.App.ConsoleTitleTemplate = origTemplate }()
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	origCopyWindowTitleToClipboard := copyWindowTitleToClipboard
 	copyWindowTitleToClipboard = vtui.SetClipboard
 	t.Cleanup(func() { copyWindowTitleToClipboard = origCopyWindowTitleToClipboard })

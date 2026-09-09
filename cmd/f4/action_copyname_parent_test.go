@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -22,23 +24,23 @@ func waitForCopyNameClipboard(t *testing.T, want string) string {
 	return vtui.GetClipboard()
 }
 
-// seedPanelForCopyName wires up a PanelsFrame whose active panel points at
+// seedPanelForCopyName wires up a panel.PanelsFrame whose active panel points at
 // `path` and shows a `..` entry plus a couple of files, pushing it onto
 // FrameManager so withPF handlers find it.
-func seedPanelForCopyName(t *testing.T, path string) *PanelsFrame {
+func seedPanelForCopyName(t *testing.T, path string) *panel.PanelsFrame {
 	t.Helper()
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	t.Cleanup(func() { pf.Close() })
 	pf.ResizeConsole(80, 25)
 
-	fsp := pf.getActivePanel()
-	fsp.vfs = vfs.NewOSVFS(path)
-	if err := fsp.vfs.SetPath(path); err != nil {
+	fsp := pf.GetActivePanel()
+	fsp.Vfs = vfs.NewOSVFS(path)
+	if err := fsp.Vfs.SetPath(path); err != nil {
 		t.Fatal(err)
 	}
 
-	fsp.entries = []*fileEntry{
+	fsp.Entries = []*panel.FileEntry{
 		{VFSItem: vfs.VFSItem{Name: "..", IsDir: true}},
 		{VFSItem: vfs.VFSItem{Name: "a.txt"}},
 	}
@@ -54,7 +56,7 @@ func TestAction_PanelCopyName_CursorOnFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	pf := seedPanelForCopyName(t, tmp)
-	fsp := pf.getActivePanel()
+	fsp := pf.GetActivePanel()
 	fsp.SetCursorIndex(1) // "a.txt"
 	vtui.SetClipboard("")
 
@@ -72,9 +74,9 @@ func TestAction_PanelCopyName_CopiesCommandLineWhenNotEmpty(t *testing.T) {
 		t.Fatal(err)
 	}
 	pf := seedPanelForCopyName(t, tmp)
-	fsp := pf.getActivePanel()
+	fsp := pf.GetActivePanel()
 	fsp.SetCursorIndex(1) // "a.txt"
-	pf.cmdLine.Edit.SetText("echo hello world")
+	pf.CmdLine.Edit.SetText("echo hello world")
 	vtui.SetClipboard("")
 
 	if !RunAction("Panel.CopyName") {
@@ -91,7 +93,7 @@ func TestAction_PanelCopyPath_CursorOnFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	pf := seedPanelForCopyName(t, tmp)
-	fsp := pf.getActivePanel()
+	fsp := pf.GetActivePanel()
 	fsp.SetCursorIndex(1) // "a.txt"
 	vtui.SetClipboard("")
 
@@ -111,7 +113,7 @@ func TestAction_PanelCopyPath_CursorOnParentUsesCurrentFolderPath(t *testing.T) 
 		t.Fatal(err)
 	}
 	pf := seedPanelForCopyName(t, inner)
-	fsp := pf.getActivePanel()
+	fsp := pf.GetActivePanel()
 	fsp.SetCursorIndex(0) // ".."
 	vtui.SetClipboard("")
 
@@ -129,9 +131,9 @@ func TestAction_PanelInsertPath_CursorOnFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	pf := seedPanelForCopyName(t, tmp)
-	fsp := pf.getActivePanel()
+	fsp := pf.GetActivePanel()
 	fsp.SetCursorIndex(1) // "a.txt"
-	pf.cmdLine.Edit.SetText("echo")
+	pf.CmdLine.Edit.SetText("echo")
 
 	if !RunAction("Panel.InsertPath") {
 		t.Fatal("Panel.InsertPath did not run")
@@ -140,7 +142,7 @@ func TestAction_PanelInsertPath_CursorOnFile(t *testing.T) {
 	// A path without spaces or cmd metacharacters is inserted bare on every
 	// platform; backslashes are Windows path separators, not a reason to quote.
 	want := "echo " + path
-	if got := pf.cmdLine.Edit.GetText(); got != want {
+	if got := pf.CmdLine.Edit.GetText(); got != want {
 		t.Errorf("command line = %q, want %q", got, want)
 	}
 }
@@ -154,7 +156,7 @@ func TestAction_PanelCopyName_CursorOnParentUsesCurrentFolderName(t *testing.T) 
 		t.Fatal(err)
 	}
 	pf := seedPanelForCopyName(t, inner)
-	fsp := pf.getActivePanel()
+	fsp := pf.GetActivePanel()
 	fsp.SetCursorIndex(0) // ".."
 	vtui.SetClipboard("")
 

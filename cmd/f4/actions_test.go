@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -30,7 +32,7 @@ import (
 )
 
 func TestActionUpdateSettings_ManualCheckDoesNotBlockMouseDispatch(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
 
@@ -157,7 +159,7 @@ func TestActionExecute_RemoteRejection(t *testing.T) {
 	// mockRemoteVFS does NOT satisfy the isLocal check in actionExecute
 	baseVfs := vfs.NewOSVFS(t.TempDir())
 	v := &mockFailingVFS{VFS: baseVfs}
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 
 	actionExecute(pf, v, filepath.FromSlash("/remote"), "script.sh", filepath.FromSlash("/remote/script.sh"))
@@ -188,7 +190,7 @@ func TestActionMkDir_Flow(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25) // Crucial: initializes panels
 
@@ -206,8 +208,8 @@ func TestActionMkDir_Flow(t *testing.T) {
 }
 
 func TestActionCalcDirSize_IgnoresParentRow(t *testing.T) {
-	fsp := &FileSystemPanel{
-		entries: []*fileEntry{{VFSItem: vfs.VFSItem{Name: "..", IsDir: true}}},
+	fsp := &panel.FileSystemPanel{
+		Entries: []*panel.FileEntry{{VFSItem: vfs.VFSItem{Name: "..", IsDir: true}}},
 	}
 
 	// The parent row is navigation metadata, not an item that can be scanned.
@@ -252,11 +254,11 @@ func TestActionDelete_BulkErrorAccumulation(t *testing.T) {
 	fm.Init(scr)
 	theme.SetDefaultF4Palette()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
 
 	// Создаем мок-VFS, который запретит удаление "fail.txt"
 	mv := &mockDeletionFailingVFS{
@@ -264,23 +266,23 @@ func TestActionDelete_BulkErrorAccumulation(t *testing.T) {
 		failedFiles: []string{"fail.txt"},
 	}
 
-	fsp := pf.panels[0].(*FileSystemPanel)
-	fsp.vfs = mv
+	fsp := pf.Panels[0].(*panel.FileSystemPanel)
+	fsp.Vfs = mv
 
 	// Подготавливаем список файлов: f1.txt (ок), fail.txt (ошибка), f2.txt (ок)
-	fsp.entries = []*fileEntry{
+	fsp.Entries = []*panel.FileEntry{
 		{VFSItem: vfs.VFSItem{Name: ".."}},
 		{VFSItem: vfs.VFSItem{Name: "f1.txt"}},
 		{VFSItem: vfs.VFSItem{Name: "fail.txt"}},
 		{VFSItem: vfs.VFSItem{Name: "f2.txt"}},
 	}
 	// Выделяем все три файла
-	fsp.entries[1].Selected = true
-	fsp.entries[2].Selected = true
-	fsp.entries[3].Selected = true
+	fsp.Entries[1].Selected = true
+	fsp.Entries[2].Selected = true
+	fsp.Entries[3].Selected = true
 
 	// ВАЖНО: делаем панель с файлами активной
-	pf.activeIdx = 0
+	pf.ActiveIdx = 0
 
 	// 1. Инициируем удаление
 	actionDelete(pf)
@@ -378,8 +380,8 @@ Loop:
 	if !foundF1 || !foundF2 {
 		t.Errorf("One of the deletable files was skipped: %v", mv.deletedFiles)
 	}
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
 }
 
 type mockRetryDeleteVFS struct {
@@ -403,7 +405,7 @@ func (m *mockRetryDeleteVFS) Stat(ctx context.Context, path string) (vfs.VFSItem
 }
 
 func TestActionDelete_RetrySuccess(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	fm := vtui.FrameManager
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(80, 25)
@@ -415,13 +417,13 @@ func TestActionDelete_RetrySuccess(t *testing.T) {
 		attempts: map[string]int{"retry.txt": 1}, // Упадёт 1 раз
 	}
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	t.Cleanup(pf.Close)
 	pf.ResizeConsole(80, 25)
-	fsp := pf.panels[0].(*FileSystemPanel)
-	fsp.vfs = mv
-	fsp.entries = []*fileEntry{{VFSItem: vfs.VFSItem{Name: "retry.txt"}}}
-	pf.activeIdx = 0
+	fsp := pf.Panels[0].(*panel.FileSystemPanel)
+	fsp.Vfs = mv
+	fsp.Entries = []*panel.FileEntry{{VFSItem: vfs.VFSItem{Name: "retry.txt"}}}
+	pf.ActiveIdx = 0
 
 	actionDelete(pf)
 
@@ -466,8 +468,8 @@ Loop:
 	if len(mv.deleted) != 1 || mv.deleted[0] != "retry.txt" {
 		t.Errorf("File was not deleted after Retry. Deleted: %v", mv.deleted)
 	}
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
 }
 
 func TestActionDelete_Abort(t *testing.T) {
@@ -482,20 +484,20 @@ func TestActionDelete_Abort(t *testing.T) {
 		failedFiles: []string{"abort.txt"},
 	}
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
-	fsp := pf.panels[0].(*FileSystemPanel)
-	fsp.vfs = mv
-	fsp.entries = []*fileEntry{
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
+	fsp := pf.Panels[0].(*panel.FileSystemPanel)
+	fsp.Vfs = mv
+	fsp.Entries = []*panel.FileEntry{
 		{VFSItem: vfs.VFSItem{Name: "abort.txt"}},
 		{VFSItem: vfs.VFSItem{Name: "should_not_touch.txt"}},
 	}
-	fsp.entries[0].Selected = true
-	fsp.entries[1].Selected = true
-	pf.activeIdx = 0
+	fsp.Entries[0].Selected = true
+	fsp.Entries[1].Selected = true
+	pf.ActiveIdx = 0
 
 	actionDelete(pf)
 	dlgConfirm := fm.GetTopFrame().(vtui.Container)
@@ -539,8 +541,8 @@ Loop:
 	if len(mv.deletedFiles) != 0 {
 		t.Errorf("Abort failed: some files were deleted: %v", mv.deletedFiles)
 	}
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
 }
 func TestActionDelete_SkipAll(t *testing.T) {
 	fm := vtui.FrameManager
@@ -555,20 +557,20 @@ func TestActionDelete_SkipAll(t *testing.T) {
 		failedFiles: []string{"fail1.txt", "fail2.txt"},
 	}
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
-	fsp := pf.panels[0].(*FileSystemPanel)
-	fsp.vfs = mv
-	fsp.entries = []*fileEntry{
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
+	fsp := pf.Panels[0].(*panel.FileSystemPanel)
+	fsp.Vfs = mv
+	fsp.Entries = []*panel.FileEntry{
 		{VFSItem: vfs.VFSItem{Name: "fail1.txt"}},
 		{VFSItem: vfs.VFSItem{Name: "fail2.txt"}},
 	}
-	fsp.entries[0].Selected = true
-	fsp.entries[1].Selected = true
-	pf.activeIdx = 0
+	fsp.Entries[0].Selected = true
+	fsp.Entries[1].Selected = true
+	pf.ActiveIdx = 0
 
 	actionDelete(pf)
 
@@ -641,15 +643,15 @@ Loop:
 	if foundErrors != 2 {
 		t.Errorf("Expected 2 errors in log, found %d", foundErrors)
 	}
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
 }
 func TestActionExecute_PtyCommandFormatting(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	// setupMockPanelsFrame и mockPty определены в других тестовых файлах того же пакета
-	pf := setupMockPanelsFrame(t)
+	// paneltest.SetupMockPanelsFrame и mockPty определены в других тестовых файлах того же пакета
+	pf := paneltest.SetupMockPanelsFrame(t)
 	defer pf.Close()
-	pty := pf.pty.(*mockPty)
+	pty := pf.Pty.(*paneltest.MockPty)
 
 	tmp := t.TempDir()
 	fileName := "app.exe"
@@ -664,13 +666,13 @@ func TestActionExecute_PtyCommandFormatting(t *testing.T) {
 	v := vfs.NewOSVFS(tmp)
 
 	// Очищаем буфер terminal.PTY перед тестом
-	pty.written = nil
+	pty.Written = nil
 
 	actionExecute(pf, v, tmp, fileName, FilePath)
 
 	// Прокачиваем задачи FrameManager
 	timeout := time.After(2 * time.Second)
-	for pf.showPanels {
+	for pf.ShowPanels {
 		select {
 		case task := <-vtui.FrameManager.TaskChan:
 			task()
@@ -681,8 +683,8 @@ func TestActionExecute_PtyCommandFormatting(t *testing.T) {
 
 	// В реальном приложении данные из terminal.PTY проходят через terminal.AnsiParser, который
 	// вырезает технические команды (cd /d) перед отображением. Эмулируем это:
-	pf.parser.Process(pty.written)
-	result := string(pf.termView.GetAllLogBytes())
+	pf.Parser.Process(pty.Written)
+	result := string(pf.TermView.GetAllLogBytes())
 
 	if runtime.GOOS == "windows" {
 		// Проверяем отсутствие технической обертки 'cd /d' в выводе после парсера
@@ -698,7 +700,7 @@ func TestActionExecute_PtyCommandFormatting(t *testing.T) {
 
 func TestActionExecute_HistoryQuoting(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	defer pf.Close()
 
 	tmp := t.TempDir()
@@ -712,7 +714,7 @@ func TestActionExecute_HistoryQuoting(t *testing.T) {
 	actionExecute(pf, v, tmp, fileName, FilePath)
 
 	timeout := time.After(2 * time.Second)
-	for pf.showPanels {
+	for pf.ShowPanels {
 		select {
 		case task := <-vtui.FrameManager.TaskChan:
 			task()
@@ -721,7 +723,7 @@ func TestActionExecute_HistoryQuoting(t *testing.T) {
 		}
 	}
 
-	lastHistory := pf.cmdLine.Edit.History[0]
+	lastHistory := pf.CmdLine.Edit.History[0]
 	if !strings.Contains(lastHistory, "\"name with spaces.exe\"") {
 		t.Errorf("History entry with spaces must be quoted, got: %q", lastHistory)
 	}
@@ -756,13 +758,13 @@ Times=804c4587aa28dd01 004e237daa28dd01 0021f27baa28dd01
 }
 func TestActionDelete_SuccessorLogic(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
 	tmp := t.TempDir()
-	fsp := pf.panels[0].(*FileSystemPanel)
-	if err := fsp.vfs.SetPath(tmp); err != nil {
+	fsp := pf.Panels[0].(*panel.FileSystemPanel)
+	if err := fsp.Vfs.SetPath(tmp); err != nil {
 		t.Fatal(err)
 	}
 
@@ -777,7 +779,7 @@ func TestActionDelete_SuccessorLogic(t *testing.T) {
 	// 1. Удаляем f2 и f3 (выделенные)
 	// Дожидаемся загрузки
 	fsp.ReadDirectory()
-	for fsp.isLoading {
+	for fsp.IsLoading {
 		select {
 		case task := <-vtui.FrameManager.TaskChan:
 			task()
@@ -787,8 +789,8 @@ func TestActionDelete_SuccessorLogic(t *testing.T) {
 	}
 
 	// Выделяем f2 и f3 (индексы 2 и 3, т.к. 0 - "..", 1 - "f1")
-	fsp.entries[2].Selected = true
-	fsp.entries[3].Selected = true
+	fsp.Entries[2].Selected = true
+	fsp.Entries[3].Selected = true
 
 	// По логике Successor, после удаления блока f2, f3 курсор должен встать на f4.
 	successor := fsp.GetSuccessorName()
@@ -797,8 +799,8 @@ func TestActionDelete_SuccessorLogic(t *testing.T) {
 	}
 
 	// 2. Удаляем последний файл (f4)
-	fsp.entries[2].Selected = false
-	fsp.entries[3].Selected = false
+	fsp.Entries[2].Selected = false
+	fsp.Entries[3].Selected = false
 	fsp.SetCursorIndex(4) // f4
 	successor = fsp.GetSuccessorName()
 	// Если удаляем последний, курсор прыгает на предыдущий (f3)
@@ -810,26 +812,26 @@ func TestActionCopyMove_TrailingSlash(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
 	// Ensure valid paths for the test
-	fspSrc := pf.panels[0].(*FileSystemPanel)
-	fspDst := pf.panels[1].(*FileSystemPanel)
-	if err := fspSrc.vfs.SetPath(t.TempDir()); err != nil {
+	fspSrc := pf.Panels[0].(*panel.FileSystemPanel)
+	fspDst := pf.Panels[1].(*panel.FileSystemPanel)
+	if err := fspSrc.Vfs.SetPath(t.TempDir()); err != nil {
 		t.Fatal(err)
 	}
-	if err := fspDst.vfs.SetPath(t.TempDir()); err != nil {
+	if err := fspDst.Vfs.SetPath(t.TempDir()); err != nil {
 		t.Fatal(err)
 	}
 
 	// Manually add an entry so actionCopyMove doesn't exit early
-	fspSrc.entries = []*fileEntry{
+	fspSrc.Entries = []*panel.FileEntry{
 		{VFSItem: vfs.VFSItem{Name: "test.txt", IsDir: false}},
 	}
 	fspSrc.SetCursorIndex(0)
-	pf.activeIdx = 0 // Ensure the panel with the file is active
+	pf.ActiveIdx = 0 // Ensure the panel with the file is active
 
 	// Trigger Copy (false = isMove)
 	actionCopyMove(pf, false)
@@ -869,16 +871,16 @@ func TestActionCopyMove_ModeMenuDoesNotCoverButtons(t *testing.T) {
 	vtui.FrameManager.Init(scr)
 	theme.SetDefaultF4Palette()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	src := pf.panels[0].(*FileSystemPanel)
-	if err := src.vfs.SetPath(t.TempDir()); err != nil {
+	src := pf.Panels[0].(*panel.FileSystemPanel)
+	if err := src.Vfs.SetPath(t.TempDir()); err != nil {
 		t.Fatalf("set source path: %v", err)
 	}
-	src.entries = []*fileEntry{{VFSItem: vfs.VFSItem{Name: "test.txt"}}}
+	src.Entries = []*panel.FileEntry{{VFSItem: vfs.VFSItem{Name: "test.txt"}}}
 	src.SetCursorIndex(0)
-	pf.activeIdx = 0
+	pf.ActiveIdx = 0
 
 	actionCopyMove(pf, false)
 	dlg, ok := vtui.FrameManager.GetTopFrame().(vtui.Container)
@@ -973,11 +975,11 @@ func TestActionCopy_ShiftF5_Prefill(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
-	fspSrc := pf.panels[0].(*FileSystemPanel)
+	fspSrc := pf.Panels[0].(*panel.FileSystemPanel)
 
 	// Setup actual existing paths using t.TempDir()
 	tmpDir := t.TempDir()
@@ -986,16 +988,16 @@ func TestActionCopy_ShiftF5_Prefill(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := fspSrc.vfs.SetPath(srcPath); err != nil {
+	if err := fspSrc.Vfs.SetPath(srcPath); err != nil {
 		t.Fatalf("Failed to set src VFS path: %v", err)
 	}
 
 	// Mock entries so we have a file under the cursor
-	fspSrc.entries = []*fileEntry{
+	fspSrc.Entries = []*panel.FileEntry{
 		{VFSItem: vfs.VFSItem{Name: "test.txt", IsDir: false}},
 	}
 	fspSrc.SetCursorIndex(0)
-	pf.activeIdx = 0
+	pf.ActiveIdx = 0
 
 	// Trigger Shift-F5 (Copy in place)
 	actionCopyInPlace(pf)
@@ -1036,11 +1038,11 @@ func TestActionNewFile_Flow(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25) // Crucial: initializes panels
 
-	pf.activeIdx = 0
+	pf.ActiveIdx = 0
 	actionNewFile(pf)
 
 	top := vtui.FrameManager.GetTopFrame()
@@ -1060,12 +1062,12 @@ func TestActionNewFile_AbsoluteExistingPath(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	fsp := pf.panels[0].(*FileSystemPanel)
-	fsp.vfs = vfs.NewOSVFS(root)
-	pvfs := fsp.vfs
+	fsp := pf.Panels[0].(*panel.FileSystemPanel)
+	fsp.Vfs = vfs.NewOSVFS(root)
+	pvfs := fsp.Vfs
 
 	actionNewFile(pf)
 	dlg, ok := vtui.FrameManager.GetTopFrame().(vtui.Container)
@@ -1116,12 +1118,12 @@ func TestDelete_FocusCustomization(t *testing.T) {
 	fm.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	fsp := pf.panels[0].(*FileSystemPanel)
-	fsp.entries = []*fileEntry{{VFSItem: vfs.VFSItem{Name: "test.txt"}}}
-	pf.activeIdx = 0
+	fsp := pf.Panels[0].(*panel.FileSystemPanel)
+	fsp.Entries = []*panel.FileEntry{{VFSItem: vfs.VFSItem{Name: "test.txt"}}}
+	pf.ActiveIdx = 0
 
 	origDelFocus := config.App.DeleteCancelFocused
 	defer func() { config.App.DeleteCancelFocused = origDelFocus }()
@@ -1178,12 +1180,12 @@ func TestActionDelete_UsesWarnPalette_Issue379(t *testing.T) {
 	oldCfg := config.App
 	defer func() { config.App = oldCfg }()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	fsp := pf.panels[0].(*FileSystemPanel)
-	fsp.entries = []*fileEntry{{VFSItem: vfs.VFSItem{Name: "goner.txt"}, Selected: true}}
-	pf.activeIdx = 0
+	fsp := pf.Panels[0].(*panel.FileSystemPanel)
+	fsp.Entries = []*panel.FileEntry{{VFSItem: vfs.VFSItem{Name: "goner.txt"}, Selected: true}}
+	pf.ActiveIdx = 0
 
 	config.App.ConfirmDelete = true
 	config.App.UseTrash = true
@@ -1238,7 +1240,7 @@ func TestActionOpenEditor_AlreadyOpened(t *testing.T) {
 	}
 
 	v := vfs.NewOSVFS(tmpDir)
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
@@ -1314,7 +1316,7 @@ func TestActionOpenViewer_AlreadyOpened(t *testing.T) {
 	}
 
 	v := vfs.NewOSVFS(tmpDir)
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
@@ -1396,7 +1398,7 @@ func TestActionOpenEditor_LockedFile(t *testing.T) {
 	}
 
 	v := &mockLockedVFS{VFS: vfs.NewOSVFS(tmpDir)}
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
@@ -1459,7 +1461,7 @@ func TestActionViewerSearch_EmptyFile(t *testing.T) {
 func TestActionFindFile_Persistence(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
@@ -1482,35 +1484,35 @@ func TestActionFindFile_Persistence(t *testing.T) {
 func TestSession_DiskPersistence(t *testing.T) {
 	// Создаем временную директорию для теста
 	tmpDir := t.TempDir()
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	oldConfig := config.App
 	oldEditorSearch, oldFindMask := editor.LastEditorSearch, LastFindFileMask
-	oldLeftPath, oldRightPath := LastLeftPath, LastRightPath
-	oldLeftCursor, oldRightCursor := LastLeftCursor, LastRightCursor
-	oldActivePanel, oldWidePanel := LastActivePanel, LastWidePanel
-	oldLeftViewMode, oldRightViewMode := LastLeftViewMode, LastRightViewMode
-	oldLeftSortMode, oldRightSortMode := LastLeftSortMode, LastRightSortMode
-	oldLeftSortRev, oldRightSortRev := LastLeftSortRev, LastRightSortRev
-	oldShowPanels, oldShowLeft, oldShowRight := LastShowPanels, LastShowLeft, LastShowRight
-	oldWorkspaces, oldActiveWorkspace := LastWorkspaceSessions, LastActiveWorkspace
+	oldLeftPath, oldRightPath := panel.LastLeftPath, panel.LastRightPath
+	oldLeftCursor, oldRightCursor := panel.LastLeftCursor, panel.LastRightCursor
+	oldActivePanel, oldWidePanel := panel.LastActivePanel, panel.LastWidePanel
+	oldLeftViewMode, oldRightViewMode := panel.LastLeftViewMode, panel.LastRightViewMode
+	oldLeftSortMode, oldRightSortMode := panel.LastLeftSortMode, panel.LastRightSortMode
+	oldLeftSortRev, oldRightSortRev := panel.LastLeftSortRev, panel.LastRightSortRev
+	oldShowPanels, oldShowLeft, oldShowRight := panel.LastShowPanels, panel.LastShowLeft, panel.LastShowRight
+	oldWorkspaces, oldActiveWorkspace := panel.LastWorkspaceSessions, panel.LastActiveWorkspace
 	t.Cleanup(func() {
 		config.App = oldConfig
 		editor.LastEditorSearch, LastFindFileMask = oldEditorSearch, oldFindMask
-		LastLeftPath, LastRightPath = oldLeftPath, oldRightPath
-		LastLeftCursor, LastRightCursor = oldLeftCursor, oldRightCursor
-		LastActivePanel, LastWidePanel = oldActivePanel, oldWidePanel
-		LastLeftViewMode, LastRightViewMode = oldLeftViewMode, oldRightViewMode
-		LastLeftSortMode, LastRightSortMode = oldLeftSortMode, oldRightSortMode
-		LastLeftSortRev, LastRightSortRev = oldLeftSortRev, oldRightSortRev
-		LastShowPanels, LastShowLeft, LastShowRight = oldShowPanels, oldShowLeft, oldShowRight
-		LastWorkspaceSessions, LastActiveWorkspace = oldWorkspaces, oldActiveWorkspace
+		panel.LastLeftPath, panel.LastRightPath = oldLeftPath, oldRightPath
+		panel.LastLeftCursor, panel.LastRightCursor = oldLeftCursor, oldRightCursor
+		panel.LastActivePanel, panel.LastWidePanel = oldActivePanel, oldWidePanel
+		panel.LastLeftViewMode, panel.LastRightViewMode = oldLeftViewMode, oldRightViewMode
+		panel.LastLeftSortMode, panel.LastRightSortMode = oldLeftSortMode, oldRightSortMode
+		panel.LastLeftSortRev, panel.LastRightSortRev = oldLeftSortRev, oldRightSortRev
+		panel.LastShowPanels, panel.LastShowLeft, panel.LastShowRight = oldShowPanels, oldShowLeft, oldShowRight
+		panel.LastWorkspaceSessions, panel.LastActiveWorkspace = oldWorkspaces, oldActiveWorkspace
 	})
-	LastWorkspaceSessions = nil
-	LastActiveWorkspace = 0
+	panel.LastWorkspaceSessions = nil
+	panel.LastActiveWorkspace = 0
 	config.App.AutoSaveSettings = true
 	// SaveSession passes these through to saveSessionWithOptions, and the panel
-	// group is what writes ViewMode, SortMode, SortReverse and the Show* keys.
+	// group is what writes panel.ViewMode, panel.SortMode, SortReverse and the Show* keys.
 	// They are process-wide settings that another test may have left switched
 	// off, and inheriting that leaves those keys out of the file: the load
 	// below then returns defaults and the assertions on them fail while the
@@ -1532,66 +1534,66 @@ func TestSession_DiskPersistence(t *testing.T) {
 
 	editor.LastEditorSearch = "disk-test"
 	LastFindFileMask = "*.log"
-	LastLeftPath = "/path/a"
-	LastRightPath = "/path/b"
-	LastLeftCursor = "file.a"
-	LastRightCursor = "file.b"
-	LastActivePanel = 0
-	LastWidePanel = 1
+	panel.LastLeftPath = "/path/a"
+	panel.LastRightPath = "/path/b"
+	panel.LastLeftCursor = "file.a"
+	panel.LastRightCursor = "file.b"
+	panel.LastActivePanel = 0
+	panel.LastWidePanel = 1
 
-	LastLeftViewMode = 1
-	LastRightViewMode = 0
-	LastLeftSortMode = 3
-	LastRightSortMode = 2
-	LastLeftSortRev = true
-	LastRightSortRev = false
+	panel.LastLeftViewMode = 1
+	panel.LastRightViewMode = 0
+	panel.LastLeftSortMode = 3
+	panel.LastRightSortMode = 2
+	panel.LastLeftSortRev = true
+	panel.LastRightSortRev = false
 
-	LastShowPanels = false
-	LastShowLeft = true
-	LastShowRight = false
+	panel.LastShowPanels = false
+	panel.LastShowLeft = true
+	panel.LastShowRight = false
 
 	SaveSession()
 
 	// Сбрасываем и загружаем
-	LastLeftPath = ""
-	LastRightPath = ""
-	LastLeftCursor = ""
-	LastRightCursor = ""
-	LastActivePanel = 1
-	LastWidePanel = -1
+	panel.LastLeftPath = ""
+	panel.LastRightPath = ""
+	panel.LastLeftCursor = ""
+	panel.LastRightCursor = ""
+	panel.LastActivePanel = 1
+	panel.LastWidePanel = -1
 
-	LastLeftViewMode = 0
-	LastRightViewMode = 1
-	LastLeftSortMode = 0
-	LastRightSortMode = 0
-	LastLeftSortRev = false
-	LastRightSortRev = true
+	panel.LastLeftViewMode = 0
+	panel.LastRightViewMode = 1
+	panel.LastLeftSortMode = 0
+	panel.LastRightSortMode = 0
+	panel.LastLeftSortRev = false
+	panel.LastRightSortRev = true
 
-	LastShowPanels = true
-	LastShowLeft = false
-	LastShowRight = true
+	panel.LastShowPanels = true
+	panel.LastShowLeft = false
+	panel.LastShowRight = true
 
 	LoadSession()
 
-	if editor.LastEditorSearch != "disk-test" || LastLeftPath != "/path/a" || LastLeftCursor != "file.a" || LastActivePanel != 0 {
+	if editor.LastEditorSearch != "disk-test" || panel.LastLeftPath != "/path/a" || panel.LastLeftCursor != "file.a" || panel.LastActivePanel != 0 {
 		t.Errorf("Disk persistence failed. Search:%q, LeftPath:%q, LeftCursor:%q, Active:%d",
-			editor.LastEditorSearch, LastLeftPath, LastLeftCursor, LastActivePanel)
+			editor.LastEditorSearch, panel.LastLeftPath, panel.LastLeftCursor, panel.LastActivePanel)
 	}
-	if LastWidePanel != 1 {
-		t.Errorf("Wide panel persistence failed: got %d, want 1", LastWidePanel)
+	if panel.LastWidePanel != 1 {
+		t.Errorf("Wide panel persistence failed: got %d, want 1", panel.LastWidePanel)
 	}
 
-	if LastLeftViewMode != 1 || LastRightViewMode != 0 || LastLeftSortMode != 3 || LastRightSortMode != 2 {
+	if panel.LastLeftViewMode != 1 || panel.LastRightViewMode != 0 || panel.LastLeftSortMode != 3 || panel.LastRightSortMode != 2 {
 		t.Errorf("View/Sort modes persistence failed. LeftVM:%d, RightVM:%d, LeftSM:%d, RightSM:%d",
-			LastLeftViewMode, LastRightViewMode, LastLeftSortMode, LastRightSortMode)
+			panel.LastLeftViewMode, panel.LastRightViewMode, panel.LastLeftSortMode, panel.LastRightSortMode)
 	}
 
-	if !LastLeftSortRev || LastRightSortRev {
-		t.Errorf("Sort directions persistence failed. LeftRev:%v, RightRev:%v", LastLeftSortRev, LastRightSortRev)
+	if !panel.LastLeftSortRev || panel.LastRightSortRev {
+		t.Errorf("Sort directions persistence failed. LeftRev:%v, RightRev:%v", panel.LastLeftSortRev, panel.LastRightSortRev)
 	}
 
-	if LastShowPanels || !LastShowLeft || LastShowRight {
-		t.Errorf("Panel visibility persistence failed. Show:%v, Left:%v, Right:%v", LastShowPanels, LastShowLeft, LastShowRight)
+	if panel.LastShowPanels || !panel.LastShowLeft || panel.LastShowRight {
+		t.Errorf("Panel visibility persistence failed. Show:%v, Left:%v, Right:%v", panel.LastShowPanels, panel.LastShowLeft, panel.LastShowRight)
 	}
 }
 
@@ -1604,10 +1606,10 @@ func TestSession_OldFileDefaultsWideOff(t *testing.T) {
 	if err := os.WriteFile(getSessionIniPath(), []byte("[Session]\nActivePanel = 0\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	LastWidePanel = 1
+	panel.LastWidePanel = 1
 	LoadSession()
-	if LastWidePanel != -1 {
-		t.Fatalf("old session enabled Wide: got %d, want -1", LastWidePanel)
+	if panel.LastWidePanel != -1 {
+		t.Fatalf("old session enabled Wide: got %d, want -1", panel.LastWidePanel)
 	}
 }
 
@@ -1615,7 +1617,7 @@ func TestActionPanelSettings_Flow(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
@@ -1664,7 +1666,7 @@ func TestActionPanelSettings_FitsSmallTerminal(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
@@ -1699,7 +1701,7 @@ func TestActionPanelSettings_ConsoleModes(t *testing.T) {
 	config.App.ConsoleMode = "own"
 	config.App.ConsoleOverlayUI = false
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
@@ -1752,8 +1754,8 @@ func TestActionPanelSettings_ConsoleModes(t *testing.T) {
 	chkOverlay.State = 1
 
 	testutil.ClickDialogButton(t, dlg, "Ok")
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
 
 	if config.App.ConsoleMode != "host" {
 		t.Errorf("config.App.ConsoleMode = %q, want host", config.App.ConsoleMode)
@@ -1775,7 +1777,7 @@ func TestActionPanelAdditionalSettings_SearchExactOnHit(t *testing.T) {
 	defer func() { config.App = oldCfg }()
 	config.App.SearchExactOnHit = false
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
@@ -1811,7 +1813,7 @@ func TestActionLanguage_Flow(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
@@ -1862,11 +1864,11 @@ func TestActionLanguage_Flow(t *testing.T) {
 func TestActionManagePlugins_Flow(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
 
 	oldPlugins := config.App.RegisteredPlugins
 	config.App.RegisteredPlugins = []string{"/old/path"}
@@ -1932,52 +1934,52 @@ func TestActionRename_CacheAndSelection(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
-	fsp := pf.panels[0].(*FileSystemPanel)
-	fsp.vfs = vfs.NewOSVFS(tmpDir)
-	fsp.entries = []*fileEntry{{VFSItem: vfs.VFSItem{Name: "old.txt"}}}
+	fsp := pf.Panels[0].(*panel.FileSystemPanel)
+	fsp.Vfs = vfs.NewOSVFS(tmpDir)
+	fsp.Entries = []*panel.FileEntry{{VFSItem: vfs.VFSItem{Name: "old.txt"}}}
 	fsp.SetCursorIndex(0)
-	pf.activeIdx = 0
+	pf.ActiveIdx = 0
 
 	// Заполняем кэш данными
-	fsp.dirCache[fsp.cacheKey(fsp.vfs.GetPath())] = dirCacheEntry{items: []vfs.VFSItem{{Name: "old.txt"}}}
+	fsp.DirCache[fsp.CacheKey(fsp.Vfs.GetPath())] = panel.DirCacheEntry{Items: []vfs.VFSItem{{Name: "old.txt"}}}
 
 	// 1. Тест успешного переименования
 	// Перехватываем InputBox внутри actionRename (в тестах он не блокирует)
 	// Мы вручную вызовем логику, которую должен был вызвать InputBox
 	newName := "new.txt"
-	oldPath := fsp.vfs.Join(fsp.vfs.GetPath(), "old.txt")
-	newPath := fsp.vfs.Join(fsp.vfs.GetPath(), newName)
+	oldPath := fsp.Vfs.Join(fsp.Vfs.GetPath(), "old.txt")
+	newPath := fsp.Vfs.Join(fsp.Vfs.GetPath(), newName)
 
 	// Симулируем успешный асинхронный ответ
-	if err := fsp.vfs.Rename(context.Background(), oldPath, newPath); err != nil {
+	if err := fsp.Vfs.Rename(context.Background(), oldPath, newPath); err != nil {
 		t.Fatal(err)
 	}
 
 	// Выполняем UI-часть из actionRename (успех)
-	delete(fsp.dirCache, fsp.cacheKey(fsp.vfs.GetPath()))
-	fsp.pendingSelection = newName
+	delete(fsp.DirCache, fsp.CacheKey(fsp.Vfs.GetPath()))
+	fsp.PendingSelection = newName
 	pf.RefreshAll()
 
-	if _, ok := fsp.dirCache[fsp.cacheKey(fsp.vfs.GetPath())]; ok {
+	if _, ok := fsp.DirCache[fsp.CacheKey(fsp.Vfs.GetPath())]; ok {
 		t.Error("Cache was not cleared after rename")
 	}
-	if fsp.pendingSelection != "new.txt" {
-		t.Errorf("Pending selection not set correctly: %q", fsp.pendingSelection)
+	if fsp.PendingSelection != "new.txt" {
+		t.Errorf("Pending selection not set correctly: %q", fsp.PendingSelection)
 	}
 
 	// 2. Тест ошибки переименования
-	fsp.pendingSelection = ""
-	fsp.vfs = &mockRenameVFS{VFS: fsp.vfs, renameErr: os.ErrPermission}
+	fsp.PendingSelection = ""
+	fsp.Vfs = &mockRenameVFS{VFS: fsp.Vfs, renameErr: os.ErrPermission}
 
 	// Выполняем UI-часть из actionRename (ошибка)
-	fsp.pendingSelection = "old.txt" // Должно вернуться к старому имени
+	fsp.PendingSelection = "old.txt" // Должно вернуться к старому имени
 	pf.RefreshAll()
 
-	if fsp.pendingSelection != "old.txt" {
+	if fsp.PendingSelection != "old.txt" {
 		t.Error("On error, pendingSelection should point to the original name")
 	}
 }
@@ -2057,10 +2059,10 @@ func (m *mockSlowVFS) Open(ctx context.Context, p string) (vfs.ReadAtCloser, err
 }
 
 func TestActionOpenViewer_ProgressTask(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
@@ -2112,7 +2114,7 @@ LoopOpen:
 func TestActionOpenViewer_FastTaskDoesNotFlashProgressDialog(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
@@ -2151,7 +2153,7 @@ func TestActionOpenViewer_FastTaskDoesNotFlashProgressDialog(t *testing.T) {
 func TestActionOpenViewer_PromptStaysAboveDelayedProgressDialog(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
@@ -2228,13 +2230,13 @@ func TestActionCommandHistory_Flow(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
 
-	pf.cmdLine.Edit.History = nil
+	pf.CmdLine.Edit.History = nil
 	actionCommandHistory(pf)
 
 	top := vtui.FrameManager.GetTopFrame()
@@ -2244,7 +2246,7 @@ func TestActionCommandHistory_Flow(t *testing.T) {
 	top.SetExitCode(-1)
 	vtui.FrameManager.Pop()
 
-	pf.cmdLine.Edit.History = []string{"cmd1", "cmd2"}
+	pf.CmdLine.Edit.History = []string{"cmd1", "cmd2"}
 	actionCommandHistory(pf)
 
 	top = vtui.FrameManager.GetTopFrame()
@@ -2260,13 +2262,13 @@ func TestActionCommandHistory_Deletion(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
 
-	pf.cmdLine.Edit.History = []string{"cmd1", "cmd2", "cmd3"}
+	pf.CmdLine.Edit.History = []string{"cmd1", "cmd2", "cmd3"}
 	actionCommandHistory(pf)
 
 	top := vtui.FrameManager.GetTopFrame()
@@ -2284,7 +2286,7 @@ func TestActionCommandHistory_Deletion(t *testing.T) {
 		ControlKeyState: vtinput.ShiftPressed,
 	})
 
-	history := pf.cmdLine.Edit.History
+	history := pf.CmdLine.Edit.History
 	if len(history) != 2 || history[0] != "cmd1" || history[1] != "cmd3" {
 		t.Errorf("Expected history [cmd1, cmd3], got %v", history)
 	}
@@ -2300,11 +2302,11 @@ func TestActionAppearanceSettings_SaveCursor(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
 
 	oldCfg := config.App
 	defer func() { config.App = oldCfg }()
@@ -2360,11 +2362,11 @@ func TestActionAppearanceSettingsSavesSystemMonospace(t *testing.T) {
 	}()
 	config.App.GuiUseSystemMonospace = true
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
 	actionAppearanceSettings(pf)
 	top := vtui.FrameManager.GetTopFrame().(vtui.Container)
 
@@ -2402,11 +2404,11 @@ func TestActionAppearanceSettingsSavesFullPathInTitle(t *testing.T) {
 	}()
 	config.App.DisplayFullPathInTitle = false
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
 	actionAppearanceSettings(pf)
 	top := vtui.FrameManager.GetTopFrame().(vtui.Container)
 
@@ -2444,11 +2446,11 @@ func TestActionAppearanceSettingsSavesWorkspaceTabRestoration(t *testing.T) {
 	}()
 	config.App.RestoreWorkspaceTabs = true
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
 	actionAppearanceSettings(pf)
 	top := vtui.FrameManager.GetTopFrame().(vtui.Container)
 
@@ -2486,11 +2488,11 @@ func TestActionAppearanceSettingsSavesWorkspaceTabOverlay(t *testing.T) {
 	}()
 	config.App.WorkspaceTabsOverlay = true
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
 	actionAppearanceSettings(pf)
 	top := vtui.FrameManager.GetTopFrame().(vtui.Container)
 
@@ -2510,8 +2512,8 @@ func TestActionAppearanceSettingsSavesWorkspaceTabOverlay(t *testing.T) {
 	}
 	overlayTabs.Toggle()
 	testutil.ClickDialogButton(t, top, "Ok")
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
 	if config.App.WorkspaceTabsOverlay {
 		t.Fatal("disabled workspace tab overlay setting was not saved")
 	}
@@ -2530,11 +2532,11 @@ func TestActionAppearanceSettingsSavesWorkspaceTabNumbering(t *testing.T) {
 	}()
 	config.App.WorkspaceTabNumbering = config.WorkspaceTabNumbersAlways
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
 	actionAppearanceSettings(pf)
 	top := vtui.FrameManager.GetTopFrame().(vtui.Container)
 
@@ -2568,11 +2570,11 @@ func TestActionAppearanceSettings_CancelPreservesPalette(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
 
 	// Simulate a farcolors.ini override: bump one palette slot to
 	// a sentinel value the base style would never produce. If Cancel
@@ -2623,11 +2625,11 @@ func TestActionAppearanceSettings_LivePreviewRecolorsExistingLabels(t *testing.T
 	vtui.FrameManager.Init(scr)
 	theme.SetDefaultF4Palette()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
 
 	actionAppearanceSettings(pf)
 	frame := vtui.FrameManager.GetTopFrame()
@@ -2674,15 +2676,15 @@ func TestActionAppearanceSettings_LivePreviewRecolorsExistingLabels(t *testing.T
 }
 
 func TestPanelsFrame_RunAdvancedProgressTask(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
-	waitForLoad(t, pf.panels[0].(*FileSystemPanel))
-	waitForLoad(t, pf.panels[1].(*FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[0].(*panel.FileSystemPanel))
+	paneltest.WaitForLoad(t, pf.Panels[1].(*panel.FileSystemPanel))
 
 	done := make(chan struct{})
 	completed := make(chan struct{})
@@ -2843,7 +2845,7 @@ func TestActionOpenEditor_SpecialFileRejection(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
 	v := &mockInvalidVFS{VFS: vfs.NewOSVFS(t.TempDir())}
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 
 	actionOpenEditor(pf, v, "special")
@@ -2873,7 +2875,7 @@ func TestActionOpenViewer_SpecialFileRejection(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
 	v := &mockInvalidVFS{VFS: vfs.NewOSVFS(t.TempDir())}
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 
 	actionOpenViewer(pf, v, "special")
@@ -2910,18 +2912,18 @@ func TestActionEditFile_DirectoryRedirectsToAttributes(t *testing.T) {
 	}
 
 	v := vfs.NewOSVFS(tmpDir)
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
-	fsp := pf.panels[0].(*FileSystemPanel)
-	fsp.vfs = v
-	fsp.entries = []*fileEntry{
+	fsp := pf.Panels[0].(*panel.FileSystemPanel)
+	fsp.Vfs = v
+	fsp.Entries = []*panel.FileEntry{
 		{VFSItem: vfs.VFSItem{Name: "..", IsDir: true}},
 		{VFSItem: vfs.VFSItem{Name: subDirName, IsDir: true}},
 	}
 	fsp.SetCursorIndex(1) // Focus on "sub_folder"
-	pf.activeIdx = 0
+	pf.ActiveIdx = 0
 
 	// Trigger Edit (F4)
 	actionEditFile(pf)
@@ -2947,19 +2949,19 @@ func TestActionEditFile_DirectoryRedirectsToAttributes(t *testing.T) {
 	}
 }
 func TestActionCreateLink_Flow(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	t.Cleanup(pf.Close)
 	pf.ResizeConsole(80, 25)
 
 	tmpDir := t.TempDir()
-	fspSrc := pf.panels[0].(*FileSystemPanel)
-	fspDst := pf.panels[1].(*FileSystemPanel)
-	waitForLoad(t, fspSrc)
-	waitForLoad(t, fspDst)
+	fspSrc := pf.Panels[0].(*panel.FileSystemPanel)
+	fspDst := pf.Panels[1].(*panel.FileSystemPanel)
+	paneltest.WaitForLoad(t, fspSrc)
+	paneltest.WaitForLoad(t, fspDst)
 
 	srcDir := filepath.Join(tmpDir, "src")
 	dstDir := filepath.Join(tmpDir, "dst")
@@ -2975,11 +2977,11 @@ func TestActionCreateLink_Flow(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fspSrc.vfs = vfs.NewOSVFS(srcDir)
-	fspDst.vfs = vfs.NewOSVFS(dstDir)
-	fspSrc.entries = []*fileEntry{{VFSItem: vfs.VFSItem{Name: "target.txt"}}}
+	fspSrc.Vfs = vfs.NewOSVFS(srcDir)
+	fspDst.Vfs = vfs.NewOSVFS(dstDir)
+	fspSrc.Entries = []*panel.FileEntry{{VFSItem: vfs.VFSItem{Name: "target.txt"}}}
 	fspSrc.SetCursorIndex(0)
-	pf.activeIdx = 0
+	pf.ActiveIdx = 0
 
 	actionCreateLink(pf)
 
@@ -3014,8 +3016,8 @@ func TestActionCreateLink_Flow(t *testing.T) {
 	linkPath := filepath.Join(dstDir, "link.txt")
 	editDest.SetText(linkPath)
 
-	srcGeneration := fspSrc.loadingGeneration
-	dstGeneration := fspDst.loadingGeneration
+	srcGeneration := fspSrc.LoadingGeneration
+	dstGeneration := fspDst.LoadingGeneration
 	testutil.ClickDialogButton(t, dlg, "Create link")
 
 	// Drain task queue to execute async creation task
@@ -3039,7 +3041,7 @@ func TestActionCreateLink_Flow(t *testing.T) {
 	}
 
 	timeout = time.After(2 * time.Second)
-	for fspSrc.loadingGeneration == srcGeneration || fspDst.loadingGeneration == dstGeneration {
+	for fspSrc.LoadingGeneration == srcGeneration || fspDst.LoadingGeneration == dstGeneration {
 		select {
 		case task := <-vtui.FrameManager.TaskChan:
 			task()
@@ -3047,8 +3049,8 @@ func TestActionCreateLink_Flow(t *testing.T) {
 			t.Fatal("Timeout waiting for link completion refresh")
 		}
 	}
-	waitForLoad(t, fspSrc)
-	waitForLoad(t, fspDst)
+	paneltest.WaitForLoad(t, fspSrc)
+	paneltest.WaitForLoad(t, fspDst)
 }
 func TestActionSwitchEditorToViewerAndBack(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
@@ -3064,7 +3066,7 @@ func TestActionSwitchEditorToViewerAndBack(t *testing.T) {
 	}
 
 	v := vfs.NewOSVFS(tmpDir)
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	// The editor/viewer frames opened below hold the file; close whichever
 	// is on top so Windows can delete it during TempDir cleanup.
@@ -3167,7 +3169,7 @@ func TestActionSwitchEditorToViewer_ModifiedFilePrompt(t *testing.T) {
 	}
 
 	v := vfs.NewOSVFS(tmpDir)
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	// The editor/viewer frames opened below hold the file; close whichever
 	// is on top so Windows can delete it during TempDir cleanup.
@@ -3264,7 +3266,7 @@ func TestActionSwitchEditorViewer_HeightPreserved(t *testing.T) {
 	}
 
 	v := vfs.NewOSVFS(tmpDir)
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	// The editor/viewer frames opened below hold the file; close whichever
 	// is on top so Windows can delete it during TempDir cleanup.

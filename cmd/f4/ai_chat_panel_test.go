@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"strings"
 	"testing"
 
@@ -14,10 +16,10 @@ import (
 )
 
 func TestAIChatPanel_Resize(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	fp := NewFileSystemPanel(0, 0, 80, 24, vfs.NewNullVFS(0))
-	waitForLoad(t, fp)
+	fp := panel.NewFileSystemPanel(0, 0, 80, 24, vfs.NewNullVFS(0))
+	paneltest.WaitForLoad(t, fp)
 	cp := NewAIChatPanel(fp)
 	cp.SetPosition(0, 0, 79, 23)
 
@@ -58,11 +60,11 @@ func TestFormatAttachedFilesLabel(t *testing.T) {
 }
 
 func TestAIChatPanel_AttachedFilesBarFocusAndNavigation(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	session := vtvibe.NewSession()
-	fp := NewFileSystemPanel(0, 0, 80, 24, &aiVFSWrapper{AIVFS: vtvibe.NewVFS(session)})
-	waitForLoad(t, fp)
+	fp := panel.NewFileSystemPanel(0, 0, 80, 24, &aiVFSWrapper{AIVFS: vtvibe.NewVFS(session)})
+	paneltest.WaitForLoad(t, fp)
 	cp := NewAIChatPanel(fp)
 	cp.SetFocus(true)
 
@@ -102,14 +104,14 @@ func TestAIChatPanel_AttachedFilesBarFocusAndNavigation(t *testing.T) {
 	}
 }
 func TestAIChatPanel_TabPassesThroughForPanelSwitching(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	fp := NewFileSystemPanel(0, 0, 80, 24, vfs.NewNullVFS(0))
-	waitForLoad(t, fp)
+	fp := panel.NewFileSystemPanel(0, 0, 80, 24, vfs.NewNullVFS(0))
+	paneltest.WaitForLoad(t, fp)
 	cp := NewAIChatPanel(fp)
 	cp.SetFocus(true)
 
-	// Tab key in ProcessKey must return false so PanelsFrame can switch active panel
+	// Tab key in ProcessKey must return false so panel.PanelsFrame can switch active panel
 	tabEvent := &vtinput.InputEvent{
 		Type:           vtinput.KeyEventType,
 		KeyDown:        true,
@@ -122,8 +124,8 @@ func TestAIChatPanel_TabPassesThroughForPanelSwitching(t *testing.T) {
 }
 func TestAIChatPanel_RCtrlC_CopiesLastResponse(t *testing.T) {
 	session := vtvibe.NewSession()
-	fp := NewFileSystemPanel(0, 0, 80, 24, &aiVFSWrapper{AIVFS: vtvibe.NewVFS(session)})
-	waitForLoad(t, fp)
+	fp := panel.NewFileSystemPanel(0, 0, 80, 24, &aiVFSWrapper{AIVFS: vtvibe.NewVFS(session)})
+	paneltest.WaitForLoad(t, fp)
 	cp := NewAIChatPanel(fp)
 	cp.SetFocus(true)
 
@@ -144,8 +146,8 @@ func TestAIChatPanel_ContextFilesRenderingAndLinkNavigation(t *testing.T) {
 	session := vtvibe.NewSession()
 	_ = session.Ask // compile check
 
-	fp := NewFileSystemPanel(0, 0, 80, 24, &aiVFSWrapper{AIVFS: vtvibe.NewVFS(session)})
-	waitForLoad(t, fp)
+	fp := panel.NewFileSystemPanel(0, 0, 80, 24, &aiVFSWrapper{AIVFS: vtvibe.NewVFS(session)})
+	paneltest.WaitForLoad(t, fp)
 	cp := NewAIChatPanel(fp)
 	cp.SetFocus(true)
 
@@ -181,8 +183,8 @@ func TestAIChatPanel_ContextFilesRenderingAndLinkNavigation(t *testing.T) {
 }
 func TestAIChatPanel_BarKindExcludesApSpec(t *testing.T) {
 	session := vtvibe.NewSession()
-	fp := NewFileSystemPanel(0, 0, 80, 24, &aiVFSWrapper{AIVFS: vtvibe.NewVFS(session)})
-	waitForLoad(t, fp)
+	fp := panel.NewFileSystemPanel(0, 0, 80, 24, &aiVFSWrapper{AIVFS: vtvibe.NewVFS(session)})
+	paneltest.WaitForLoad(t, fp)
 	cp := NewAIChatPanel(fp)
 
 	// Case 1: No files

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -15,27 +17,27 @@ import (
 	"github.com/unxed/vtui"
 )
 
-// withTempAssociations redirects AssociationsFilePath to a fresh temp
+// withTempAssociations redirects panel.AssociationsFilePath to a fresh temp
 // file for the duration of the test. Restores the default resolver on
 // cleanup so subsequent tests aren't affected.
-func withTempAssociations(t *testing.T, list []FileAssoc) string {
+func withTempAssociations(t *testing.T, list []panel.FileAssoc) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "associations.ini")
-	prev := associationsFilePathFn
-	associationsFilePathFn = func() string { return path }
-	t.Cleanup(func() { associationsFilePathFn = prev })
+	prev := panel.AssociationsFilePathFn
+	panel.AssociationsFilePathFn = func() string { return path }
+	t.Cleanup(func() { panel.AssociationsFilePathFn = prev })
 	if list != nil {
-		if err := SaveAssociations(path, list); err != nil {
+		if err := panel.SaveAssociations(path, list); err != nil {
 			t.Fatalf("prepare associations file: %v", err)
 		}
 	}
 	return path
 }
 
-// setupPanelWithFile stages a PanelsFrame whose active panel has the
+// setupPanelWithFile stages a panel.PanelsFrame whose active panel has the
 // cursor on a single file entry named `name` inside a real temp dir.
 // Returns the frame + the mock term.PTY so tests can observe writes.
-func setupPanelWithFile(t *testing.T, name string) (*PanelsFrame, *mockPty) {
+func setupPanelWithFile(t *testing.T, name string) (*panel.PanelsFrame, *paneltest.MockPty) {
 	t.Helper()
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
@@ -58,41 +60,41 @@ func setupPanelWithFile(t *testing.T, name string) (*PanelsFrame, *mockPty) {
 		}
 	}
 
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	t.Cleanup(pf.Close)
 	pf.ResizeConsole(80, 25)
 
-	fsp := pf.panels[pf.activeIdx].(*FileSystemPanel)
-	if err := fsp.vfs.SetPath(tmpDir); err != nil {
+	fsp := pf.Panels[pf.ActiveIdx].(*panel.FileSystemPanel)
+	if err := fsp.Vfs.SetPath(tmpDir); err != nil {
 		t.Fatal(err)
 	}
-	fsp.entries = []*fileEntry{
+	fsp.Entries = []*panel.FileEntry{
 		{VFSItem: vfs.VFSItem{Name: ".."}},
 		{VFSItem: vfs.VFSItem{Name: name}},
 	}
 	fsp.Refresh()
 	fsp.SetCursorIndex(1)
-	return pf, pf.pty.(*mockPty)
+	return pf, pf.Pty.(*paneltest.MockPty)
 }
 
 // TestFileAssociation_SingleMatch_RunsDirectly is the happy path:
 // exactly one association fires for the file → its command reaches
 // the term.PTY without any picker in between.
 func TestFileAssociation_SingleMatch_RunsDirectly(t *testing.T) {
-	withTempAssociations(t, []FileAssoc{
+	withTempAssociations(t, []panel.FileAssoc{
 		{
 			Mask:        "*.png",
 			Description: "Image viewer",
-			Commands:    [assocKindCount]string{AssocExecute: "eog !.!"},
-			Enabled:     [assocKindCount]bool{AssocExecute: true},
+			Commands:    [panel.AssocKindCount]string{panel.AssocExecute: "eog !.!"},
+			Enabled:     [panel.AssocKindCount]bool{panel.AssocExecute: true},
 		},
 	})
 
 	pf, pty := setupPanelWithFile(t, "pic.png")
-	if !tryFileAssociation(pf, AssocExecute) {
+	if !panel.TryFileAssociation(pf, panel.AssocExecute) {
 		t.Fatal("expected tryFileAssociation to intercept when a match exists")
 	}
-	written := string(pty.written)
+	written := string(pty.Written)
 	if !strings.Contains(written, "eog pic.png") {
 		t.Errorf("PTY did not receive substituted command; got %q", written)
 	}
@@ -102,16 +104,16 @@ func TestFileAssociation_SingleMatch_RunsDirectly(t *testing.T) {
 // declines when nothing matches — the caller then runs its default
 // behaviour (spawn / xdg-open / built-in viewer).
 func TestFileAssociation_NoMatch_FallsThrough(t *testing.T) {
-	withTempAssociations(t, []FileAssoc{
+	withTempAssociations(t, []panel.FileAssoc{
 		{
 			Mask:     "*.png",
-			Commands: [assocKindCount]string{AssocExecute: "eog !.!"},
-			Enabled:  [assocKindCount]bool{AssocExecute: true},
+			Commands: [panel.AssocKindCount]string{panel.AssocExecute: "eog !.!"},
+			Enabled:  [panel.AssocKindCount]bool{panel.AssocExecute: true},
 		},
 	})
 
 	pf, _ := setupPanelWithFile(t, "readme.txt")
-	if tryFileAssociation(pf, AssocExecute) {
+	if panel.TryFileAssociation(pf, panel.AssocExecute) {
 		t.Error("no PNG matches for readme.txt — intercept should return false")
 	}
 }
@@ -119,16 +121,16 @@ func TestFileAssociation_NoMatch_FallsThrough(t *testing.T) {
 // TestFileAssociation_DisabledSlot_NotRun ensures a slot with the
 // checkbox unchecked doesn't fire even when the command is populated.
 func TestFileAssociation_DisabledSlot_NotRun(t *testing.T) {
-	withTempAssociations(t, []FileAssoc{
+	withTempAssociations(t, []panel.FileAssoc{
 		{
 			Mask:     "*.png",
-			Commands: [assocKindCount]string{AssocExecute: "eog !.!"},
+			Commands: [panel.AssocKindCount]string{panel.AssocExecute: "eog !.!"},
 			// Enabled all false.
 		},
 	})
 
 	pf, _ := setupPanelWithFile(t, "pic.png")
-	if tryFileAssociation(pf, AssocExecute) {
+	if panel.TryFileAssociation(pf, panel.AssocExecute) {
 		t.Error("disabled slot must not intercept")
 	}
 }
@@ -136,19 +138,19 @@ func TestFileAssociation_DisabledSlot_NotRun(t *testing.T) {
 // TestFileAssociation_WrongKind_NotRun ensures a slot enabled for
 // View doesn't fire for an Execute lookup, and vice versa.
 func TestFileAssociation_WrongKind_NotRun(t *testing.T) {
-	withTempAssociations(t, []FileAssoc{
+	withTempAssociations(t, []panel.FileAssoc{
 		{
 			Mask:     "*.png",
-			Commands: [assocKindCount]string{AssocView: "feh !.!"},
-			Enabled:  [assocKindCount]bool{AssocView: true},
+			Commands: [panel.AssocKindCount]string{panel.AssocView: "feh !.!"},
+			Enabled:  [panel.AssocKindCount]bool{panel.AssocView: true},
 		},
 	})
 
 	pf, _ := setupPanelWithFile(t, "pic.png")
-	if tryFileAssociation(pf, AssocExecute) {
+	if panel.TryFileAssociation(pf, panel.AssocExecute) {
 		t.Error("View-only association must not intercept Execute")
 	}
-	if !tryFileAssociation(pf, AssocView) {
+	if !panel.TryFileAssociation(pf, panel.AssocView) {
 		t.Error("View-only association should intercept View lookup")
 	}
 }
@@ -157,20 +159,20 @@ func TestFileAssociation_WrongKind_NotRun(t *testing.T) {
 // the default dispatch (cd for Enter, size calc for F3, attributes
 // for F4). Associations only care about files.
 func TestFileAssociation_Directory_NotIntercepted(t *testing.T) {
-	withTempAssociations(t, []FileAssoc{
+	withTempAssociations(t, []panel.FileAssoc{
 		{
 			Mask:     "*",
-			Commands: [assocKindCount]string{AssocExecute: "echo hit"},
-			Enabled:  [assocKindCount]bool{AssocExecute: true},
+			Commands: [panel.AssocKindCount]string{panel.AssocExecute: "echo hit"},
+			Enabled:  [panel.AssocKindCount]bool{panel.AssocExecute: true},
 		},
 	})
 
 	pf, _ := setupPanelWithFile(t, "some_subdir")
-	fsp := pf.panels[pf.activeIdx].(*FileSystemPanel)
+	fsp := pf.Panels[pf.ActiveIdx].(*panel.FileSystemPanel)
 	// Flip the cursor's entry to a directory.
-	fsp.entries[1].IsDir = true
+	fsp.Entries[1].IsDir = true
 
-	if tryFileAssociation(pf, AssocExecute) {
+	if panel.TryFileAssociation(pf, panel.AssocExecute) {
 		t.Error("directories must never be intercepted by associations")
 	}
 }
@@ -179,30 +181,30 @@ func TestFileAssociation_Directory_NotIntercepted(t *testing.T) {
 // match UX: no direct execution, a VMenu appears on top of the frame
 // stack listing the candidates.
 func TestFileAssociation_MultipleMatches_ShowsPicker(t *testing.T) {
-	withTempAssociations(t, []FileAssoc{
+	withTempAssociations(t, []panel.FileAssoc{
 		{
 			Mask:        "*.png",
 			Description: "First",
-			Commands:    [assocKindCount]string{AssocExecute: "eog !.!"},
-			Enabled:     [assocKindCount]bool{AssocExecute: true},
+			Commands:    [panel.AssocKindCount]string{panel.AssocExecute: "eog !.!"},
+			Enabled:     [panel.AssocKindCount]bool{panel.AssocExecute: true},
 		},
 		{
 			Mask:        "*.png",
 			Description: "Second",
-			Commands:    [assocKindCount]string{AssocExecute: "feh !.!"},
-			Enabled:     [assocKindCount]bool{AssocExecute: true},
+			Commands:    [panel.AssocKindCount]string{panel.AssocExecute: "feh !.!"},
+			Enabled:     [panel.AssocKindCount]bool{panel.AssocExecute: true},
 		},
 	})
 
 	pf, pty := setupPanelWithFile(t, "pic.png")
 
-	if !tryFileAssociation(pf, AssocExecute) {
+	if !panel.TryFileAssociation(pf, panel.AssocExecute) {
 		t.Fatal("expected intercept with 2 matches")
 	}
 
 	// Two matches must show a picker, not run either command yet.
-	if len(pty.written) != 0 {
-		t.Errorf("PTY must be untouched until the user picks; got %q", pty.written)
+	if len(pty.Written) != 0 {
+		t.Errorf("PTY must be untouched until the user picks; got %q", pty.Written)
 	}
 	top := vtui.FrameManager.GetTopFrame()
 	if top == nil || top.GetType() != vtui.TypeMenu {
@@ -221,30 +223,30 @@ func TestFileAssociation_MultipleMatches_ShowsPicker(t *testing.T) {
 // picker appears, user hits Enter on row 1, term.PTY gets the second
 // command (verifying UserData routing).
 func TestFileAssociation_PickerRunsChosenCommand(t *testing.T) {
-	withTempAssociations(t, []FileAssoc{
+	withTempAssociations(t, []panel.FileAssoc{
 		{
 			Mask:        "*.png",
 			Description: "First",
-			Commands:    [assocKindCount]string{AssocExecute: "eog !.!"},
-			Enabled:     [assocKindCount]bool{AssocExecute: true},
+			Commands:    [panel.AssocKindCount]string{panel.AssocExecute: "eog !.!"},
+			Enabled:     [panel.AssocKindCount]bool{panel.AssocExecute: true},
 		},
 		{
 			Mask:        "*.png",
 			Description: "Second",
-			Commands:    [assocKindCount]string{AssocExecute: "feh !.!"},
-			Enabled:     [assocKindCount]bool{AssocExecute: true},
+			Commands:    [panel.AssocKindCount]string{panel.AssocExecute: "feh !.!"},
+			Enabled:     [panel.AssocKindCount]bool{panel.AssocExecute: true},
 		},
 	})
 
 	pf, pty := setupPanelWithFile(t, "pic.png")
-	tryFileAssociation(pf, AssocExecute)
+	panel.TryFileAssociation(pf, panel.AssocExecute)
 
 	top := vtui.FrameManager.GetTopFrame()
 	menu := top.(*vtui.VMenu)
 	menu.SetSelectPos(1) // pick "Second"
 	// Fire OnAction to simulate Enter (the callback is what routes the
 	// pick to the run). Then drain the task queue: the OnAction posts a
-	// task that runs the command, and executeMenuCommands may enqueue
+	// task that runs the command, and panel.ExecuteMenuCommands may enqueue
 	// further tasks on its way to the term.PTY.
 	menu.OnAction(1)
 	// Drain the queue with a short timeout: PostTask hands off to an
@@ -260,7 +262,7 @@ drain:
 		}
 	}
 
-	written := string(pty.written)
+	written := string(pty.Written)
 	if !strings.Contains(written, "feh pic.png") {
 		t.Errorf("PTY did not receive the picked command; got %q", written)
 	}
@@ -273,20 +275,20 @@ drain:
 // syntax end-to-end through the dispatcher — a file matching the
 // include but also the exclude must NOT trigger the association.
 func TestFileAssociation_ExcludeMask(t *testing.T) {
-	withTempAssociations(t, []FileAssoc{
+	withTempAssociations(t, []panel.FileAssoc{
 		{
 			Mask:     "*.png|thumb_*",
-			Commands: [assocKindCount]string{AssocView: "feh !.!"},
-			Enabled:  [assocKindCount]bool{AssocView: true},
+			Commands: [panel.AssocKindCount]string{panel.AssocView: "feh !.!"},
+			Enabled:  [panel.AssocKindCount]bool{panel.AssocView: true},
 		},
 	})
 
 	pf, pty := setupPanelWithFile(t, "thumb_pic.png")
-	if tryFileAssociation(pf, AssocView) {
+	if panel.TryFileAssociation(pf, panel.AssocView) {
 		t.Error("thumb_* exclude should veto pic.png match")
 	}
-	if len(pty.written) != 0 {
-		t.Errorf("PTY should be untouched; got %q", pty.written)
+	if len(pty.Written) != 0 {
+		t.Errorf("PTY should be untouched; got %q", pty.Written)
 	}
 }
 
@@ -297,8 +299,8 @@ func TestFileAssociation_EditorAddSavesAndReloads(t *testing.T) {
 	path := withTempAssociations(t, nil)
 
 	pf, _ := setupPanelWithFile(t, "anything")
-	s := &assocEditorState{pf: pf, sourcePath: path}
-	s.editAt(0, true)
+	s := &panel.AssocEditorState{Pf: pf, SourcePath: path}
+	s.EditAt(0, true)
 
 	top := vtui.FrameManager.GetTopFrame()
 	dlg, ok := top.(*vtui.Window)
@@ -320,17 +322,17 @@ func TestFileAssociation_EditorAddSavesAndReloads(t *testing.T) {
 			checks = append(checks, v)
 		}
 	}
-	if len(edits) < 2+assocKindCount {
+	if len(edits) < 2+panel.AssocKindCount {
 		t.Fatalf("edit dialog missing edits, got %d", len(edits))
 	}
-	if len(checks) != assocKindCount {
+	if len(checks) != panel.AssocKindCount {
 		t.Fatalf("edit dialog missing checkboxes, got %d", len(checks))
 	}
 	edits[0].SetText("*.md,*.markdown")
 	edits[1].SetText("Markdown")
-	// Enable AssocExecute (idx 0) with a command.
-	checks[AssocExecute].State = 1
-	edits[2+AssocExecute].SetText("view-md !.!")
+	// Enable panel.AssocExecute (idx 0) with a command.
+	checks[panel.AssocExecute].State = 1
+	edits[2+panel.AssocExecute].SetText("view-md !.!")
 
 	// Find and click the Save button.
 	var saved *vtui.Button
@@ -346,7 +348,7 @@ func TestFileAssociation_EditorAddSavesAndReloads(t *testing.T) {
 	saved.OnClick()
 
 	// Read the file back and assert.
-	loaded, err := LoadAssociations(path)
+	loaded, err := panel.LoadAssociations(path)
 	if err != nil {
 		t.Fatalf("reload failed: %v", err)
 	}
@@ -359,10 +361,10 @@ func TestFileAssociation_EditorAddSavesAndReloads(t *testing.T) {
 	if loaded[0].Description != "Markdown" {
 		t.Errorf("description = %q", loaded[0].Description)
 	}
-	if !loaded[0].Enabled[AssocExecute] {
+	if !loaded[0].Enabled[panel.AssocExecute] {
 		t.Error("AssocExecute should be enabled")
 	}
-	if got := loaded[0].Commands[AssocExecute]; got != "view-md !.!" {
+	if got := loaded[0].Commands[panel.AssocExecute]; got != "view-md !.!" {
 		t.Errorf("execute cmd = %q", got)
 	}
 }
@@ -405,19 +407,19 @@ func TestFileAssociation_LangKeysResolve(t *testing.T) {
 // confirmation is destructive and must render on the red WarnDialog
 // palette, matching the file-manager delete confirmation.
 func TestFileAssociation_DeleteConfirmIsWarning(t *testing.T) {
-	withTempAssociations(t, []FileAssoc{
+	withTempAssociations(t, []panel.FileAssoc{
 		{
 			Mask:        "*.md",
 			Description: "Markdown",
-			Commands:    [assocKindCount]string{AssocExecute: "cat !.!"},
-			Enabled:     [assocKindCount]bool{AssocExecute: true},
+			Commands:    [panel.AssocKindCount]string{panel.AssocExecute: "cat !.!"},
+			Enabled:     [panel.AssocKindCount]bool{panel.AssocExecute: true},
 		},
 	})
 	pf, _ := setupPanelWithFile(t, "readme.md")
-	ShowFileAssociations(pf)
+	panel.ShowFileAssociations(pf)
 
 	top := vtui.FrameManager.GetTopFrame()
-	umf, ok := top.(*userMenuFrame)
+	umf, ok := top.(*panel.UserMenuFrame)
 	if !ok {
 		t.Fatalf("expected *userMenuFrame on top after ShowFileAssociations, got %T", top)
 	}

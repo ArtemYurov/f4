@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -19,7 +20,7 @@ func writeTemp(t *testing.T, content string) string {
 }
 
 func TestLoadMainMenu_MissingFile(t *testing.T) {
-	items, err := LoadMainMenu(filepath.Join(t.TempDir(), "does_not_exist.ini"))
+	items, err := panel.LoadMainMenu(filepath.Join(t.TempDir(), "does_not_exist.ini"))
 	if err != nil {
 		t.Fatalf("expected nil error for missing file, got %v", err)
 	}
@@ -35,11 +36,11 @@ HotKey=c
 Label=open VSCode
 Submenu=0
 `)
-	items, err := LoadMainMenu(p)
+	items, err := panel.LoadMainMenu(p)
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}
-	want := []UserMenuItem{{
+	want := []panel.UserMenuItem{{
 		HotKey:   "c",
 		Label:    "open VSCode",
 		Commands: []string{"code ."},
@@ -58,7 +59,7 @@ HotKey=m
 Label=multi
 Submenu=0
 `)
-	items, _ := LoadMainMenu(p)
+	items, _ := panel.LoadMainMenu(p)
 	if len(items) != 1 {
 		t.Fatalf("want 1 item, got %d", len(items))
 	}
@@ -87,7 +88,7 @@ HotKey=a
 Label=attach
 Submenu=0
 `)
-	items, _ := LoadMainMenu(p)
+	items, _ := panel.LoadMainMenu(p)
 	if len(items) != 1 {
 		t.Fatalf("want 1 item, got %d", len(items))
 	}
@@ -126,7 +127,7 @@ HotKey=c
 Label=C
 Submenu=0
 `)
-	items, _ := LoadMainMenu(p)
+	items, _ := panel.LoadMainMenu(p)
 	if len(items) != 1 || !items[0].IsSubmenu() {
 		t.Fatalf("top: %#v", items)
 	}
@@ -155,7 +156,7 @@ Submenu=0
 [Unrelated]
 Foo=bar
 `)
-	items, _ := LoadMainMenu(p)
+	items, _ := panel.LoadMainMenu(p)
 	if len(items) != 1 || items[0].Label != "mine" {
 		t.Fatalf("foreign sections not skipped: %#v", items)
 	}
@@ -175,7 +176,7 @@ HotKey=c
 Label=C
 Submenu=0
 `)
-	items, _ := LoadMainMenu(p)
+	items, _ := panel.LoadMainMenu(p)
 	if len(items) != 1 {
 		t.Fatalf("indexing must be contiguous; got %d items: %#v", len(items), items)
 	}
@@ -187,7 +188,7 @@ HotKey=e
 Label=empty
 Submenu=1
 `)
-	items, _ := LoadMainMenu(p)
+	items, _ := panel.LoadMainMenu(p)
 	if len(items) != 1 || !items[0].IsSubmenu() {
 		t.Fatalf("expected one submenu item, got %#v", items)
 	}
@@ -202,16 +203,16 @@ HotKey=--
 Label=
 Submenu=0
 `)
-	items, _ := LoadMainMenu(p)
+	items, _ := panel.LoadMainMenu(p)
 	if len(items) != 1 || !items[0].IsSeparator() {
 		t.Fatalf("expected separator, got %#v", items)
 	}
 }
 
 func TestSaveMainMenu_RoundTrip(t *testing.T) {
-	in := []UserMenuItem{
+	in := []panel.UserMenuItem{
 		{HotKey: "c", Label: "VSCode", Commands: []string{"code ."}},
-		{HotKey: "t", Label: "tmux", Submenu: []UserMenuItem{
+		{HotKey: "t", Label: "tmux", Submenu: []panel.UserMenuItem{
 			{HotKey: "l", Label: "list", Commands: []string{"tmux ls"}},
 			{HotKey: "a", Label: "attach", Commands: []string{"tmux attach -t main"}},
 		}},
@@ -220,10 +221,10 @@ func TestSaveMainMenu_RoundTrip(t *testing.T) {
 	}
 	dir := t.TempDir()
 	p := filepath.Join(dir, "out.ini")
-	if err := SaveMainMenu(p, in); err != nil {
+	if err := panel.SaveMainMenu(p, in); err != nil {
 		t.Fatalf("save: %v", err)
 	}
-	out, err := LoadMainMenu(p)
+	out, err := panel.LoadMainMenu(p)
 	if err != nil {
 		t.Fatalf("reload: %v", err)
 	}
@@ -236,11 +237,11 @@ func TestSaveMainMenu_RoundTrip(t *testing.T) {
 }
 
 func TestSaveMainMenu_DeterministicAndAlphabetical(t *testing.T) {
-	in := []UserMenuItem{
+	in := []panel.UserMenuItem{
 		{HotKey: "c", Label: "VSCode", Commands: []string{"code ."}},
 	}
 	p := filepath.Join(t.TempDir(), "det.ini")
-	if err := SaveMainMenu(p, in); err != nil {
+	if err := panel.SaveMainMenu(p, in); err != nil {
 		t.Fatalf("save: %v", err)
 	}
 	data, _ := os.ReadFile(p)
@@ -256,12 +257,12 @@ Submenu=0
 }
 
 func TestSaveMainMenu_BlankLineBetweenSections(t *testing.T) {
-	in := []UserMenuItem{
+	in := []panel.UserMenuItem{
 		{HotKey: "a", Label: "A", Commands: []string{"a"}},
 		{HotKey: "b", Label: "B", Commands: []string{"b"}},
 	}
 	p := filepath.Join(t.TempDir(), "blanks.ini")
-	_ = SaveMainMenu(p, in)
+	_ = panel.SaveMainMenu(p, in)
 	data, _ := os.ReadFile(p)
 	if !strings.Contains(string(data), "Submenu=0\n\n[UserMenu/MainMenu/Item1]") {
 		t.Fatalf("expected blank line between sibling sections, got:\n%s", data)
@@ -271,7 +272,7 @@ func TestSaveMainMenu_BlankLineBetweenSections(t *testing.T) {
 func TestSaveMainMenu_CreatesParentDirs(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "nested", "deeper", "main_menu.ini")
-	if err := SaveMainMenu(p, []UserMenuItem{{HotKey: "a", Label: "a", Commands: []string{"a"}}}); err != nil {
+	if err := panel.SaveMainMenu(p, []panel.UserMenuItem{{HotKey: "a", Label: "a", Commands: []string{"a"}}}); err != nil {
 		t.Fatalf("save: %v", err)
 	}
 	if _, err := os.Stat(p); err != nil {
@@ -332,7 +333,7 @@ Submenu=0
 
 func TestLoadMainMenu_RealFar2lFile(t *testing.T) {
 	p := writeTemp(t, realFar2lFixture)
-	items, err := LoadMainMenu(p)
+	items, err := panel.LoadMainMenu(p)
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}
@@ -364,15 +365,15 @@ func TestSaveMainMenu_RealFar2lFile_RoundTripSemantics(t *testing.T) {
 	// Save -> load -> compare. We don't require byte-identical output to
 	// the original (far2l's whitespace varies), only structural equality.
 	src := writeTemp(t, realFar2lFixture)
-	items, err := LoadMainMenu(src)
+	items, err := panel.LoadMainMenu(src)
 	if err != nil {
 		t.Fatalf("initial load: %v", err)
 	}
 	dst := filepath.Join(t.TempDir(), "out.ini")
-	if err := SaveMainMenu(dst, items); err != nil {
+	if err := panel.SaveMainMenu(dst, items); err != nil {
 		t.Fatalf("save: %v", err)
 	}
-	items2, err := LoadMainMenu(dst)
+	items2, err := panel.LoadMainMenu(dst)
 	if err != nil {
 		t.Fatalf("reload: %v", err)
 	}
@@ -383,13 +384,13 @@ func TestSaveMainMenu_RealFar2lFile_RoundTripSemantics(t *testing.T) {
 
 func TestUserMenuItem_IsSeparator(t *testing.T) {
 	cases := []struct {
-		it   UserMenuItem
+		it   panel.UserMenuItem
 		want bool
 	}{
-		{UserMenuItem{HotKey: "--"}, true},
-		{UserMenuItem{HotKey: "-"}, false},
-		{UserMenuItem{HotKey: ""}, false},
-		{UserMenuItem{HotKey: "a"}, false},
+		{panel.UserMenuItem{HotKey: "--"}, true},
+		{panel.UserMenuItem{HotKey: "-"}, false},
+		{panel.UserMenuItem{HotKey: ""}, false},
+		{panel.UserMenuItem{HotKey: "a"}, false},
 	}
 	for _, c := range cases {
 		if got := c.it.IsSeparator(); got != c.want {
@@ -399,9 +400,9 @@ func TestUserMenuItem_IsSeparator(t *testing.T) {
 }
 
 func TestUserMenuItem_IsSubmenu(t *testing.T) {
-	leaf := UserMenuItem{HotKey: "a", Commands: []string{"x"}}
-	emptySub := UserMenuItem{HotKey: "s", Submenu: []UserMenuItem{}}
-	fullSub := UserMenuItem{HotKey: "s", Submenu: []UserMenuItem{{HotKey: "x"}}}
+	leaf := panel.UserMenuItem{HotKey: "a", Commands: []string{"x"}}
+	emptySub := panel.UserMenuItem{HotKey: "s", Submenu: []panel.UserMenuItem{}}
+	fullSub := panel.UserMenuItem{HotKey: "s", Submenu: []panel.UserMenuItem{{HotKey: "x"}}}
 	if leaf.IsSubmenu() {
 		t.Errorf("leaf reported as submenu")
 	}
@@ -426,7 +427,7 @@ HotKey=o
 Label=ok
 Submenu=0
 `)
-	items, _ := LoadMainMenu(p)
+	items, _ := panel.LoadMainMenu(p)
 	if len(items) != 1 || !items[0].IsSubmenu() || len(items[0].Submenu) != 1 {
 		t.Fatalf("submenu flag whitespace not tolerated: %#v", items)
 	}

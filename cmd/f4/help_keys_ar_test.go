@@ -3,14 +3,15 @@ package main
 import (
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/dialog"
+	"github.com/unxed/f4/internal/keymap"
 	"strings"
 	"testing"
 )
 
 func TestGenerateKeysHelpTopic_Arabic(t *testing.T) {
-	old := GlobalHotkeysMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	defer func() { GlobalHotkeysMgr = old }()
+	old := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	defer func() { keymap.GlobalHotkeysMgr = old }()
 
 	oldLang := config.App.Language
 	defer func() {
@@ -33,9 +34,9 @@ func TestGenerateKeysHelpTopic_Arabic(t *testing.T) {
 }
 
 func TestGenerateKeysHelpTopic_HelpLanguageOverridesUI_Arabic(t *testing.T) {
-	old := GlobalHotkeysMgr
-	GlobalHotkeysMgr = NewHotkeyManager("")
-	defer func() { GlobalHotkeysMgr = old }()
+	old := keymap.GlobalHotkeysMgr
+	keymap.GlobalHotkeysMgr = keymap.NewHotkeyManager("")
+	defer func() { keymap.GlobalHotkeysMgr = old }()
 
 	oldLang := config.App.Language
 	defer func() {

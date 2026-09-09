@@ -3,6 +3,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,7 +22,7 @@ func TestPanelsFrame_DriveMenu_CursorOnCurrentDrive(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	theme.SetDefaultF4Palette()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
@@ -33,17 +35,17 @@ func TestPanelsFrame_DriveMenu_CursorOnCurrentDrive(t *testing.T) {
 	if vol == "" {
 		t.Skip("current directory has no drive letter")
 	}
-	left := pf.panels[0].(*FileSystemPanel)
-	left.vfs = vfs.NewOSVFS(cur)
-	if err := left.vfs.SetPath(cur); err != nil {
+	left := pf.Panels[0].(*panel.FileSystemPanel)
+	left.Vfs = vfs.NewOSVFS(cur)
+	if err := left.Vfs.SetPath(cur); err != nil {
 		t.Fatal(err)
 	}
 
 	// Open Alt+F1 (left panel drive menu).
-	pf.showDriveMenu(0)
+	pf.ShowDriveMenu(0)
 
 	top := vtui.FrameManager.GetTopFrame()
-	menu, ok := driveMenuFromFrame(top)
+	menu, ok := paneltest.DriveMenuFromFrame(top)
 	if !ok {
 		t.Fatal("Drive menu not opened")
 	}

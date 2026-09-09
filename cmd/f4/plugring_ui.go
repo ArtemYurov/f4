@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
 	"io"
 	"net/http"
 	"os"
@@ -115,7 +116,7 @@ func BuildPlugRingRows(items []plughost.PlugRingItem, installed map[string]plugh
 	return rows, selectable
 }
 
-func actionPlugRing(pf *PanelsFrame) {
+func actionPlugRing(pf *panel.PanelsFrame) {
 	w, h := 76, 22
 
 	btnInstall := vtui.NewButton(0, 0, i18n.Msg("PlugRing.BtnInstall"))
@@ -224,7 +225,7 @@ func entrypointNeedsInterpreterOnPath(entrypoint string) bool {
 	return !strings.ContainsAny(interpreter, "/\\") && !strings.HasPrefix(interpreter, ".")
 }
 
-func actionInstallPlugRingItem(pf *PanelsFrame, parent *vtui.Window, item plughost.PlugRingItem, refresh func()) {
+func actionInstallPlugRingItem(pf *panel.PanelsFrame, parent *vtui.Window, item plughost.PlugRingItem, refresh func()) {
 	if !safePlugRingID(item.ID) {
 		vtui.ShowMessageOn(parent, " Error ", "Plugin catalog contains an invalid ID.", []string{"&Ok"})
 		return
@@ -386,7 +387,7 @@ func actionInstallPlugRingItem(pf *PanelsFrame, parent *vtui.Window, item plugho
 	})
 }
 
-func actionRemovePlugRingItem(pf *PanelsFrame, parent *vtui.Window, item plughost.PlugRingItem, refresh func()) {
+func actionRemovePlugRingItem(pf *panel.PanelsFrame, parent *vtui.Window, item plughost.PlugRingItem, refresh func()) {
 	if !safePlugRingID(item.ID) {
 		vtui.ShowMessageOn(parent, " Error ", "Plugin catalog contains an invalid ID.", []string{"&Ok"})
 		return

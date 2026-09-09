@@ -134,6 +134,13 @@ var architectureLayers = map[string]int{
 
 	"internal/dialog": 3,
 
+	// The panels frame sits at the top of the interactive layer: it holds the
+	// command line, the terminal view and the file panels at once, and reaches
+	// the editor and the viewer to open a file. Everything above it is the
+	// application, which is why what it needs from there is a seam in host.go
+	// rather than an import.
+	"internal/panel": 3,
+
 	// Test scaffolding, placed by what it may import: testutil imports no
 	// package of ours, paneltest sits above the three it builds a frame from.
 	// Neither may be imported from production code.

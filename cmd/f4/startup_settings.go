@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/unxed/f4/internal/config"
 	"github.com/unxed/f4/internal/i18n"
+	"github.com/unxed/f4/internal/panel"
 	"github.com/unxed/vtui"
 )
 
@@ -26,7 +27,7 @@ func startupBackendLabels(choices []string) []string {
 // --gui/--tty flag: which renderer family it opens, and which backend each
 // family uses. The dialog only writes the configuration; the command line
 // still overrides all three settings on any individual run.
-func actionStartupSettings(pf *PanelsFrame) {
+func actionStartupSettings(pf *panel.PanelsFrame) {
 	width, height := 62, 14
 	dlg := vtui.NewCenteredDialog(width, height, i18n.Msg("StartupSettings.Title"))
 	dlg.ShowClose = true

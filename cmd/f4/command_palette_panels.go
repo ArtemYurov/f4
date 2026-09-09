@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
 	"os"
 	"strings"
 
@@ -11,8 +12,8 @@ import (
 	"github.com/unxed/vtui"
 )
 
-func commandPalettePanelsContextEntries(pf *PanelsFrame) []commandPaletteEntry {
-	if pf == nil || pf.closed || !pf.showPanels {
+func commandPalettePanelsContextEntries(pf *panel.PanelsFrame) []commandPaletteEntry {
+	if pf == nil || pf.Closed || !pf.ShowPanels {
 		return nil
 	}
 	category := action.PlainLabel(i18n.Msg("Help.Area.Shell"))
@@ -20,11 +21,11 @@ func commandPalettePanelsContextEntries(pf *PanelsFrame) []commandPaletteEntry {
 		commandPaletteLocalizedPanelKeyEntry(pf, "Panel.ActivateSelected", "CommandPalette.Panel.ActivateSelected", "Activate selected item", "CommandPalette.Panel.ActivateSelected.Desc", "Open the selected item or execute it", "Enter", "Enter", category, nil, "Menu.Files.View"),
 		commandPaletteLocalizedPanelKeyEntry(pf, "Panel.SwitchActive", "CommandPalette.Panel.SwitchActive", "Switch active panel", "CommandPalette.Panel.SwitchActive.Desc", "Move focus to the other panel", "Tab", "Tab", category, nil, "Panel.Other"),
 	}
-	if pf.getActivePanel() != nil {
+	if pf.GetActivePanel() != nil {
 		entries = append(entries, commandPaletteLocalizedPanelKeyEntry(pf, "Panel.ToggleSelection", "CommandPalette.Panel.ToggleSelection", "Toggle item selection", "CommandPalette.Panel.ToggleSelection.Desc", "Toggle selection of the current item and advance", "Ins", "Ins", category, nil, "Help.PanelNav"))
 	}
-	if panel := pf.getActivePanel(); panel != nil {
-		if task := panel.providerOpenTask; task != nil {
+	if pnl := pf.GetActivePanel(); pnl != nil {
+		if task := pnl.ProviderOpenTask; task != nil {
 			entries = append(entries, commandPaletteLocalizedPanelKeyEntry(
 				pf,
 				"Provider.CancelOpen",
@@ -35,11 +36,11 @@ func commandPalettePanelsContextEntries(pf *PanelsFrame) []commandPaletteEntry {
 				"Esc",
 				"Esc",
 				category,
-				func() bool { return pf.getActivePanel() == panel && panel.providerOpenTask == task },
+				func() bool { return pf.GetActivePanel() == pnl && pnl.ProviderOpenTask == task },
 				"Provider.Opening",
 			))
 		}
-		if panel.fastFindMode {
+		if pnl.FastFindMode {
 			entry := commandPaletteLocalizedPanelKeyEntry(
 				pf,
 				"FastFind.ToggleMatchMode",
@@ -50,16 +51,16 @@ func commandPalettePanelsContextEntries(pf *PanelsFrame) []commandPaletteEntry {
 				"F2",
 				"F2",
 				category,
-				func() bool { return pf.getActivePanel() == panel && panel.fastFindMode },
+				func() bool { return pf.GetActivePanel() == pnl && pnl.FastFindMode },
 				"Help.FastFind",
 			)
-			entry.Checked = strings.HasPrefix(panel.fastFindStr, "*")
+			entry.Checked = strings.HasPrefix(pnl.FastFindStr, "*")
 			entries = append(entries, entry)
 		}
 	}
 
-	if pf.searchFirstMode() {
-		commandLineFocused := pf.commandLineFocused
+	if pf.SearchFirstMode() {
+		commandLineFocused := pf.CommandLineFocused
 		entry := commandPaletteLocalizedPanelKeyEntry(
 			pf,
 			"Panel.ToggleCommandLineFocus",
@@ -71,7 +72,7 @@ func commandPalettePanelsContextEntries(pf *PanelsFrame) []commandPaletteEntry {
 			"`",
 			category,
 			func() bool {
-				return pf.showPanels && pf.searchFirstMode() && pf.commandLineFocused == commandLineFocused
+				return pf.ShowPanels && pf.SearchFirstMode() && pf.CommandLineFocused == commandLineFocused
 			},
 			"Config.NavigationMode.SearchFirst",
 		)
@@ -79,7 +80,7 @@ func commandPalettePanelsContextEntries(pf *PanelsFrame) []commandPaletteEntry {
 		entries = append(entries, entry)
 	}
 
-	if target := pf.currentRemotePTYInterruptTarget(); target != nil {
+	if target := pf.CurrentRemotePTYInterruptTarget(); target != nil {
 		entries = append(entries, commandPaletteLocalizedPanelKeyEntry(
 			pf,
 			"Panel.InterruptRemoteCommand",
@@ -90,15 +91,15 @@ func commandPalettePanelsContextEntries(pf *PanelsFrame) []commandPaletteEntry {
 			"Ctrl+C",
 			"CtrlC",
 			category,
-			func() bool { return target.matches(pf.currentRemotePTYInterruptTarget()) },
+			func() bool { return target.Matches(pf.CurrentRemotePTYInterruptTarget()) },
 			"Help.Terminal",
 		))
 	}
 
-	if pf.activeIdx >= 0 && pf.activeIdx < len(pf.altPanels) {
-		switch panel := pf.altPanels[pf.activeIdx].(type) {
-		case *InfoPanel:
-			if panel != nil && panel.IsFocused() {
+	if pf.ActiveIdx >= 0 && pf.ActiveIdx < len(pf.AltPanels) {
+		switch pnl := pf.AltPanels[pf.ActiveIdx].(type) {
+		case *panel.InfoPanel:
+			if pnl != nil && pnl.IsFocused() {
 				entries = append(entries, commandPaletteLocalizedPanelKeyEntry(
 					pf,
 					"InfoPanel.CopyCurrent",
@@ -109,15 +110,15 @@ func commandPalettePanelsContextEntries(pf *PanelsFrame) []commandPaletteEntry {
 					"C",
 					"C",
 					action.PlainLabel(i18n.Msg("InfoPanel.Title")),
-					func() bool { return commandPaletteInfoPanelFocused(pf, panel) },
+					func() bool { return commandPaletteInfoPanelFocused(pf, pnl) },
 					"InfoPanel.Title",
 				))
 			}
-		case *QuickViewPanel:
-			if panel != nil && panel.IsFocused() {
+		case *panel.QuickViewPanel:
+			if pnl != nil && pnl.IsFocused() {
 				labelKey := "KeyBar.F2Wrap"
 				english := "Enable wrapping in Quick View"
-				if panel.wrap {
+				if pnl.Wrap {
 					labelKey = "KeyBar.F2Unwrap"
 					english = "Disable wrapping in Quick View"
 				}
@@ -131,14 +132,14 @@ func commandPalettePanelsContextEntries(pf *PanelsFrame) []commandPaletteEntry {
 					"F2",
 					"F2",
 					action.PlainLabel(i18n.Msg("QuickView.Title")),
-					func() bool { return commandPaletteQuickViewPanelFocused(pf, panel) },
+					func() bool { return commandPaletteQuickViewPanelFocused(pf, pnl) },
 					"QuickView.Title",
 				)
-				entry.Checked = panel.wrap
+				entry.Checked = pnl.Wrap
 				entries = append(entries, entry)
 			}
 		case *AIChatPanel:
-			if panel != nil && panel.IsFocused() {
+			if pnl != nil && pnl.IsFocused() {
 				entries = append(entries, commandPaletteLocalizedPanelKeyEntry(
 					pf,
 					"AI.CopyLastResponse",
@@ -149,14 +150,14 @@ func commandPalettePanelsContextEntries(pf *PanelsFrame) []commandPaletteEntry {
 					"Right Ctrl+C",
 					"RCtrlC",
 					action.PlainLabel(i18n.Msg("Action.AI.ViewChat")),
-					func() bool { return commandPaletteAIChatPanelFocused(pf, panel) },
+					func() bool { return commandPaletteAIChatPanelFocused(pf, pnl) },
 					"Action.AI.ViewChat",
 				))
 				barKind := aiBarNone
-				if panel.focusedLinkIdx == -2 {
-					barKind = panel.barKind()
+				if pnl.focusedLinkIdx == -2 {
+					barKind = pnl.barKind()
 				}
-				entries = append(entries, commandPaletteAIChatFocusedEntries(pf, panel, barKind)...)
+				entries = append(entries, commandPaletteAIChatFocusedEntries(pf, pnl, barKind)...)
 			}
 		}
 	}
@@ -166,7 +167,7 @@ func commandPalettePanelsContextEntries(pf *PanelsFrame) []commandPaletteEntry {
 }
 
 func commandPaletteLocalizedPanelKeyEntry(
-	pf *PanelsFrame,
+	pf *panel.PanelsFrame,
 	id, labelKey, englishLabel, descKey, englishDescription, shortcut, key, category string,
 	valid func() bool,
 	aliasKeys ...string,
@@ -181,7 +182,7 @@ func commandPaletteLocalizedPanelKeyEntry(
 	)
 	entry.EnglishDescription = englishDescription
 	entry.run = func() bool {
-		if vtui.FrameManager == nil || vtui.FrameManager.GetTopFrame() != pf || pf.closed {
+		if vtui.FrameManager == nil || vtui.FrameManager.GetTopFrame() != pf || pf.Closed {
 			return false
 		}
 		if valid != nil && !valid() {
@@ -192,41 +193,41 @@ func commandPaletteLocalizedPanelKeyEntry(
 	return entry
 }
 
-func commandPaletteInfoPanelFocused(pf *PanelsFrame, panel *InfoPanel) bool {
-	if pf == nil || panel == nil || pf.activeIdx < 0 || pf.activeIdx >= len(pf.altPanels) {
+func commandPaletteInfoPanelFocused(pf *panel.PanelsFrame, pnl *panel.InfoPanel) bool {
+	if pf == nil || pnl == nil || pf.ActiveIdx < 0 || pf.ActiveIdx >= len(pf.AltPanels) {
 		return false
 	}
-	current, ok := pf.altPanels[pf.activeIdx].(*InfoPanel)
-	return ok && current == panel && panel.IsFocused()
+	current, ok := pf.AltPanels[pf.ActiveIdx].(*panel.InfoPanel)
+	return ok && current == pnl && pnl.IsFocused()
 }
 
-func commandPaletteQuickViewPanelFocused(pf *PanelsFrame, panel *QuickViewPanel) bool {
-	if pf == nil || panel == nil || pf.activeIdx < 0 || pf.activeIdx >= len(pf.altPanels) {
+func commandPaletteQuickViewPanelFocused(pf *panel.PanelsFrame, pnl *panel.QuickViewPanel) bool {
+	if pf == nil || pnl == nil || pf.ActiveIdx < 0 || pf.ActiveIdx >= len(pf.AltPanels) {
 		return false
 	}
-	current, ok := pf.altPanels[pf.activeIdx].(*QuickViewPanel)
-	return ok && current == panel && panel.IsFocused()
+	current, ok := pf.AltPanels[pf.ActiveIdx].(*panel.QuickViewPanel)
+	return ok && current == pnl && pnl.IsFocused()
 }
 
-func commandPaletteAIChatPanelFocused(pf *PanelsFrame, panel *AIChatPanel) bool {
-	if pf == nil || panel == nil || pf.activeIdx < 0 || pf.activeIdx >= len(pf.altPanels) {
+func commandPaletteAIChatPanelFocused(pf *panel.PanelsFrame, pnl *AIChatPanel) bool {
+	if pf == nil || pnl == nil || pf.ActiveIdx < 0 || pf.ActiveIdx >= len(pf.AltPanels) {
 		return false
 	}
-	current, ok := pf.altPanels[pf.activeIdx].(*AIChatPanel)
-	return ok && current == panel && panel.IsFocused()
+	current, ok := pf.AltPanels[pf.ActiveIdx].(*AIChatPanel)
+	return ok && current == pnl && pnl.IsFocused()
 }
 
 // commandPaletteAIChatFocusedEntries exposes the keys owned by the currently
 // focused response link or strip. barKind is passed in so discovery remains a
 // pure snapshot; every callback revalidates the live focus and target before
 // routing the key back through AIChatPanel.ProcessKey.
-func commandPaletteAIChatFocusedEntries(pf *PanelsFrame, panel *AIChatPanel, barKind int) []commandPaletteEntry {
-	if !commandPaletteAIChatPanelFocused(pf, panel) {
+func commandPaletteAIChatFocusedEntries(pf *panel.PanelsFrame, pnl *AIChatPanel, barKind int) []commandPaletteEntry {
+	if !commandPaletteAIChatPanelFocused(pf, pnl) {
 		return nil
 	}
 	category := action.PlainLabel(i18n.Msg("Action.AI.ViewChat"))
-	if panel.focusedLinkIdx == -1 {
-		draft := panel.input.GetText()
+	if pnl.focusedLinkIdx == -1 {
+		draft := pnl.input.GetText()
 		if strings.TrimSpace(draft) == "" {
 			return nil
 		}
@@ -241,13 +242,13 @@ func commandPaletteAIChatFocusedEntries(pf *PanelsFrame, panel *AIChatPanel, bar
 			"Enter",
 			category,
 			func() bool {
-				return commandPaletteAIChatPanelFocused(pf, panel) &&
-					panel.focusedLinkIdx == -1 && panel.input.GetText() == draft
+				return commandPaletteAIChatPanelFocused(pf, pnl) &&
+					pnl.focusedLinkIdx == -1 && pnl.input.GetText() == draft
 			},
 			"AI.InputLabel",
 		)}
 	}
-	if panel.focusedLinkIdx == -2 {
+	if pnl.focusedLinkIdx == -2 {
 		if barKind == aiBarNone {
 			return nil
 		}
@@ -264,8 +265,8 @@ func commandPaletteAIChatFocusedEntries(pf *PanelsFrame, panel *AIChatPanel, bar
 			aliasKeys = []string{"AI.ApplyPatchBar"}
 		}
 		barStillFocused := func() bool {
-			return commandPaletteAIChatPanelFocused(pf, panel) &&
-				panel.focusedLinkIdx == -2 && panel.barKind() == barKind
+			return commandPaletteAIChatPanelFocused(pf, pnl) &&
+				pnl.focusedLinkIdx == -2 && pnl.barKind() == barKind
 		}
 		entries := []commandPaletteEntry{commandPaletteLocalizedPanelKeyEntry(
 			pf,
@@ -298,15 +299,15 @@ func commandPaletteAIChatFocusedEntries(pf *PanelsFrame, panel *AIChatPanel, bar
 		return entries
 	}
 
-	linkIndex := panel.focusedLinkIdx
-	if linkIndex < 0 || linkIndex >= len(panel.visibleLinks) {
+	linkIndex := pnl.focusedLinkIdx
+	if linkIndex < 0 || linkIndex >= len(pnl.visibleLinks) {
 		return nil
 	}
-	linkTarget := panel.visibleLinks[linkIndex].target
+	linkTarget := pnl.visibleLinks[linkIndex].target
 	linkStillFocused := func() bool {
-		return commandPaletteAIChatPanelFocused(pf, panel) &&
-			panel.focusedLinkIdx == linkIndex && linkIndex < len(panel.visibleLinks) &&
-			panel.visibleLinks[linkIndex].target == linkTarget
+		return commandPaletteAIChatPanelFocused(pf, pnl) &&
+			pnl.focusedLinkIdx == linkIndex && linkIndex < len(pnl.visibleLinks) &&
+			pnl.visibleLinks[linkIndex].target == linkTarget
 	}
 	return []commandPaletteEntry{
 		commandPaletteLocalizedPanelKeyEntry(
@@ -338,7 +339,7 @@ func commandPaletteAIChatFocusedEntries(pf *PanelsFrame, panel *AIChatPanel, bar
 	}
 }
 
-func commandPalettePanelKeyEntry(pf *PanelsFrame, id, labelKey, englishLabel, description, shortcut, key, category string, aliasKeys ...string) commandPaletteEntry {
+func commandPalettePanelKeyEntry(pf *panel.PanelsFrame, id, labelKey, englishLabel, description, shortcut, key, category string, aliasKeys ...string) commandPaletteEntry {
 	label := i18n.Msg(labelKey)
 	if label == "" || strings.HasPrefix(label, "{") {
 		label = englishLabel
@@ -355,7 +356,7 @@ func commandPalettePanelKeyEntry(pf *PanelsFrame, id, labelKey, englishLabel, de
 		Shortcut:           shortcut,
 		SearchFields:       commandPaletteTranslations(translationKeys...),
 		run: func() bool {
-			if vtui.FrameManager == nil || vtui.FrameManager.GetTopFrame() != pf || pf.closed {
+			if vtui.FrameManager == nil || vtui.FrameManager.GetTopFrame() != pf || pf.Closed {
 				return false
 			}
 			return pf.ProcessKey(keymap.ParseFarKey(key))
@@ -363,10 +364,10 @@ func commandPalettePanelKeyEntry(pf *PanelsFrame, id, labelKey, englishLabel, de
 	}
 }
 
-func commandPaletteBookmarkEntries(pf *PanelsFrame) []commandPaletteEntry {
+func commandPaletteBookmarkEntries(pf *panel.PanelsFrame) []commandPaletteEntry {
 	category := action.PlainLabel(i18n.Msg("Menu.Commands.Bookmarks"))
 	aliases := commandPaletteTranslations("Menu.Commands.Bookmarks", "Action.Panel.Bookmarks.Desc")
-	bookmarks, _ := LoadBookmarks(BookmarksFilePath())
+	bookmarks, _ := panel.LoadBookmarks(panel.BookmarksFilePath())
 	entries := make([]commandPaletteEntry, 0, 21)
 	for slot := range bookmarks {
 		slot := slot
@@ -421,7 +422,7 @@ func commandPaletteBookmarkEntries(pf *PanelsFrame) []commandPaletteEntry {
 				return false
 			}
 			home, _ := os.UserHomeDir()
-			fsp := pf.getActivePanel()
+			fsp := pf.GetActivePanel()
 			if home == "" || fsp == nil {
 				return false
 			}
@@ -432,36 +433,36 @@ func commandPaletteBookmarkEntries(pf *PanelsFrame) []commandPaletteEntry {
 	return entries
 }
 
-func runCommandPaletteBookmarkGoto(pf *PanelsFrame, slot int) bool {
+func runCommandPaletteBookmarkGoto(pf *panel.PanelsFrame, slot int) bool {
 	if !commandPaletteBookmarkFrameActive(pf) || slot < 0 || slot > 9 {
 		return false
 	}
-	bookmarks, err := LoadBookmarks(BookmarksFilePath())
-	fsp := pf.getActivePanel()
+	bookmarks, err := panel.LoadBookmarks(panel.BookmarksFilePath())
+	fsp := pf.GetActivePanel()
 	if err != nil || fsp == nil || strings.TrimSpace(bookmarks[slot].Path) == "" {
 		return false
 	}
-	pf.navigateToBookmark(fsp, bookmarks[slot])
+	pf.NavigateToBookmark(fsp, bookmarks[slot])
 	return true
 }
 
-func runCommandPaletteBookmarkSave(pf *PanelsFrame, slot int) bool {
+func runCommandPaletteBookmarkSave(pf *panel.PanelsFrame, slot int) bool {
 	if !commandPaletteBookmarkFrameActive(pf) || slot < 0 || slot > 9 {
 		return false
 	}
-	fsp := pf.getActivePanel()
-	if fsp == nil || fsp.vfs == nil {
+	fsp := pf.GetActivePanel()
+	if fsp == nil || fsp.Vfs == nil {
 		return false
 	}
-	path := BookmarksFilePath()
-	bookmarks, err := LoadBookmarks(path)
+	path := panel.BookmarksFilePath()
+	bookmarks, err := panel.LoadBookmarks(path)
 	if err != nil {
 		return false
 	}
-	bookmarks[slot] = Bookmark{Path: fsp.vfs.GetPath()}
-	return SaveBookmarks(path, bookmarks) == nil
+	bookmarks[slot] = panel.Bookmark{Path: fsp.Vfs.GetPath()}
+	return panel.SaveBookmarks(path, bookmarks) == nil
 }
 
-func commandPaletteBookmarkFrameActive(pf *PanelsFrame) bool {
-	return pf != nil && !pf.closed && vtui.FrameManager != nil && vtui.FrameManager.GetTopFrame() == pf
+func commandPaletteBookmarkFrameActive(pf *panel.PanelsFrame) bool {
+	return pf != nil && !pf.Closed && vtui.FrameManager != nil && vtui.FrameManager.GetTopFrame() == pf
 }

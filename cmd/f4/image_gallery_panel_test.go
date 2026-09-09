@@ -1,18 +1,19 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
 	"testing"
 
 	"github.com/unxed/f4/vfs"
 )
 
 func TestPanelSelectionByName(t *testing.T) {
-	fp := &FileSystemPanel{
-		entries: []*fileEntry{
+	fp := &panel.FileSystemPanel{
+		Entries: []*panel.FileEntry{
 			{VFSItem: vfs.VFSItem{Name: "..", IsDir: true}},
 			{VFSItem: vfs.VFSItem{Name: "a.png"}},
 		},
-		selectedItems: map[string]bool{},
+		SelectedItems: map[string]bool{},
 	}
 
 	if !fp.SetSelectedByName("a.png", true) {

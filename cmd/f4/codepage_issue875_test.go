@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/unxed/f4/internal/panel"
 	"os"
 	"path/filepath"
 	"strings"
@@ -291,7 +292,7 @@ func TestEditor_Issue875_UTF8BOMDoesNotShiftLines(t *testing.T) {
 }
 
 type issue875EditorRig struct {
-	panels *PanelsFrame
+	panels *panel.PanelsFrame
 	vfs    vfs.VFS
 	dir    string
 }
@@ -312,7 +313,7 @@ func newIssue875EditorRig(t *testing.T) *issue875EditorRig {
 	config.App.EditorDefaultCodePage = 65001
 
 	dir := t.TempDir()
-	panels := NewPanelsFrame()
+	panels := panel.NewPanelsFrame()
 	panels.ResizeConsole(120, 40)
 	return &issue875EditorRig{panels: panels, vfs: vfs.NewOSVFS(dir), dir: dir}
 }

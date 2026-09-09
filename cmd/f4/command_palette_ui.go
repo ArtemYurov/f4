@@ -87,7 +87,7 @@ func commandPaletteDisplayDescription(entry commandPaletteEntry) string {
 
 // newCommandPaletteDialog creates a self-contained modal command picker. It
 // deliberately accepts entries and an executor so filtering and UI behavior
-// can be tested without constructing PanelsFrame (and therefore ConPTY).
+// can be tested without constructing panel.PanelsFrame (and therefore ConPTY).
 func newCommandPaletteDialog(
 	entries []commandPaletteEntry,
 	recent []string,

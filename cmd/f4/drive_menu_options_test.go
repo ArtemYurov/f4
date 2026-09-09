@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"strings"
 	"testing"
 
@@ -13,11 +15,11 @@ import (
 
 func TestDriveMenuPlatformRowsAlignColumns(t *testing.T) {
 	options := config.DriveMenuShowType | config.DriveMenuShowLabel | config.DriveMenuShowFilesystem | config.DriveMenuShowSize
-	rows := []driveMenuPlatformRow{
-		{base: "C:", kind: "fixed", label: "Win10", filesystem: "NTFS", total: "953.0 GiB", free: "300.6 GiB"},
-		{base: "K:", kind: "network", label: "DISK-K", filesystem: "NTFS", total: "13.8 TiB", free: "1.2 TiB"},
+	rows := []panel.DriveMenuPlatformRow{
+		{Base: "C:", Kind: "fixed", Label: "Win10", Filesystem: "NTFS", Total: "953.0 GiB", Free: "300.6 GiB"},
+		{Base: "K:", Kind: "network", Label: "DISK-K", Filesystem: "NTFS", Total: "13.8 TiB", Free: "1.2 TiB"},
 	}
-	lines := driveMenuPlatformRowsText(rows, options)
+	lines := panel.DriveMenuPlatformRowsText(rows, options)
 	if len(lines) != 2 {
 		t.Fatalf("got %d rows, want 2: %q", len(lines), lines)
 	}
@@ -34,23 +36,23 @@ func TestDriveMenuPlatformRowsAlignColumns(t *testing.T) {
 }
 
 func TestDriveMenuPhysicalDiskHasNoTypeDescription(t *testing.T) {
-	got := driveMenuPlatformItemText(sysinfo.DriveEntry{Name: "Physical Disks"}, config.DriveMenuShowType)
+	got := panel.DriveMenuPlatformItemText(sysinfo.DriveEntry{Name: "Physical Disks"}, config.DriveMenuShowType)
 	if got != "Physical Disks" {
 		t.Fatalf("physical disk row = %q, want no type suffix", got)
 	}
 }
 
 func TestDriveMenuOptionsDialogSizeIsContentBased(t *testing.T) {
-	width, height := driveMenuOptionsDialogSize()
+	width, height := panel.DriveMenuOptionsDialogSize()
 	if width >= 78 {
 		t.Fatalf("options dialog width = %d, want narrower than the old fixed width", width)
 	}
-	if height != len(driveMenuOptionSpecs)+7 {
-		t.Fatalf("options dialog height = %d, want %d", height, len(driveMenuOptionSpecs)+7)
+	if height != len(panel.DriveMenuOptionSpecs)+7 {
+		t.Fatalf("options dialog height = %d, want %d", height, len(panel.DriveMenuOptionSpecs)+7)
 	}
 	longest := 0
-	for _, spec := range driveMenuOptionSpecs {
-		label, _, _ := vtui.ParseAmpersandString(i18n.Msg(spec.label))
+	for _, spec := range panel.DriveMenuOptionSpecs {
+		label, _, _ := vtui.ParseAmpersandString(i18n.Msg(spec.Label))
 		if w := vtui.StringWidth(label); w > longest {
 			longest = w
 		}
@@ -67,20 +69,20 @@ func TestDriveMenuOptions_DefaultsAndFormatting(t *testing.T) {
 	if config.ParseDriveMenuOptions("not-a-number") != config.DefaultDriveMenuOptions {
 		t.Fatalf("invalid options did not use defaults")
 	}
-	if got := driveMenuPlatformItemText(sysinfo.DriveEntry{Name: "/ Root"}, config.DriveMenuShowType|config.DriveMenuShowFilesystem); !strings.Contains(got, "/") {
+	if got := panel.DriveMenuPlatformItemText(sysinfo.DriveEntry{Name: "/ Root"}, config.DriveMenuShowType|config.DriveMenuShowFilesystem); !strings.Contains(got, "/") {
 		t.Fatalf("root row lost its name: %q", got)
 	}
-	if got := driveMenuSize(1024*1024*3, false); got != "3 MiB" {
+	if got := panel.DriveMenuSize(1024*1024*3, false); got != "3 MiB" {
 		t.Fatalf("integer drive size = %q, want 3 MiB", got)
 	}
-	if got := driveMenuSize(1024*1024*3, true); !strings.Contains(got, "3.0") {
+	if got := panel.DriveMenuSize(1024*1024*3, true); !strings.Contains(got, "3.0") {
 		t.Fatalf("decimal drive size = %q, want a decimal value", got)
 	}
 }
 
 func TestPanelsFrame_DriveMenu_F9OpensOptions(t *testing.T) {
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
@@ -88,8 +90,8 @@ func TestPanelsFrame_DriveMenu_F9OpensOptions(t *testing.T) {
 	config.App.DriveMenuOptions = config.DefaultDriveMenuOptions
 	t.Cleanup(func() { config.App.DriveMenuOptions = oldOptions })
 
-	pf.showDriveMenu(0)
-	menu, ok := driveMenuFromFrame(vtui.FrameManager.GetTopFrame())
+	pf.ShowDriveMenu(0)
+	menu, ok := paneltest.DriveMenuFromFrame(vtui.FrameManager.GetTopFrame())
 	if !ok {
 		t.Fatalf("drive menu not opened: %T", vtui.FrameManager.GetTopFrame())
 	}

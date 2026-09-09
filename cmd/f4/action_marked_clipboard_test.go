@@ -1,6 +1,9 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -34,31 +37,31 @@ func waitForMarkedClipboard(t *testing.T, want string) string {
 	return vtui.GetClipboard()
 }
 
-// seedMarkedPanel wires up a PanelsFrame whose active panel has the given
+// seedMarkedPanel wires up a panel.PanelsFrame whose active panel has the given
 // entries at the given path, with the first `markCount` entries pre-
 // marked. The frame is pushed onto FrameManager so withPF handlers find it.
-func seedMarkedPanel(t *testing.T, path string, names []string, markCount int) *PanelsFrame {
+func seedMarkedPanel(t *testing.T, path string, names []string, markCount int) *panel.PanelsFrame {
 	t.Helper()
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	t.Cleanup(func() { pf.Close() })
 	pf.ResizeConsole(80, 25)
 
-	fsp := pf.getActivePanel()
-	fsp.vfs = vfs.NewOSVFS(path)
-	if err := fsp.vfs.SetPath(path); err != nil {
+	fsp := pf.GetActivePanel()
+	fsp.Vfs = vfs.NewOSVFS(path)
+	if err := fsp.Vfs.SetPath(path); err != nil {
 		t.Fatal(err)
 	}
 
-	entries := []*fileEntry{{VFSItem: vfs.VFSItem{Name: "..", IsDir: true}}}
+	entries := []*panel.FileEntry{{VFSItem: vfs.VFSItem{Name: "..", IsDir: true}}}
 	for i, n := range names {
-		e := &fileEntry{VFSItem: vfs.VFSItem{Name: n}}
+		e := &panel.FileEntry{VFSItem: vfs.VFSItem{Name: n}}
 		if i < markCount {
 			e.Selected = true
 		}
 		entries = append(entries, e)
 	}
-	fsp.entries = entries
+	fsp.Entries = entries
 	fsp.Refresh()
 
 	vtui.FrameManager.Push(pf)
@@ -92,7 +95,7 @@ func TestAction_PanelCopySelectedNames_NoMarkedFallsBackToCursor(t *testing.T) {
 		}
 	}
 	pf := seedMarkedPanel(t, tmp, []string{"a.txt", "b.txt"}, 0)
-	fsp := pf.getActivePanel()
+	fsp := pf.GetActivePanel()
 	// Cursor at index 2 → "b.txt"
 	fsp.SetCursorIndex(2)
 	vtui.SetClipboard("")
@@ -134,7 +137,7 @@ func TestAction_PanelCopySelectedPaths_CursorOnParentUsesCurrentDir(t *testing.T
 		t.Fatal(err)
 	}
 	pf := seedMarkedPanel(t, tmp, []string{"a.txt"}, 0)
-	fsp := pf.getActivePanel()
+	fsp := pf.GetActivePanel()
 	// Cursor at index 0 → ".." (par far2l docs: acts as the current folder).
 	fsp.SetCursorIndex(0)
 	vtui.SetClipboard("")
@@ -164,7 +167,7 @@ func TestAction_PanelCopySelectedRealPaths_CursorOnParentUsesCurrentDir(t *testi
 	// Panel opened via the symlink; cursor on ".." must yield the RESOLVED
 	// path of the current folder, not just the symlinked one.
 	pf := seedMarkedPanel(t, linkDir, nil, 0)
-	fsp := pf.getActivePanel()
+	fsp := pf.GetActivePanel()
 	fsp.SetCursorIndex(0)
 	vtui.SetClipboard("")
 
@@ -219,8 +222,8 @@ func TestAction_PanelCopySelectedRealPaths_ResolvesSymlink(t *testing.T) {
 }
 
 func TestHotkeyManager_MarkedClipboardDefaults_Issue289(t *testing.T) {
-	hm := NewHotkeyManager("")
-	hm.initDefaults()
+	hm := keymap.NewHotkeyManager("")
+	hm.InitDefaults()
 
 	cases := []struct {
 		key      string

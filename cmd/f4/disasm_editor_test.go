@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/paneltest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,7 +26,7 @@ var movRaxRcx = []byte{0x48, 0x89, 0xC8}
 // editor and the hotkey manager, which stayed here.
 
 func TestDisasmModeIsBoundToShiftF4InBothAreas(t *testing.T) {
-	hm := NewHotkeyManager("")
+	hm := keymap.NewHotkeyManager("")
 	for _, area := range []string{"Editor", "Viewer"} {
 		if got := hm.GetAction(area, "ShiftF4"); got != area+".DisasmMode" {
 			t.Errorf("%s ShiftF4 -> %q, want %s.DisasmMode", area, got, area)
@@ -37,7 +39,7 @@ func TestDisasmModeIsBoundToShiftF4InBothAreas(t *testing.T) {
 // the instruction length of the mode in effect, not of the one the file
 // opened in.
 func TestEditorView_DisasmMode_CycleRedecodesUnderTheCursor(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.SetDefaultPalette()
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	Pt := piecetable.New(bytes.Repeat(movRaxRcx, 8))
@@ -87,7 +89,7 @@ func TestEditorView_DisasmMode_CycleRedecodesUnderTheCursor(t *testing.T) {
 // fifteen bytes regardless, so Down did nothing on the last instructions of
 // a file.
 func TestEditorView_DecodeStepSeesTheLastBytes(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	ev := editor.NewEditorView(piecetable.New(bytes.Repeat(movRaxRcx, 2)), nil, "")
 	defer ev.Close()
@@ -107,7 +109,7 @@ func TestEditorView_DecodeStepSeesTheLastBytes(t *testing.T) {
 // decode as 64-bit whatever the view was set to, so after a switch the page
 // step and the lines on screen disagreed about where instructions start.
 func TestViewerView_DisasmMode_PageDownWalksTheSelectedMode(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.SetDefaultPalette()
 	theme.SetDefaultF4Palette()
 	tmpDir := t.TempDir()

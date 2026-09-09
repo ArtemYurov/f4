@@ -1,21 +1,22 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
 	"testing"
 
 	"github.com/unxed/f4/vfs"
 )
 
 func TestPanelImageSiblings(t *testing.T) {
-	fp := &FileSystemPanel{
-		entries: []*fileEntry{
+	fp := &panel.FileSystemPanel{
+		Entries: []*panel.FileEntry{
 			{VFSItem: vfs.VFSItem{Name: "..", IsDir: true}},
 			{VFSItem: vfs.VFSItem{Name: "sub", IsDir: true}},
 			{VFSItem: vfs.VFSItem{Name: "a.png"}},
 			{VFSItem: vfs.VFSItem{Name: "notes.txt"}},
 			{VFSItem: vfs.VFSItem{Name: "b.jpg"}},
 		},
-		cursorIdx: 4,
+		CursorIdx: 4,
 	}
 
 	names, index := fp.ImageSiblings()
@@ -27,7 +28,7 @@ func TestPanelImageSiblings(t *testing.T) {
 	}
 
 	// A cursor on something that is not a picture has no position.
-	fp.cursorIdx = 3
+	fp.CursorIdx = 3
 	if _, index := fp.ImageSiblings(); index != -1 {
 		t.Errorf("expected no position, got %d", index)
 	}

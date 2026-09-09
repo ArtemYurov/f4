@@ -2,15 +2,17 @@ package main
 
 import (
 	"fmt"
+	"github.com/unxed/f4/internal/keymap"
+	"github.com/unxed/f4/internal/panel"
 	"strings"
 
 	"github.com/unxed/f4/internal/i18n"
 	"github.com/unxed/vtui"
 )
 
-func commandPalettePrefixEntries(area string, pf *PanelsFrame) []commandPaletteEntry {
+func commandPalettePrefixEntries(area string, pf *panel.PanelsFrame) []commandPaletteEntry {
 	if pf == nil || (area != "Shell" && area != "Terminal") ||
-		(area == "Terminal" && !commandPaletteConditionTrue("TerminalQuiet")) {
+		(area == "Terminal" && !keymap.ConditionTrue("TerminalQuiet")) {
 		return nil
 	}
 	category := i18n.Msg("CommandPalette.CategoryCommandPrefix")
@@ -19,44 +21,44 @@ func commandPalettePrefixEntries(area string, pf *PanelsFrame) []commandPaletteE
 		"CommandPalette.CommandPrefix.Desc",
 		"CommandPalette.CategoryPlugin",
 	)
-	snapshot := commandPrefixSnapshot()
+	snapshot := panel.CommandPrefixSnapshot()
 	entries := make([]commandPaletteEntry, 0, len(snapshot))
 	for _, prefix := range snapshot {
 		prefix := prefix
 		entries = append(entries, commandPaletteEntry{
-			Key:                "command-prefix:" + strings.ToLower(prefix.id),
-			Label:              prefix.prefix + ":",
-			EnglishLabel:       prefix.prefix + ":",
-			Description:        fmt.Sprintf(i18n.Msg("CommandPalette.CommandPrefix.Desc"), prefix.id),
+			Key:                "command-prefix:" + strings.ToLower(prefix.Id),
+			Label:              prefix.Prefix + ":",
+			EnglishLabel:       prefix.Prefix + ":",
+			Description:        fmt.Sprintf(i18n.Msg("CommandPalette.CommandPrefix.Desc"), prefix.Id),
 			EnglishDescription: "Insert a plugin command prefix",
-			ID:                 prefix.id,
+			ID:                 prefix.Id,
 			Category:           category,
-			SearchFields:       append([]string{prefix.prefix, prefix.id}, aliases...),
+			SearchFields:       append([]string{prefix.Prefix, prefix.Id}, aliases...),
 			run: func() bool {
-				return focusCommandPrefix(pf, prefix.id, prefix.prefix)
+				return focusCommandPrefix(pf, prefix.Id, prefix.Prefix)
 			},
 		})
 	}
 	return entries
 }
 
-func focusCommandPrefix(pf *PanelsFrame, id, prefix string) bool {
-	if pf == nil || pf.closed || pf.cmdLine == nil || findPanelsFrameAnyScreen() != pf {
+func focusCommandPrefix(pf *panel.PanelsFrame, id, prefix string) bool {
+	if pf == nil || pf.Closed || pf.CmdLine == nil || panel.FindPanelsFrameAnyScreen() != pf {
 		return false
 	}
-	commandPrefixRegistry.RLock()
-	registration := commandPrefixRegistry.byID[id]
-	active := registration != nil && registration.active && registration.prefix == prefix
-	commandPrefixRegistry.RUnlock()
+	panel.CommandPrefixRegistry.RLock()
+	registration := panel.CommandPrefixRegistry.ByID[id]
+	active := registration != nil && registration.Active && registration.Prefix == prefix
+	panel.CommandPrefixRegistry.RUnlock()
 	if !active {
 		return false
 	}
-	pf.cancelFastFind()
-	pf.cmdLine.Edit.SetText(prefix + ":")
-	if pf.searchFirstMode() {
-		pf.setCommandLineFocus(true)
+	pf.CancelFastFind()
+	pf.CmdLine.Edit.SetText(prefix + ":")
+	if pf.SearchFirstMode() {
+		pf.SetCommandLineFocus(true)
 	} else {
-		pf.cmdLine.SetFocus(true)
+		pf.CmdLine.SetFocus(true)
 	}
 	if vtui.FrameManager != nil {
 		vtui.FrameManager.Redraw()

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -44,7 +45,7 @@ func sheetBaseName(path string) string {
 // under it, and because a dialog is what sits on top while a path is typed.
 // An empty result means there is no local panel to speak of.
 func sheetDirectory() string {
-	pf := findPanelsFrameAnyScreen()
+	pf := panel.FindPanelsFrameAnyScreen()
 	if pf == nil {
 		return ""
 	}

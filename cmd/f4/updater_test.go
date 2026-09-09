@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"github.com/unxed/f4/internal/panel"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -460,7 +461,7 @@ func TestUpdater_PerformUpdate(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 
 	performUpdate(pf, update.Candidate{

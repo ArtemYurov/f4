@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -21,15 +23,15 @@ func TestGroupDropSources(t *testing.T) {
 		filepath.FromSlash("/tmp/two/dir/"),
 		"   ",
 	}
-	got := groupDropSources(paths)
-	want := []dropSourceGroup{
-		{dir: filepath.FromSlash("/tmp/one"), names: []string{"a.txt", "b.txt"}},
-		{dir: filepath.FromSlash("/tmp/two"), names: []string{"dir"}},
+	got := panel.GroupDropSources(paths)
+	want := []panel.DropSourceGroup{
+		{Dir: filepath.FromSlash("/tmp/one"), Names: []string{"a.txt", "b.txt"}},
+		{Dir: filepath.FromSlash("/tmp/two"), Names: []string{"dir"}},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("groups = %#v, want %#v", got, want)
 	}
-	if len(groupDropSources(nil)) != 0 {
+	if len(panel.GroupDropSources(nil)) != 0 {
 		t.Fatal("nothing dropped means nothing to do")
 	}
 }
@@ -42,7 +44,7 @@ func TestNormalizeExternalDropPath(t *testing.T) {
 		{"   ", ""},
 	}
 	for _, tc := range cases {
-		if got := normalizeExternalDropPath(tc.input); got != tc.want {
+		if got := panel.NormalizeExternalDropPath(tc.input); got != tc.want {
 			t.Errorf("normalizeExternalDropPath(%q) = %q, want %q", tc.input, got, tc.want)
 		}
 	}
@@ -67,7 +69,7 @@ func TestChooseDropAction(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			if got := chooseDropAction(c.allowed, c.suggested, c.mods); got != c.want {
+			if got := panel.ChooseDropAction(c.allowed, c.suggested, c.mods); got != c.want {
 				t.Fatalf("action = %s, want %s", got, c.want)
 			}
 		})
@@ -81,28 +83,28 @@ type readOnlyTestVFS struct {
 func (readOnlyTestVFS) IsReadOnly() bool { return true }
 
 func TestVFSAcceptsDrop(t *testing.T) {
-	if vfsAcceptsDrop(nil) {
+	if panel.VfsAcceptsDrop(nil) {
 		t.Fatal("no file system accepts nothing")
 	}
 	local := vfs.NewOSVFS(t.TempDir())
-	if !vfsAcceptsDrop(local) {
+	if !panel.VfsAcceptsDrop(local) {
 		t.Fatal("a writable file system accepts a drop")
 	}
-	if vfsAcceptsDrop(readOnlyTestVFS{local}) {
+	if panel.VfsAcceptsDrop(readOnlyTestVFS{local}) {
 		t.Fatal("a read-only file system must refuse before the drop")
 	}
 	androidManager := &androidfs.ManagerVFS{}
-	if vfsAcceptsDrop(androidManager) {
+	if panel.VfsAcceptsDrop(androidManager) {
 		t.Fatal("android manager must be read-only")
 	}
 	netfoxVFS := &netfox.NetFoxVFS{}
-	if vfsAcceptsDrop(netfoxVFS) {
+	if panel.VfsAcceptsDrop(netfoxVFS) {
 		t.Fatal("netfox VFS must be read-only")
 	}
 }
 
 func TestHandleDragWithoutTargetPanel(t *testing.T) {
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	defer vtui.SetDropTarget(nil)
 
@@ -129,8 +131,8 @@ func TestHandleDragWithoutTargetPanel(t *testing.T) {
 }
 func TestLocalDragPaths(t *testing.T) {
 	dir := t.TempDir()
-	fsp := &FileSystemPanel{vfs: vfs.NewOSVFS(dir)}
-	paths, ok := localDragPaths(fsp, []string{"a.txt", "b.txt"})
+	fsp := &panel.FileSystemPanel{Vfs: vfs.NewOSVFS(dir)}
+	paths, ok := panel.LocalDragPaths(fsp, []string{"a.txt", "b.txt"})
 	if !ok {
 		t.Fatal("a local panel can be dragged out of")
 	}
@@ -139,14 +141,14 @@ func TestLocalDragPaths(t *testing.T) {
 		t.Fatalf("paths = %v, want %v", paths, want)
 	}
 
-	remote := &FileSystemPanel{vfs: vfs.NewNullVFS(0)}
-	if _, ok := localDragPaths(remote, []string{"a.txt"}); ok {
+	remote := &panel.FileSystemPanel{Vfs: vfs.NewNullVFS(0)}
+	if _, ok := panel.LocalDragPaths(remote, []string{"a.txt"}); ok {
 		t.Fatal("a panel without real paths must refuse the drag")
 	}
 }
 
 func TestDragOutGestureIgnoresPlainPress(t *testing.T) {
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	defer pf.Close()
 	defer vtui.SetDropTarget(nil)
 
@@ -157,10 +159,10 @@ func TestDragOutGestureIgnoresPlainPress(t *testing.T) {
 		MouseX:      5,
 		MouseY:      5,
 	}
-	if pf.processDragOutGesture(press, 5, 5) {
+	if pf.ProcessDragOutGesture(press, 5, 5) {
 		t.Fatal("a press must never be swallowed")
 	}
-	if pf.dragOut.armed {
+	if pf.DragOut.Armed {
 		t.Fatal("a press outside a marked file must not arm the gesture")
 	}
 
@@ -171,13 +173,13 @@ func TestDragOutGestureIgnoresPlainPress(t *testing.T) {
 		MouseX:          7,
 		MouseY:          9,
 	}
-	if pf.processDragOutGesture(move, 7, 9) {
+	if pf.ProcessDragOutGesture(move, 7, 9) {
 		t.Fatal("an unarmed drag belongs to the panel")
 	}
 }
 
 // dragBackendStub is a backend that supports both directions and does
-// nothing, which is all dragOutRefusal asks of one.
+// nothing, which is all panel.DragOutRefusal asks of one.
 type dragBackendStub struct{}
 
 func (dragBackendStub) AcceptsDrops() bool { return true }
@@ -188,49 +190,49 @@ func (dragBackendStub) StartDrag(vtui.DragPayload, vtui.DropAction) (vtui.DropAc
 
 func TestDragOutRefusal(t *testing.T) {
 	vtui.SetDragBackend(nil)
-	if got := dragOutRefusal(nil, nil); got != "no panel under the pointer" {
+	if got := panel.DragOutRefusal(nil, nil); got != "no panel under the pointer" {
 		t.Fatalf("reason = %q, want the missing panel", got)
 	}
 
-	fsp := &FileSystemPanel{vfs: vfs.NewOSVFS(t.TempDir())}
-	if got := dragOutRefusal(fsp, []string{"a.txt"}); got != "the backend offers no drag source" {
+	fsp := &panel.FileSystemPanel{Vfs: vfs.NewOSVFS(t.TempDir())}
+	if got := panel.DragOutRefusal(fsp, []string{"a.txt"}); got != "the backend offers no drag source" {
 		t.Fatalf("reason = %q, want the missing backend", got)
 	}
 
 	vtui.SetDragBackend(dragBackendStub{})
 	defer vtui.SetDragBackend(nil)
-	if got := dragOutRefusal(fsp, nil); got != "nothing to drag" {
+	if got := panel.DragOutRefusal(fsp, nil); got != "nothing to drag" {
 		t.Fatalf("reason = %q, want the empty selection", got)
 	}
-	if got := dragOutRefusal(fsp, []string{"a.txt"}); got != "" {
+	if got := panel.DragOutRefusal(fsp, []string{"a.txt"}); got != "" {
 		t.Fatalf("reason = %q, want none", got)
 	}
 }
 
 func TestDragOutNames(t *testing.T) {
-	fsp := &FileSystemPanel{entries: []*fileEntry{
+	fsp := &panel.FileSystemPanel{Entries: []*panel.FileEntry{
 		{VFSItem: vfs.VFSItem{Name: ".."}},
 		{VFSItem: vfs.VFSItem{Name: "a.txt"}},
 		{VFSItem: vfs.VFSItem{Name: "b.txt"}},
 	}}
 
-	if _, _, ok := dragOutNames(fsp, 0); ok {
+	if _, _, ok := panel.DragOutNames(fsp, 0); ok {
 		t.Fatal("the parent entry must never be dragged")
 	}
-	names, cursorOnly, ok := dragOutNames(fsp, 1)
+	names, cursorOnly, ok := panel.DragOutNames(fsp, 1)
 	if !ok || !cursorOnly || !reflect.DeepEqual(names, []string{"a.txt"}) {
 		t.Fatalf("names = %v cursorOnly = %v ok = %v, want the current file", names, cursorOnly, ok)
 	}
 
-	fsp.entries[2].Selected = true
-	if _, _, ok := dragOutNames(fsp, 1); ok {
+	fsp.Entries[2].Selected = true
+	if _, _, ok := panel.DragOutNames(fsp, 1); ok {
 		t.Fatal("with marks present an unmarked entry must not be dragged")
 	}
-	names, cursorOnly, ok = dragOutNames(fsp, 2)
+	names, cursorOnly, ok = panel.DragOutNames(fsp, 2)
 	if !ok || cursorOnly || !reflect.DeepEqual(names, []string{"b.txt"}) {
 		t.Fatalf("names = %v cursorOnly = %v ok = %v, want the marked files", names, cursorOnly, ok)
 	}
-	if _, _, ok := dragOutNames(nil, 1); ok {
+	if _, _, ok := panel.DragOutNames(nil, 1); ok {
 		t.Fatal("no panel, no drag")
 	}
 }
@@ -240,20 +242,20 @@ func TestDragOutRemotePanel(t *testing.T) {
 	defer vtui.SetDragBackend(nil)
 	vtui.SetDragBackend(dragBackendStub{})
 
-	pf := setupMockPanelsFrame(t)
+	pf := paneltest.SetupMockPanelsFrame(t)
 	defer pf.Close()
 	pf.ResizeConsole(80, 25)
 
 	remoteVFS := vfs.NewNullVFS(0)
-	fsp := pf.panels[pf.activeIdx].(*FileSystemPanel)
-	fsp.vfs = remoteVFS
-	fsp.entries = []*fileEntry{
+	fsp := pf.Panels[pf.ActiveIdx].(*panel.FileSystemPanel)
+	fsp.Vfs = remoteVFS
+	fsp.Entries = []*panel.FileEntry{
 		{VFSItem: vfs.VFSItem{Name: ".."}},
 		{VFSItem: vfs.VFSItem{Name: "1KB.bin"}, Selected: true},
 	}
 	fsp.Refresh()
 
-	if !pf.startDragOut(fsp, fsp.GetMarkedNames()) {
+	if !pf.StartDragOut(fsp, fsp.GetMarkedNames()) {
 		t.Fatal("expected startDragOut to succeed")
 	}
 

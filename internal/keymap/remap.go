@@ -71,13 +71,13 @@ type KeyRemap struct {
 	// that CtrlAltShift* wins over CtrlAlt*.
 	Prefix map[string][]keyRemapPrefixRule
 
-	iniPath string
+	IniPath string
 }
 
 // NewKeyRemap reads keymap.ini. A missing file is not an error: it yields an
 // empty table that Apply short-circuits on.
 func NewKeyRemap(iniPath string) *KeyRemap {
-	kr := &KeyRemap{iniPath: iniPath}
+	kr := &KeyRemap{IniPath: iniPath}
 	kr.Load()
 	return kr
 }
@@ -89,10 +89,10 @@ func (kr *KeyRemap) Load() {
 	}
 	kr.Exact = make(map[string]map[string]string)
 	kr.Prefix = make(map[string][]keyRemapPrefixRule)
-	if kr.iniPath == "" {
+	if kr.IniPath == "" {
 		return
 	}
-	ini := ini.Load(kr.iniPath)
+	ini := ini.Load(kr.IniPath)
 	for area, rules := range ini.Sections() {
 		for source, target := range rules {
 			kr.addRule(area, source, target)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
 	"strings"
 	"testing"
 
@@ -107,7 +108,7 @@ NormalColor = foreground:#00FF00
 	theme.GlobalFileHighlighter.LoadFromIni(ini)
 
 	// Создаем тестовую структуру файла панели
-	entry := &fileEntry{
+	entry := &panel.FileEntry{
 		VFSItem: vfs.VFSItem{Name: "main.go", IsDir: false},
 	}
 

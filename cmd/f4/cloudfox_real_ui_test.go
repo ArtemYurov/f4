@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/unxed/f4/internal/panel"
 	"io"
 	"net"
 	"net/http"
@@ -729,10 +730,10 @@ func runRealCloudFoxF5RoundTrip(t *testing.T, workspace vfs.VFS, provider cloudf
 
 	pf := realCloudFoxUIPanels(t, local, cloudPanelVFS)
 	defer pf.Close()
-	left := pf.panels[0].(*FileSystemPanel)
-	right := pf.panels[1].(*FileSystemPanel)
+	left := pf.Panels[0].(*panel.FileSystemPanel)
+	right := pf.Panels[1].(*panel.FileSystemPanel)
 	realCloudFoxUIWaitPanelName(t, left, name, 30*time.Second)
-	pf.activeIdx = 0
+	pf.ActiveIdx = 0
 	left.SetFocus(true)
 	right.SetFocus(false)
 
@@ -752,7 +753,7 @@ func runRealCloudFoxF5RoundTrip(t *testing.T, workspace vfs.VFS, provider cloudf
 		t.Fatalf("remove local upload fixture before reverse F5: %v", err)
 	}
 	realCloudFoxUIWaitPanelName(t, right, name, 2*time.Minute)
-	pf.activeIdx = 1
+	pf.ActiveIdx = 1
 	left.SetFocus(false)
 	right.SetFocus(true)
 	actionCopyMove(pf, false)
@@ -788,7 +789,7 @@ func realCloudFoxUIResetScreen() {
 	theme.SetDefaultF4Palette()
 }
 
-func realCloudFoxUIBarePanels(t *testing.T) *PanelsFrame {
+func realCloudFoxUIBarePanels(t *testing.T) *panel.PanelsFrame {
 	t.Helper()
 	left := vfs.NewOSVFS(t.TempDir())
 	right := vfs.NewOSVFS(t.TempDir())
@@ -800,27 +801,27 @@ func realCloudFoxUIBarePanels(t *testing.T) *PanelsFrame {
 	return pf
 }
 
-func realCloudFoxUIPanels(t *testing.T, leftVFS, rightVFS vfs.VFS) *PanelsFrame {
+func realCloudFoxUIPanels(t *testing.T, leftVFS, rightVFS vfs.VFS) *panel.PanelsFrame {
 	t.Helper()
-	pf := NewPanelsFrame()
-	pf.panels[0] = NewFileSystemPanel(0, 0, 60, 37, leftVFS)
-	pf.panels[1] = NewFileSystemPanel(60, 0, 60, 37, rightVFS)
-	pf.activeIdx = 0
+	pf := panel.NewPanelsFrame()
+	pf.Panels[0] = panel.NewFileSystemPanel(0, 0, 60, 37, leftVFS)
+	pf.Panels[1] = panel.NewFileSystemPanel(60, 0, 60, 37, rightVFS)
+	pf.ActiveIdx = 0
 	pf.ResizeConsole(120, 40)
-	pf.panels[0].SetFocus(true)
-	pf.panels[1].SetFocus(false)
+	pf.Panels[0].SetFocus(true)
+	pf.Panels[1].SetFocus(false)
 	vtui.FrameManager.Push(pf)
 	return pf
 }
 
-func realCloudFoxUIWaitPanelName(t *testing.T, panel *FileSystemPanel, name string, timeout time.Duration) {
+func realCloudFoxUIWaitPanelName(t *testing.T, pnl *panel.FileSystemPanel, name string, timeout time.Duration) {
 	t.Helper()
 	realCloudFoxUIWait(t, timeout, "file panel to load target row", func() bool {
-		if panel.isLoading {
+		if pnl.IsLoading {
 			return false
 		}
-		panel.SelectName(name)
-		return panel.GetSelectedName() == name
+		pnl.SelectName(name)
+		return pnl.GetSelectedName() == name
 	})
 }
 

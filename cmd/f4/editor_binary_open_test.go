@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"github.com/unxed/f4/internal/panel"
+	"github.com/unxed/f4/internal/paneltest"
 	"os"
 	"path/filepath"
 	"sync"
@@ -177,7 +179,7 @@ func TestEditorEscapeCancelsIndexing(t *testing.T) {
 // A binary file opened for editing goes straight into hex on the lazy chunked
 // path (codepage 65001) without a background scan.
 func TestShowEditorBinaryOpensInHex(t *testing.T) {
-	t.Cleanup(swapFrameManager(t))
+	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
 	testutil.DrainPendingTasks()
 
@@ -189,22 +191,22 @@ func TestShowEditorBinaryOpensInHex(t *testing.T) {
 
 	localVFS := vfs.NewOSVFS(dir)
 	_ = localVFS.SetPath(dir)
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	t.Cleanup(pf.Close)
-	for _, panel := range pf.panels {
-		if fsp, ok := panel.(*FileSystemPanel); ok {
-			if fsp.cancelLoad != nil {
-				fsp.cancelLoad()
+	for _, pnl := range pf.Panels {
+		if fsp, ok := pnl.(*panel.FileSystemPanel); ok {
+			if fsp.CancelLoad != nil {
+				fsp.CancelLoad()
 			}
-			fsp.stopLoadingAnimation()
+			fsp.StopLoadingAnimation()
 		}
 	}
-	left := NewFileSystemPanel(0, 0, 40, 20, localVFS)
-	right := NewFileSystemPanel(40, 0, 40, 20, localVFS.Clone())
-	pf.panels[0] = left
-	pf.panels[1] = right
-	waitForLoad(t, left)
-	waitForLoad(t, right)
+	left := panel.NewFileSystemPanel(0, 0, 40, 20, localVFS)
+	right := panel.NewFileSystemPanel(40, 0, 40, 20, localVFS.Clone())
+	pf.Panels[0] = left
+	pf.Panels[1] = right
+	paneltest.WaitForLoad(t, left)
+	paneltest.WaitForLoad(t, right)
 	pf.ResizeConsole(120, 60)
 	vtui.FrameManager.Push(pf)
 

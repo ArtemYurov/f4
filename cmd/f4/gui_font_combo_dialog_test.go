@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/unxed/f4/internal/panel"
 	"testing"
 
 	"github.com/unxed/f4/internal/config"
@@ -30,7 +31,7 @@ func TestAppearanceSettingsFontComboRemainsEditable(t *testing.T) {
 		config.GetUserConfigIniPath = oldPath
 	})
 
-	pf := NewPanelsFrame()
+	pf := panel.NewPanelsFrame()
 	t.Cleanup(pf.Close)
 	pf.ResizeConsole(80, 25)
 	actionAppearanceSettings(pf)
