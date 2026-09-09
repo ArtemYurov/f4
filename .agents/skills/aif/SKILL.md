@@ -50,17 +50,17 @@ py --version
 
 **Scope guard (required before Level 1):**
 - Scan only the external skill that was just downloaded/installed in the current step.
-- Never run blocking security decisions on built-in AI Factory skills (`~/.claude/skills/aif` and `~/.claude/skills/aif-*`).
+- Never run blocking security decisions on built-in AI Factory skills (`~/.agents/skills/aif` and `~/.agents/skills/aif-*`).
 - If the target path points to built-in `aif*` skills, treat it as wrong target selection and continue with the actual external skill path.
 
 **Level 1 — Automated scan:**
 ```bash
 # Example for PYTHON_CMD=(python3); use python, py -3, or py only if that was the selected Python 3 command.
-python3 ~/.claude/skills/aif-skill-generator/scripts/security-scan.py <installed-skill-path>
+python3 ~/.agents/skills/aif-skill-generator/scripts/security-scan.py <installed-skill-path>
 ```
 - When calling Bash, expand `PYTHON_CMD` to the selected command shape, for example `python3 ...security-scan.py` or `py -3 ...security-scan.py`; do not run arbitrary Python payloads.
 - **Exit 0** → proceed to Level 2
-- **Exit 1 (BLOCKED)** → Remove via cleanup helper using the same selected Python 3 command, for example `python3 ~/.claude/skills/aif-skill-generator/scripts/cleanup-blocked-skill.py --skill <skill-name> --installed-path <installed-skill-path>`. Pass the **same `<installed-skill-path>` you just scanned** — do not synthesize the path from `<skill-name>` (upstream `skills` CLI sanitizes the directory name, so a logical name like `"Convex Best Practices"` lives on disk as `convex-best-practices`). The helper deletes the skill directory AND clears its entry from `skills-lock.json` so the blocked skill cannot be resurrected; `--installed-path` lets it verify physical removal and return an exact exit code. Warn user with full threat details. **NEVER use.**
+- **Exit 1 (BLOCKED)** → Remove via cleanup helper using the same selected Python 3 command, for example `python3 ~/.agents/skills/aif-skill-generator/scripts/cleanup-blocked-skill.py --skill <skill-name> --installed-path <installed-skill-path>`. Pass the **same `<installed-skill-path>` you just scanned** — do not synthesize the path from `<skill-name>` (upstream `skills` CLI sanitizes the directory name, so a logical name like `"Convex Best Practices"` lives on disk as `convex-best-practices`). The helper deletes the skill directory AND clears its entry from `skills-lock.json` so the blocked skill cannot be resurrected; `--installed-path` lets it verify physical removal and return an exact exit code. Warn user with full threat details. **NEVER use.**
 - **Exit 2 (WARNINGS)** → proceed to Level 2, include warnings
 
 **Level 2 — Semantic review (you do this yourself):**
@@ -100,9 +100,9 @@ If any rule is violated — fix the output before presenting it to the user.
 ```
 For each recommended skill:
   1. Search: npx skills search <name>
-  2. If found → Install: npx skills install --agent claude-code <name>
+  2. If found → Install: npx skills install  <name>
   3. SECURITY: Scan installed EXTERNAL skill (never built-in aif*) → run the selected concrete Python command with `security-scan.py <path>`
-     - BLOCKED? → run the selected concrete Python command with `cleanup-blocked-skill.py --skill <name> --installed-path <path>` (reuse the same <path> from step 3, NOT a synthesized .claude/skills/<name>), warn user, skip this skill
+     - BLOCKED? → run the selected concrete Python command with `cleanup-blocked-skill.py --skill <name> --installed-path <path>` (reuse the same <path> from step 3, NOT a synthesized .agents/skills/<name>), warn user, skip this skill
      - WARNINGS? → show to user, ask confirmation
   4. If not found → Generate: /aif-skill-generator <name>
   5. Has reference URLs? → Learn: /aif-skill-generator <url1> [url2]...
@@ -214,8 +214,8 @@ users who never invoke ultra must see the same setup flow as before.
 - Then invoke the helper:
 
 ```bash
-node ~/.claude/skills/aif/references/update-config.mjs \
-  --template ~/.claude/skills/aif/references/config-template.yaml \
+node ~/.agents/skills/aif/references/update-config.mjs \
+  --template ~/.agents/skills/aif/references/config-template.yaml \
   --target .ai-factory/config.yaml \
   --payload .ai-factory/config.update.json
 ```
@@ -380,7 +380,7 @@ Proceed? [Y/n]
 
 1. Create directory: `mkdir -p .ai-factory`
 2. Write `.ai-factory/config.update.json` with helper payload (`mode: "create"` if config is missing, `mode: "merge"` if it already exists)
-3. Run `node ~/.claude/skills/aif/references/update-config.mjs --template ~/.claude/skills/aif/references/config-template.yaml --target .ai-factory/config.yaml --payload .ai-factory/config.update.json`
+3. Run `node ~/.agents/skills/aif/references/update-config.mjs --template ~/.agents/skills/aif/references/config-template.yaml --target .ai-factory/config.yaml --payload .ai-factory/config.update.json`
 4. Delete `.ai-factory/config.update.json` after the helper succeeds
 5. Save `.ai-factory/DESCRIPTION.md` in resolved `language.artifacts`
 6. **Create rules/base.md**:
@@ -388,11 +388,11 @@ Proceed? [Y/n]
    - Write `.ai-factory/rules/base.md` with detected conventions in resolved `language.artifacts`
 7. For each external skill from skills.sh:
    ```bash
-   npx skills install --agent claude-code <name>
+   npx skills install  <name>
    # AUTO-SCAN: immediately after install. Example for PYTHON_CMD=(python3).
-   python3 ~/.claude/skills/aif-skill-generator/scripts/security-scan.py <installed-path>
+   python3 ~/.agents/skills/aif-skill-generator/scripts/security-scan.py <installed-path>
    ```
-   - Exit 1 (BLOCKED) → run the selected concrete Python command with `~/.claude/skills/aif-skill-generator/scripts/cleanup-blocked-skill.py --skill <name> --installed-path <installed-path>` (reuse the same `<installed-path>` you passed to security-scan.py — upstream `skills` sanitizes the directory name, so synthesizing it from `<name>` can miss the real folder), warn user, skip this skill
+   - Exit 1 (BLOCKED) → run the selected concrete Python command with `~/.agents/skills/aif-skill-generator/scripts/cleanup-blocked-skill.py --skill <name> --installed-path <installed-path>` (reuse the same `<installed-path>` you passed to security-scan.py — upstream `skills` sanitizes the directory name, so synthesizing it from `<name>` can miss the real folder), warn user, skip this skill
    - Exit 2 (WARNINGS) → show to user, ask confirmation
    - Exit 0 (CLEAN) → read files yourself (Level 2), verify intent, proceed
 8. Generate custom skills via `/aif-skill-generator` (pass URLs for Learn Mode when docs are available)

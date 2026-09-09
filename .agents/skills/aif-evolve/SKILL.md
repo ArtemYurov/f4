@@ -62,7 +62,7 @@ This is the ONLY correct target for built-in skill improvements. No exceptions.
 Rule: first, strip any leading `/` from the argument. Then: if the argument does not start with `aif-` AND a skill named `aif-<argument>` exists — use `aif-<argument>`. Otherwise use as-is.
 
 **After resolving the skill name:** verify that the resolved skill actually exists
-(check `.claude/skills/<resolved-name>/SKILL.md` or `skills/<resolved-name>/SKILL.md`).
+(check `.agents/skills/<resolved-name>/SKILL.md` or `skills/<resolved-name>/SKILL.md`).
 If the skill is not found → report an error to the user and stop:
 "Skill '<resolved-name>' not found. Use `/aif-evolve` without arguments to evolve
 all skills, or specify a valid skill name."
@@ -219,9 +219,9 @@ Scan the project for patterns:
 **Read ONLY the base SKILL.md files for target skills — not all skills.**
 
 - If evolving a **specific skill** (e.g., `/aif-evolve plan`) → read only that one:
-  `Read: .claude/skills/aif-plan/SKILL.md` (or `skills/aif-plan/SKILL.md` if not installed)
+  `Read: .agents/skills/aif-plan/SKILL.md` (or `skills/aif-plan/SKILL.md` if not installed)
 - If evolving **all skills** (`/aif-evolve` or `/aif-evolve all`) → read all:
-  `Glob: .claude/skills/*/SKILL.md` (or `Glob: skills/*/SKILL.md` if not installed)
+  `Glob: .agents/skills/*/SKILL.md` (or `Glob: skills/*/SKILL.md` if not installed)
 
 Keep loaded SKILL.md content in memory — Step 3 needs it for comparison (do NOT re-read).
 
