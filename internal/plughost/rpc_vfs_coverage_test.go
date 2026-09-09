@@ -40,10 +40,10 @@ func TestRPCVFSOperationsAndWrappers(t *testing.T) {
 	if got := v.Dir("/folder/file.txt"); got != filepath.FromSlash("/folder") {
 		t.Fatalf("Dir = %q", got)
 	}
-	if got := v.Abs("file.txt"); got != filepath.FromSlash("/folder/sub/file.txt") {
+	if got, err := v.Abs("file.txt"); err != nil || got != filepath.FromSlash("/folder/sub/file.txt") {
 		t.Fatalf("Abs relative = %q", got)
 	}
-	if got := v.Abs("/root.txt"); got != filepath.FromSlash("/root.txt") {
+	if got, err := v.Abs("/root.txt"); err != nil || got != filepath.FromSlash("/root.txt") {
 		t.Fatalf("Abs absolute = %q", got)
 	}
 	if got := v.Base("/folder/file.txt"); got != "file.txt" {
