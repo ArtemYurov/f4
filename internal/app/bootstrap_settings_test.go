@@ -2,7 +2,6 @@ package app
 
 import (
 	"testing"
-
 	"github.com/unxed/f4/internal/paneltest"
 	"github.com/unxed/vtui"
 )
