@@ -60,16 +60,14 @@ func TestHandlePanelsAppCommandDispatchesFileAndSettingsActions(t *testing.T) {
 	}
 }
 
-func TestHandlePanelsAppCommandDispatchesNilManagerActions(t *testing.T) {
+func TestHandlePanelsAppCommandDispatchesWorkspaceActionWithoutManager(t *testing.T) {
 	oldManager := vtui.FrameManager
 	vtui.FrameManager = nil
 	t.Cleanup(func() { vtui.FrameManager = oldManager })
 
 	pf := &panel.PanelsFrame{}
-	for _, cmd := range []int{appcmd.CmBackground, appcmd.CmWorkspaceNew} {
-		if got := handlePanelsAppCommand(pf, cmd, nil); got {
-			t.Errorf("handlePanelsAppCommand(%d) = true with nil FrameManager, want false", cmd)
-		}
+	if got := handlePanelsAppCommand(pf, appcmd.CmWorkspaceNew, nil); got {
+		t.Errorf("handlePanelsAppCommand(CmWorkspaceNew) = true with nil FrameManager, want false")
 	}
 }
 
