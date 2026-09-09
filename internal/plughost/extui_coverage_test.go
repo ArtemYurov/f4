@@ -62,7 +62,9 @@ func TestExtUiMessageValidationAndIntegerConversions(t *testing.T) {
 		{"float", float64(12), 0, false},
 		{"uint64-overflow", ^uint64(0), 0, false},
 	}
-	if got, ok := extUiAnyInt(int64(^uint64(0) >> 1)); (strconv.IntSize == 64 && (!ok || got != int(^uint64(0)>>1))) || (strconv.IntSize == 32 && ok) {
+	maxInt64 := int64(^uint64(0) >> 1)
+	got, ok := extUiAnyInt(maxInt64)
+	if (strconv.IntSize == 64 && (!ok || int64(got) != maxInt64)) || (strconv.IntSize == 32 && ok) {
 		t.Fatalf("int64 max conversion = (%d, %t) on %d-bit platform", got, ok, strconv.IntSize)
 	}
 	for _, test := range tests {
