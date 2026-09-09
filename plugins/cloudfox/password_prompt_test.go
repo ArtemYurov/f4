@@ -34,9 +34,6 @@ func masterPasswordDialogControls(t *testing.T, dialog *vtui.Window) ([]*vtui.Ed
 			buttons = append(buttons, control)
 		}
 	}
-	if len(buttons) != 2 {
-		t.Fatalf("master password dialog has %d buttons, want 2", len(buttons))
-	}
 	return edits, buttons
 }
 
@@ -103,6 +100,9 @@ func TestVTUIMasterPasswordPrompterRoundTrip(t *testing.T) {
 		t.Fatalf("top frame = %T, want password dialog", fm.GetTopFrame())
 	}
 	edits, buttons := masterPasswordDialogControls(t, dialog)
+	if len(buttons) != 2 {
+		t.Fatalf("unlock dialog has %d buttons, want 2", len(buttons))
+	}
 	if len(edits) != 1 {
 		t.Fatalf("unlock dialog has %d edit controls, want 1", len(edits))
 	}
@@ -131,6 +131,9 @@ func TestShowMasterPasswordDialogCancelAndFinishGuard(t *testing.T) {
 		t.Fatalf("top frame = %T, want password dialog", fm.GetTopFrame())
 	}
 	_, buttons := masterPasswordDialogControls(t, dialog)
+	if len(buttons) != 2 {
+		t.Fatalf("cancel dialog has %d buttons, want 2", len(buttons))
+	}
 
 	// A non-negative result is ignored; cancel then exercises the negative path.
 	dialog.OnResult(0)
@@ -155,6 +158,9 @@ func TestShowMasterPasswordDialogRejectsMismatchedConfirmation(t *testing.T) {
 		t.Fatalf("top frame = %T, want password dialog", fm.GetTopFrame())
 	}
 	edits, buttons := masterPasswordDialogControls(t, dialog)
+	if len(buttons) != 2 {
+		t.Fatalf("creation dialog has %d buttons, want 2", len(buttons))
+	}
 	if len(edits) != 2 {
 		t.Fatalf("creation dialog has %d edit controls, want 2", len(edits))
 	}
@@ -168,6 +174,9 @@ func TestShowMasterPasswordDialogRejectsMismatchedConfirmation(t *testing.T) {
 		t.Fatalf("top frame after mismatch = %T, want mismatch message dialog", fm.GetTopFrame())
 	}
 	_, messageButtons := masterPasswordDialogControls(t, message)
+	if len(messageButtons) != 1 {
+		t.Fatalf("mismatch message has %d buttons, want 1", len(messageButtons))
+	}
 	messageButtons[0].OnClick()
 
 	edits[1].SetText("first")
@@ -190,6 +199,9 @@ func TestShowMasterPasswordDialogWarnsBeforeEmptyPassword(t *testing.T) {
 		t.Fatalf("top frame = %T, want password dialog", fm.GetTopFrame())
 	}
 	_, buttons := masterPasswordDialogControls(t, dialog)
+	if len(buttons) != 2 {
+		t.Fatalf("empty-password dialog has %d buttons, want 2", len(buttons))
+	}
 
 	buttons[0].OnClick()
 	assertNoMasterPasswordResult(t, result)
