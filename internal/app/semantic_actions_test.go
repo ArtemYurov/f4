@@ -14,13 +14,13 @@ func TestHandleSemanticActionNil(t *testing.T) {
 
 func TestHandleSemanticElementActionWidgets(t *testing.T) {
 	edit := vtui.NewEdit(0, 0, 20, "")
-	if !handleSemanticElementAction(edit, map[string]any{"action": "set_text", "text":   "alpha"}) {
+	if !handleSemanticElementAction(edit, map[string]any{"action": "set_text", "text": "alpha"}) {
 		t.Fatal("set_text action was not handled")
 	}
 	if got := edit.GetText(); got != "alpha" {
 		t.Fatalf("edit text = %q, want alpha", got)
 	}
-	if !handleSemanticElementAction(edit, map[string]any{"action": "insert_text", "text":   " beta"}) {
+	if !handleSemanticElementAction(edit, map[string]any{"action": "insert_text", "text": " beta"}) {
 		t.Fatal("insert_text action was not handled")
 	}
 	if got := edit.GetText(); got != "alpha beta" {
@@ -42,7 +42,7 @@ func TestHandleSemanticElementActionWidgets(t *testing.T) {
 	}
 
 	radio := vtui.NewRadioGroup(0, 0, 1, []string{"one", "two"})
-	if !handleSemanticElementAction(radio, map[string]any{"action": "select", "index":  1}) {
+	if !handleSemanticElementAction(radio, map[string]any{"action": "select", "index": 1}) {
 		t.Fatal("radio select action was not handled")
 	}
 	if radio.Selected != 1 {
@@ -77,7 +77,7 @@ func TestHandleSemanticChildrenActionFindsTarget(t *testing.T) {
 	edit := vtui.NewEdit(0, 0, 20, "")
 	dlg.AddItem(edit)
 
-	if !handleSemanticChildrenAction(dlg.GetChildren(), vtui.SemanticID(edit), map[string]any{"action": "set_text", "text":   "nested"}) {
+	if !handleSemanticChildrenAction(dlg.GetChildren(), vtui.SemanticID(edit), map[string]any{"action": "set_text", "text": "nested"}) {
 		t.Fatal("child semantic target was not handled")
 	}
 	if got := edit.GetText(); got != "nested" {
