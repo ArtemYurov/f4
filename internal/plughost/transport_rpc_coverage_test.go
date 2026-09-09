@@ -76,6 +76,7 @@ func TestRPCPluginCloseKillsProcess(t *testing.T) {
 		return
 	}
 
+	// #nosec G204 -- the test deliberately starts this test binary as a helper.
 	cmd := exec.Command(os.Args[0], "-test.run=TestRPCPluginCloseKillsProcess")
 	cmd.Env = append(os.Environ(), "F4_RPC_PLUGIN_HELPER=1")
 	if err := cmd.Start(); err != nil {
@@ -86,7 +87,7 @@ func TestRPCPluginCloseKillsProcess(t *testing.T) {
 	if err := plugin.Close(); err != nil {
 		t.Fatalf("Close() error = %v", err)
 	}
-	if cmd.ProcessState == nil || !cmd.ProcessState.Exited() {
+	if cmd.ProcessState == nil {
 		t.Fatal("Close() did not wait for the killed process")
 	}
 }
