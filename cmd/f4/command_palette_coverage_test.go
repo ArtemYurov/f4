@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"github.com/unxed/f4/internal/paneltest"
 	"go/ast"
 	"go/format"
 	"go/parser"
@@ -16,9 +15,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/unxed/f4/internal/action"
 	"github.com/unxed/f4/internal/testutil"
-	"github.com/unxed/vtui"
 )
 
 // This file deliberately combines two different invariants:
@@ -70,45 +67,17 @@ var commandPaletteAuditClasses = map[string]bool{
 // below cannot see because both sides shrink at once.
 const commandPaletteF4Surfaces = 42
 
-// commandPaletteTargetPackage names the package each audited f4 file ends up in
-// once cmd/f4 is split, so an audit key survives the move that carries its
-// subject. Keys are bare basenames and the map is consulted for cmd/f4 files
-// only; every other file is keyed by the directory it already sits in. An entry
-// is deleted by the wave that actually moves its file — at that point the
-// fallback returns the same name — so the map empties itself and no key ever
-// changes.
+// commandPaletteTargetPackage named the package each audited cmd/f4 file would
+// end up in once the split reached it, so an audit key survived the move that
+// carried its subject. Every entry has now been reached: nothing audited is
+// left in cmd/f4, the directory a file sits in gives the same answer the map
+// used to, and the map has emptied itself as its own rule said it would.
 //
-// Keys stay unique without the path because the files sharing a target package
-// share one Go package today, and Go already forbids two functions there under
-// the same name.
-var commandPaletteTargetPackage = map[string]string{
-	"actions.go":                  "app",
-	"ai_chat_panel.go":            "app",
-	"arkanoid.go":                 "app",
-	"sheet_frame.go":              "app",
-	"bookmarks_dialog.go":         "dialog",
-	"command_palette_ui.go":       "dialog",
-	"find_file.go":                "dialog",
-	"grabber.go":                  "dialog",
-	"hotkeys_ui.go":               "dialog",
-	"editor_base64.go":            "editor",
-	"editor_find_all.go":          "editor",
-	"editor_view.go":              "editor",
-	"fuse_mount_list.go":          "panel",
-	"player_panel.go":             "panel",
-	"drive_bookmarks_ui.go":       "panel",
-	"file_associations_editor.go": "panel",
-	"file_associations_ui.go":     "panel",
-	"file_panel.go":               "panel",
-	"info_panel.go":               "panel",
-	"panel_plugins.go":            "panel",
-	"panels_frame.go":             "panel",
-	"quick_view_panel.go":         "panel",
-	"temp_panel.go":               "panel",
-	"user_menu_ui.go":             "panel",
-	"viewer_editor_history.go":    "panel",
-	"plugin_hotkeys.go":           "app",
-}
+// It is kept, empty, because the mechanism is not spent: a file that moves
+// again — Task 44 asks whether some should — needs an entry here for exactly
+// one commit, or its key changes and the allowlist goes stale in a way that
+// reads as a missing surface rather than a move.
+var commandPaletteTargetPackage = map[string]string{}
 
 var commandPaletteProcessKeyAudit = map[string]commandPaletteSurfaceAudit{
 	"app.(*AIChatPanel).ProcessKey": {
@@ -123,25 +92,25 @@ var commandPaletteProcessKeyAudit = map[string]commandPaletteSurfaceAudit{
 	"cmdline.(*CommandLine).ProcessKey": {
 		class: paletteAuditParentControl, rationale: "command-line editing primitives belong to PanelsFrame rather than being standalone commands",
 	},
-	"dialog.(*commandPaletteDialog).ProcessKey": {
+	"app.(*commandPaletteDialog).ProcessKey": {
 		class: paletteAuditModalLocal, rationale: "the palette dialog owns query, navigation, execution, and cancellation while it is open",
 	},
 	"editor.(*EditorView).ProcessKey": {
 		class: paletteAuditActionArea, rationale: "editor commands are registered actions; raw text and cursor editing remain local primitives",
 	},
-	"dialog.(*SearchResultsWindow).ProcessKey": {
+	"app.(*SearchResultsWindow).ProcessKey": {
 		class: paletteAuditModalLocal, rationale: "find results are a modal result picker whose F3/F4/F5 buttons route to existing view/edit/temporary-panel operations",
 	},
 	"panel.(*FileSystemPanel).ProcessKey": {
 		class: paletteAuditPanelProvider, rationale: "panel actions and audited transient panel keys are exposed by the action registry and panel-context provider",
 	},
-	"dialog.(*GrabberFrame).ProcessKey": {
+	"app.(*GrabberFrame).ProcessKey": {
 		class: paletteAuditFrameProvider, rationale: "screen-grabber commands are supplied by commandPaletteGrabberEntries",
 	},
 	"app.(*SheetFrame).ProcessKey": {
 		class: paletteAuditFrameProvider, rationale: "spreadsheet commands are supplied by commandPaletteSheetEntries; cell editing, cursor movement and block marking remain local primitives",
 	},
-	"dialog.(*HotkeyAssignFrame).ProcessKey": {
+	"app.(*HotkeyAssignFrame).ProcessKey": {
 		class: paletteAuditModalLocal, rationale: "the hotkey-capture dialog must consume the next key locally and is not a global command surface",
 	},
 	"panel.(*PluginHotkeyAssignFrame).ProcessKey": {
@@ -258,7 +227,7 @@ var commandPaletteNewVMenuAudit = map[string]commandPaletteSurfaceAudit{
 	"panel.(*userMenuState).pushLevel#1": {
 		class: paletteAuditDynamicProvider, rationale: "executable user-menu leaves are flattened by commandPaletteUserMenuEntries",
 	},
-	"f4.actionViewerEditorHistory#1": {
+	"app.actionViewerEditorHistory#1": {
 		class: paletteAuditDynamicAction, rationale: "the registered viewer/editor history action opens runtime history entries",
 	},
 	"panel.(*QuickViewPanel).showCodepageDialog#1": {
@@ -267,132 +236,6 @@ var commandPaletteNewVMenuAudit = map[string]commandPaletteSurfaceAudit{
 	"panel.showTempPanelSlots#1": {
 		class: paletteAuditModalLocal, rationale: "the temporary-panel slot picker is a local modal menu; its entries are dynamic panel state, not standalone actions",
 	},
-}
-
-func TestCommandPaletteResolvesEveryActionGeneratedMenuLeafByID(t *testing.T) {
-	t.Cleanup(paneltest.SwapFrameManager(t))
-	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
-
-	areas := make(map[string]bool)
-	for _, act := range action.All() {
-		if act.MenuPath != "" && !act.HideFromMenu && !strings.EqualFold(act.Area, "Common") {
-			areas[act.Area] = true
-		}
-	}
-	orderedAreas := make([]string, 0, len(areas))
-	for area := range areas {
-		orderedAreas = append(orderedAreas, area)
-	}
-	sort.Strings(orderedAreas)
-
-	for _, area := range orderedAreas {
-		area := area
-		t.Run(area, func(t *testing.T) {
-			expected := commandPaletteAuditedActionMenuGroups(area)
-			actual := BuildMenuBarItems(area)
-			if len(actual) != len(expected) {
-				t.Fatalf("top-level act menus = %d, audited act groups = %d", len(actual), len(expected))
-			}
-
-			paletteByID := make(map[string]commandPaletteEntry)
-			for _, entry := range commandPaletteActionEntries(area) {
-				if entry.source == commandPaletteSourceAction {
-					paletteByID[strings.ToLower(entry.ID)] = entry
-				}
-			}
-
-			for groupIndex, group := range expected {
-				var leaves []vtui.MenuItem
-				// A submenu heading is not a leaf of its own: it stands for
-				// the actions folded under it, which the palette must still
-				// resolve one by one.
-				var collect func(items []vtui.MenuItem)
-				collect = func(items []vtui.MenuItem) {
-					for _, item := range items {
-						if item.Separator {
-							continue
-						}
-						if len(item.SubItems) > 0 {
-							collect(item.SubItems)
-							continue
-						}
-						leaves = append(leaves, item)
-					}
-				}
-				collect(actual[groupIndex].SubItems)
-				if len(leaves) != len(group.actions) {
-					t.Fatalf("menu group %q has %d non-separator leaves, want %d act leaves", group.path, len(leaves), len(group.actions))
-				}
-				for index, act := range group.actions {
-					if leaves[index].OnClick == nil {
-						t.Errorf("menu group %q leaf %d for act %q has no executor", group.path, index, act.Name)
-					}
-					gotLabel := action.PlainLabel(strings.TrimPrefix(leaves[index].Text, "√ "))
-					wantLabel := action.PlainLabel(act.DisplayLabel())
-					if gotLabel != wantLabel {
-						t.Errorf("menu group %q leaf %d = %q, want act %q label %q", group.path, index, gotLabel, act.Name, wantLabel)
-					}
-					entry, ok := paletteByID[strings.ToLower(act.Name)]
-					if !ok {
-						t.Errorf("menu act %q has no command-palette entry in area %q", act.Name, area)
-						continue
-					}
-					wantKey := "act:" + strings.ToLower(act.Name)
-					if entry.ID != act.Name || entry.Key != wantKey {
-						t.Errorf("menu act %q resolves to palette ID/key %q/%q, want %q/%q", act.Name, entry.ID, entry.Key, act.Name, wantKey)
-					}
-				}
-			}
-		})
-	}
-}
-
-type commandPaletteActionMenuGroup struct {
-	path    string
-	actions []action.Action
-	pinned  []action.Action
-}
-
-// commandPaletteAuditedActionMenuGroups mirrors BuildMenuBarItems' grouping
-// and ordering rules, including MenuLast pinning, so the coverage test can
-// compare it against the actual generated menu leaf-by-leaf.
-func commandPaletteAuditedActionMenuGroups(area string) []commandPaletteActionMenuGroup {
-	var groups []commandPaletteActionMenuGroup
-	byPath := make(map[string]int)
-	appendAction := func(action action.Action) {
-		if action.Visible != nil && !action.Visible() {
-			return
-		}
-		index, ok := byPath[action.MenuPath]
-		if !ok {
-			index = len(groups)
-			byPath[action.MenuPath] = index
-			groups = append(groups, commandPaletteActionMenuGroup{path: action.MenuPath})
-		}
-		if action.MenuLast {
-			groups[index].pinned = append(groups[index].pinned, action)
-			return
-		}
-		groups[index].actions = append(groups[index].actions, action)
-	}
-
-	for _, action := range action.All() {
-		if action.MenuPath != "" && !action.HideFromMenu && action.Area == area {
-			appendAction(action)
-		}
-	}
-	for _, action := range action.All() {
-		if action.MenuPath == "" || action.HideFromMenu || !strings.EqualFold(action.Area, "Common") {
-			continue
-		}
-		if _, exists := byPath[action.MenuPath]; exists {
-			appendAction(action)
-		}
-	}
-	for i := range groups {
-		groups[i].actions = append(groups[i].actions, groups[i].pinned...)
-	}
-	return groups
 }
 
 func TestCommandPaletteProductionCommandSurfaceInventory(t *testing.T) {

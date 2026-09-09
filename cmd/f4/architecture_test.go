@@ -141,6 +141,11 @@ var architectureLayers = map[string]int{
 	// rather than an import.
 	"internal/panel": 3,
 
+	// The composition root. It is the only package allowed to import every
+	// other, and rule 3 is the other half of that: nothing below layer 4 may
+	// import it. cmd/f4 is now a call to app.Main and the four auditors here.
+	"internal/app": 4,
+
 	// Test scaffolding, placed by what it may import: testutil imports no
 	// package of ours, paneltest sits above the three it builds a frame from.
 	// Neither may be imported from production code.
