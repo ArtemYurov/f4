@@ -638,7 +638,7 @@ func TestInfoPanel_ShortPanelScrollsToLowerProviderRows(t *testing.T) {
 	}
 }
 
-func TestInfoPanel_RendersUsageAsTwoLineMeter(t *testing.T) {
+func TestInfoPanel_RendersUsageAsThreeLineMeter(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(60, 20)
 	vtui.FrameManager.Init(scr)
@@ -671,24 +671,24 @@ func TestInfoPanel_RendersUsageAsTwoLineMeter(t *testing.T) {
 	config.App.InfoPanelBytes = false
 	ip.Show(scr)
 
-	assertMeter := func(used, total string) {
+	assertMeter := func(used, total, free string) {
 		t.Helper()
-		for i := 0; i+1 < len(ip.rows); i++ {
-			first, second := ip.rows[i], ip.rows[i+1]
+		for i := 1; i+1 < len(ip.rows); i++ {
+			totalRow, first, second := ip.rows[i-1], ip.rows[i], ip.rows[i+1]
 			if first.Label != "Memory" || !first.copyable {
 				continue
 			}
-			if second.Label != "Memory" || second.copyable {
+			if totalRow.copyable || !strings.Contains(totalRow.text, i18n.Msg("InfoPanel.TotalShort")) || !strings.Contains(totalRow.text, total) || second.Label != "Memory" || second.copyable {
 				t.Fatalf("usage continuation = %#v, want non-copyable Memory row", second)
 			}
 			if strings.Contains(first.text, "[") || strings.Contains(first.text, "]") || !strings.Contains(first.text, "50%") {
 				t.Fatalf("meter line %q is not a bracketless 50%% progress bar", first.text)
 			}
 			if !strings.Contains(second.text, i18n.Msg("InfoPanel.UsedShort")) ||
-				!strings.Contains(second.text, used) || !strings.Contains(second.text, total) {
+				!strings.Contains(second.text, used) || !strings.Contains(second.text, i18n.Msg("InfoPanel.Free")) || !strings.Contains(second.text, free) {
 				t.Fatalf("legend line %q does not contain used %q and total %q", second.text, used, total)
 			}
-			if !strings.Contains(first.value, used) || !strings.Contains(first.value, total) {
+			if !strings.Contains(first.value, used) || !strings.Contains(first.value, total) || !strings.Contains(first.value, free) {
 				t.Fatalf("copy value %q does not retain both usage values", first.value)
 			}
 
@@ -716,13 +716,13 @@ func TestInfoPanel_RendersUsageAsTwoLineMeter(t *testing.T) {
 			}
 			return
 		}
-		t.Fatal("two-line Memory meter not found")
+		t.Fatal("three-line Memory meter not found")
 	}
 
-	assertMeter(formatBytes(500), formatBytes(1000))
+	assertMeter(formatBytes(500), formatBytes(1000), formatBytes(500))
 	config.App.InfoPanelBytes = true
 	ip.Show(scr)
-	assertMeter(formatBytesCommas(500), formatBytesCommas(1000))
+	assertMeter(formatBytesCommas(500), formatBytesCommas(1000), formatBytesCommas(500))
 }
 
 func TestInfoPanel_AlignsAllUsageMetersToNarrowestWidth(t *testing.T) {
@@ -1180,7 +1180,7 @@ func TestInfoPanel_WrapRowContinuationInheritsSelection(t *testing.T) {
 	// existing rows for two consecutive rows sharing (section,
 	// label) — that's a wrap. If none exist skip the test.
 	var parentIdx = -1
-	for i := 0; i+1 < len(ip.rows); i++ {
+	for i := 1; i+1 < len(ip.rows); i++ {
 		r, next := ip.rows[i], ip.rows[i+1]
 		if r.copyable && !next.copyable && r.Label != "" &&
 			next.Label == r.Label && next.section == r.section {
