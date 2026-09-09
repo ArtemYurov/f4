@@ -490,7 +490,7 @@ upstream merge that must happen first, the open tails and the tool hazards.
 - [x] Task 38: Rebalance the CI shards; measure before and after ([details](phase-11-ci-and-docs.md#task-38-rebalance-the-ci-shards)) (depends on 37)
 - [x] Task 39: Run the incremental lint, and verify every commit builds, before opening the PR ([details](phase-11-ci-and-docs.md#task-39-run-the-incremental-lint-against-originmain-before-opening-the-pr)) (depends on 38)
 - [x] Task 40: `/aif-docs` checkpoint; rewrite `AGENTS.md` and `rules/base.md` ([details](phase-11-ci-and-docs.md#task-40-aif-docs-checkpoint)) (depends on 37)
-- [ ] Task 41: Rewrite `ARCHITECTURE.md` from target to fact ([details](phase-11-ci-and-docs.md#task-41-rewrite-architecturemd-from-target-to-fact)) (depends on 40)
+- [x] Task 41: Rewrite `ARCHITECTURE.md` from target to fact ([details](phase-11-ci-and-docs.md#task-41-rewrite-architecturemd-from-target-to-fact)) (depends on 40)
 - [ ] Task 42: Drop the migration baseline ([details](phase-11-ci-and-docs.md#task-42-drop-the-migration-baseline)) (depends on 41)
 - [ ] Task 44: Review the finished tree before calling it done ([details](phase-11-ci-and-docs.md#task-44-review-the-finished-tree-before-calling-it-done)) (depends on 42)
 - [ ] Task 45: Write the pull request ([details](phase-11-ci-and-docs.md#task-45-write-the-pull-request)) (depends on 44) — the last task

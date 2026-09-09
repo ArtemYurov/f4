@@ -521,6 +521,14 @@ transition and leaving a description of the result.
    as a proposal rather than as a description. The proposal itself belongs in
    Task 44 step 2, not here.
 
+1b. **Leave a check behind, or it drifts again.** The document lists packages and
+   layers in prose, which cannot help going stale — it had six packages missing
+   and four in the wrong layer when this task started, and nothing said so. Put
+   the two commands that answer it into the Dependency Rules section itself: a
+   `diff` of the package names it mentions against `ls -d internal/*/`, and the
+   `architectureLayers` map it must agree with. A reader then asks whether it is
+   current instead of reading it to find out.
+
 2. Add the packages this plan created that the document does not yet name:
    `internal/action`, `internal/toast`, `internal/history`, `internal/numeric`,
    `internal/testutil` and `internal/paneltest`. Give the last two a line saying

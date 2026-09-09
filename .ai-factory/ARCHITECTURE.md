@@ -9,34 +9,31 @@ process, but hard module boundaries drawn along Go package lines. A module is a 
 package; its public API is its exported identifiers; nobody reaches into another
 module's internals.
 
-The current tree already follows this pattern above `cmd/f4`: `vfs/`, `sdk/`,
-`plugins/*`, `piecetable/`, `textlayout/`, `sheet/`, `fusefs/`, `vtvibe/`,
-`luaplug/` and `internal/*` are real modules with an acyclic dependency graph and
-no upward edges. Two things are missing. The application itself — `cmd/f4` — holds
-345 non-test files and ~109k lines in one flat `package main`, the one place where
-the compiler enforces nothing. And the repository root mixes the public contract
-(`sdk/`, `vfs/`) with module-private subsystems and loose data directories, so
-nothing about the layout says which is which.
+The tree follows that pattern throughout. `vfs/`, `sdk/` and `plugins/*` are the
+public contract; the application is 40 packages under `internal/`, in four
+layers, with an acyclic dependency graph and no upward edges. `cmd/f4` is the
+composition root and holds five files: `main.go`, four module-wide auditors, and
+the Windows `.syso` resources the linker takes from the main package's own
+directory.
 
-This document defines the target structure that closes both gaps: **the root holds
-entry points and the plugin contract with its implementations; the application core
-lives under `internal/`.** Once the layout states the rule, the compiler enforces it
-and agents reproduce it without being told again.
+**The root holds entry points and the plugin contract with its implementations;
+the application lives under `internal/`.** The layout states the rule, the
+compiler enforces it through `cmd/f4/architecture_test.go`, and an agent
+reproduces it without being told again.
 
 ## Decision Rationale
 
 - **Project type:** cross-platform TUI file manager, single static binary.
 - **Tech stack:** Go 1.26.6, `CGO_ENABLED=0`, no framework; UI and input come from
   the external `vtui` / `vtinput` libraries.
-- **Size:** ~700 Go files outside plugins, 560 `_test.go` files, AI-generated
-  codebase where the test suite is the review mechanism.
+- **Size:** 1360 Go files, 69 packages, AI-generated codebase where the test
+  suite is the review mechanism.
 - **Key factors:**
   1. A file manager is one interactive process with shared terminal state. There is
      no network traffic between subsystems that would pay for service boundaries —
      microservices and layered ports/adapters both add ceremony with no return.
   2. The subsystems are genuinely independent (piece table, spreadsheet, FUSE,
-     Lua engine, VFS backends). Packages already express that; the pattern only has
-     to name it and extend it to `cmd/f4`.
+     Lua engine, VFS backends), and packages express that.
   3. `CGO_ENABLED=0` and the cross-platform matrix mean structure has to survive
      build tags. Package-per-module with `*_windows.go` / `*_unix.go` suffixes does;
      folder-per-technical-layer does not.
@@ -46,8 +43,7 @@ and agents reproduce it without being told again.
 
 ## Folder Structure
 
-Target layout. Entries marked **(move)** exist today and relocate; **(extract)**
-means the package is carved out of today's flat `cmd/f4`.
+The layout, as it is.
 
 ```text
 f4/
@@ -71,61 +67,86 @@ f4/
 ├── plugins/                       # ── SHIPPED PLUGINS: implementations of sdk/ ──
 │   ├── archive/ cloudfox/ netfox/ mediainfo/ envman/
 │   ├── ios/ android/ sqlite/ visren/ id3editor/ chroma/
-│   ├── dummy_internal/ dummy_rpc/ dummy_lua/   # transport fixtures
-│   └── plugring/     (move)       # installable-plugin catalogue: index.yaml and
-│                                  # the plugins it points at. Data, no Go files.
-│                                  # Keeps the Far-era name it is modelled on.
+│   └── dummy_internal/ dummy_rpc/ dummy_lua/   # transport fixtures
 │
-├── internal/                      # ── THE APPLICATION CORE IS MODULE-PRIVATE ──
+├── plugring/                      # installable-plugin catalogue: index.yaml and
+│                                  # the plugins it points at. Data, no Go files.
+│                                  # Keeps the Far-era name it is modelled on, and
+│                                  # stays in the root: its published URL is
+│                                  # .../main/plugring/index.yaml, so the path is
+│                                  # part of the contract.
+│
+├── internal/                      # ── THE APPLICATION IS MODULE-PRIVATE ──
 │   │
-│   │  # application core, extracted from the flat package main
-│   ├── app/          (extract)    # event loop and bootstrap only — see the split
-│   │                              # below; the shared primitives leave first
-│   ├── panel/        (extract)    # file panels, sorting, navigation, quick view, info
-│   ├── editor/       (extract)    # F4 editor on top of internal/piecetable
-│   ├── viewer/       (extract)    # F3 viewer, hex, disasm
-│   ├── dialog/       (extract)    # modal dialogs, command palette, menus, help
-│   ├── cmdline/      (extract)    # command line, prefixes, history, apply_command_*
-│   ├── macro/        (extract)    # macro engine and Lua macro API
-│   ├── plughost/     (extract)    # plugin host: in-process / RPC / Lua / WASM transports
-│   ├── term/         (extract)    # pty, console host, ttyx, ANSI parser, kitty/sixel
-│   ├── gui/          (extract)    # GUI backends, fonts, window position and icon
-│   ├── media/        (extract)    # image, audio, video decode and preview
-│   ├── sysinfo/      (extract)    # cpu / mem / fs / gpu info, drives
-│   ├── update/       (extract)    # self-update, elevation, helper args
-│   ├── unpack/       (extract)    # zip / tar.gz / 7z over a directory, and the
-│   │                              # path guard its three callers share
-│   ├── ini/          (extract)    # the ini parser the four leaves below share;
-│   │                              # its own package because none of them may
-│   │                              # import another of ours
-│   ├── config/       (extract)    # F4Config, ini parsing, config overlay
-│   ├── i18n/         (extract)    # language packs + embedded lang/
-│   ├── theme/        (extract)    # colours, colour space, styles + embedded styles/
-│   ├── keymap/       (extract)    # key remap, hotkeys, input translation
-│   ├── fileops/      (extract)    # copy/move/delete, background jobs, clipboard
+│   │  # layer 4 — the composition root's package: the only one that may
+│   │  # import every other, and which nothing else may import
+│   ├── app/                       # action table, event loop, bootstrap, workspaces
 │   │
-│   │  # self-contained subsystems, module-private (moved off the root)
-│   ├── piecetable/   (move)       # piece table backing the editor
-│   ├── textlayout/   (move)       # text layout and wrapping
-│   ├── sheet/        (move)       # spreadsheet mode
-│   ├── fusefs/       (move)       # FUSE mounting
-│   ├── vtvibe/       (move)       # vtvibe session/provider layer
-│   ├── luaplug/      (move)       # Lua plugin engine
-│   ├── colorer/      (extract)    # colorer4go integration + embedded radiola.hrd
+│   │  # layer 3 — the interactive subsystems
+│   ├── panel/                     # file panels, sorting, navigation, quick view, info
+│   ├── editor/                    # F4 editor on top of internal/piecetable
+│   ├── viewer/                    # F3 viewer, hex, disasm
+│   ├── dialog/                    # modal dialogs, help, settings screens
+│   ├── cmdline/                   # command line, prefixes, apply-command
+│   ├── macro/                     # macro engine and Lua macro API
+│   ├── terminal/                  # pty, console host, ttyx, ANSI parser, kitty/sixel
+│   ├── media/                     # image, audio, video decode and preview
 │   │
-│   │  # platform helpers, already here
-│   ├── wincon/  ttyx/  netproxy/
-│   └── hideconsole/                # NOT our code: a vendored fork of
-│                                   # github.com/ebitengine/hideconsole, wired in
-│                                   # by `replace` in go.mod. Own go.mod, own
-│                                   # module path — leave the path alone.
+│   │  # layer 2
+│   ├── plughost/                  # plugin host: in-process / RPC / Lua / WASM
+│   ├── gui/                       # GUI backends, fonts, window position and icon
+│   │
+│   │  # layer 1
+│   ├── fileops/                   # copy/move/delete, background jobs, clipboard
+│   ├── update/                    # self-update, elevation, helper args
+│   ├── fusefs/                    # FUSE mounting
+│   ├── textlayout/                # text layout and wrapping
+│   ├── vtvibe/                    # vtvibe session/provider layer
+│   │
+│   │  # layer 0 — leaves; each may import internal/ini and nothing else of ours
+│   ├── action/                    # the action registry
+│   ├── appcmd/                    # frame command constants
+│   ├── colorer/                   # colorer4go integration + embedded radiola.hrd
+│   ├── config/                    # F4Config, ini parsing, config overlay
+│   ├── history/                   # command, folder and view/edit history
+│   ├── i18n/                      # language packs + embedded lang/
+│   ├── ini/                       # the ini parser the leaves share; its own
+│   │                              # package because none of them may import
+│   │                              # another of ours
+│   ├── keymap/                    # key names, remapping, the hotkey manager
+│   ├── luaplug/                   # Lua plugin engine
+│   ├── netproxy/                  # network proxy
+│   ├── numeric/                   # numeric helpers
+│   ├── piecetable/                # piece table backing the editor
+│   ├── semantic/                  # the GUI semantic protocol's shared fields
+│   ├── sheet/                     # spreadsheet mode
+│   ├── sysinfo/                   # cpu / mem / fs / gpu info, drives
+│   ├── textsearch/                # text search
+│   ├── theme/                     # colours, colour space, styles + embedded styles/
+│   ├── toast/                     # transient notifications
+│   ├── ttyx/                      # tty extensions
+│   ├── unpack/                    # zip / tar.gz / 7z over a directory, and the
+│   │                              # path guard its callers share
+│   ├── wincon/                    # Windows console
+│   │
+│   │  # test scaffolding: ordinary packages, imported from _test.go only
+│   ├── testutil/                  # layer 0: imports no package of ours
+│   ├── paneltest/                 # layer 4: builds a panels frame, so it sits
+│   │                              # above the three packages that make one
+│   │
+│   └── hideconsole/               # NOT our code and NOT in the layer graph: a
+│                                  # vendored fork of
+│                                  # github.com/ebitengine/hideconsole with its
+│                                  # own go.mod and module path, wired in by
+│                                  # `replace`. `go list ./internal/...` does not
+│                                  # return it — leave the path alone.
 │
 ├── embedded.go                    # root package: embeds README.md, and only that.
 │                                  # Must stay in the root — //go:embed cannot
 │                                  # reach above its own directory, and README.md
 │                                  # has to sit there to render on GitHub.
 │
-├── scripts/          (new)        # *.sh moved out of the repository root
+├── scripts/        # *.sh moved out of the repository root
 ├── docs/                          # subsystem documents; SPREADSHEET.md lands
 │   └── ISSUES/                    #   here. Per-issue reviews are named
 │                                  #   ISSUE_<number>_<SLUG>.md — the number
@@ -135,7 +156,7 @@ f4/
 ├── packaging/                     # distribution packaging
 ├── .github/
 │   ├── workflows/                 # CI build matrix, nightly and tagged releases
-│   └── assets/       (new)        # screenshot.png and other README media
+│   └── assets/        # screenshot.png and other README media
 │
 └── README.md  LICENSE  go.mod  go.sum  f4.example.ini  highlight.ini
                                    # reference configs stay next to the README
@@ -154,18 +175,13 @@ implementations live at the top; the application core lives under `internal/`.**
   They are leaves of the dependency graph: hiding them buys no enforcement, and
   297 files of extensions sitting beside `panel/` and `editor/` would blur the line
   between the core and what plugs into it.
-- `plugins/plugring/` — the catalogue of installable plugins, named after the
-  Far-era plugin ring it reproduces, next to the plugins
-  that ship in the binary. It holds data, not Go files, so `./...` ignores it.
-  Its `index.yaml` is fetched over HTTP from its repository path
-  (`PlugRingCatalogURL`, `internal/plughost/plugring.go:24`), which makes that path a
-  published contract: moving it means already-installed builds stop resolving
-  the catalogue until they update. That is accepted here — the catalogue holds a
-  single demonstration plugin, and application updates go through GitHub
-  Releases, not this URL — but it is called out in the pull request rather than
-  buried, and three references move with it: `PlugRingCatalogURL`, the developer
-  fallback at `internal/plughost/plugring.go:55-56`, and the `url:` inside `index.yaml`
-  that points at its own neighbour.
+- `plugring/` — the catalogue of installable plugins, named after the Far-era
+  plugin ring it reproduces. It holds data, not Go files, so `./...` ignores it.
+  It stays in the root because its `index.yaml` is fetched over HTTP from that
+  exact repository path (`defaultPlugRingCatalogURL`,
+  `internal/plughost/plugring.go:24`), which makes the path a published
+  contract: moving it would leave already-installed builds unable to resolve the
+  catalogue until they update.
 - `cmd/f4` — the entry point; it is `package main` and nothing can import it anyway.
 - `embedded.go` — the root package that bridges root-level files into the binary.
   `//go:embed` cannot reach above its own directory, and `README.md` has to stay in
@@ -174,40 +190,24 @@ implementations live at the top; the application core lives under `internal/`.**
 Everything else is module-private, so the compiler answers "may I import this?"
 before a reviewer has to.
 
-**`app` is two things, and only one of them is the root.** Today 37 call edges
-run *into* the would-be `app` from lower layers — `toast.go` is called from six
-different domains, `framework_actions.go` from four, the action registry from
-panels and hotkeys. The dependency rule below forbids exactly that, so the pile
-splits in two. Layer-0 utilities leave `cmd/f4` **first**, before any package
-that calls them; the real composition root (`main.go`, `startup_*`,
-`runtime_mode`) leaves last and keeps the name `app`. Extracting them in the
-other order makes every intermediate commit uncompilable.
+**`internal/app` is the composition root and nothing else.** The dependency rule
+below is what keeps it that way: `internal/app` may import every layer 0-3
+package, and nothing below layer 4 may import it. Both halves are checked by
+`cmd/f4/architecture_test.go`, and the second is the one that matters — a
+utility called from six domains does not belong in the root, and if it drifts
+there the check turns the drift into a build failure rather than a habit.
 
-The split runs through files, not between them — three of these files are
-themselves mixed, and moving one whole is what would break the build:
+That is why the leaves exist at all. `internal/action` holds the registry
+mechanism, `internal/toast` the transient notifications, `internal/history` the
+command, folder and view/edit histories, `internal/numeric` the bounded-integer
+helpers: each is called from several domains, so each is a package below all of
+them rather than a file beside the loop.
 
-| file | layer-0 part | stays with the views |
-|---|---|---|
-| `action_registry.go` | the `Action` type and `RegisterAction`; its fields are `func() bool` closures, so the mechanism depends on nothing above layer 0 | the 2553-line `init()` registration table, which names `PanelsFrame` 109 times and `EditorView` 48 |
-| `actions.go` | four functions — the far2l history helpers | everything else, and it does not go to one place: 61 carry a view type (52 take `*PanelsFrame` in the signature), and of the remaining view-free ones eight belong to `dialog`, three to `i18n`, three to `viewer`, one to `editor` |
-| `misc.go` | the numeric helpers (`bounded*`, `nonNegativeUint64`, `runeCodepoint`) — called from eight future packages, the most widely shared code in the file | `ScreenRow` (used only by four test files) and `ReleaseHeavyMemory` (two files) |
-
-`toast` and `path_identity` move whole. The history files — `history_provider.go`,
-`history_dialog.go`, `command_history_paths.go`, `search_history.go`,
-`menu_history.go` — are a cluster rather than strays: none of them touches a
-message, a config field, a toast or a view type, so they form a layer-0 package
-of their own.
-
-`framework_actions.go` is not in this table: 18 of its 25 functions have no
-external callers at all — they are `Handler:` values referenced from the
-registration table. It reads as widely used only because registration looks like
-calling. It travels whole with the composition root.
-
-**`sysinfo` keeps its own copy of the one numeric helper it needs.** Its single
-outbound edge is one call to `boundedUint64ToInt` (`cpu_info_darwin.go:33`).
-Importing the shared numeric package would *create* the edge the rules forbid for
-a layer-0 leaf rather than remove it, so a five-line private copy is what makes
-its outbound count genuinely zero. Everyone else imports the shared package.
+**`internal/sysinfo` keeps its own copy of the one numeric helper it needs.** Its
+single outbound edge would be one call to a bounded-integer conversion.
+Importing `internal/numeric` would *create* an edge where the point is to have
+none, so a five-line private copy is what makes its outbound count genuinely
+zero. Everyone else imports the shared package.
 
 **One test does not follow its subject.** `command_palette_coverage_test.go`
 walks the whole module and checks a global invariant: every `ProcessKey` and
@@ -217,11 +217,10 @@ per-package copy sees only its own subtree, and a handler added in a third
 package passes unnoticed, which is the thing the test exists to catch. It stays
 in `cmd/f4`.
 
-Its 42 audit keys, however, are keyed by file path
-(`cmd/f4/file_panel.go:(*FileSystemPanel).ProcessKey`), so every move rewrites
-them. Re-key them once to the qualified symbol —
-`panel.(*FileSystemPanel).ProcessKey` — before the extraction starts: a package
-changes far less often than a path, files move freely inside their package, and
+Its audit keys are the qualified symbol rather than a file path —
+`panel.(*FileSystemPanel).ProcessKey`, not
+`internal/panel/list.go:(*FileSystemPanel).ProcessKey`. A package changes far
+less often than a path, files move freely inside their package, and
 the package name is what identifies the subject anyway. The keys have to be
 touched regardless; doing it as a re-keying instead of a path update ends the
 tax rather than paying it on every commit.
@@ -254,12 +253,12 @@ way `vfs/hostpath` holds `path.go` rather than `vfs_path.go`.
 ```text
 internal/panel/
 ├── frame.go                # type PanelsFrame and its core methods
-├── frame_dragdrop.go       # was cmd/f4/dragdrop.go
-├── frame_translator.go     # was cmd/f4/translator.go
-├── frame_semantic.go       # the PanelsFrame slice of cmd/f4/semantic.go
+├── frame_dragdrop.go       # dragging files out of a panel
+├── frame_translator.go     # the external-UI translator's view of the frame
+├── frame_semantic.go       # the frame's half of the GUI semantic protocol
 ├── list.go                 # type FileSystemPanel
-├── list_reconnect.go       # was cmd/f4/reconnect.go
-└── list_semantic.go        # the FileSystemPanel slice of cmd/f4/semantic.go
+├── list_reconnect.go       # reconnecting a panel whose VFS session died
+└── list_semantic.go        # the file panel's half of that protocol
 ```
 
 Why it matters here specifically: Go requires a type's methods to live in the
@@ -283,28 +282,56 @@ into the type's package.
 
 ## Dependency Rules
 
-Dependencies point from the application inward to the subsystems. `cmd/f4/main.go`
-is the only place where everything is assembled. Layers, bottom up:
+Dependencies point from the application inward to the subsystems.
+`internal/app` is the only place where everything is assembled, and
+`cmd/f4/main.go` is one call to it. Layers, bottom up.
 
-**Layer 0 — kernel, no intra-module dependencies:** `vfs`, `sdk`,
-`internal/piecetable`, `internal/sheet`, `internal/wincon`, `internal/ttyx`,
-`internal/netproxy`, `internal/hideconsole`, `internal/config`, `internal/i18n`,
-`internal/theme`, `internal/keymap`, `internal/sysinfo`, `internal/numeric`,
-`internal/ini`, `internal/unpack`.
+The layer of every package is declared once, in `architectureLayers` in
+`cmd/f4/architecture_test.go`, and that map is the authority — this list is
+written from it. `TestArchitectureLayerMapCoversEveryInternalPackage` fails if a
+package under `internal/` is missing from the map, so the map cannot go stale in
+silence; this prose can, and the check for that is at the end of this section.
 
-**Layer 1 — subsystems over the kernel:** `internal/textlayout` →
-`internal/piecetable`; `internal/fusefs` → `vfs`; `internal/vtvibe` → `vfs`;
-`internal/luaplug`; `internal/terminal`, `internal/gui`, `internal/media`,
-`internal/fileops`, `internal/update` (self-update is a leaf with 3 outbound
-edges, not an interactive subsystem).
+**Layer 0 — leaves, importing no package of ours but `internal/ini`:**
+`vfs`, `sdk`, `internal/action`, `internal/appcmd`, `internal/colorer`,
+`internal/config`, `internal/history`, `internal/i18n`, `internal/ini`,
+`internal/keymap`, `internal/luaplug`, `internal/netproxy`, `internal/numeric`,
+`internal/piecetable`, `internal/semantic`, `internal/sheet`,
+`internal/sysinfo`, `internal/testutil`, `internal/textsearch`,
+`internal/theme`, `internal/toast`, `internal/ttyx`, `internal/unpack`,
+`internal/wincon`.
+
+**Layer 1 — subsystems over the leaves:** `internal/fileops`,
+`internal/fusefs` → `vfs`, `internal/textlayout` → `internal/piecetable`,
+`internal/update`, `internal/vtvibe` → `vfs`.
 
 **Layer 2 — plugins and hosts:** `plugins/*` → `vfs`, `sdk`, `internal/*`;
-`internal/plughost` → `sdk`, `internal/luaplug`, `vfs`.
+`internal/plughost` → `sdk`, `internal/luaplug`, `vfs`; `internal/gui`.
 
 **Layer 3 — interactive subsystems:** `internal/panel`, `internal/editor`,
-`internal/viewer`, `internal/dialog`, `internal/cmdline`, `internal/macro`.
+`internal/viewer`, `internal/dialog`, `internal/cmdline`, `internal/macro`,
+`internal/terminal`, `internal/media`.
 
-**Layer 4 — application:** `internal/app`, then `cmd/f4`.
+**Layer 4 — application:** `internal/app`, then `cmd/f4`. `internal/paneltest`
+is layer 4 as well: it builds a panels frame, so it sits above the three
+packages that make one, and no production file imports it.
+
+`internal/hideconsole` is in no layer. It is a vendored fork with its own
+`go.mod` and module path, so `go list ./internal/...` does not return it and the
+auditor is not asked about it.
+
+This prose lists packages and layers by hand, so it can drift from the tree —
+and it did, by six packages and four layers, before it was rewritten from the
+map. Two commands say whether it has drifted again:
+
+```bash
+# every package under internal/ is named here, and nothing here is gone
+diff <(grep -oE 'internal/[a-z0-9]+' .ai-factory/ARCHITECTURE.md | sed 's|internal/||' | sort -u) \
+     <(ls -d internal/*/ | sed 's|internal/||;s|/||' | sort)
+
+# and the layer each is listed under matches architectureLayers
+grep -oE '"internal/\w+": *[0-9]' cmd/f4/architecture_test.go | sort
+```
 
 Rules:
 
@@ -421,27 +448,21 @@ means updating the `replace` directive that points at it (`go.mod:187`).
    research → plan → archive chain under `.ai-factory/`.
 
 8. **Documentation is part of the change, not its aftermath.** The 48 subsystem
-   documents describe where things live, so a move that leaves them stale makes
-   them actively misleading — worse than absent. Every move commit closes its own
-   references (see the migration policy), and the restructuring as a whole revises
-   `docs/` rather than only patching paths in it.
+   documents describe where things live, so a change that leaves them stale
+   makes them actively misleading — worse than absent. A commit that moves a
+   file closes its own references in `docs/`, `README.md` and `AGENTS.md`.
 
-   Per-issue reviews are named `docs/ISSUES/ISSUE_<number>_<SLUG>.md`, keeping
-   the existing SCREAMING_SNAKE style — `ISSUE_165_SORT_GROUPS.md`,
-   `ISSUE_546_CONPTY_FOLLOWUP.md`. The convention is not invented here:
-   `ISSUE_91_FREEBSD_CONSOLE_DIAGNOSIS.md` already carries a slug and is the
-   precedent. The other 40 read `ISSUE_<n>_SOLUTION_REVIEW.md` — names
-   distinguished only by a number, so finding the review of a subject requires
-   already knowing its issue number. The slug replaces the constant
-   `SOLUTION_REVIEW` tail, which carried no information: every file in the
-   directory is a solution review. Renaming updates the links that point at
-   them, by the same rule as any other move.
+   Per-issue reviews are named `docs/ISSUES/ISSUE_<number>_<SLUG>.md` in
+   SCREAMING_SNAKE — `ISSUE_165_CONPTY_SYNC_MARKER.md`,
+   `ISSUE_546_CONPTY_FOLLOWUP.md`. The slug is what makes the directory
+   navigable: a name distinguished only by a number can only be found by
+   somebody who already knows the number, and `SOLUTION_REVIEW` carried no
+   information because every file there is one.
 
 ## Package Ownership
 
 Every package answers for one subject, and every file belongs to exactly one
-package. This outlives the extraction: once the tree is split, the rules below
-are what keeps it split.
+package. The rules below are what keeps it that way.
 
 - **A new file goes to the package that owns its subject.** If none owns it,
   create the package — do not widen a neighbouring one because it is close
@@ -486,83 +507,118 @@ define contracts, `plugins/` implement them, `internal/*` runs the application,
 `cmd/f4` wires it together, `tools/` serves developers and ships in nothing. A
 file that would do two of these jobs is two files.
 
-## Legacy vs New Code Policy
+## Where New Code Goes
 
-- **New features:** new code goes into the module it belongs to. If no module fits,
-  create the package — do not add file number 346 to `cmd/f4`.
-- **Existing code:** do not opportunistically refactor unrelated files in
-  `cmd/f4` while fixing a bug. Extraction is its own task, with its own commit, so
-  a behavioural change never hides inside a move diff.
-- **Migration is mechanical and staged.** One subsystem per commit: `git mv` the
-  files and their tests, add the package clause, export what `cmd/f4` still needs,
-  fix imports, run the matrix. No rewrites inside a move commit — a reviewer must
-  be able to confirm the diff is a rename.
-- **Registration order is behaviour, not detail.** `action_registry.go:254` holds
-  a 2553-line `init()` with 174 `RegisterAction` calls, and that order is what the
-  menus and the command palette display. Inside one package Go runs `init()` in
-  filename order; across packages it follows the import graph. Splitting the
-  registry therefore reorders the menu silently, and no test catches it. Make the
-  order explicit — sort at registration or register from one ordered list — before
-  the files separate.
-- **A move is not done until the prose agrees.** 24 documents reference paths that
-  change, `docs/VTVIBE.md` alone 34 times, `AGENTS.md` 12. Each move commit greps
-  `docs/`, `README.md` and `AGENTS.md` for the old path; a surviving reference is
-  an unfinished move, not a follow-up.
-- **Extraction order:** leaf-first, ranked by **outbound** edges — how much a
-  package still drags out of `cmd/f4`, not how many callers it has. A package
-  with many callers and few dependencies is an early candidate, not a late one.
-  Measured on the call graph: `sysinfo` (1 outbound), `update` (3), the config
-  group (`config`/`i18n`/`theme`/`keymap`), then `dialog`/`plughost`/`gui`/`macro`
-  (7 each), `viewer` (9), `term` (12) ahead of `media` (10) because six of media's
-  ten point at term, `fileops` (13), `editor` (23), `panel` (30), `cmdline` (41).
-  The composition root goes last.
-- **Interoperability:** while a subsystem is half-extracted, the extracted package
-  must not import `cmd/f4` back — that is impossible for `package main` anyway,
-  which is precisely what makes leaf-first ordering the only workable order.
+- **A file goes to the package that owns its subject.** If none does, create the
+  package. Never `internal/app`: it wires the subsystems together and implements
+  none of them, and a file parked there is a file whose home was not looked for.
+- **Nothing new in `cmd/f4`.** It is `main.go`, the four module-wide auditors and
+  the Windows `.syso`.
+- **A test lives with its subject.** A test that spans packages is hosted by the
+  highest one it needs; if that pulls it away from private members it must reach,
+  split it or make it a `package X_test`. Exporting a symbol so a test can reach
+  it from another package is that rule broken and then papered over.
+- **Registration order is behaviour, not detail.** The action registry's order is
+  what the menus and the command palette display, and Go runs `init()` in
+  filename order within a package and in import-graph order across them, so a
+  file that moves can reorder the menu with nothing to catch it.
+  `TestActionOrderIsStable` in `internal/app` holds that order against a golden
+  list; a change to it is a change to the UI and has to be argued for.
+- **A change is not done until the prose agrees.** `docs/`, `README.md` and
+  `AGENTS.md` name files and packages. A surviving reference to a path that
+  moved is an unfinished change, not a follow-up.
+- **Do not opportunistically restructure while fixing a bug.** Moving code is its
+  own commit, so a behavioural change never hides inside a move diff and a
+  reviewer can confirm a rename is a rename.
 
 ## Code Examples
 
-### Composition Root — construction, not global state
+### Composition Root — one place that knows every subsystem exists
 
 ```go
 // cmd/f4/main.go
+package main
+
+import "github.com/unxed/f4/internal/app"
+
 func main() {
-    flags := parseFlags()
-    cfg := config.Load(flags.ConfigPath)
-
-    fs := vfs.NewHost()                       // layer 0
-    host := plughost.New(cfg, fs)             // layer 2: owns all four transports
-    term := term.New(cfg.Terminal)            // layer 1
-
-    left := panel.New(cfg, fs, panel.Left)    // layer 3
-    right := panel.New(cfg, fs, panel.Right)
-
-    application := app.New(cfg, fs, host, term, left, right)
-    if err := application.Run(context.Background()); err != nil {
-        fmt.Fprintf(os.Stderr, "f4: %v\n", err)
-        os.Exit(1)
-    }
+	app.Main()
 }
 ```
+
+`app.Main` reads the flags, picks the startup mode — terminal, GUI backend,
+`--update`, the sudo dispatcher, the plugin scaffolder — and fills in every seam
+the lower packages declare, which is what makes it the composition root: the
+only function in the tree that names all forty packages.
+
+**It receives nothing and returns nothing, and that is the honest description.**
+The shape a composition root is supposed to have is a constructor taking its
+subsystems and a `Run` returning an error:
+
+```go
+application := app.New(cfg, fs, host, term, left, right)
+if err := application.Run(context.Background()); err != nil { … }
+```
+
+f4 is not built that way. `vtui.FrameManager`, `config.App`,
+`keymap.GlobalHotkeysMgr` and `macro.MacroMgr` are package-level values, read
+4490 times across `internal/`, so a constructor taking those things as arguments
+would not inject them — it would list them, while the body still reached for the
+globals. The signature would assert something the code does not do, which is
+worse than the plain call above saying nothing.
+
+Making it true is threading those four through, starting with `config.App`
+(1575 of the 4490, read rather than mutated) and starting after the entry point
+has a test, which it does not. That is a change of its own, not a rename.
 
 ### Dependency direction — a lower layer defines the interface
 
+A lower package declares what it needs from above as a variable with an inert
+default, and the composition root fills it in. The declaration is the interface;
+the assignment is the only place the two layers meet.
+
 ```go
-// internal/panel/frame.go — the panel says what it needs from a plugin host;
-// it does not import internal/plughost, so plughost can depend on panel types
-// later without producing a cycle.
-type PluginColumns interface {
-    ColumnsFor(ctx context.Context, path string) ([]Column, error)
+// internal/panel/host.go — what the panels need from the application above
+// them. Every default is inert, so an unwired panel declines the command and
+// shows no menu, which is wrong in a way somebody notices.
+var (
+	// AppCommand answers a frame command the panel does not implement, and
+	// reports whether it did.
+	AppCommand = func(pf *PanelsFrame, cmd int, args any) bool { return false }
+
+	// BuildMenuBarItems builds the menu bar for an area from the action table.
+	BuildMenuBarItems = func(area string) []vtui.MenuBarItem { return nil }
+)
+```
+
+```go
+// internal/app/bootstrap.go — the root filling them in.
+panel.AppCommand = handlePanelsAppCommand
+panel.BuildMenuBarItems = BuildMenuBarItems
+```
+
+`internal/terminal` states the same thing as an interface rather than a set of
+variables, because what it needs is a coherent group rather than eight
+unrelated calls:
+
+```go
+// internal/terminal/application.go
+type Application interface {
+	InitCore() *vtui.ScreenBuf
+	InstallImageOverlay()
+	OpenEditFile()
+	ClientAttached(startLeft, startRight, editPath string)
+	// …
 }
 
-func New(cfg *config.Config, fs vfs.FileSystem, side Side) *Panel { … }
+// App is the live application. The composition root sets it once at startup.
+var App Application
 ```
 
-```go
-// internal/app/app.go — the app is the only place that knows both sides exist.
-func New(cfg *config.Config, fs vfs.FileSystem, host *plughost.Host,
-    t *term.Terminal, left, right *panel.Panel) *App { … }
-```
+Both shapes are in use and both are correct; the choice is whether the calls
+belong together. What is not permitted is the lower package importing the
+higher one to make the call directly, which is what `architecture_test.go`'s
+rule 3 checks.
 
 ### Platform differences stay in build-tag files
 
@@ -596,15 +652,21 @@ if err := fs.Copy(ctx, src, dst); err != nil {
 
 ## Anti-Patterns
 
-- ❌ **Adding to the flat package.** A new feature landing as another file in
-  `cmd/f4` moves the project backwards; the whole point of the target layout is
-  that the compiler, not a convention, keeps subsystems apart.
+- ❌ **Adding a file to `cmd/f4`.** It holds `main.go`, the four module-wide
+  auditors and the Windows `.syso`. A feature landing there is the flat package
+  growing back one file at a time, and the point of the layout is that the
+  compiler, not a convention, keeps subsystems apart.
+- ❌ **Parking a file in `internal/app` because nothing else fitted.** It wires
+  and does not implement. Code whose owner was not decided is code with an owner
+  nobody looked for.
 - ❌ **Moving `vfs` or `sdk` under `internal/`.** It compiles here and breaks every
   third-party plugin, because Go forbids importing `internal/` from outside the
   module.
 - ❌ **Rewriting inside a move commit.** Renamed identifiers and reshuffled logic
-  hidden in a 300-file `git mv` diff cannot be reviewed, and this codebase reviews
+  hidden in a large `git mv` diff cannot be reviewed, and this codebase reviews
   by reading diffs and running tests.
+- ❌ **Exporting a symbol so a test in another package can reach it.** The test
+  belongs with its subject; the export is the rule broken and then papered over.
 - ❌ **Package-level mutable state as a shortcut across a boundary.** A `var
   currentPanel *Panel` in one package read by another is an import cycle that the
   compiler happens not to catch.
