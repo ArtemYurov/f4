@@ -1071,7 +1071,8 @@ jobs:
         set -euo pipefail
         module=$(go list -m)
         args=""
-        for package in $PACKAGES; do
+        read -r -a shard_packages <<<"$PACKAGES"
+        for package in "${shard_packages[@]}"; do
           case "$package" in
             "$module")   relative=./ ;;
             "$module"/*) relative="./${package#"$module"/}" ;;
@@ -1238,16 +1239,34 @@ jobs:
         if [ -z "$RUN_FILTER" ] || [[ "TestAllDialogs_LayoutValidation" =~ $RUN_FILTER ]]; then
           case " ${targets[*]} " in
             *" ./... "*|*" github.com/unxed/f4/internal/app "*)
-              # -v and the grep are the check: the -skip above removes this
-              # test from every other target, so if this line names a package
-              # that does not hold it, `go test -run` prints
-              # "[no tests to run]" and exits 0 -- the test would be excluded
-              # everywhere and re-run nowhere, with the cell still green.
-              GOMAXPROCS=1 go test -v -timeout 15m -run '^TestAllDialogs_LayoutValidation$' ./internal/app \
-                | tee /dev/stderr | grep -q '^--- PASS: TestAllDialogs_LayoutValidation' || {
-                  echo "::error::TestAllDialogs_LayoutValidation did not run in ./internal/app"
-                  exit 1
-                } ;;
+              # -v and the PASS check are the point: the -skip above removes
+              # this test from every other target, so if this line names a
+              # package that does not hold it, `go test -run` prints
+              # "[no tests to run]" and exits 0 -- excluded everywhere, re-run
+              # nowhere, cell still green.
+              #
+              # What is asserted is "=== RUN", not "--- PASS": the test skips
+              # itself when nothing a layout depends on changed, and a skip is
+              # a deliberate behaviour, not a failure. What must never happen
+              # is the test not being *found* -- then `go test -run` prints
+              # "[no tests to run]" and exits 0, and the -skip above has
+              # already removed it from every other target.
+              #
+              # -count=1 because a cached result prints neither line, and
+              # captured rather than piped because `... | grep -q` exits at
+              # the first match, closes the pipe, and pipefail then fails the
+              # step over the SIGPIPE it caused.
+              if ! layout=$(GOMAXPROCS=1 go test -v -count=1 -timeout 15m -run '^TestAllDialogs_LayoutValidation$' ./internal/app 2>&1); then
+                printf '%s\n' "$layout"
+                exit 1
+              fi
+              printf '%s\n' "$layout"
+              case "$layout" in
+                *"=== RUN   TestAllDialogs_LayoutValidation"*) ;;
+                *)
+                  echo "::error::TestAllDialogs_LayoutValidation was not found in ./internal/app"
+                  exit 1 ;;
+              esac ;;
           esac
         fi
 
@@ -1409,7 +1428,11 @@ jobs:
         # runner gets, and an empty shard skipped the step above rather than
         # falling through to `go test` with no arguments, which would quietly
         # test the current directory.
-        go test -race -shuffle=on -timeout 15m -skip '^TestSeedSweep$' $PACKAGES
+        # An array, not a bare expansion: the list has to word-split into
+        # separate arguments, and shellcheck is right that a bare $PACKAGES
+        # would also glob.
+        read -r -a packages <<<"$PACKAGES"
+        go test -race -shuffle=on -timeout 15m -skip '^TestSeedSweep$' "${packages[@]}"
 
   release:
     name: Release

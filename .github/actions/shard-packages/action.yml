@@ -91,4 +91,4 @@ runs:
         echo "packages=$(tr '\n' ' ' <<<"$mine" | sed 's/ $//')" >> "$GITHUB_OUTPUT"
         echo "count=$(wc -l <<<"$mine" | tr -d ' ')" >> "$GITHUB_OUTPUT"
         echo "shard $SHARD of $SHARDS: $(wc -l <<<"$mine" | tr -d ' ') packages"
-        printf '  %s\n' $mine
+        sed 's/^/  /' <<<"$mine"
