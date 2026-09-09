@@ -115,15 +115,33 @@ commit. Phase 4 carries the full table.
    `gpu_info_linux.go:113` is the single `Msg` call inside the sysinfo family.
    Both must go before the first wave. Tasks 6 and 7.
 
-**CI does not need per-commit resharding, but it does hide one silent failure.**
-The lint shards split `./cmd/f4/...` against everything else and the race
-`packages` scope is `go list ./... | grep -Ev '…/cmd/f4$'` (`build.yml:1395`), so
-files migrate between shards on their own and both halves stay correct — only
-progressively imbalanced. Rebalance once, in Task 38. The trap is elsewhere:
-`build.yml:1235` skips `TestAllDialogs_LayoutValidation` globally and re-runs it
-single-threaded only for `./...` or `cmd/f4` (`:1193-1194`). When
-`dialog_layouts_test.go` moves in Task 25, the test is skipped everywhere and
-re-run nowhere — a green build with a missing test.
+**A check that names a place must assert it found something there.** This was
+written as one prediction about one test and it turned out to be a class. The
+prediction: `build.yml` skips `TestAllDialogs_LayoutValidation` globally and
+re-runs it single-threaded only for a named target, so when the test moves it is
+skipped everywhere and re-run nowhere — a green build with a missing test. Task
+25 saw it happen and fixed the path. Task 36 moved the test again and the same
+trap fired in the same place, because fixing the path fixes the instance.
+
+Three of these landed in this work, and they differ only in what emptied:
+
+| what named a place | what emptied | who noticed |
+|---|---|---|
+| the layout test's isolated re-run | the package it named | nobody, twice — `go test -run` prints `[no tests to run]` and exits 0 |
+| `go generate ./cmd/f4` | the directive, which travelled with `main.go` | nobody — `go generate` on a package with no directives exits 0 |
+| the race job's three heaviest shards | the package they filtered over | nobody — they ran four auditor files and passed |
+
+The rule that closes the class rather than the case: **a check that names a
+location must fail when it finds nothing there**, and it has to say so itself,
+because the tool will not. The layout re-run now greps its own `--- PASS`; the
+generate step now asserts a directive exists before running it; the shards no
+longer name a package at all.
+
+The distinguishing question is what a command does with empty input, not how
+important the command is. `cp -r internal/i18n/lang internal/dialog/help build/`
+is self-checking — `cp` fails on a missing source — which is why moving `lang/`
+and `help/` in phases 5 and 6 broke nothing quietly. `go test`, `go generate` and
+a shard filter all succeed on nothing.
 
 **The extraction gate.** A package leaves `cmd/f4` only when every symbol it calls
 already lives in an extracted package, in itself, or outside the module. The

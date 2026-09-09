@@ -613,6 +613,27 @@ None.
 
 ## Task 45: Write the pull request
 
+**The body needs a section for what the restructuring found rather than broke,
+and it must be separate from the moves.** A reader of a 300-commit branch cannot
+otherwise tell "we fixed what we broke" from "we found what was lying there" —
+and only the second is an argument in favour of the work. What belongs there so
+far, each with its evidence:
+
+- **`internal/editor` raced its own teardown.** `EditorView.Close` cancelled the
+  highlighting goroutine and did not wait for it, then called `BaseFrame.Close`,
+  which writes the field that goroutine reads through `IsDone` between slices.
+  The indexing goroutine two lines above is joined with `indexWG.Wait()`; the
+  highlighter had no equivalent. Pre-existing, product-side, found by the race
+  detector on run 34298174157 and fixed here.
+- **`tools/icons`' own test never passed** (below).
+- **The `.lng` key that reaches the user as `{KeyBar.EditorAltF8}`** — upstream's
+  gap, found by the sweep Task 46 added, and left as theirs to fix.
+
+`internal/fileops`' race does **not** belong in that section: a test replaced
+`vtui.FrameManager` under a goroutine it had started, which is this work's own
+test hygiene, not a bug in f4. Keeping the two apart is the whole point of the
+section.
+
 **One more line the body owes the reader**, recorded here so it survives to
 Task 45: `tools/icons`' own test never passed. It read
 `../../assets/icon/f4.svg` while the tool it tests read `cmd/f4/assets/icon/`,
