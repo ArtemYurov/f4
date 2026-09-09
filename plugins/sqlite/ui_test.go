@@ -195,7 +195,7 @@ func TestBrowserWindowRoutesDatabaseGestures(t *testing.T) {
 		t.Fatal("Enter on the result table was not handled")
 	}
 	dismissSQLiteTopFrame(fm)
-	if b.frame.ProcessKey(&vtinput.InputEvent{KeyDown: true, VirtualKeyCode: vtinput.VK_F1}) {
+	if b.frame.ProcessKey(&vtinput.InputEvent{KeyDown: true, VirtualKeyCode: 0xffff}) {
 		t.Fatal("unrelated key was unexpectedly handled")
 	}
 }
