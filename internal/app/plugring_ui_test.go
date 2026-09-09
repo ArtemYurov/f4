@@ -1,8 +1,11 @@
 package app
 
 import (
+	"context"
+
 	"github.com/unxed/f4/internal/panel"
 	"github.com/unxed/f4/internal/paneltest"
+	"github.com/unxed/f4/internal/plughost"
 	"path/filepath"
 	"testing"
 
@@ -10,6 +13,14 @@ import (
 )
 
 func TestPlugRingDialog_Layout(t *testing.T) {
+	// The dialog refreshes its catalog on a goroutine that outlives this test,
+	// and plughost.FetchCatalog reads plughost.PlugRingCatalogURL, which
+	// TestFetchCatalog_Success writes. This test wants the layout, not the
+	// catalog, so it hands the dialog a fetch that touches neither.
+	previousCatalog := plugRingCatalog
+	plugRingCatalog = func(context.Context) ([]plughost.PlugRingItem, error) { return nil, nil }
+	t.Cleanup(func() { plugRingCatalog = previousCatalog })
+
 	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.SetDefaultPalette()
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())

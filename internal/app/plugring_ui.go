@@ -116,6 +116,15 @@ func BuildPlugRingRows(items []plughost.PlugRingItem, installed map[string]plugh
 	return rows, selectable
 }
 
+// plugRingCatalog is the catalog read the dialog performs in the background.
+// It is a variable so a test that only wants the dialog's layout can keep the
+// fetch from escaping: the goroutine outlives the test that started it, and
+// plughost.FetchCatalog reads package state that another test writes.
+//
+// refresh reads this on the goroutine that starts the task, not on the one that
+// runs it, so replacing it is safe while a refresh is in flight.
+var plugRingCatalog = plughost.FetchCatalog
+
 func actionPlugRing(pf *panel.PanelsFrame) {
 	w, h := 76, 22
 
@@ -156,8 +165,9 @@ func actionPlugRing(pf *panel.PanelsFrame) {
 		table.SetRows(nil)
 		vtui.FrameManager.Redraw()
 
+		fetch := plugRingCatalog
 		refreshTask = vtui.RunAsync(func(ctx *vtui.TaskContext) {
-			fetched, err := plughost.FetchCatalog(ctx.Context)
+			fetched, err := fetch(ctx.Context)
 			if ctx.Err() != nil {
 				return
 			}
