@@ -19,7 +19,7 @@ func TestHandleSudoClientDispatchesFilesystemCommands(t *testing.T) {
 		t.Fatal(err)
 	}
 	listener := listenUnixForTest(t, addr)
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 
 	serverDone := make(chan struct{})
 	serverErr := make(chan error, 1)
@@ -38,7 +38,7 @@ func TestHandleSudoClientDispatchesFilesystemCommands(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	request := func(req SudoRequest) (SudoResponse, *os.File) {
 		t.Helper()
