@@ -14,6 +14,7 @@ func TestOpenVisRenEditorCreatesTemporaryEditorScreen(t *testing.T) {
 	scr := vtui.NewSilentScreenBuf()
 	scr.AllocBuf(100, 30)
 	vtui.FrameManager.Init(scr)
+	initialScreens := len(vtui.FrameManager.Screens)
 
 	pf := &PanelsFrame{LastW: 100, LastH: 30}
 	err := pf.OpenVisRenEditor(visren.EditorRequest{
@@ -26,10 +27,10 @@ func TestOpenVisRenEditorCreatesTemporaryEditorScreen(t *testing.T) {
 		t.Fatalf("OpenVisRenEditor() error = %v", err)
 	}
 
-	if len(vtui.FrameManager.Screens) != 1 {
-		t.Fatalf("screens = %d, want 1", len(vtui.FrameManager.Screens))
+	if len(vtui.FrameManager.Screens) != initialScreens+1 {
+		t.Fatalf("screens = %d, want %d", len(vtui.FrameManager.Screens), initialScreens+1)
 	}
-	screen := vtui.FrameManager.Screens[0]
+	screen := vtui.FrameManager.Screens[len(vtui.FrameManager.Screens)-1]
 	if len(screen.Frames) != 1 {
 		t.Fatalf("frames = %d, want 1", len(screen.Frames))
 	}
