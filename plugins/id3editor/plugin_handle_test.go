@@ -100,7 +100,7 @@ func TestHandleEditOpensAndSavesSelectedMP3(t *testing.T) {
 	if !ok {
 		t.Fatalf("top frame = %T, want editor dialog", fm.GetTopFrame())
 	}
-	if strings.TrimSpace(dlg.GetTitle()) != "ID3Editor.Title" {
+	if strings.Trim(strings.TrimSpace(dlg.GetTitle()), "{}") != "ID3Editor.Title" {
 		t.Errorf("dialog title = %q, want ID3Editor.Title", dlg.GetTitle())
 	}
 
