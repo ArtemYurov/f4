@@ -24,10 +24,10 @@ func (v *findFileFinderProbeVFS) FindFiles(context.Context, string, vfs.FindQuer
 
 func TestSplitFindMasks(t *testing.T) {
 	cases := []struct {
-		name              string
-		input             string
-		wantIncludes      []string
-		wantExcludes      []string
+		name		string
+		input		string
+		wantIncludes	[]string
+		wantExcludes	[]string
 	}{
 		{name: "ordinary masks", input: " *.go, *.txt ", wantIncludes: []string{"*.go", "*.txt"}},
 		{name: "included and excluded", input: "*.txt | .git, skip.txt", wantIncludes: []string{"*.txt"}, wantExcludes: []string{".git", "skip.txt"}},
