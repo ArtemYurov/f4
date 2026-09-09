@@ -13,12 +13,12 @@ func TestPackEmptyAndDeterministic(t *testing.T) {
 	makeSession := func() *Session {
 		s := NewSession()
 		files := map[string][]byte{
-			"/ctx/readme.txt":       []byte("hello"),
-			"/ctx/sub/with-newline": []byte("world\n"),
-			"/ctx/blob.bin":         []byte{'x', 0, 'y'},
-			"/ctx/.env":             []byte("API_KEY=secret"),
-			"/ctx/project/.ssh/id":  []byte("private"),
-			"/ctx/certificate.pem":  []byte("private"),
+			"/ctx/readme.txt":		[]byte("hello"),
+			"/ctx/sub/with-newline":	[]byte("world\n"),
+			"/ctx/blob.bin":		[]byte{'x', 0, 'y'},
+			"/ctx/.env":			[]byte("API_KEY=secret"),
+			"/ctx/project/.ssh/id":	[]byte("private"),
+			"/ctx/certificate.pem":	[]byte("private"),
 		}
 		for name, data := range files {
 			if err := s.tree.writeFile(name, data); err != nil {
