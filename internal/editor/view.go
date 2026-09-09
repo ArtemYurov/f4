@@ -112,6 +112,11 @@ type EditorView struct {
 	IndexCancel context.CancelFunc
 	// indexWG joins cancelled indexers before Close tears down their buffers.
 	indexWG sync.WaitGroup
+	// highlightWG does the same for the highlighting pass. Cancelling it is not
+	// enough: the worker's loop asks IsDone between slices, and BaseFrame.Close
+	// writes the field that answers, so a cancel that is not waited for leaves
+	// the two racing over the teardown.
+	highlightWG sync.WaitGroup
 	// Indexing is true from StartIndexing until that run ends, by completion
 	// or by cancellation. indexCancel cannot answer the question: it is left
 	// set after a normal finish, so it reads as "indexing forever".
@@ -368,6 +373,7 @@ func (ev *EditorView) Close() {
 		ev.indexResume = nil
 	}
 	ev.indexWG.Wait()
+	ev.highlightWG.Wait()
 	if ev.AsyncBuf != nil {
 		ev.AsyncBuf.Close()
 	}
@@ -935,7 +941,9 @@ func (ev *EditorView) startHighlighting() {
 	// reassigns vtui.FrameManager while the pass is still running.
 	frames := vtui.FrameManager
 
+	ev.highlightWG.Add(1)
 	go func() {
+		defer ev.highlightWG.Done()
 		defer func() {
 			frames.PostTask(func() {
 				ev.highlighting = false

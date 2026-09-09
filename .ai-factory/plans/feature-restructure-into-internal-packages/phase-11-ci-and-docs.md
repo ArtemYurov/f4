@@ -87,6 +87,60 @@ This is done **once, here**, not fourteen times during the waves.
 6. **Measure.** Record the wall-clock of the `lint` and `race` jobs before and
    after on the same commit. A rebalancing that makes CI slower is not done.
 
+
+### What Task 38 actually found
+
+Two jobs were not sharded badly — they were **not running what they named**.
+
+**`TestAllDialogs_LayoutValidation` was running nowhere.** The test job removes
+it from every target with `-skip` and re-runs it single-threaded, because layout
+validation mutates shared UI registries from parallel subtests. The re-run named
+`./cmd/f4`. Task 36 moved the test to `internal/app`, and
+`go test -run '^TestAllDialogs_LayoutValidation$' ./cmd/f4` prints
+`ok ... [no tests to run]` and **exits 0**. So the test was excluded everywhere,
+re-run nowhere, and every cell stayed green — including the full-matrix run this
+branch read as its confirmation. It now names `./internal/app` and asserts its
+own `--- PASS`, because the same silence would return the moment it moves again.
+
+**The race job's three heaviest shards were running four auditor files.** They
+filtered by test-name letter over `./cmd/f4`, which is now `main.go` and four
+auditors, while the `packages` scope carried `internal/app`'s 235. Measured on
+34298174157: the three shards took 0.7-0.9 minutes each and `packages` 2.7.
+
+Both are the same shape, and it is the shape this branch keeps finding: a check
+that names a location, and goes quiet rather than red when the thing it names
+moves away.
+
+**So the shards are numbered now, and their contents computed.** The plan asked
+for that and it was right, for a reason stronger than balance: a shard that
+names a package path has to be edited by every restructuring, and the one that
+did — `cmd/f4` — kept the application in its name for three phases after the
+application left. `.github/actions/shard-packages` assigns each package to a
+shard by weight, longest-processing-time first, weight being the number of test
+files. Nothing in `build.yml` names a package.
+
+Measured on the finished tree, 69 packages:
+
+| shards | per-shard weight | per-shard packages |
+|---|---|---|
+| 2 (lint) | 291, 291 | 40, 29 |
+| 4 (race) | 157, 142, 142, 141 | 1, 17, 18, 33 |
+
+The shard holding `internal/app` gets it alone, and 157 of the 581 total weight
+is irreducible: a package cannot be split across runners without a test-name
+filter, and a filter has to name the package it filters — which is the thing
+being removed. That floor is acceptable because it is measured to be under the
+Test cells' wall clock (3.9-4.9 minutes on 34295760690), so the race job is not
+on the critical path and does not need the split it used to have.
+
+**The empty-shard guard changed meaning and had to be kept explicitly.** The old
+one errored when the package list came out empty, which could only happen by
+accident. A computed split has two empty cases that look identical and are not:
+a shard of a *filtered* list is legitimately empty when nothing this diff
+touched landed in it, and a shard of the *whole module* being empty means the
+assignment dropped packages. The action errors on the second and skips the
+first.
+
 ### Required Interfaces and Contracts
 
 - Every package in `go list ./...` is linted by exactly one shard and raced by

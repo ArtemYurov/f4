@@ -90,6 +90,18 @@ jobs:
       # One cell carries the repo-wide checks; linux/amd64 is the fastest.
       if: steps.affected.outputs.build == 'yes' && matrix.goos == 'linux' && matrix.goarch == 'amd64'
       run: |
+        # `go generate` on a package with no directives prints nothing and
+        # exits 0, so the git diff below would pass by having regenerated
+        # nothing at all. That is not hypothetical: the directive lives in the
+        # main package because the toolchain links a .syso only from there, and
+        # it travels with whatever file it sits in.
+        #
+        # -n prints the commands it would run to STDERR, not stdout, so the
+        # redirect is the check rather than decoration.
+        go generate -n ./cmd/f4 2>&1 | grep -q . || {
+          echo "::error::no //go:generate directive under cmd/f4; the icon and .syso generator would silently not run"
+          exit 1
+        }
         go generate ./cmd/f4
         git diff --exit-code -- \
           internal/gui/assets/icon/generated \
@@ -1000,7 +1012,12 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix: { include: [{ shard: 'cmd/f4', cache-key: cmd-f4 }, { shard: rest, cache-key: rest }] }
+      # Numbered, not named. A shard that names a package path has to be
+      # edited by every restructuring, and the one that did -- `cmd/f4` --
+      # went on carrying the whole application in its name for three phases
+      # after the application left it. The assignment is computed below from
+      # `go list`, so a package that moves lands in a shard by itself.
+      matrix: { include: [{ shard: 0, cache-key: lint-0 }, { shard: 1, cache-key: lint-1 }] }
     env:
       CGO_ENABLED: 0
     steps:
@@ -1037,63 +1054,37 @@ jobs:
       uses: ./.github/actions/affected-packages
 
     - name: Select incremental lint packages
+      id: shard
+      uses: ./.github/actions/shard-packages
+      with:
+        shard: ${{ matrix.shard }}
+        shards: '2'
+        packages: ${{ steps.affected.outputs.packages }}
+
+    - name: Convert import paths to package arguments
       id: lint-packages
+      if: steps.shard.outputs.count != '0'
       shell: bash
       env:
-        AFFECTED: ${{ steps.affected.outputs.packages }}
-        SHARD: ${{ matrix.shard }}
+        PACKAGES: ${{ steps.shard.outputs.packages }}
       run: |
         set -euo pipefail
-
         module=$(go list -m)
-        if [ "$AFFECTED" = "all" ]; then
-          packages=$(go list ./...)
-        elif [ -z "$AFFECTED" ]; then
-          packages=""
-        else
-          packages=$(tr ' ' '\n' <<<"$AFFECTED")
-        fi
-
-        cmd_affected=no
-        rest_args=""
-        while IFS= read -r package; do
-          [ -n "$package" ] || continue
+        args=""
+        for package in $PACKAGES; do
           case "$package" in
-            "$module/cmd/f4"|"$module/cmd/f4"/*)
-              cmd_affected=yes
-              continue ;;
-            "$module")
-              relative=./ ;;
-            "$module"/*)
-              relative="./${package#"$module"/}" ;;
+            "$module")   relative=./ ;;
+            "$module"/*) relative="./${package#"$module"/}" ;;
             *)
-              echo "::error::affected package is outside $module: $package"
+              echo "::error::package is outside $module: $package"
               exit 1 ;;
           esac
-          rest_args="${rest_args:+$rest_args }$relative"
-        done <<<"$packages"
-
-        if [ "$SHARD" = "cmd/f4" ]; then
-          if [ "$cmd_affected" != "yes" ]; then
-            echo "cmd/f4 is not affected by this diff; skipping incremental lint."
-            echo "run=no" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          echo "args=./cmd/f4/..." >> "$GITHUB_OUTPUT"
-          echo "run=yes" >> "$GITHUB_OUTPUT"
-          exit 0
-        fi
-
-        if [ -z "$rest_args" ]; then
-          echo "No affected packages outside cmd/f4; skipping incremental lint."
-          echo "run=no" >> "$GITHUB_OUTPUT"
-          exit 0
-        fi
-        echo "args=$rest_args" >> "$GITHUB_OUTPUT"
-        echo "run=yes" >> "$GITHUB_OUTPUT"
+          args="${args:+$args }$relative"
+        done
+        echo "args=$args" >> "$GITHUB_OUTPUT"
 
     - name: Run incremental golangci-lint
-      if: steps.lint-packages.outputs.run == 'yes'
+      if: steps.shard.outputs.count != '0'
       uses: golangci/golangci-lint-action@v9.3.0
       with:
         version: v2.13.1
@@ -1106,8 +1097,11 @@ jobs:
     # and from then on it is checked across the whole tree and cannot regrow.
     # Adding a linter to this list means clearing its debt first, in the same
     # change.
+    # Shard 0 carries it, not because of what it holds -- the shards are
+    # numbered and their contents computed -- but because exactly one runner
+    # must, and zero is the one that always exists.
     - name: Run whole-tree golangci-lint for the linters with no backlog
-      if: matrix.shard == 'rest'
+      if: matrix.shard == 0
       uses: golangci/golangci-lint-action@v9.3.0
       with:
         version: v2.13.1
@@ -1243,8 +1237,17 @@ jobs:
         # upstream race, so isolate that test in a single-threaded process.
         if [ -z "$RUN_FILTER" ] || [[ "TestAllDialogs_LayoutValidation" =~ $RUN_FILTER ]]; then
           case " ${targets[*]} " in
-            *" ./... "*|*" github.com/unxed/f4/cmd/f4 "*)
-              GOMAXPROCS=1 go test -timeout 15m -run '^TestAllDialogs_LayoutValidation$' ./cmd/f4 ;;
+            *" ./... "*|*" github.com/unxed/f4/internal/app "*)
+              # -v and the grep are the check: the -skip above removes this
+              # test from every other target, so if this line names a package
+              # that does not hold it, `go test -run` prints
+              # "[no tests to run]" and exits 0 -- the test would be excluded
+              # everywhere and re-run nowhere, with the cell still green.
+              GOMAXPROCS=1 go test -v -timeout 15m -run '^TestAllDialogs_LayoutValidation$' ./internal/app \
+                | tee /dev/stderr | grep -q '^--- PASS: TestAllDialogs_LayoutValidation' || {
+                  echo "::error::TestAllDialogs_LayoutValidation did not run in ./internal/app"
+                  exit 1
+                } ;;
           esac
         fi
 
@@ -1321,25 +1324,23 @@ jobs:
         exit 0
 
   race:
-    name: Race (${{ matrix.scope }})
+    name: Race (shard ${{ matrix.shard }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        # cmd/f4's suite alone takes as long under the detector as every
-        # other package combined, so it gets runners of its own -- split in
-        # three by test-name letter, because even alone it sat on the critical
-        # path. TestAllDialogs_LayoutValidation dominates the A range under
-        # the detector, so A cannot be split any further by first letter;
-        # B-L/rest is the closest split of the remaining measured time. The
-        # three app shards share a cache key on purpose: they compile identical
-        # objects, so whichever saves first serves all three.
+        # Four numbered shards, filled by measured weight rather than by name.
+        # The heaviest package lands alone in one of them and that is the floor:
+        # a package cannot be split across runners without a test-name filter,
+        # and a filter has to name the package it filters. Measured, the floor
+        # is under the Test cells' wall clock, so the race job is no longer on
+        # the critical path and does not need one.
         include:
-          - { scope: 'cmd/f4 A', cache-key: app, run: '^TestA' }
-          - { scope: 'cmd/f4 B-L', cache-key: app, run: '^Test[B-L]' }
-          - { scope: 'cmd/f4 rest', cache-key: app, run: '^Test([^A-L]|$)' }
-          - { scope: packages, cache-key: packages }
+          - { shard: 0 }
+          - { shard: 1 }
+          - { shard: 2 }
+          - { shard: 3 }
     env:
       # The race detector requires cgo and the Ubuntu runner provides the
       # native compiler needed by the instrumented test binary.
@@ -1354,16 +1355,18 @@ jobs:
       # The shared setup-go cache key is claimed by whichever ubuntu job
       # saves first -- always one without -race -- so these jobs recompiled
       # the whole tree under the detector on every run, ~2 minutes each.
-      # Race-instrumented objects get a key of their own; the app shards and
-      # package scope compile different package sets, so the key includes it.
+      # Race-instrumented objects get a key of their own, shared by every
+      # shard: they compile overlapping dependency sets, so whichever saves
+      # first serves the rest. Which packages land in which shard is computed
+      # at job time and would make a per-shard key rotate on every move.
       uses: actions/cache@v4
       with:
         path: |
           ~/.cache/go-build
           ~/go/pkg/mod
-        key: race-${{ matrix.cache-key }}-go-${{ hashFiles('go.sum') }}
+        key: race-go-${{ hashFiles('go.sum') }}
         restore-keys: |
-          race-${{ matrix.cache-key }}-go-
+          race-go-
 
     - name: Set up Go
       uses: actions/setup-go@v7
@@ -1375,53 +1378,38 @@ jobs:
       id: affected
       uses: ./.github/actions/affected-packages
 
+    - name: Select race packages
+      id: shard
+      uses: ./.github/actions/shard-packages
+      with:
+        shard: ${{ matrix.shard }}
+        shards: '4'
+        packages: ${{ steps.affected.outputs.packages }}
+
     - name: Run race detector
+      if: steps.shard.outputs.count != '0'
       shell: bash
       env:
-        SCOPE: ${{ matrix.scope }}
-        RUN_FILTER: ${{ matrix.run || '' }}
-        AFFECTED: ${{ steps.affected.outputs.packages }}
+        PACKAGES: ${{ steps.shard.outputs.packages }}
       run: |
-        if [ -n "$RUN_FILTER" ]; then
-          if [ "$AFFECTED" != "all" ] && [[ " $AFFECTED " != *" github.com/unxed/f4/cmd/f4 "* ]]; then
-            echo "cmd/f4 is not affected by this diff; skipping."
-            exit 0
-          fi
-          # 5m, not 15m: a warm shard runs in about a minute, and the known
-          # cmd/f4 hang (leaked FrameManager task pumps; TestMain stuck in a
-          # chan receive) otherwise burns the full timeout before the job
-          # can go red and be retried.
-          go test -race -shuffle=on -timeout 5m -run "$RUN_FILTER" ./cmd/f4
-          exit 0
-        fi
-        # The FFI dependencies now keep Go-owned pointers typed and isolate
-        # the genuinely foreign-pointer conversions behind nocheckptr helpers,
-        # so luaplug can execute its FFI tests under the detector as well.
-        mapfile -t packages < <(go list ./... | grep -Ev '^github.com/unxed/f4/cmd/f4$')
-        # The bare $packages this replaced failed the step when the list came
-        # out empty, because set -e sees the assignment's exit status. mapfile
-        # swallows it, and go test with no arguments would quietly fall back to
-        # the current directory, so check explicitly.
-        if [ ${#packages[@]} -eq 0 ]; then
-          echo "::error::no packages left to run under the race detector"
-          exit 1
-        fi
-        if [ "$AFFECTED" != "all" ]; then
-          mapfile -t packages < <(printf '%s\n' "${packages[@]}" | grep -Fx -f <(tr ' ' '\n' <<<"$AFFECTED") || true)
-          if [ ${#packages[@]} -eq 0 ] || [ -z "${packages[0]}" ]; then
-            echo "No affected packages outside cmd/f4; skipping."
-            exit 0
-          fi
-        fi
+        set -euo pipefail
+        # The FFI dependencies keep Go-owned pointers typed and isolate the
+        # genuinely foreign-pointer conversions behind nocheckptr helpers, so
+        # luaplug can execute its FFI tests under the detector as well.
+        #
         # TestSeedSweep in tools/conptyreconcile runs 3000 seeds through the
         # reconcile pipeline -- pure CPU work. The detector makes it roughly
-        # 7x more expensive, holding this whole job to ~7 minutes while the
-        # other ~40 packages finish in ~40s combined. The full sweep still
-        # runs in the regular non-race jobs; the race-detector pipeline remains
-        # covered by the other ConPTY tests, including
-        # TestRandomisedRoundsAgainstTheMock, TestKnownSeedsAgainstTheMock,
-        # and others.
-        go test -race -shuffle=on -timeout 15m -skip '^TestSeedSweep$' "${packages[@]}"
+        # 7x more expensive, holding a whole shard to ~7 minutes while its
+        # neighbours finish in seconds. The full sweep still runs in the
+        # regular non-race jobs; the race-detector pipeline remains covered by
+        # the other ConPTY tests, including TestRandomisedRoundsAgainstTheMock
+        # and TestKnownSeedsAgainstTheMock.
+        #
+        # No package name appears here. The shard action decides what this
+        # runner gets, and an empty shard skipped the step above rather than
+        # falling through to `go test` with no arguments, which would quietly
+        # test the current directory.
+        go test -race -shuffle=on -timeout 15m -skip '^TestSeedSweep$' $PACKAGES
 
   release:
     name: Release

@@ -451,7 +451,7 @@ upstream merge that must happen first, the open tails and the tool hazards.
 - [x] Task 37: Reduce `cmd/f4` to the entry point ([details](phase-10-composition-root.md#task-37-reduce-cmdf4-to-the-entry-point)) (depends on 36)
 
 ### Phase 11: CI, Lint and Documentation
-- [ ] Task 38: Rebalance the CI shards; measure before and after ([details](phase-11-ci-and-docs.md#task-38-rebalance-the-ci-shards)) (depends on 37)
+- [x] Task 38: Rebalance the CI shards; measure before and after ([details](phase-11-ci-and-docs.md#task-38-rebalance-the-ci-shards)) (depends on 37)
 - [ ] Task 39: Run the incremental lint, and verify every commit builds, before opening the PR ([details](phase-11-ci-and-docs.md#task-39-run-the-incremental-lint-against-originmain-before-opening-the-pr)) (depends on 38)
 - [ ] Task 40: `/aif-docs` checkpoint; rewrite `AGENTS.md` and `rules/base.md` ([details](phase-11-ci-and-docs.md#task-40-aif-docs-checkpoint)) (depends on 37)
 - [ ] Task 41: Rewrite `ARCHITECTURE.md` from target to fact ([details](phase-11-ci-and-docs.md#task-41-rewrite-architecturemd-from-target-to-fact)) (depends on 40)
@@ -906,6 +906,36 @@ goroutine outliving its test could eat the shutdown signal, and the next `Init`
 would raise a second pump. Its check is also its fix: give each of those
 goroutines a done channel and a `t.Cleanup` that joins it, and see whether CI's
 seed stops catching it.
+
+---
+
+### Two data races the detector found, both fixed
+
+Neither is this branch's doing, and neither had been seen before: the race
+detector runs `-shuffle=on` with a fresh seed, so a race that needs a particular
+interleaving surfaces when it surfaces.
+
+**`internal/editor`: `Close` cancelled the highlighter and did not wait for it.**
+`EditorView.Close` cancels `highlightCancel` and then calls
+`BaseFrame.Close`, which writes the field `IsDone` reads; the highlighting
+goroutine asks `IsDone` between slices. Two lines above, the indexing goroutine
+is joined with `indexWG.Wait()` — the highlighter simply had no equivalent, and
+the asymmetry is the bug. It has a `highlightWG` now, waited in the same place.
+Caught on run 34298174157, `TestEditor_StatefulHighlighting_DynamicCatchUpSpeed`;
+not reproducible locally on five seeds including CI's own, green on five after.
+
+**`internal/fileops`: a background toast read the frame manager a test was
+replacing.** `Enqueue` spawns a goroutine that sleeps 500 ms and then may
+announce "operation went to the background"; the toast reads
+`vtui.FrameManager`. A test that enqueues, finishes inside that half second and
+swaps the manager in its cleanup races that read. `QueueShowToast` is a seam
+whose comment already said "a test silences it" — and `internal/fileops` had no
+`TestMain` to do it, while `internal/app`'s does. It has one now. Twenty
+consecutive `-race -shuffle=on` runs clean after, from one in four before.
+
+The second is a test-side race and the first is not: `BaseFrame`'s field is read
+and written from two goroutines in ordinary operation, and only the editor's
+side of it is ours to fix.
 
 ---
 
