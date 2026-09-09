@@ -130,6 +130,7 @@ Three of these landed in this work, and they differ only in what emptied:
 | the layout test's isolated re-run | the package it named | nobody, twice — `go test -run` prints `[no tests to run]` and exits 0 |
 | `go generate ./cmd/f4` | the directive, which travelled with `main.go` | nobody — `go generate` on a package with no directives exits 0 |
 | the race job's three heaviest shards | the package they filtered over | nobody — they ran four auditor files and passed |
+| the per-commit build walk | every merge commit — `git diff-tree` prints nothing for one without `-m --first-parent` | nobody — 59 of 68 commits were checked and the count looked complete |
 
 The rule that closes the class rather than the case: **a check that names a
 location must fail when it finds nothing there**, and it has to say so itself,

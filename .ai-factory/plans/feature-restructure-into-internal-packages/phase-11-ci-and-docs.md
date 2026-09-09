@@ -257,6 +257,13 @@ Finding this locally costs one run. Finding it in review costs the PR.
    ```
    git worktree add -q --detach /tmp/verify upstream/main
    for c in $(git rev-list --reverse upstream/main..HEAD); do
+       # -m --first-parent: git diff-tree prints NOTHING for a merge commit
+       # without it, so a filter on "does this touch Go" skips every merge --
+       # which is exactly the set where conflicts were resolved by hand and a
+       # broken commit is most likely. Nine of this branch's commits were being
+       # skipped that way, the three upstream merges among them.
+       git diff-tree --no-commit-id --name-only -r -m --first-parent "$c" \
+           | grep -qE '\.go$|^go\.(mod|sum)$' || continue
        git -C /tmp/verify checkout -q --detach "$c"
        (cd /tmp/verify && CGO_ENABLED=0 go build ./... && go vet ./...) \
            || echo "FAIL $c $(git log -1 --format=%s "$c")"
