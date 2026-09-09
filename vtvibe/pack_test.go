@@ -76,7 +76,7 @@ func TestPackSecretAndBinaryRules(t *testing.T) {
 	if !isBinary([]byte{'a', 0, 'b'}) {
 		t.Error("NUL-containing data not detected as binary")
 	}
-	if isBinary(append(make([]byte, 8193), 0)) {
+	if isBinary(append([]byte(strings.Repeat("x", 8193)), 0)) {
 		t.Error("NUL after the first 8 KiB detected as binary")
 	}
 }
