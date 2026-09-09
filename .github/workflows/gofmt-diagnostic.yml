@@ -1,0 +1,15 @@
+name: Go fmt diagnostic
+on:
+  push:
+    branches:
+      - '**'
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.6'
+      - name: Print gofmt diff
+        run: gofmt -s -d internal/app/semantic_actions_test.go
