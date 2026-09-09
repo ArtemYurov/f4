@@ -7,7 +7,7 @@ import (
 	"github.com/unxed/vtui"
 )
 
-func TestStartupBackendLabels(t *testing.T) {
+func TestBootstrapStartupBackendLabels(t *testing.T) {
 	labels := startupBackendLabels([]string{"", "tcell"})
 	if len(labels) != 2 {
 		t.Fatalf("startupBackendLabels returned %d labels, want 2", len(labels))
