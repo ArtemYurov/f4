@@ -23,6 +23,8 @@ func TestSkipIfNoRelevantChangesHonoursCIBypasses(t *testing.T) {
 }
 
 func TestSkipIfNoRelevantChangesSkipsUnchangedFiles(t *testing.T) {
+	t.Setenv("CI", "")
+	t.Setenv("F4_FORCE_TESTS", "")
 	dir := t.TempDir()
 	path := filepath.Join(dir, "dependency.txt")
 	if err := os.WriteFile(path, []byte("stable"), 0o600); err != nil {
