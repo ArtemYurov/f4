@@ -1,5 +1,12 @@
 package panel
 
+// ponytail: this file is a copy of internal/paneltest's helpers, kept because
+// an in-package test cannot import a package that imports it. Ceiling: twenty
+// lines that drift apart silently. Upgrade path is to make the panel's tests an
+// external test package (package panel_test), which is what
+// internal/paneltest/doc.go already describes — the tests that would then need
+// the package's private members are the ones to weigh against it.
+
 import (
 	"testing"
 	"time"

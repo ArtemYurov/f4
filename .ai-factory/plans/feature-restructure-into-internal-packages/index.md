@@ -443,7 +443,7 @@ upstream merge that must happen first, the open tails and the tool hazards.
 - [x] Task 33: Extract `internal/editor` ([details](phase-08-fileops-and-editor.md#task-33-extract-internaleditor)) (depends on 14, 29, 32)
 
 ### Phase 9: The Command Line and the Panels
-- [ ] Task 35: Extract `internal/cmdline` ([details](phase-09-panel-and-cmdline.md#task-35-extract-internalcmdline)) (depends on 33) — runs first
+- [x] Task 35: Extract `internal/cmdline` ([details](phase-09-panel-and-cmdline.md#task-35-extract-internalcmdline)) (depends on 33) — runs first
 - [x] Task 34: Extract `internal/panel`, finish `semantic.go`, fill `internal/paneltest` ([details](phase-09-panel-and-cmdline.md#task-34-extract-internalpanel)) (depends on 26, 33, 35)
 
 ### Phase 10: The Composition Root

@@ -10,20 +10,38 @@ Written at `f59248f4`, on a clean, green tree, level with `upstream/main`
 27 upstream commits; both are recorded in `index.md`'s Open Findings, along with
 the live bug the first of them fixed.
 
-**Nothing is pushed since `7d7f5309`.** A phase boundary without a push is a
-boundary without CI, and this wave is the largest commit on the branch: 252
-files, 70 of them renames. Twenty-six matrix cells have not seen it.
+**The run on `7d7f5309` was never read, and it is red.** Run 34284446204 failed
+on Build (linux/amd64) and Race (packages), and two more commits went on top of
+it — the largest on the branch among them. This is the second time the rule
+"a run number is written with its revision, and it is read at the first commit
+after it" was written and not followed. Both failures are the same step,
+`affected.calc`, exiting 1 two seconds in, so nothing was compiled: the step
+begins `git fetch --quiet --depth=1 origin "refs/heads/$GITHUB_BASE_REF" || all
+"base fetch failed"` and `GITHUB_BASE_REF` is empty on `workflow_dispatch`. But
+an earlier `workflow_dispatch` run (34219411634) was green with the same empty
+variable, so the empty variable alone is not it. Two candidates, both to check
+before the next run:
+
+- the affected-package calculator could not place a file in a package. The
+  branch is full of renames, and the script has `all "cannot attribute $f to a
+  package"` and `build_all "cannot attribute $f to a compiled binary"`.
+- Race (packages) carries `echo "::error::no packages left to run under the race
+  detector"`, so the package list may have collapsed to empty after the moves.
+
+The second candidate is worth chasing on its own account even if it is not the
+cause: a race job that is green because it had nothing to run is the same class
+of check as a sweep that finds nothing.
 
 ## Where the work stands
 
-Tasks 26-34 and 46 are done and committed; phases 6, 7 and 8 are closed and
-Task 34 closes the larger half of phase 9. `cmd/f4` is down from 596 files to
+Tasks 26-35 and 46 are done and committed; phases 6, 7, 8 and 9 are closed —
+Task 35 ran before Task 34, which is the order `index.md`'s dependency note
+asks for. `cmd/f4` is down from 596 files to
 241, `internal/panel` holds 75, and there are 39 packages under `internal`. The
 checkboxes in `index.md` match the tree.
 
-Next is **Task 35, `internal/cmdline`**. Task 34 measured its dependency away:
-all five files the roster called "cmdline" read private members of the panel
-frame, so they are panel code and `cmdline -> panel` is zero edges.
+Next is **Task 36, `internal/app`** — but not before the CI run is read. See
+below.
 
 Everything that waited for Task 34 is closed. `text_editor_bridge.go` and
 `visren_editor_bridge.go` are `internal/panel/bridge_texteditor.go` and
@@ -65,7 +83,8 @@ session can check the record rather than rediscover it.
    — a test asserting "nothing happened" passes with an inert seam whatever it
    is really testing. The honest split is by what each test asserts, and nobody
    has read them one by one.
-2. **`internal/paneltest` duplicates two helpers into `internal/panel`.**
+2. **`internal/paneltest` duplicates two helpers into `internal/panel`**, marked
+   `ponytail:` at both copies.
    `frame_manager_test_helpers_test.go` and the mocks the moved tests share
    exist on both sides, because an in-package test cannot import a package that
    imports it. Twenty lines of scaffolding; the alternative is making every
@@ -130,7 +149,18 @@ Two of the fourteen came from blocks written to *correct* the roster, which is
 the part worth remembering: a correction goes stale like the thing it corrects,
 and the check that catches it is the same one — measure before moving.
 
-## Four mechanical traps, each hit once
+## Five mechanical traps, each hit at least once
+
+**The literal multiset is the only check that catches a rewritten string.** Say
+it plainly, because three other checks were running and all three said nothing.
+A rename script that rewrites a string literal produces code that compiles, runs
+and passes: `"panel.activate"` became `"activate"` in five semantic action names
+on the panel wave — the eleventh case of this damage — and the build, the whole
+test suite and `golangci-lint` were green over it. What sees it is the
+before/after count of every literal in the changed files, renames resolved with
+`git diff --name-status -M` so a moved file is compared against its old path
+rather than against nothing. Run it before the tests, not after: a green suite
+is not evidence, and once the diff is committed the comparison is harder to make.
 
 **Both obvious ways of listing paths for a pointed commit are wrong, in
 opposite directions.** `git diff --cached --name-only` prints only the *new*

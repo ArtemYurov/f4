@@ -175,14 +175,27 @@ Finding this locally costs one run. Finding it in review costs the PR.
    does not track these renames; the incremental job reports N findings, of which
    the pre-existing backlog on `main` is M" — so the maintainer sees a known
    quantity rather than a mystery.
-5. Run the strict configuration over the new packages only, where it is meaningful:
+5. **Measure the exported surface by taking it away, not by counting it.** Each
+   wave exported whatever the layer above turned out to need, and a mechanical
+   rename exports more than it should. A text search cannot tell a name that is
+   still used from one that only looks used: `.Dir` matches `filepath.Dir`,
+   `.Label` matches every widget. Un-export the suspects instead and let the
+   compiler answer — it resolves each selector to the object that declares it,
+   which no grep can do. Task 34 did this for the five most generic names on
+   `internal/panel` (`Pf`, `Free`, `SourcePath`, `Filesystem`, `Chord`) and every
+   one of them broke a caller, which is the answer: nothing was over-exported.
+   The tool is `packages.Load` with `NeedTypesInfo`, renaming by object identity;
+   a run costs a minute and a wrong guess costs nothing, because the build fails
+   loudly and the change reverts by re-exporting the same name.
+
+6. Run the strict configuration over the new packages only, where it is meaningful:
    ```
    golangci-lint run -c .golangci-strict.yml ./internal/numeric/... ./internal/toast/... ./internal/history/... ./internal/action/...
    ```
    These four are new code written during this work, so they can be held to the
    strict bar.
 
-6. Verify that **every commit** on the branch builds, not only `HEAD`. The
+7. Verify that **every commit** on the branch builds, not only `HEAD`. The
    plan's central invariant is that any commit can be checked out and built, and
    checking `HEAD` alone never tests it:
    Walk the revisions in a scratch worktree, which reads and rewrites nothing:

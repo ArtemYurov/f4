@@ -2603,6 +2603,13 @@ func TestPanelsFrame_CtrlShiftArrows_AsymmetricHeight(t *testing.T) {
 	pf.CmdLine.Edit.SetText("")
 }
 
+// ponytail: the mocks below are copies of the ones in internal/panel's own
+// tests. The 36 tests in this file need the action table, which lives here, and
+// the panel's tests need the same mocks against private members, which live
+// there; neither package can import the other's _test.go. Ceiling: two copies
+// that drift apart silently. Upgrade path is the same as the helpers' —
+// package panel_test, and one copy in internal/paneltest.
+
 type recordedExternalUICall struct {
 	command string
 	args    []string
