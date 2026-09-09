@@ -32,14 +32,14 @@ func callMacroHost[T any](t *testing.T, call func() T) T {
 }
 
 type macroHostScreenSize struct {
-`twidth, height int
+	width, height int
 }
 
 func callMacroHostScreenSize(t *testing.T, host f4MacroHost) macroHostScreenSize {
-`treturn callMacroHost(t, func() macroHostScreenSize {
-`t`tw, h := host.ScreenSize()
-`t`treturn macroHostScreenSize{width: w, height: h}
-`t})
+	return callMacroHost(t, func() macroHostScreenSize {
+		w, h := host.ScreenSize()
+		return macroHostScreenSize{width: w, height: h}
+	})
 }
 
 func runMacroHostTask(t *testing.T) {
