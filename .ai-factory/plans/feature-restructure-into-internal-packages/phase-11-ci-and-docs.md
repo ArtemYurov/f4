@@ -393,6 +393,28 @@ transition and leaving a description of the result.
    outside the module, `embedded.go` being pinned by `//go:embed`,
    `rsrc_windows_*.syso` being linked only from the built package's directory,
    `internal/hideconsole` being a vendored fork.
+1a. **The composition-root example is fiction and must be replaced, not
+   annotated.** `ARCHITECTURE.md` shows `main` as
+
+   ```go
+   application := app.New(cfg, fs, host, term, left, right)
+   if err := application.Run(context.Background()); err != nil { … }
+   ```
+
+   and repeats the constructor under **Dependency direction**. Neither exists:
+   `cmd/f4/main.go` is `func main() { app.Main() }`, and Task 36 recorded why —
+   4490 references to `vtui.FrameManager`, `config.App`,
+   `keymap.GlobalHotkeysMgr` and `macro.MacroMgr` across `internal/`, so a
+   constructor taking those things would list its dependencies rather than
+   receive them. This document is handed over as a description of the built
+   tree; leaving that example in it makes it wrong in its first paragraph about
+   the composition root, which is the one paragraph a reviewer reads first.
+
+   Replace both snippets with what the code does, and say in one line what the
+   argument-taking form would require — the same 4490 — so the shape is recorded
+   as a proposal rather than as a description. The proposal itself belongs in
+   Task 44 step 2, not here.
+
 2. Add the packages this plan created that the document does not yet name:
    `internal/action`, `internal/toast`, `internal/history`, `internal/numeric`,
    `internal/testutil` and `internal/paneltest`. Give the last two a line saying
@@ -740,7 +762,26 @@ whole tree.
    `go list -f '{{.ImportPath}} {{join .Imports " "}}' ./... | grep internal/`.
    A package nobody imports but `internal/app` is a candidate for merging back;
    a package imported by everything is a candidate for splitting.
-2. **Ask the split question where the parts have different callers.** The named
+2. **Propose the dependency-injection work with its price, and do not leave it
+   as a question.** `internal/app` is the composition root by layer and by
+   import rule, and it is not one by construction: it reaches for
+   `vtui.FrameManager`, `config.App`, `keymap.GlobalHotkeysMgr` and
+   `macro.MacroMgr` the way every other package does, 4490 times across
+   `internal/`. `app.New(cfg, fs, host, term, left, right)` — the form
+   `ARCHITECTURE.md` describes and Task 36 declined to build — becomes true only
+   when those are threaded through instead.
+
+   State the price rather than the wish. It has **no intermediate form**: a
+   constructor that takes the arguments and a body that still reads the globals
+   is worse than neither, because the signature then asserts something the code
+   does not do. And it cannot start where it looks like it starts: the first
+   thing it needs is a test of the startup path, and there is none —
+   `main_test.go` does not exist, `Main` exits through `os.Exit` at seven points
+   and returns nothing. So the order is: cover the entry point, then thread one
+   global at a time, and the first one is `config.App` because it is read rather
+   than mutated and 1575 of the 4490 sites are its.
+
+2a. **Ask the split question where the parts have different callers.** The named
    candidate is `internal/media`: its `image_*`, `audio_*` and `video_*` families
    were measured as effectively unconnected before the move — one reference in
    total, `imageViewBackAttr`, which is a colour attribute and by then may live in

@@ -173,23 +173,52 @@ The task's Required Interfaces name `app.New(cfg, fs, host, t, left, right)` and
 That is not what this commit does; `cmd/f4/main.go` calls `app.Main()`, which is
 today's `main` verbatim.
 
-The reason is that the two are not the same change. `main` exits through
-`os.Exit` at seven points — the update helper, the plugin scaffolder, the mount
-CLI, the sudo dispatcher and three error paths — and returns nothing. Threading
-an error back out of them is a redesign of the startup path, and the startup
-path has no test: `main_test.go` does not exist, and the seven `main.go` tests
-the plan names all test helpers rather than the entry point. A move whose
-correctness rests on "the tests still pass" cannot also rewrite the one function
-the tests do not reach.
+**The reason is that the signature would be false.** Counted across `internal/`:
 
-What this leaves for later, stated so it is not discovered as a surprise: the
-constructor arguments in that contract describe an application that receives its
-subsystems rather than reaching for package globals, and f4 does not work that
-way yet — `config.App`, `vtui.FrameManager`, `macro.MacroMgr` and
-`keymap.GlobalHotkeysMgr` are all package-level. Building `New` honestly means
-threading those through, which is a larger change than this branch, and pretending
-to build it by wrapping globals in a struct would make the signature true and the
-design no different.
+```
+grep -rhoE 'vtui\.FrameManager|config\.App|keymap\.GlobalHotkeysMgr|macro\.MacroMgr' \
+  --include='*.go' internal | wc -l
+```
+
+| global | references |
+|---|---|
+| `vtui.FrameManager` | 2575 |
+| `config.App` | 1575 |
+| `keymap.GlobalHotkeysMgr` | 241 |
+| `macro.MacroMgr` | 99 |
+| | **4490** |
+
+A constructor that takes the configuration, the filesystem, the plugin host, the
+terminal and the two panels, in a tree where 4490 sites reach for those things at
+package level anyway, does not inject its dependencies — it lists them. The body
+still goes to the package globals, and the signature starts asserting something
+that is not true of the code beneath it.
+
+That is the same shape this branch has been catching all along: a seam whose
+default is inert, a sweep that finds nothing, a race job with an empty package
+list — an interface that says a thing is being supplied while the code takes it
+from somewhere else. The difference is that here it would not be in a test but
+in the contract, where it is read as a description of the design.
+
+The cost argument comes second and is weaker on its own, because expensive
+things do get done: `main` exits through `os.Exit` at seven points — the update
+helper, the plugin scaffolder, the mount CLI, the sudo dispatcher and three error
+paths, thirteen across the package — and returns nothing, so threading an error
+out of them is a redesign of the startup path. And the startup path has no test:
+`main_test.go` does not exist, and the seven `main.go` tests the plan names all
+exercise helpers rather than the entry point. A move whose correctness rests on
+"the tests still pass" cannot also rewrite the one function the tests do not
+reach. But that is a reason to sequence the work, not a reason the contract is
+wrong; the 4490 is.
+
+Two things follow, and both are written where they will be met:
+
+- **Task 41** rewrites `ARCHITECTURE.md` from intent into fact. The line
+  describing `app.New` and `(*App).Run(ctx)` describes an API that does not
+  exist, and a document handed over as a description of the built tree cannot be
+  wrong in its first paragraph about the composition root.
+- **Task 44 step 2** carries the proposal, with its price rather than as an open
+  question.
 
 ### Required Interfaces and Contracts
 
