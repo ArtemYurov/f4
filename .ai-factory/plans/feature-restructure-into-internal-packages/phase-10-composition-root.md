@@ -151,7 +151,7 @@ will land, so an audit key survives the move. It predicted `dialog` for
   `internal/dialog`: it takes a `*panel.PanelsFrame`, and `internal/panel`
   imports `internal/dialog` already, so the edge would close a cycle.
   `grabber.go` could, at the price of a new `dialog -> terminal` edge for one
-  file — Task 25 already declined it once, and Task 44 step 2 is where that
+  file — Task 25 already declined it once, and Task 44 step 4a is where that
   question belongs, not in the wave that is only moving things.
 
 The map has now emptied itself, as its own comment said it would. It is kept,

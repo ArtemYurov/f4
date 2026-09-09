@@ -79,7 +79,7 @@ session can check the record rather than rediscover it.
 | The plugin menu and global-hotkey registries go to `internal/plughost` | `phase-09` |
 | 36 panel tests stay in `cmd/f4`: they need the action table, which no seam can supply | `phase-09` |
 | `app.Main()` instead of the `New`/`Run(ctx)` contract — the signature would assert an injection that 4490 global reads contradict | `phase-10`, "Deviation"; obligations in `phase-11` Task 41 step 1a and Task 44 step 2 |
-| `PlayerPanel` goes to `internal/panel`; `grabber.go` and `share_dialog.go` stay in `app` | `phase-10`, "What the wave actually found" |
+| `PlayerPanel` goes to `internal/panel`; `grabber.go` and `share_dialog.go` stay in `app` | `phase-10`, "What the wave actually found"; decided in `phase-11` Task 44 step 4a |
 | `cmd/f4` has no `TestMain`: the auditors parse files and build no frame | `phase-10` |
 | Package-name question for Task 44 | `phase-11`, Task 44 step 3 |
 

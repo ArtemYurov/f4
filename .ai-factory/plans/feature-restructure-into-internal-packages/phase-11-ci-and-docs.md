@@ -1093,6 +1093,16 @@ whole tree.
    them where the wave put them by default: `player_panel.go` (a panel over the
    media engine — media or panel?) and `sixel_layers.go` (graphics — media or
    term?). State the reason, not just the choice.
+4a. **Close the `share_dialog.go` / `grabber.go` question with a written
+   decision.** Phase 10 deferred both to "Task 44 step 2", and the renumbering
+   turned step 2 into the dependency-injection proposal, so the question would
+   otherwise be reachable only from `phase-10:149` and `HANDOFF:82`. Both files
+   sit in `internal/app` with their tests, and neither is held there by need:
+   zero references into `app` from either.
+
+   Decide each on the edge it would create, not on its name, and record the
+   answer here so a reader walking the steps arrives at it.
+
 5. **Check that no new flat package appeared.** The failure this whole branch
    exists to undo is one package accumulating unrelated code. Verify no extracted
    package holds files from two unrelated subjects, and that `internal/app` holds
@@ -1202,6 +1212,108 @@ Not applicable.
 
 None added. `cmd/f4/architecture_test.go` (Task 6) already asserts the layer
 rules; this task reads its result rather than extending it.
+
+### Outcome
+
+Run on the finished tree. Every number below is measured, and where a step's
+prediction failed the measurement stands and the prediction is marked.
+
+**Step 1 — the packages as they stand.** `internal/app` 234 files / 63212 lines,
+`internal/terminal` 101 / 18631, `internal/panel` 80 / 41756, `internal/editor`
+65 / 25280, `internal/media` 40 / 9152. Five packages have a single importer —
+`sheet`, `vtvibe` and `paneltest` (`app`), `colorer` (`editor`), `wincon`
+(`media`). None is a merge candidate: a subject with its own tests is a package
+whatever the importer count, and merging any of them back would put a second
+subject into the importer, which is the shape this branch exists to undo.
+
+**Step 2a — `internal/media` stays one package.** Counting package-level symbols
+only, the image half and the audio half share **zero** references and image and
+video share exactly **one** (`imageViewBackAttr`), so the plan's prediction about
+the *contents* held. The plan's own caller test is what fails: `internal/panel`
+reaches audio (10 references) and image (6). Every caller uses at least two
+families, so there is no boundary behind the split, and a split without a caller
+boundary is two packages that always travel together.
+
+The first count was wrong and worth recording as a trap: counting *method* names
+put seven image→video edges on the board that do not exist, because `Close`,
+`ProcessKey` and `Show` are borne by unrelated types in both halves. The same
+name collision that made step 1c need two stages makes a cohesion count need
+package-level symbols only.
+
+Cohesion measured the same way for the other clusters: `command_palette*` 13
+files / 3024 lines, 11 outward edges / 6 inward — and the outward ones are frame
+types and the action layer, which is its subject, not a second one; `sheet*` 4 /
+1537, 4 / 3; `vtvibe*` 2 / 1062, 7 / 7; `pty*` 13 / 1729, 8 / 7; `frame*` 8 /
+7992, 53 outward; `bootstrap*` 9 / 1870, 38 outward — it *is* the root, and that
+number is what a composition root looks like.
+
+**Step 4 — both named files had already moved, and one left a test behind.**
+`player_panel.go` is `internal/panel/player.go`: a panel over the media engine
+is a panel, and it imports `internal/media` the way any consumer does. The
+production half of `sixel_layers.go` is `internal/terminal/sixel.go` and
+`sixel_terminal.go`. The test did not follow it — `sixel_layers_test.go` stayed
+in `internal/media` holding two subjects: two tests of the terminal's sixel
+layering, and two of `blitInto`, which is `internal/media`'s own compositing
+helper. It carried private copies of `mockPty`, `sixelEnv`, `newSixelEnv` and
+`send`, and its own comment said so: "internal/terminal keeps its own; this copy
+goes with the image tests when they leave for internal/media." The image tests
+never left, because they were never image tests.
+
+Split along the subjects: the two sixel tests and `sixelHalfBody` are
+`internal/terminal/sixel_layers_test.go`, using the `sixelEnv` that package
+already has, and the four helper copies are gone; the two `blitInto` tests are
+`internal/media/blit_test.go`, beside `TestBlitIntoPlacesAndClips` which was
+already there. A test file that needs a private copy of another package's
+fixtures is stating where it belongs.
+
+**Step 4a — both stay in `internal/app`, each for a different reason.**
+`share_dialog.go` takes a `*panel.PanelsFrame` in three places, and
+`internal/panel` imports `internal/dialog` already, so moving it to
+`internal/dialog` closes a cycle. That is not a preference; the build would
+refuse it. `grabber.go` is 437 lines importing `internal/terminal` and
+`internal/keymap`, and all four of its top-level functions —
+`NewGrabberFrame`, `OpenGrabber`, `handleForcedMouseSelectionEvent`,
+`actionScreenGrab` — have **zero** callers outside `internal/app`. Moving it to
+`internal/dialog` would buy one file's tidiness with a new `dialog → terminal`
+edge on a package that has none, which is what Task 25 declined once already.
+Both stay, and `internal/app` holding an action's own dialog is wiring, not a
+feature that found no home.
+
+**Step 5 — no new flat package.** The clusters above are the check: each is a
+subject with its own callers, and the one package that reaches everywhere,
+`internal/app`, reaches outward 38 times from `bootstrap*` because wiring is
+what it holds.
+
+**Step 6 — `ARCHITECTURE.md` and the tree agree.** The layer table diffed
+against the tree returns nothing. The document was rewritten from the tree in
+Task 41, which is why: it describes a fact, and it carries the check that says
+so.
+
+**Step 7 — the 63 suppressions.** Compared as sets of lines between the two
+trees, the branch adds 168 suppression *lines* over `upstream/main`, of which
+**14 are `#nosec`** and the rest are `_ =`. The largest groups are ten
+`_ = File.Close()`, nine `_ = config.GetF4ConfigDir()`, and six `#nosec G204`
+in `internal/panel/process_environment_panel_test.go`, all six on
+`exec.Command` with the test's own fixture path. Reviewed: the `#nosec` lines
+each carry a reason next to them naming why the input is not untrusted, and the
+`_ =` lines are on a `Close` or a config-directory read in a path with nobody
+to tell. They stay, and the PR body says so in those words rather than
+advertising the 99-finding drop, which is not an improvement in error handling
+and would read as one.
+
+**Step 7a — the embedding trap is upstream's pattern, and the branch added
+exactly one.** Counted on the finished tree: **38** test doubles embed
+`vfs.VFS` anonymously, most of them populated with a live `vfs.NewOSVFS` or
+`vfs.NewNullVFS`. `upstream/main` has **37** of them. The one the branch added
+is `mockMetadataVFS` in `internal/dialog` — the copy that lost its two methods
+to a regexp and silently reached the real filesystem. So the pattern is
+inherited, not introduced, and the recommendation stands as a follow-up for the
+whole tree rather than as a debt of this branch: a double that embeds an
+interface should embed panicking stubs, so a missing method fails on the first
+call instead of on a timeout.
+
+**Step 8** is recorded in its own step above; **step 9** carries all of this
+into the PR body.
 
 ### Acceptance Criteria
 
