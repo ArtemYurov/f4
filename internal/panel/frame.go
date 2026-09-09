@@ -524,10 +524,6 @@ func (pf *PanelsFrame) InsertSelectedFileName() bool {
 			name = "'" + strings.ReplaceAll(name, "'", "'\\''") + "'"
 		}
 	}
-	txt := pf.CmdLine.Edit.GetText()
-	if len(txt) > 0 && txt[len(txt)-1] != ' ' {
-		pf.CmdLine.InsertString(" ")
-	}
 	pf.CmdLine.InsertString(name)
 	return true
 }
@@ -4071,7 +4067,7 @@ func (pf *PanelsFrame) RefreshAll() {
 func (pf *PanelsFrame) Message(title, msg string, buttons []string) int {
 	resChan := make(chan int, 1)
 	vtui.FrameManager.PostTask(func() {
-		dlg := vtui.ShowMessage(title, msg, buttons)
+		dlg := vtui.ShowMessageOn(pf, title, msg, buttons)
 		dlg.OnResult = func(code int) { resChan <- code }
 	})
 	return <-resChan
@@ -4082,7 +4078,7 @@ func (pf *PanelsFrame) Message(title, msg string, buttons []string) int {
 // the same value travels as InputBoxReq.Default.
 func (pf *PanelsFrame) InputBox(title, prompt, defaultText string, callback func(string)) {
 	vtui.FrameManager.PostTask(func() {
-		vtui.InputBox(title, prompt, defaultText, callback)
+		vtui.InputBoxOn(pf, title, prompt, defaultText, callback)
 	})
 }
 
@@ -4168,9 +4164,9 @@ func (pf *PanelsFrame) menuItemsWithKeyLabels(title string, items []vtui.MenuIte
 			}
 		}
 		if keyLabels != nil {
-			vtui.FrameManager.Push(&menuKeyLabelsFrame{VMenu: menu, keyLabels: keyLabels})
+			vtui.FrameManager.PushToFrameScreen(pf, &menuKeyLabelsFrame{VMenu: menu, keyLabels: keyLabels})
 		} else {
-			vtui.FrameManager.Push(menu)
+			vtui.FrameManager.PushToFrameScreen(pf, menu)
 		}
 	})
 }

@@ -1,7 +1,6 @@
 package panel
 
 import (
-	"strconv"
 	"strings"
 
 	"github.com/unxed/f4/internal/ini"
@@ -15,10 +14,9 @@ import (
 // while a user who wants a group *below* them can still say Group = 20000.
 const DefaultSortGroupOrder = 10000
 
-// SortGroupRule is one entry of the sort-group list. The matching criteria are
-// exactly those of a highlight rule (mask, attributes, size, dates), so a user
-// who already knows highlight.ini needs no second syntax; only the colour keys
-// are ignored here.
+// SortGroupRule is one entry of the sort-group list. A rule can come directly
+// from a coloured [Highlight_N] section, which is how f4 follows Far's model:
+// the same matcher paints the file and places it in a sort group.
 type SortGroupRule struct {
 	Name   string
 	Order  int
@@ -40,11 +38,17 @@ func init() {
 	GlobalSortGroups = &SortGroupSet{}
 }
 
-func (s *SortGroupSet) LoadFromIni(ini *ini.File) {
+func (s *SortGroupSet) LoadFromIni(file *ini.File, sharedRules ...[]theme.HighlightRule) {
 	if s == nil {
 		return
 	}
-	s.Groups = ParseSortGroups(ini)
+	s.Groups = nil
+	if len(sharedRules) > 0 {
+		s.Groups = append(s.Groups, sortGroupsFromHighlightRules(sharedRules[0])...)
+	}
+	// Keep accepting the original [SortGroup_N] sections so existing profiles
+	// continue to work while users migrate matching fields into Highlight_N.
+	s.Groups = append(s.Groups, ParseSortGroups(file)...)
 }
 
 // Configured reports whether any group is defined. Grouping a panel by an
@@ -69,22 +73,42 @@ func (s *SortGroupSet) GroupOf(item *vfs.VFSItem) int {
 	return DefaultSortGroupOrder
 }
 
-// parseSortGroups reads the [SortGroup_N] sections. The section number decides
-// the default order, so the plain case — SortGroup_1, SortGroup_2, … — needs no
-// Group key at all.
-func ParseSortGroups(ini *ini.File) []SortGroupRule {
-	sections := theme.ParseRuleSections(ini, "sortgroup_")
+// sortGroupsFromHighlightRules takes the groups declared inside coloured
+// [Highlight_N] sections, which is Far's model: one matcher both paints the
+// file and places it in a group.
+func sortGroupsFromHighlightRules(rules []theme.HighlightRule) []SortGroupRule {
+	groups := make([]SortGroupRule, 0, len(rules))
+	for _, rule := range rules {
+		if !rule.HasSortGroup {
+			continue
+		}
+		name := rule.Name
+		if name == "" {
+			name = strings.Join(rule.Masks, ", ")
+		}
+		groups = append(groups, SortGroupRule{
+			Name:   name,
+			Order:  rule.SortGroup,
+			Filter: rule,
+		})
+	}
+	return groups
+}
+
+// ParseSortGroups reads the legacy [SortGroup_N] sections. The section number
+// decides the default order, so the plain case — SortGroup_1, SortGroup_2, … —
+// needs no Group key.
+func ParseSortGroups(file *ini.File) []SortGroupRule {
+	sections := theme.ParseRuleSections(file, "sortgroup_")
 	groups := make([]SortGroupRule, 0, len(sections))
 	for i, section := range sections {
 		group := SortGroupRule{
-			Name:   ini.GetString(section.Section, "Name", ""),
+			Name:   section.Rule.Name,
 			Order:  i,
 			Filter: section.Rule,
 		}
-		if raw := strings.TrimSpace(ini.GetString(section.Section, "Group", "")); raw != "" {
-			if order, err := strconv.Atoi(raw); err == nil {
-				group.Order = order
-			}
+		if section.Rule.HasSortGroup {
+			group.Order = section.Rule.SortGroup
 		}
 		if group.Name == "" {
 			group.Name = strings.Join(group.Filter.Masks, ", ")

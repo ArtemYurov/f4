@@ -570,8 +570,8 @@ type FileSystemPanel struct {
 
 	SortMode    SortMode
 	SortReverse bool
-	// useSortGroups clusters the panel by the [SortGroup_N] rules from
-	// highlight.ini before the sort mode is applied (far's Shift+F11).
+	// UseSortGroups clusters the panel by the Group-bearing highlight.ini
+	// rules before the sort mode is applied (far's Shift+F11).
 	UseSortGroups bool
 
 	lastDirMTime time.Time

@@ -16,6 +16,32 @@ func portableSettingsMouseCoordinate(value int) int16 {
 	return int16(value) // #nosec G115 -- the test dialog is inside the test screen.
 }
 
+// portableSettingsDialogButtonBounds is the horizontal extent of the dialog's
+// two buttons, which the resize has to keep centred on the dialog.
+func portableSettingsDialogButtonBounds(t *testing.T, dlg *portableSettingsDialog) (int, int) {
+	t.Helper()
+	minX, maxX := 0, 0
+	buttonCount := 0
+	for _, child := range dlg.GetChildren() {
+		button, ok := child.(*vtui.Button)
+		if !ok {
+			continue
+		}
+		x1, _, x2, _ := button.GetPosition()
+		if buttonCount == 0 || x1 < minX {
+			minX = x1
+		}
+		if buttonCount == 0 || x2 > maxX {
+			maxX = x2
+		}
+		buttonCount++
+	}
+	if buttonCount != 2 {
+		t.Fatalf("portable settings has %d buttons, want 2", buttonCount)
+	}
+	return minX, maxX
+}
+
 // The portable settings dialog is dragged by its resize corner: the width
 // grows symmetrically about the centre so the dialog stays centred, and the
 // height stays where the layout put it.
@@ -80,5 +106,22 @@ func TestPortableSettingsDialogResizesHorizontallyOnly(t *testing.T) {
 	}
 	if dlg.Y2 != startY2 {
 		t.Errorf("portable settings bottom edge = %d, want fixed %d", dlg.Y2, startY2)
+	}
+	buttonX1, buttonX2 := portableSettingsDialogButtonBounds(t, dlg)
+	if buttonX1+buttonX2 != dlg.X1+dlg.X2 {
+		t.Fatalf("portable settings buttons center = %d, dialog center = %d before screen resize", buttonX1+buttonX2, dlg.X1+dlg.X2)
+	}
+
+	width := dlg.X2 - dlg.X1 + 1
+	vtui.FrameManager.Resize(120, 30)
+	if got := dlg.X2 - dlg.X1 + 1; got != width {
+		t.Errorf("portable settings width after screen resize = %d, want %d", got, width)
+	}
+	if got := dlg.X1 + dlg.X2; got != 119 {
+		t.Errorf("portable settings center after screen resize = %d, want 119", got)
+	}
+	buttonX1, buttonX2 = portableSettingsDialogButtonBounds(t, dlg)
+	if got := buttonX1 + buttonX2; got != dlg.X1+dlg.X2 {
+		t.Errorf("portable settings buttons center after screen resize = %d, dialog center = %d", got, dlg.X1+dlg.X2)
 	}
 }

@@ -39,9 +39,9 @@ func TestHighlightRule_CursorColorAliases(t *testing.T) {
 NormalColorUnderCursor = foreground:#112233
 SelectedColorUnderCursor = background:#445566
 `))
-	rules := parseHighlightRules(ini)
+	rules := ParseHighlightRules(ini)
 	if len(rules) != 1 {
-		t.Fatalf("parseHighlightRules returned %d rules, want 1", len(rules))
+		t.Fatalf("ParseHighlightRules returned %d rules, want 1", len(rules))
 	}
 	if rules[0].CursorStr != "foreground:#112233" {
 		t.Errorf("CursorStr = %q, want alias value", rules[0].CursorStr)
@@ -120,7 +120,7 @@ func TestBuiltInStylesHighlightSymlinks(t *testing.T) {
 	plainDir := vfs.VFSItem{Name: "plain-dir", IsDir: true}
 	for _, style := range styles {
 		found := false
-		for _, rule := range parseHighlightRules(style.ini) {
+		for _, rule := range ParseHighlightRules(style.ini) {
 			if !rule.Match(&linkDir) {
 				continue
 			}
@@ -148,6 +148,7 @@ func TestFileHighlighter_GetColor(t *testing.T) {
 
 	iniData := `[Highlight_0]
 Name = Executables
+Group = 0
 Mask = *.exe, *.sh
 NormalColor = foreground:#00FF00
 SelectedColor = foreground:#00FF00 | background:#0000FF
@@ -610,9 +611,9 @@ SelectedFileName = foreground:#222222
 FileNameUnderCursor = foreground:#333333
 FileNameSelectedUnderCursor = foreground:#444444
 `))
-	rules := parseHighlightRules(ini)
+	rules := ParseHighlightRules(ini)
 	if len(rules) != 1 {
-		t.Fatalf("parseHighlightRules returned %d rules, want 1", len(rules))
+		t.Fatalf("ParseHighlightRules returned %d rules, want 1", len(rules))
 	}
 	rule := rules[0]
 	for _, tt := range []struct {
@@ -638,9 +639,9 @@ NormalFileName = foreground:#202020
 CursorColor = foreground:#303030
 FileNameUnderCursor = foreground:#404040
 `))
-	rules := parseHighlightRules(ini)
+	rules := ParseHighlightRules(ini)
 	if len(rules) != 1 {
-		t.Fatalf("parseHighlightRules returned %d rules, want 1", len(rules))
+		t.Fatalf("ParseHighlightRules returned %d rules, want 1", len(rules))
 	}
 	if rules[0].NormalStr != "foreground:#101010" {
 		t.Errorf("NormalStr = %q, want the NormalColor value", rules[0].NormalStr)

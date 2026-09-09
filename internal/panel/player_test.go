@@ -116,6 +116,9 @@ func TestAddPathsWalksDirectoriesAndSkipsOthers(t *testing.T) {
 
 	pp := newTestPlayerPanel()
 	// Playlist saving writes to the config dir; point it at the temp dir.
+	// Initialize the once-only detector before saving and restoring the test
+	// override, otherwise a shuffled run can leave an empty cached path behind.
+	_ = config.GetF4ConfigDir()
 	oldCfg := config.CachedF4ConfigDir
 	config.CachedF4ConfigDir = dir
 	config.ConfigDirOnce.Do(func() {})
