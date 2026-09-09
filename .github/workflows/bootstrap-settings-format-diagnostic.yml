@@ -1,0 +1,19 @@
+name: Bootstrap settings format diagnostic
+
+on:
+  push:
+    branches:
+      - codex/f33f64cd91460430a21da326/lunobot-2/coverage-app-bootstrap-settings
+
+jobs:
+  gofmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Show gofmt diff
+        run: |
+          gofmt -s -d internal/app/bootstrap_settings_test.go
+          test -z "$(gofmt -s -l internal/app/bootstrap_settings_test.go)"
