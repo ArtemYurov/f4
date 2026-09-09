@@ -113,8 +113,9 @@ func TestF4MacroHostUIState(t *testing.T) {
 	if got := callMacroHost(t, host.CommandLine); got != "" {
 		t.Fatalf("CommandLine without panels frame = %q, want empty", got)
 	}
-	if width, height := callMacroHostScreenSize(t, host); width != 0 || height != 0 {
-		t.Fatalf("ScreenSize without panels frame = %dx%d, want 0x0", width, height)
+	size := callMacroHostScreenSize(t, host)
+	if size.width != 0 || size.height != 0 {
+		t.Fatalf("ScreenSize without panels frame = %dx%d, want 0x0", size.width, size.height)
 	}
 
 	pf := paneltest.SetupMockPanelsFrame(t)
@@ -133,8 +134,9 @@ func TestF4MacroHostUIState(t *testing.T) {
 	if got := callMacroHost(t, host.CommandLine); got != pf.CmdLine.Edit.GetText() {
 		t.Fatalf("CommandLine = %q, want %q", got, pf.CmdLine.Edit.GetText())
 	}
-	if width, height := callMacroHostScreenSize(t, host); width != 80 || height != 25 {
-		t.Fatalf("ScreenSize = %dx%d, want 80x25", width, height)
+	size := callMacroHostScreenSize(t, host)
+	if size.width != 80 || size.height != 25 {
+		t.Fatalf("ScreenSize = %dx%d, want 80x25", size.width, size.height)
 	}
 	_ = callMacroHost(t, host.WindowTitle)
 	if callMacroHost(t, func() bool { return host.RunAction("missing") }) {
