@@ -110,10 +110,11 @@ func (r *CommandPrefixRegistration) Unregister() {
 	})
 }
 
-// dispatchCommandPrefix consumes input when the text before its first colon
-// names either a registered prefix or a plugin drive. Registered prefixes get
-// the raw argument so each plugin can apply its own quoting rules; drive
-// prefixes intentionally accept only the bare form (for example, "Android:").
+// DispatchCommandPrefix consumes input when the text before its first colon
+// names either a registered prefix or a plugin/platform drive. Registered
+// prefixes get the raw argument so each plugin can apply its own quoting
+// rules; drive prefixes intentionally accept only the bare form (for example,
+// "Android:" or the platform alias "reg:").
 func DispatchCommandPrefix(app vfs.App, input string) bool {
 	colon := strings.IndexByte(input, ':')
 	if colon <= 0 {
@@ -167,5 +168,28 @@ func dispatchDriveCommandPrefix(app vfs.App, prefix, argument string) bool {
 		pf.SwitchToVFS(fsp, newVFS)
 		return true
 	}
+
+	for _, drive := range sysinfo.GetPlatformDrives() {
+		if platformDriveCommandPrefix(drive.Name) != prefix || drive.Factory == nil {
+			continue
+		}
+		newVFS := drive.Factory()
+		if newVFS == nil {
+			return false
+		}
+		pf.SwitchToVFS(fsp, newVFS)
+		return true
+	}
 	return false
+}
+
+// platformDriveCommandPrefix exposes the short command-line aliases for
+// platform drives that cannot use their menu labels as bare prefixes.
+func platformDriveCommandPrefix(name string) string {
+	switch strings.ToLower(strings.TrimSpace(name)) {
+	case "windows registry":
+		return "reg"
+	default:
+		return ""
+	}
 }
