@@ -839,6 +839,49 @@ No branch of `ResolveProfileDir` can return `""`, so the value is unambiguous.
 Verified: eight shuffle seeds of the flaking test, zero failures, and no stray
 files left in the package directory.
 
+### Run 34284446204 on `7d7f5309`: two failures, neither where they looked
+
+Read late, and read wrong the first time. Recording both the failures and the
+misreading, because the misreading is the more useful half.
+
+**Build (linux/amd64) failed the `gofmt -s` gate**, not `affected.calc`. The
+step's log shows `git fetch --quiet --depth=1 origin "refs/heads/$GITHUB_BASE_REF"`
+as its last echoed command and the failure 1.5 seconds later, which reads as
+that line failing — but the echo is the *group header* GitHub prints for a step,
+and the real output is two lines below it:
+
+```
+The following files are not properly formatted:
+internal/cmdline/line_semantic.go
+internal/terminal/view_semantic.go
+```
+
+`affected.calc` cannot fail on `workflow_dispatch` at all: its first statement is
+`if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then all "not a pull request"`,
+which exits 0 before the fetch. The empty `GITHUB_BASE_REF`, the "cannot
+attribute to a package" branches and the empty race list were all read out of
+that one misattributed line and none of them happened.
+
+The two files were misformatted from the moment they were written, and the local
+gate never said so because it runs `gofmt -w`, while CI runs **`gofmt -s -l`** —
+the simplify pass. `gofmt -l` did list both files during the panel wave and the
+listing was dismissed as "they parse". Add `gofmt -s -l .` to the local gate;
+`gofmt -w` is not the same command and never was. Both files were reformatted in
+passing by `f59248f4`, so this failure is already fixed.
+
+**Race (packages) failed on a goroutine-leak check, after every test passed.**
+`internal/editor` left one `vtui` task-pump goroutine alive, and
+`testutil.Main`'s check turned that into a failing package. The check is new to
+that package: `internal/editor/main_test.go` was written in Task 33, and before
+it there was no `TestMain` there and so no check. Not reproduced locally over
+four seeds including CI's own (`1788905440127742299`), on a tree that has moved
+a great deal since. `vtui`'s `stopTaskPump` does join its goroutine, so the pump
+that leaked belongs to a manager whose `finishShutdown` never ran — the guard is
+`shutdownDone`, which `Init` resets. Left open with the other two CI-only
+failures rather than chased into the dependency on one unreproduced sample.
+
+---
+
 ### Two CI-only test failures, cause not identified
 
 The first full matrix run after Phase 4 failed two test cells that pass locally

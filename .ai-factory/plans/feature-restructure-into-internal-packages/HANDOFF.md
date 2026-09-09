@@ -10,27 +10,18 @@ Written at `f59248f4`, on a clean, green tree, level with `upstream/main`
 27 upstream commits; both are recorded in `index.md`'s Open Findings, along with
 the live bug the first of them fixed.
 
-**The run on `7d7f5309` was never read, and it is red.** Run 34284446204 failed
-on Build (linux/amd64) and Race (packages), and two more commits went on top of
-it — the largest on the branch among them. This is the second time the rule
-"a run number is written with its revision, and it is read at the first commit
-after it" was written and not followed. Both failures are the same step,
-`affected.calc`, exiting 1 two seconds in, so nothing was compiled: the step
-begins `git fetch --quiet --depth=1 origin "refs/heads/$GITHUB_BASE_REF" || all
-"base fetch failed"` and `GITHUB_BASE_REF` is empty on `workflow_dispatch`. But
-an earlier `workflow_dispatch` run (34219411634) was green with the same empty
-variable, so the empty variable alone is not it. Two candidates, both to check
-before the next run:
+**The run on `7d7f5309` was read late, and it was red for two reasons, neither
+of them `affected.calc`.** Build failed the `gofmt -s` gate on two files that
+were misformatted from birth — the local gate runs `gofmt -w`, CI runs
+`gofmt -s -l`, and they are not the same command. Both were reformatted in
+passing by `f59248f4`, so that half is fixed. Race failed a goroutine-leak check
+in `internal/editor` after every test passed, and does not reproduce locally
+over four seeds. Both are written up in `index.md`, together with the misreading
+that sent the first diagnosis to `affected.calc`: the last line a failing step
+echoes is its group header, not its last command.
 
-- the affected-package calculator could not place a file in a package. The
-  branch is full of renames, and the script has `all "cannot attribute $f to a
-  package"` and `build_all "cannot attribute $f to a compiled binary"`.
-- Race (packages) carries `echo "::error::no packages left to run under the race
-  detector"`, so the package list may have collapsed to empty after the moves.
-
-The second candidate is worth chasing on its own account even if it is not the
-cause: a race job that is green because it had nothing to run is the same class
-of check as a sweep that finds nothing.
+Run **34295760690** is the one on `b4721d48`. Read it at the first commit after
+it — the rule has now been written twice and followed neither time.
 
 ## Where the work stands
 
@@ -223,6 +214,18 @@ sed -n '/^var commandPaletteTargetPackage/,/^}/p' cmd/f4/command_palette_coverag
   | while read f; do [ -e "cmd/f4/$f" ] || echo "stale: $f"; done
 ```
 
+**`gofmt -w` is not the check CI runs.** CI runs `gofmt -s -l .` and fails on
+any output; `-s` is the simplify pass, and a file it would rewrite is a file
+`gofmt -w` leaves alone. Two files sat misformatted from the day they were
+written and no local gate said so, because every wave ran `gofmt -w` on what it
+touched and never asked the question CI asks. `gofmt -l` did list both during
+the panel wave and the listing was dismissed as "they parse" — which was true
+and beside the point. The gate line is:
+
+```
+gofmt -s -l . | grep -v '^vendor' && echo "unformatted"
+```
+
 ## A test whose subject is a binding belongs with the table
 
 `internal/editor` reaches the action layer through a seam, and the registry
@@ -250,7 +253,22 @@ which is local. Tasks 34 and 35 sit next to the table and will meet it again.
 
 Live in the session scratchpad and are copied to the shared location for the
 next session. `xbuild.sh` there was broken — `| head` swallowed `go build`'s
-exit status, so every target printed OK — and is replaced.
+exit status, so every target printed OK — and is replaced; it now also runs the
+`gofmt -s -l` gate CI runs.
+
+The panel wave added six, every one of them go/types or go/parser rather than a
+regexp, and every one because a text tool had already got the same job wrong.
+Two rules came out of using them, and both are cheap to forget:
+
+**A Go error's column is a byte offset.** A line with a Russian comment ahead of
+the selector has fewer characters than bytes, so an edit made at that index in a
+Python string lands in the wrong place — or, more often, finds nothing and the
+loop spins reporting progress it did not make. Edit bytes.
+
+**`go/parser`'s object resolution is what separates a local from a qualifier.**
+An identifier carrying an `Object` was declared in this file; one without it is
+the package name. No regexp can make that distinction, and both `stripqual.go`
+and `unshadow.go` exist because one tried.
 
 | Script | What it does |
 |---|---|
@@ -264,6 +282,12 @@ exit status, so every target printed OK — and is replaced.
 | `unexport.py` | undo an over-export in a test that moved into its package |
 | `splittests.py` | split the tests naming a symbol back to `cmd/f4`; appends |
 | `addimports.py` | add the imports the compiler names |
+| `exporter/` | rename a package's unexported members to their exported spelling, and `-down` back again, by **object identity** — a name shared by two types is renamed only on the type that owns it. Package-level declarations, struct fields and methods. |
+| `allerrs/` | type-check a package **with its test files** and print every error. `go vet` stops at the first type error in a test file, which turns a 3000-error mechanical rename into 3000 full builds. |
+| `stripqual.go` | drop a package qualifier from a file moved into that package, skipping a selector whose `X` resolves to a local of the same name |
+| `unshadow.go` | rename a local that shadows an imported package name |
+| `drive.py` | the loop that drives all of the above from the compiler's own errors: selectors, struct-literal keys, missing and dead imports, qualification |
+| `decls.go` | every top-level declaration of a package, block members included |
 | `deadimports.py`, `verify-commits.sh` | as inherited |
 
 **Three of these caused damage this session, all of it the same class.** A
