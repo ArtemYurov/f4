@@ -24,7 +24,7 @@ func TestAIDownload(t *testing.T) {
 			http.NotFound(w, r)
 		}
 	}))
-	t.Cleanup(func() { _ = server.Close() })
+	t.Cleanup(server.Close)
 
 	got, err := aiDownload(context.Background(), server.URL+"/ok")
 	if err != nil || string(got) != "patcher" {
