@@ -665,6 +665,13 @@ None.
 
 ## Task 45: Write the pull request
 
+**Say that the 42 renamed issue documents are renames.** Both trees hold 43
+files in `docs/ISSUES/`; upstream keeps the `*_SOLUTION_REVIEW.md` names, phase 2
+renamed them for their subject. Content-identical but for one line this branch
+changed on purpose, and git resolves them as renames — but a reviewer scanning a
+300-file diff sees 42 deletions next to 42 additions unless the body says
+otherwise.
+
 **And one item of its own: `docs/FILELIST.md`.** Nothing reads it, no check
 regenerates it, and it described the base revision's tree for eleven phases
 without anybody noticing. It is correct again and its generator no longer walks
@@ -920,12 +927,27 @@ whole tree.
    ```
 
    The comparison is of names, so it sees only what upstream **added**. A file
-   upstream *renamed* would not appear: the new name is absent from the base
-   list, but this branch has renamed the same file too, differently, and the two
-   would drift apart in silence. On this tree that cannot happen —
-   `git diff --name-status -M 0cda22a7 upstream/main | grep '^R'` returns
-   nothing over the whole distance — but that is a property of this upstream,
-   not of the method. Check it before trusting the inventory again.
+   upstream *renamed* does not appear at all, and if this branch renamed the
+   same file differently the two drift apart in silence. Both halves of that
+   happened here:
+
+   - Upstream renamed three files over the distance
+     (`git diff --name-status -M 0cda22a7 upstream/main | grep '^R'`), all
+     markdown. Since the inventory filters `\.go$` they are invisible to it,
+     which is why the Go answer above is complete.
+   - **Forty-two documents exist under two names.** Both trees hold 43 files in
+     `docs/ISSUES/` and the name sets barely overlap: upstream moved its
+     root-level `*_SOLUTION_REVIEW.md` there keeping their names, phase 2 moved
+     the same files there and renamed them for their subject
+     (`ISSUE_165_CONPTY_SYNC_MARKER.md`). Compared by content, 42 of the 43 are
+     byte-identical and the 43rd differs by one line — this branch's own
+     `selfCommand` → `update.SelfCommand`. Nothing was lost; git resolves all
+     of it as renames (41 × R100, one R098). Say so in the PR body, or the
+     diff reads as 42 deletions beside 42 additions.
+
+   So: check for renames before trusting a name comparison, and check by
+   content when the names disagree. A file present under a different name is
+   the case that looks exactly like a missing one.
 
    Nineteen files at the time of writing. Fifteen are outside the restructured
    tree — `internal/ttyx` (3), `plugins/archive`, `plugins/id3editor`,
