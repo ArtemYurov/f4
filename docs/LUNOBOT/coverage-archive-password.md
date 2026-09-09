@@ -21,5 +21,13 @@ repository coverage was 60.98%.
 
 No local Go build or test is run, per the current LUNOBOT passport. Static
 checks are `gofmt` and `git diff --check`; GitHub Actions is the authoritative
-verification environment. CI and merge results will be recorded here after
-the pull request is verified.
+verification environment.
+
+The first full CI attempt, run `34338222185`, had one unrelated failure:
+`Test (linux/arm64)` reached the 15-minute global test timeout in shuffled
+`cmd/f4` tests, while `plugins/archive` passed. Rerunning only the failed job
+completed successfully in 1m36s; all required build, test, race, lint, vet,
+quality, and Codecov checks are green.
+
+PR [#1048](https://github.com/unxed/f4/pull/1048) was merged on 2026-09-09
+with merge commit `f73592bcd807d34f5fe2a14e9338ec5bff21cc05`.
