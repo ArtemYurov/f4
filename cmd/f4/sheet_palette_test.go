@@ -47,4 +47,3 @@ func TestCommandPaletteSheetEntries(t *testing.T) {
 		t.Fatal("stale sheet command ran after another frame became top")
 	}
 }
-
