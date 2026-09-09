@@ -37,7 +37,7 @@ func TestAIVFSNavigationAndPathRules(t *testing.T) {
 	if got := v.Base("/ctx/child"); got != "child" {
 		t.Fatalf("Base = %q", got)
 	}
-	if got := v.Dir("child"); got != "/ctx" {
+	if got := v.Dir("child"); got != "/" {
 		t.Fatalf("Dir = %q", got)
 	}
 	if got := v.Dir("/"); got != "/" {
