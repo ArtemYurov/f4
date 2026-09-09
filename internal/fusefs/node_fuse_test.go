@@ -20,9 +20,10 @@ func TestFuseWriteCount(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		in   int
+		want uint32
 	}{
-		{name: "zero", in: 0},
-		{name: "one", in: 1},
+		{name: "zero", in: 0, want: 0},
+		{name: "one", in: 1, want: 1},
 		{name: "negative", in: -1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -33,8 +34,8 @@ func TestFuseWriteCount(t *testing.T) {
 				}
 				return
 			}
-			if !ok || got != uint32(tc.in) {
-				t.Fatalf("fuseWriteCount(%d) = (%d, %v), want (%d, true)", tc.in, got, ok, tc.in)
+			if !ok || got != tc.want {
+				t.Fatalf("fuseWriteCount(%d) = (%d, %v), want (%d, true)", tc.in, got, ok, tc.want)
 			}
 		})
 	}
@@ -79,16 +80,23 @@ func TestTypeBitsAndFuseID(t *testing.T) {
 		})
 	}
 
-	for _, value := range []int{-1, 0, 1} {
-		got, ok := fuseID(value)
-		if value < 0 {
+	for _, tc := range []struct {
+		value int
+		want  uint32
+	}{
+		{value: -1},
+		{value: 0, want: 0},
+		{value: 1, want: 1},
+	} {
+		got, ok := fuseID(tc.value)
+		if tc.value < 0 {
 			if ok {
-				t.Fatalf("fuseID(%d) accepted a negative id", value)
+				t.Fatalf("fuseID(%d) accepted a negative id", tc.value)
 			}
 			continue
 		}
-		if !ok || got != uint32(value) {
-			t.Fatalf("fuseID(%d) = (%d, %v)", value, got, ok)
+		if !ok || got != tc.want {
+			t.Fatalf("fuseID(%d) = (%d, %v)", tc.value, got, ok)
 		}
 	}
 	maxInt := int(^uint(0) >> 1)
@@ -186,8 +194,8 @@ func TestNodeGetattrUsesStagedSizeAndReaddirFilters(t *testing.T) {
 	if errno := n.Getattr(context.Background(), nil, &root); errno != 0 {
 		t.Fatalf("Getattr(root) = %v", errno)
 	}
-	if !root.Attr.IsDir() || root.Attr.Nlink != 2 {
-		t.Fatalf("root attr = mode %#o nlink %d", root.Attr.Mode, root.Attr.Nlink)
+	if !root.IsDir() || root.Nlink != 2 {
+		t.Fatalf("root attr = mode %#o nlink %d", root.Mode, root.Nlink)
 	}
 
 	stream, errno := n.Readdir(context.Background())
@@ -216,7 +224,7 @@ func TestNodeGetattrUsesStagedSizeAndReaddirFilters(t *testing.T) {
 	if err != nil {
 		t.Fatalf("newStagedFile: %v", err)
 	}
-	defer staged.Close()
+	defer func() { _ = staged.Close() }()
 	if _, err := staged.WriteAt([]byte("staged"), 0); err != nil {
 		t.Fatalf("stage data: %v", err)
 	}
@@ -230,8 +238,8 @@ func TestNodeGetattrUsesStagedSizeAndReaddirFilters(t *testing.T) {
 	if errno := (&node{b: b, path: "/root/new.txt"}).Getattr(context.Background(), nil, &stagedOut); errno != 0 {
 		t.Fatalf("Getattr(staged) = %v", errno)
 	}
-	if stagedOut.Attr.Size != 6 || !stagedOut.Attr.IsRegular() {
-		t.Fatalf("staged attr = mode %#o size %d", stagedOut.Attr.Mode, stagedOut.Attr.Size)
+	if stagedOut.Size != 6 || !stagedOut.IsRegular() {
+		t.Fatalf("staged attr = mode %#o size %d", stagedOut.Mode, stagedOut.Size)
 	}
 }
 
