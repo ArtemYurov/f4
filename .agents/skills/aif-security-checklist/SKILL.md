@@ -146,7 +146,7 @@ If any rule is violated — fix the output before presenting it to the user.
 Run the automated security audit script:
 
 ```bash
-bash ~/.claude/skills/security-checklist/scripts/audit.sh
+bash ~/.agents/skills/security-checklist/scripts/audit.sh
 ```
 
 This checks:
