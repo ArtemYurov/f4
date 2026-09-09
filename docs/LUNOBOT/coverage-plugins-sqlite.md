@@ -17,4 +17,6 @@ The package was selected under § 22 from Codecov for current `main` commit `ada
 
 No local Go build or test was run, per the current LUNOBOT instructions. Static checks are `gofmt` and `git diff --check`; GitHub Actions is authoritative for this change.
 
-The exact CI run and post-merge Codecov result will be recorded here as they become available.
+The first CI run `34316593678` on `d01853ca3202440c590dfacfadf509c36ae4ee63` found a test assertion mistake: `VK_F1` is correctly handled by the window's help routing, so it was not an unrelated key. The test now uses an unknown key code in `26799efd74a4d2da272c83e6b7c7fd1f567c6819`.
+
+The corrected CI run `34317046258` on that exact commit completed successfully with all 26 required jobs green; release jobs were skipped. The final PR-head run and post-merge Codecov result will be recorded here next.
