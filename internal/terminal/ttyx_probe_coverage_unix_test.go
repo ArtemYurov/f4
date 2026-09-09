@@ -17,7 +17,11 @@ func TestHostPixelsFromIoctlRejectsMissingAndNonTerminalFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer file.Close()
+	t.Cleanup(func() {
+		if err := file.Close(); err != nil {
+			t.Errorf("close /dev/null: %v", err)
+		}
+	})
 	if width, height, ok := HostPixelsFromIoctl(file); ok || width != 0 || height != 0 {
 		t.Fatalf("non-terminal file result = (%d, %d, %v)", width, height, ok)
 	}
@@ -28,8 +32,16 @@ func TestReadAnswerCompletesWithDeadline(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer reader.Close()
-	defer writer.Close()
+	t.Cleanup(func() {
+		if err := reader.Close(); err != nil {
+			t.Errorf("close pipe reader: %v", err)
+		}
+	})
+	t.Cleanup(func() {
+		if err := writer.Close(); err != nil {
+			t.Errorf("close pipe writer: %v", err)
+		}
+	})
 
 	if _, err := writer.WriteString("\x1b[4;856;1319t"); err != nil {
 		t.Fatal(err)
@@ -45,7 +57,11 @@ func TestPollAnswerRejectsEndOfFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer file.Close()
+	t.Cleanup(func() {
+		if err := file.Close(); err != nil {
+			t.Errorf("close /dev/null: %v", err)
+		}
+	})
 
 	answer, ok := pollAnswer(file, 10*time.Millisecond, "\x1b[4;")
 	if ok || answer != "" {
