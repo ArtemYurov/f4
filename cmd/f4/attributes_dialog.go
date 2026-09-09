@@ -675,39 +675,36 @@ func showAttributesWindowsWithPropertiesForTargets(
 		// already reset every file's mode to 0666 there before this fix.
 		posixSemantics := runtime.GOOS != "windows" || hostmode.Posix()
 		preserveWinAttrs := uint32(0)
-		if chkRO.State == 2 {
+		switch chkRO.State {
+		case 2:
 			preserveWinAttrs |= 1
-		} else if chkRO.State == 1 {
+		case 1:
 			item.WinAttrs |= 1
 			if !posixSemantics {
 				item.UnixMode = 0444
 			}
-		} else {
+		default:
 			item.WinAttrs &= ^uint32(1)
 			if !posixSemantics {
 				item.UnixMode = 0666
 			}
 		}
-		if chkHD.State == 2 {
-			preserveWinAttrs |= 2
-		} else if chkHD.State == 1 {
-			item.WinAttrs |= 2
-		} else {
-			item.WinAttrs &= ^uint32(2)
-		}
-		if chkSY.State == 2 {
-			preserveWinAttrs |= 4
-		} else if chkSY.State == 1 {
-			item.WinAttrs |= 4
-		} else {
-			item.WinAttrs &= ^uint32(4)
-		}
-		if chkAR.State == 2 {
-			preserveWinAttrs |= 32
-		} else if chkAR.State == 1 {
-			item.WinAttrs |= 32
-		} else {
-			item.WinAttrs &= ^uint32(32)
+		for _, flag := range []struct {
+			state int
+			bit   uint32
+		}{
+			{chkHD.State, 2},
+			{chkSY.State, 4},
+			{chkAR.State, 32},
+		} {
+			switch flag.state {
+			case 2:
+				preserveWinAttrs |= flag.bit
+			case 1:
+				item.WinAttrs |= flag.bit
+			default:
+				item.WinAttrs &^= flag.bit
+			}
 		}
 
 		vtui.RunAsync(func(ctx *vtui.TaskContext) {
