@@ -20,8 +20,15 @@ over four seeds. Both are written up in `index.md`, together with the misreading
 that sent the first diagnosis to `affected.calc`: the last line a failing step
 echoes is its group header, not its last command.
 
-Run **34295760690** is the one on `b4721d48`. Read it at the first commit after
-it — the rule has now been written twice and followed neither time.
+Run **34295760690** on `b4721d48` is **green on every cell**, read at the commit
+that followed it. That is the first full-matrix confirmation the branch has had
+since the terminal wave, and it covers the largest commit on it: 252 files, 70
+renames, `internal/panel` under the race detector, and `Test (windows/arm64)`
+and `Test (windows/amd64)` on the seams that only Windows compiles.
+
+The editor task-pump leak did not reproduce — `Race (packages)` passed — so it
+stays a flake with the other two, and `internal/panel` did not add one of its
+own despite 156 direct `FrameManager.Init` calls (see Task 44 step 7).
 
 ## Where the work stands
 

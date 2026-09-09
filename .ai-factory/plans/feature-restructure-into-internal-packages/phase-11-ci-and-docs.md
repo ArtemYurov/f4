@@ -776,7 +776,30 @@ whole tree.
 6. **Verify the tree against `ARCHITECTURE.md` as rewritten in Task 41** — the
    layer table, the dependency rules, the file-naming convention. Where the code
    and the document disagree, one of them is wrong; say which.
-7. **Write the outcome into the PR body**, in a short section: what was reviewed,
+7. **Record that the frame manager has a disciplined path that almost nobody
+   takes.** `testutil.SwapFrameManager` gives a test a fresh manager and, in its
+   returned closure, closes the frames and shuts that manager down;
+   `vtui.FrameManager.Init` gives it a fresh screen on the shared manager and
+   undoes nothing. Counted on the finished tree:
+
+   | package | `FrameManager.Init` | `SwapFrameManager` |
+   |---|---|---|
+   | `cmd/f4` | 286 | 100 |
+   | `internal/editor` | 161 | 10 |
+   | `internal/panel` | 156 | 1 |
+   | `internal/viewer` | 18 | 1 |
+   | `internal/terminal` | 4 | 3 |
+   | `internal/cmdline` | 4 | 0 |
+   | `internal/dialog` | 3 | 2 |
+
+   The helper exists because the direct call leaks, and it is taken in a
+   minority of cases everywhere and in under one per cent in `internal/panel`.
+   This is not a task for this branch — converting three hundred call sites is
+   its own change with its own risk — but it is the first thing to propose as a
+   follow-up, and the goroutine-leak failure recorded in `index.md` is the first
+   bill for it.
+
+8. **Write the outcome into the PR body**, in a short section: what was reviewed,
    what stays as is, and what is proposed as a follow-up with the evidence behind
    it. A reviewer should not have to ask whether the structure was thought about
    after it was built.
