@@ -871,14 +871,35 @@ passing by `f59248f4`, so this failure is already fixed.
 
 **Race (packages) failed on a goroutine-leak check, after every test passed.**
 `internal/editor` left one `vtui` task-pump goroutine alive, and
-`testutil.Main`'s check turned that into a failing package. The check is new to
-that package: `internal/editor/main_test.go` was written in Task 33, and before
-it there was no `TestMain` there and so no check. Not reproduced locally over
-four seeds including CI's own (`1788905440127742299`), on a tree that has moved
-a great deal since. `vtui`'s `stopTaskPump` does join its goroutine, so the pump
-that leaked belongs to a manager whose `finishShutdown` never ran — the guard is
-`shutdownDone`, which `Init` resets. Left open with the other two CI-only
-failures rather than chased into the dependency on one unreproduced sample.
+`testutil.Main`'s check turned that into a failing package. It did not recur on
+the next full run (34295760690, green), so it joins the two flakes below.
+
+*Established, and not worth re-deriving:*
+
+- The `TestMain` is not the cause. `internal/editor`'s and `internal/viewer`'s
+  are byte-identical — `testutil.Main(m, theme.SetDefaultF4Palette, nil)` — and
+  only the editor leaked.
+- Teardown discipline is not the cause. `testutil.Main` already shuts down the
+  global manager, and the base manager too when they have diverged, and counts
+  the pumps only after that (`internal/testutil/main.go:73-93`).
+- No test in any of the six packages assigns `vtui.FrameManager` directly, so
+  the orphaned manager did not come from there.
+- The goroutine profile says `runnable`, not `blocked`: the pump was working, so
+  it started *after* the shutdown began.
+- It does not reproduce locally. Five attempts: four seeds on the tree as it was,
+  and CI's own seed `1788905440127742299` on the tree as it is.
+- `vtui`'s `stopTaskPump` joins its goroutine through `taskWG.Wait()`, so the
+  pump that leaked belongs to a manager whose `finishShutdown` never ran. The
+  guard there is `shutdownDone`, and `Init` resets it.
+
+*Hypothesis, untested:* four editor test files start goroutines that read
+`vtui.FrameManager.TaskChan` by hand — `editor_search_lazy_test.go:32`,
+`editor_find_all_test.go:170`, `buffer_async_test.go:236` and `:410`,
+`editor_view_test.go:3790` — and the same files call `Init` directly. A drain
+goroutine outliving its test could eat the shutdown signal, and the next `Init`
+would raise a second pump. Its check is also its fix: give each of those
+goroutines a done channel and a `t.Cleanup` that joins it, and see whether CI's
+seed stops catching it.
 
 ---
 

@@ -1057,6 +1057,27 @@ comes from the graph's edges out of each test file, not from filenames.
    The third command compares the tree with itself and never reads the bundle;
    it reports 154 whatever the tables say. Only the first two are checks.
 
+   **Both checks stop returning nothing once the waves start, and that is not a
+   miss.** A wave creates files the bundle could not have named — the seam files
+   the composition root fills in, and the tests written for them. Run before
+   Task 36 the first check returned ten (`keymap_suspend.go`, `media_app.go`,
+   `panels_app_commands.go`, `plughost_app.go`, `process_environment_host.go`,
+   `settings_save.go`, `term_app.go` and its two build-tagged halves,
+   `viewer_app.go`) and the second twenty-four, and every one of the
+   thirty-four is absent from the branch point. So the question the check
+   answers is not "is this list empty" but "is anything on it older than the
+   branch":
+
+   ```
+   base=$(git merge-base HEAD upstream/main)
+   for f in <the names the two commands printed>; do
+       git cat-file -e "$base:cmd/f4/$f" 2>/dev/null && echo "predates the branch: $f"
+   done
+   ```
+
+   Nothing printed means no wave missed a file. Something printed is a Task 43
+   miss and belongs in the wave that should have named it.
+
 2. Sources. Each row still needs its gate score confirmed by the wave that moves
    it:
 
