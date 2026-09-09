@@ -1,8 +1,8 @@
 package cmdline
 
 // The command line's side of the GUI semantic protocol: what an external UI
-// is told the prompt currently holds. Go requires it with CommandLine; it was
-// in cmd/f4/semantic.go, which serves every frame.
+// is told the prompt currently holds. Go requires it to sit with CommandLine;
+// the frame-level half of the protocol is internal/app's.
 
 import (
 	"github.com/unxed/f4/internal/semantic"

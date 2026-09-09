@@ -2,7 +2,7 @@ package editor
 
 // The editor's side of the GUI semantic protocol: what an external UI is told
 // the editor contains, and what it is allowed to ask for. Go requires these
-// with EditorView; they were in cmd/f4/semantic.go, which serves every frame.
+// with EditorView; the frame-level half of the protocol is internal/app's.
 
 import (
 	"github.com/unxed/f4/internal/piecetable"

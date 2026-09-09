@@ -346,6 +346,47 @@ any of them would see only its own subtree.
 4. Update `README.md:237` — "If `cmd/f4/assets/icon/f4.svg` is changed" — to the
    new icon location from Task 27, if Phase 6 did not already.
 
+
+### What Task 37 actually found
+
+**The `//go:generate` directive travelled with `main.go` and broke silently.**
+It generates the icons and the two `rsrc_windows_*.syso` files, and the tool
+writes the `.syso` into `cmd/f4` because the toolchain links a resource object
+only from the directory of the main package. CI runs `go generate ./cmd/f4`.
+Once the directive was in `internal/app`, that command matched no directive and
+**exited 0**: the icons would have stopped being regenerated and every job would
+have stayed green. Nothing in the tree checks that a generator ran.
+
+It is back in `cmd/f4/main.go`, above the package comment, with the reason
+written next to it. The general form is worth keeping: a directive is bound to
+the directory a tool is told to look in, and moving the file it sits in moves it
+out of that directory without a word from any check. Same family as a sweep that
+finds nothing.
+
+**Removing the `cmd/f4` special case changes little today, and that is not the
+reason to remove it.** Both branches — the test-impact one mapping every path
+under `cmd/f4/` to the single unit `cmd/f4`, and the build-impact one setting
+`build=yes` for any of them — now give the same answer the general rules give:
+a `.go` file resolves to its own directory, which is `cmd/f4`, and `cmd/f4` is a
+main package so it is in the production graph either way. What the special case
+actually cost was truth: its comment justified itself with "language files, help
+pages, icons and testdata are read by cmd/f4's tests at run time", and none of
+those has been there since phase 5. A future non-Go file under `cmd/f4/` would
+have been attributed silently instead of forcing the full run the fallback
+exists for.
+
+`.syso` needed a branch of its own, since it is neither `.go` nor testdata and
+would otherwise reach `all "cannot attribute"`. It resolves to its directory,
+for the same reason the linker does.
+
+**The sweep in step 3 cannot pass yet, and not because of this task.** It asks
+that `grep -rn 'cmd/f4/'` return only the build invocations, the `.syso` cache
+paths, `tools/icons/main.go` and two `README.md` lines. It also returns
+`AGENTS.md` and eleven files under `docs/`, all naming files that moved — and
+those documents are Tasks 40 and 42's subject, not this one's. What this task
+could sweep, it swept: three comments in `internal/` naming `cmd/f4/semantic.go`
+and `cmd/f4/editor_view.go` now name where the code is.
+
 ### Required Interfaces and Contracts
 
 - `cmd/f4` is `package main`. Nothing can import it and nothing should want to;

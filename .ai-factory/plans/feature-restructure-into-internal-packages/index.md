@@ -448,7 +448,7 @@ upstream merge that must happen first, the open tails and the tool hazards.
 
 ### Phase 10: The Composition Root
 - [x] Task 36: Extract `internal/app` ([details](phase-10-composition-root.md#task-36-extract-internalapp)) (depends on 35)
-- [ ] Task 37: Reduce `cmd/f4` to the entry point ([details](phase-10-composition-root.md#task-37-reduce-cmdf4-to-the-entry-point)) (depends on 36)
+- [x] Task 37: Reduce `cmd/f4` to the entry point ([details](phase-10-composition-root.md#task-37-reduce-cmdf4-to-the-entry-point)) (depends on 36)
 
 ### Phase 11: CI, Lint and Documentation
 - [ ] Task 38: Rebalance the CI shards; measure before and after ([details](phase-11-ci-and-docs.md#task-38-rebalance-the-ci-shards)) (depends on 37)
@@ -868,6 +868,12 @@ the simplify pass. `gofmt -l` did list both files during the panel wave and the
 listing was dismissed as "they parse". Add `gofmt -s -l .` to the local gate;
 `gofmt -w` is not the same command and never was. Both files were reformatted in
 passing by `f59248f4`, so this failure is already fixed.
+
+GitHub names the failing steps itself, which is the reading to trust over any
+log: `gh run view <id> --json jobs --jq '.jobs[] | select(.conclusion=="failure")
+| {name, steps: [.steps[] | select(.conclusion=="failure") | .name]}'` returns
+`Build (linux/amd64) -> Check formatting` and `Race (packages) -> Run race
+detector`. `affected.calc` is not among them.
 
 **Race (packages) failed on a goroutine-leak check, after every test passed.**
 `internal/editor` left one `vtui` task-pump goroutine alive, and

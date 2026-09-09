@@ -38,7 +38,7 @@ var msgKeyFixtureFiles = map[string]bool{
 // runtime — vtui.Msg renders it as "{key}" — which is exactly why it needs a
 // test: the caption reaches the user in braces and nothing else complains.
 var msgKeysWithoutAString = map[string]string{
-	// cmd/f4/editor_view.go:3919. Absent from upstream's en.lng too, so the
+	// internal/editor/view.go:3919. Absent from upstream's en.lng too, so the
 	// fix is a string in their table, not a change here.
 	"KeyBar.EditorAltF8": "upstream's gap, not ours",
 }

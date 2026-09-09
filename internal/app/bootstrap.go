@@ -1,5 +1,3 @@
-//go:generate go -C ../../tools/icons run .
-
 package app
 
 import (
