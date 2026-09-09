@@ -412,9 +412,13 @@ upstream merge that must happen first, the open tails and the tool hazards.
 - **Task 36 depends on every wave** — the composition root is what is left.
 - **Task 41 depends on Task 37** — `ARCHITECTURE.md` can describe the tree as a
   fact only once the tree is the tree.
-- **Task 47 runs after the pull request is merged, not before.** Until then the
-  list it works from is incomplete by construction: a file upstream adds after
-  its wave has passed lands in `cmd/f4` with nobody left to place it.
+- **Re-homing what upstream adds past the roster is a step of Task 44, not a
+  task after the merge.** It was written to run post-PR, because the list is
+  only complete once upstream stops moving under an open pull request. Three
+  things retired that: the branch is level with `upstream/main`, `cmd/f4` is
+  five files so a stray arrival breaks the build rather than landing quietly,
+  and every merge has placed its own arrivals as it went. The residue is covered
+  by merging once more immediately before opening the PR.
 - **Task 46 depends on nothing, and Task 32 must not start without it.** It
   guards Tasks 32-36 against the one damage the waves actually cause: a script
   that rewrites identifiers rewriting a string literal instead. Run after the
@@ -489,8 +493,7 @@ upstream merge that must happen first, the open tails and the tool hazards.
 - [ ] Task 41: Rewrite `ARCHITECTURE.md` from target to fact ([details](phase-11-ci-and-docs.md#task-41-rewrite-architecturemd-from-target-to-fact)) (depends on 40)
 - [ ] Task 42: Drop the migration baseline ([details](phase-11-ci-and-docs.md#task-42-drop-the-migration-baseline)) (depends on 41)
 - [ ] Task 44: Review the finished tree before calling it done ([details](phase-11-ci-and-docs.md#task-44-review-the-finished-tree-before-calling-it-done)) (depends on 42)
-- [ ] Task 45: Write the pull request ([details](phase-11-ci-and-docs.md#task-45-write-the-pull-request)) (depends on 44)
-- [ ] Task 47: Re-home the files upstream added past Task 43's roster ([details](phase-11-ci-and-docs.md#task-47)) (depends on 45)
+- [ ] Task 45: Write the pull request ([details](phase-11-ci-and-docs.md#task-45-write-the-pull-request)) (depends on 44) — the last task
 
 ## Open Findings
 

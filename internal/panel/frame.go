@@ -2439,7 +2439,7 @@ func (pf *PanelsFrame) ProcessKey(e *vtinput.InputEvent) bool {
 
 			// A plain edit:<path> opens the named file. Keep this after
 			// edit:<< so captured command output keeps its existing meaning.
-			if editPath, ok := ParsePlainEditCommand(trimmedCmd); ok {
+			if editPath, ok := parsePlainEditCommand(trimmedCmd); ok {
 				pf.CmdLine.Clear()
 				if pf.SearchFirstMode() && !config.App.SearchCommandStayFocused {
 					pf.SetCommandLineFocus(false)
@@ -5641,7 +5641,7 @@ func parseDirChangeCommand(trimmedCmd string) (targetPath string, ok bool) {
 // parsePlainEditCommand recognizes the file-opening form of the edit:
 // command. The edit:<< capture form is handled before this helper, but it is
 // excluded here as well so the two forms cannot drift into one another.
-func ParsePlainEditCommand(trimmedCmd string) (path string, ok bool) {
+func parsePlainEditCommand(trimmedCmd string) (path string, ok bool) {
 	const prefix = "edit:"
 	trimmedCmd = strings.TrimSpace(trimmedCmd)
 	if len(trimmedCmd) <= len(prefix) || !strings.EqualFold(trimmedCmd[:len(prefix)], prefix) {

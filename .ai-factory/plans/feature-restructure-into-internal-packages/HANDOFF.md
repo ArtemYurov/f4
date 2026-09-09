@@ -42,7 +42,8 @@ checkboxes in `index.md` match the tree.
 
 Next is **Task 41**, `ARCHITECTURE.md` from target to fact — including step 1a,
 which replaces the `app.New`/`Run(ctx)` example with what `main` actually does.
-Then 42, 44, 45 and 47.
+Then 42, 44 and 45; Task 45 is now the last, because re-homing upstream's
+arrivals moved into Task 44 as its step 1a.
 
 **`origin/main` is level with `upstream/main`**, so the incremental lint runs
 against a real base. Re-measured on it: still **0**. The zero held on rename
