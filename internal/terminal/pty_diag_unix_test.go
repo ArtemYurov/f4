@@ -5,5 +5,5 @@ package terminal
 import "testing"
 
 func TestLogPTYDiagnostics(t *testing.T) {
-`tLogPTYDiagnostics()
+	LogPTYDiagnostics()
 }
