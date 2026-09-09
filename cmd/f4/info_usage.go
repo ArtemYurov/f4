@@ -88,65 +88,6 @@ func (meter infoUsageMeter) rowsWithWidth(section string, innerW, y, requestedMe
 		freeLine = strings.Repeat(" ", meterX) + panelInfoUsageLegend(usedLabel, usedText, freeLabel, freeText, meterWidth)
 	}
 
-	return []infoRow{
-		{
-			section:           section,
-			label:             meter.Label,
-			text:              runewidth.Truncate(totalLine, innerW, "…"),
-			usageMeterWidth:   meterWidth,
-			usageTotal:        meter.Total,
-			usageAvailable:    meter.Available,
-			usageContinuation: true,
-			y:                 y,
-		},
-		{
-			section: section,
-			label:   meter.Label, value: copyValue, copyable: true,
-			text:            runewidth.Truncate(firstText, innerW, "…"),
-			usageBarStart:   barStart,
-			usageBarWidth:   barWidth,
-			usageBarFilled:  barFilled,
-			usageMeterWidth: meterWidth,
-			usageTotal:      meter.Total,
-			usageAvailable:  meter.Available,
-			y:               y + 1,
-		},
-		{
-			section:           section,
-			label:             meter.Label,
-			text:              runewidth.Truncate(freeLine, innerW, "…"),
-			usageMeterWidth:   meterWidth,
-			usageTotal:        meter.Total,
-			usageAvailable:    meter.Available,
-			usageContinuation: true,
-			y:                 y + 2,
-		},
-	}
-
-	return []infoRow{
-		{
-			section: section,
-			label:   meter.Label, value: copyValue, copyable: true,
-			text:            runewidth.Truncate(firstText, innerW, "…"),
-			usageBarStart:   barStart,
-			usageBarWidth:   barWidth,
-			usageBarFilled:  barFilled,
-			usageMeterWidth: meterWidth,
-			usageTotal:      meter.Total,
-			usageAvailable:  meter.Available,
-			y:               y,
-		},
-		{
-			section:           section,
-			label:             meter.Label,
-			text:              runewidth.Truncate(secondText, innerW, "…"),
-			usageMeterWidth:   meterWidth,
-			usageTotal:        meter.Total,
-			usageAvailable:    meter.Available,
-			usageContinuation: true,
-			y:                 y + 1,
-		},
-	}
 }
 
 // alignInfoUsageMeters makes every meter as narrow as the naturally narrowest
