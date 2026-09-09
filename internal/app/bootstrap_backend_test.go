@@ -2,6 +2,7 @@ package app
 
 import (
 	"github.com/unxed/f4/internal/config"
+	"github.com/unxed/f4/internal/i18n"
 	"path/filepath"
 	"testing"
 )
@@ -148,6 +149,23 @@ func TestStartupChoiceHelpers(t *testing.T) {
 	}
 	if got := startupChoiceAt(startupModeChoices, 1); got != config.StartupModeTTY {
 		t.Errorf("startupChoiceAt(modes, 1) = %v, want tty", got)
+	}
+}
+
+func TestStartupBackendLabels(t *testing.T) {
+	choices := []string{"", "x11", "wayland"}
+	labels := startupBackendLabels(choices)
+
+	if got, want := labels[0], i18n.Msg("StartupSettings.BackendAuto"); got != want {
+		t.Errorf("startupBackendLabels(auto) = %q, want %q", got, want)
+	}
+	if labels[1] != "x11" || labels[2] != "wayland" {
+		t.Errorf("startupBackendLabels = %q, want translated auto plus backend names", labels)
+	}
+
+	labels[1] = "changed"
+	if choices[1] != "x11" {
+		t.Error("startupBackendLabels returned an alias of the input slice")
 	}
 }
 
