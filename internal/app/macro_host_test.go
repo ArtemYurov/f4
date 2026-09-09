@@ -31,6 +31,17 @@ func callMacroHost[T any](t *testing.T, call func() T) T {
 	}
 }
 
+type macroHostScreenSize struct {
+`twidth, height int
+}
+
+func callMacroHostScreenSize(t *testing.T, host f4MacroHost) macroHostScreenSize {
+`treturn callMacroHost(t, func() macroHostScreenSize {
+`t`tw, h := host.ScreenSize()
+`t`treturn macroHostScreenSize{width: w, height: h}
+`t})
+}
+
 func runMacroHostTask(t *testing.T) {
 	t.Helper()
 	select {
@@ -102,7 +113,7 @@ func TestF4MacroHostUIState(t *testing.T) {
 	if got := callMacroHost(t, host.CommandLine); got != "" {
 		t.Fatalf("CommandLine without panels frame = %q, want empty", got)
 	}
-	if width, height := callMacroHost(t, host.ScreenSize); width != 0 || height != 0 {
+	if width, height := callMacroHostScreenSize(t, host); width != 0 || height != 0 {
 		t.Fatalf("ScreenSize without panels frame = %dx%d, want 0x0", width, height)
 	}
 
@@ -122,7 +133,7 @@ func TestF4MacroHostUIState(t *testing.T) {
 	if got := callMacroHost(t, host.CommandLine); got != pf.CmdLine.Edit.GetText() {
 		t.Fatalf("CommandLine = %q, want %q", got, pf.CmdLine.Edit.GetText())
 	}
-	if width, height := callMacroHost(t, host.ScreenSize); width != 80 || height != 25 {
+	if width, height := callMacroHostScreenSize(t, host); width != 80 || height != 25 {
 		t.Fatalf("ScreenSize = %dx%d, want 80x25", width, height)
 	}
 	_ = callMacroHost(t, host.WindowTitle)
