@@ -42,12 +42,12 @@ func ShowAttributesDialogForTargets(refresh func(), v vfs.VFS, targets []Attribu
 	}
 }
 
-func SetUnixAttributesForTargets(ctx context.Context, v vfs.VFS, targets []AttributesTarget, edited vfs.VFSItem) error {
+func setUnixAttributesForTargets(ctx context.Context, v vfs.VFS, targets []AttributesTarget, edited vfs.VFSItem, preserveUnixMode uint32) error {
 	for _, target := range targets {
 		item := target.Item
 		item.Uid = edited.Uid
 		item.Gid = edited.Gid
-		item.UnixMode = edited.UnixMode
+		item.UnixMode = (item.UnixMode & preserveUnixMode) | (edited.UnixMode &^ preserveUnixMode)
 		item.MTime = edited.MTime
 		if err := v.SetAttributes(ctx, target.Path, item); err != nil {
 			return fmt.Errorf("%s: %w", target.Path, err)
@@ -148,16 +148,19 @@ func ReplaceSymlinkTarget(ctx context.Context, v vfs.VFS, path, newTarget string
 	return fmt.Errorf("create symlink %q: %w (original target restored)", path, createErr)
 }
 
-func SetWindowsAttributesForTargets(ctx context.Context, v vfs.VFS, targets []AttributesTarget, edited vfs.VFSItem) error {
+func setWindowsAttributesForTargets(ctx context.Context, v vfs.VFS, targets []AttributesTarget, edited vfs.VFSItem, preserveWinAttrs uint32) error {
 	const editableWinAttrs = uint32(1 | 2 | 4 | 32)
 	for _, target := range targets {
 		item := target.Item
 		item.MTime = edited.MTime
-		item.UnixMode = edited.UnixMode
+		if preserveWinAttrs&1 == 0 {
+			item.UnixMode = edited.UnixMode
+		}
 		// The dialog edits only the four ordinary Windows flags. Keep
 		// directory/reparse/compression and other provider-specific flags from
 		// each target instead of copying those of the first selected object.
-		item.WinAttrs = (item.WinAttrs &^ editableWinAttrs) | (edited.WinAttrs & editableWinAttrs)
+		editable := editableWinAttrs &^ preserveWinAttrs
+		item.WinAttrs = (item.WinAttrs &^ editable) | (edited.WinAttrs & editable)
 		if err := v.SetAttributes(ctx, target.Path, item); err != nil {
 			return fmt.Errorf("%s: %w", target.Path, err)
 		}
@@ -287,16 +290,17 @@ func ShowAttributesUnixForTargets(refresh func(), v vfs.VFS, targets []Attribute
 	// Наполнение Permissions
 	vboxPerms := vtui.NewVBoxLayout(gbPerms.X1+2, gbPerms.Y1+1, gbPerms.X2-gbPerms.X1-4, 5)
 	allChecks := []*vtui.Checkbox{}
+	threeState := len(targets) > 1
 
 	makeRow := func(label string, bitOff uint) {
 		row := vtui.NewHBoxLayout(0, 0, 60, 1)
 		lbl := vtui.NewText(0, 0, PadLabel(label), vtui.Palette[vtui.ColDialogText])
-		r := vtui.NewCheckbox(0, 0, i18n.Msg("Attributes.Read"), false)
-		r.State = map[bool]int{true: 1}[(item.UnixMode&(0400>>bitOff)) != 0]
-		w := vtui.NewCheckbox(0, 0, i18n.Msg("Attributes.Write"), false)
-		w.State = map[bool]int{true: 1}[(item.UnixMode&(0200>>bitOff)) != 0]
-		x_ := vtui.NewCheckbox(0, 0, i18n.Msg("Attributes.Execute"), false)
-		x_.State = map[bool]int{true: 1}[(item.UnixMode&(0100>>bitOff)) != 0]
+		r := vtui.NewCheckbox(0, 0, i18n.Msg("Attributes.Read"), threeState)
+		r.State = mixedAttributeState(targets, uint32(0400>>bitOff), func(item vfs.VFSItem) uint32 { return item.UnixMode })
+		w := vtui.NewCheckbox(0, 0, i18n.Msg("Attributes.Write"), threeState)
+		w.State = mixedAttributeState(targets, uint32(0200>>bitOff), func(item vfs.VFSItem) uint32 { return item.UnixMode })
+		x_ := vtui.NewCheckbox(0, 0, i18n.Msg("Attributes.Execute"), threeState)
+		x_.State = mixedAttributeState(targets, uint32(0100>>bitOff), func(item vfs.VFSItem) uint32 { return item.UnixMode })
 		row.Add(lbl, vtui.Margins{Right: 1}, vtui.AlignLeft)
 		row.Add(r, vtui.Margins{Right: 1}, vtui.AlignLeft)
 		row.Add(w, vtui.Margins{Right: 1}, vtui.AlignLeft)
@@ -398,6 +402,13 @@ func ShowAttributesUnixForTargets(refresh func(), v vfs.VFS, targets []Attribute
 		var m uint64
 		fmt.Sscanf(editOctal.GetText(), "%o", &m)
 		item.UnixMode = uint32(m)
+		preserveUnixMode := uint32(0)
+		modeBits := []uint32{0400, 0200, 0100, 0040, 0020, 0010, 0004, 0002, 0001}
+		for i, check := range allChecks {
+			if check.State == 2 {
+				preserveUnixMode |= modeBits[i]
+			}
+		}
 		if t, err := time.ParseInLocation(timeFormat, editMTime.GetText(), time.Local); err == nil {
 			item.MTime = t
 		}
@@ -410,7 +421,7 @@ func ShowAttributesUnixForTargets(refresh func(), v vfs.VFS, targets []Attribute
 					return
 				}
 			}
-			err := SetUnixAttributesForTargets(ctx.Context, v, targets, item)
+			err := setUnixAttributesForTargets(ctx.Context, v, targets, item, preserveUnixMode)
 			ctx.RunOnUI(func() {
 				if err != nil {
 					vtui.ShowMessage(" Error ", err.Error(), []string{"&Ok"})
@@ -433,6 +444,22 @@ func ShowAttributesWindows(refresh func(), v vfs.VFS, path string, item vfs.VFSI
 
 func ShowAttributesWindowsForTargets(refresh func(), v vfs.VFS, targets []AttributesTarget) {
 	ShowAttributesWindowsWithPropertiesForTargets(refresh, v, targets, DefaultNativePropertiesOpener)
+}
+
+func mixedAttributeState(targets []AttributesTarget, bit uint32, value func(vfs.VFSItem) uint32) int {
+	if len(targets) == 0 {
+		return 0
+	}
+	wantSet := value(targets[0].Item)&bit != 0
+	for _, target := range targets[1:] {
+		if (value(target.Item)&bit != 0) != wantSet {
+			return 2
+		}
+	}
+	if wantSet {
+		return 1
+	}
+	return 0
 }
 
 var DefaultNativePropertiesOpener = showNativePropertiesOS
@@ -538,23 +565,16 @@ func ShowAttributesWindowsWithPropertiesForTargets(
 
 	// Apply second pass for GroupBox
 	gbVBox := vtui.NewVBoxLayout(gbAttr.X1+2, gbAttr.Y1+1, gbAttr.X2-gbAttr.X1-4, 4)
-	chkRO := vtui.NewCheckbox(0, 0, i18n.Msg("Attributes.ReadOnly"), false)
-	chkHD := vtui.NewCheckbox(0, 0, i18n.Msg("Attributes.Hidden"), false)
-	chkSY := vtui.NewCheckbox(0, 0, i18n.Msg("Attributes.System"), false)
-	chkAR := vtui.NewCheckbox(0, 0, i18n.Msg("Attributes.Archive"), false)
+	threeState := len(targets) > 1
+	chkRO := vtui.NewCheckbox(0, 0, i18n.Msg("Attributes.ReadOnly"), threeState)
+	chkHD := vtui.NewCheckbox(0, 0, i18n.Msg("Attributes.Hidden"), threeState)
+	chkSY := vtui.NewCheckbox(0, 0, i18n.Msg("Attributes.System"), threeState)
+	chkAR := vtui.NewCheckbox(0, 0, i18n.Msg("Attributes.Archive"), threeState)
 
-	if (item.WinAttrs & 1) != 0 {
-		chkRO.State = 1
-	}
-	if (item.WinAttrs & 2) != 0 {
-		chkHD.State = 1
-	}
-	if (item.WinAttrs & 4) != 0 {
-		chkSY.State = 1
-	}
-	if (item.WinAttrs & 32) != 0 {
-		chkAR.State = 1
-	}
+	chkRO.State = mixedAttributeState(targets, 1, func(item vfs.VFSItem) uint32 { return item.WinAttrs })
+	chkHD.State = mixedAttributeState(targets, 2, func(item vfs.VFSItem) uint32 { return item.WinAttrs })
+	chkSY.State = mixedAttributeState(targets, 4, func(item vfs.VFSItem) uint32 { return item.WinAttrs })
+	chkAR.State = mixedAttributeState(targets, 32, func(item vfs.VFSItem) uint32 { return item.WinAttrs })
 
 	gbAttr.AddItem(chkRO)
 	gbAttr.AddItem(chkHD)
@@ -617,35 +637,41 @@ func ShowAttributesWindowsWithPropertiesForTargets(
 		// defaults to unchecked on a native Linux build too, meaning Set
 		// already reset every file's mode to 0666 there before this fix.
 		posixSemantics := runtime.GOOS != "windows" || hostmode.Posix()
-		if chkRO.State == 1 {
+		preserveWinAttrs := uint32(0)
+		switch chkRO.State {
+		case 2:
+			preserveWinAttrs |= 1
+		case 1:
 			item.WinAttrs |= 1
 			if !posixSemantics {
 				item.UnixMode = 0444
 			}
-		} else {
+		default:
 			item.WinAttrs &= ^uint32(1)
 			if !posixSemantics {
 				item.UnixMode = 0666
 			}
 		}
-		if chkHD.State == 1 {
-			item.WinAttrs |= 2
-		} else {
-			item.WinAttrs &= ^uint32(2)
-		}
-		if chkSY.State == 1 {
-			item.WinAttrs |= 4
-		} else {
-			item.WinAttrs &= ^uint32(4)
-		}
-		if chkAR.State == 1 {
-			item.WinAttrs |= 32
-		} else {
-			item.WinAttrs &= ^uint32(32)
+		for _, flag := range []struct {
+			state int
+			bit   uint32
+		}{
+			{chkHD.State, 2},
+			{chkSY.State, 4},
+			{chkAR.State, 32},
+		} {
+			switch flag.state {
+			case 2:
+				preserveWinAttrs |= flag.bit
+			case 1:
+				item.WinAttrs |= flag.bit
+			default:
+				item.WinAttrs &^= flag.bit
+			}
 		}
 
 		vtui.RunAsync(func(ctx *vtui.TaskContext) {
-			err := SetWindowsAttributesForTargets(ctx.Context, v, targets, item)
+			err := setWindowsAttributesForTargets(ctx.Context, v, targets, item, preserveWinAttrs)
 			ctx.RunOnUI(func() {
 				if err != nil {
 					vtui.ShowMessage(" Error ", err.Error(), []string{"&Ok"})

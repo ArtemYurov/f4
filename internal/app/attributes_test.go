@@ -483,21 +483,6 @@ func TestAttributesDialog_InvalidTime(t *testing.T) {
 	}
 }
 
-// walkUI is a local helper to find elements in nested containers
-func walkUI(el vtui.UIElement, fn func(vtui.UIElement) bool) bool {
-	if !fn(el) {
-		return false
-	}
-	if c, ok := el.(vtui.Container); ok {
-		for _, child := range c.GetChildren() {
-			if !walkUI(child, fn) {
-				return false
-			}
-		}
-	}
-	return true
-}
-
 func runUITasksUntil(t *testing.T, taskChan <-chan func(), done func() bool) {
 	t.Helper()
 	timeout := time.After(2 * time.Second)
@@ -1254,4 +1239,19 @@ func TestDialogTaskPump_OverlayResilience(t *testing.T) {
 	if fm.GetTopFrame() != overlay {
 		t.Error("Overlay should still be on top of the stack")
 	}
+}
+
+// walkUI is a local helper to find elements in nested containers
+func walkUI(el vtui.UIElement, fn func(vtui.UIElement) bool) bool {
+	if !fn(el) {
+		return false
+	}
+	if c, ok := el.(vtui.Container); ok {
+		for _, child := range c.GetChildren() {
+			if !walkUI(child, fn) {
+				return false
+			}
+		}
+	}
+	return true
 }
