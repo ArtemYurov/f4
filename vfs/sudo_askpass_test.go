@@ -86,7 +86,7 @@ func TestRunSudoAskpassRejectsMissingParent(t *testing.T) {
 
 func TestAskpassServerReturnsWhenSocketCannotBeCreated(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "not-a-socket")
-	if err := os.WriteFile(path, []byte("occupied"), 0600); err != nil {
+	if err := os.Mkdir(path, 0700); err != nil {
 		t.Fatalf("create occupied socket path: %v", err)
 	}
 
@@ -122,6 +122,7 @@ func askpassHelperCommand(t *testing.T, parent string) *exec.Cmd {
 	}
 	env = append(env, "F4_RUN_SUDO_ASKPASS=1", "F4_ASKPASS_PARENT="+parent)
 
+	// #nosec G204 -- os.Args[0] is the current test binary and the arguments are fixed.
 	cmd := exec.Command(os.Args[0], "-test.run=TestSudoAskpassHelperProcess", "--")
 	cmd.Env = env
 	return cmd
