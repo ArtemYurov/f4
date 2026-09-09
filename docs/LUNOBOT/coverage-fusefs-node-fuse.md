@@ -1,7 +1,7 @@
-# Лунобот-2: покрытие `fusefs/node_fuse`
+# Лунобот-2: покрытие `internal/fusefs/node_fuse`
 
-- Claim: кастомная задача «покрыть тестами пакет `fusefs/node_fuse`», часть 1 из 1.
+- Claim: кастомная задача «покрыть тестами пакет `internal/fusefs/node_fuse`», часть 1 из 1.
 - Основание выбора: последний доступный отчёт Codecov для `main` `e40b44db248b72deb958a8fe6c70ac6bca31e349`; файл имел 8.89% покрытия (28/315 строк). Более свежий отчёт для быстро меняющегося `main` на момент выбора ещё не был опубликован Codecov.
-- Изменение: добавлен Unix-only `node_fuse_test.go` с покрытием преобразований FUSE-атрибутов и errno, `Getattr` для staged-файла, `Readdir`, чтения и освобождения read-handle, writable `Open`/`Write`/`Fsync`/`Flush`/`Release`, `Statfs`, отказов записи и неподдерживаемого `Readlink`.
+- Изменение: добавлен Unix-only `internal/fusefs/node_fuse_test.go` с покрытием преобразований FUSE-атрибутов и errno, `Getattr` для staged-файла, `Readdir`, чтения и освобождения read-handle, writable `Open`/`Write`/`Fsync`/`Flush`/`Release`, `Statfs`, отказов записи и неподдерживаемого `Readlink`.
 - Локально выполнены только `gofmt` и `git diff --check`; Go build/test не запускались согласно `LUNOBOT.md`.
-- Hosted CI: ожидается для PR.
+- Первый hosted CI run `34351074103` на head `ad3ffcd0f49f65618b42bc0dc2b0ec670d4f94cf` выявил, что `main` уже перенёс пакет из `fusefs/` в `internal/fusefs/`: typecheck не находил символы node-адаптера в верхнеуровневом тесте. Тест перемещён в актуальный пакет; новый run будет проверять этот head.
