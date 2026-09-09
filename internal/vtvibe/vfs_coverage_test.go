@@ -122,7 +122,7 @@ func TestAIVFSReadDirStatAndOpenUseSharedTree(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer r.Close()
+		defer func() { _ = r.Close() }()
 		buf := make([]byte, 32)
 		n, err := r.Read(context.Background(), buf)
 		if err != nil && !errors.Is(err, io.EOF) {
