@@ -40,7 +40,7 @@ func TestDecodeZipName(t *testing.T) {
 		},
 		{
 			name:           "modern creator OS 11 uses Windows 1251",
-			encoded:        string([]byte{0xe2, 0xe5, 0xf1, 0xe2}),
+			encoded:        string([]byte{0xf2, 0xe5, 0xf1, 0xf2}),
 			want:           "тест",
 			creatorVersion: 0x0b14,
 		},
