@@ -43,10 +43,10 @@ func TestExtUiMessageValidationAndIntegerConversions(t *testing.T) {
 	}
 
 	tests := []struct {
-		name string
+		name  string
 		value any
-		want int
-		ok   bool
+		want  int
+		ok    bool
 	}{
 		{"int", int(-3), -3, true},
 		{"int8", int8(4), 4, true},
