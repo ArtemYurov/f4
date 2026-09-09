@@ -18,4 +18,6 @@ The package was selected from the Codecov report for merge `3ab39ef964ed065fbd9d
 
 No local Go build or test was run, per the current LUNOBOT instructions. Static checks are `gofmt` and `git diff --check`; GitHub Actions is the authoritative verification for this change.
 
-The exact CI run and post-merge Codecov result will be recorded here as they become available.
+The first CI run `34295042683` on commit `bd3bddc56d07014b2c808148b94bcdcf06850b8d` exposed a test assertion mistake: `vtui.Msg("ID3Editor.Title")` returned `{ID3Editor.Title}`. The assertion was corrected in `ef077a733dab4ea8204931e11722b6b35ecdc89a`.
+
+The corrected CI run `34295694105` on that exact commit completed successfully with all 26 required jobs green; release jobs were skipped. The final PR-head run and post-merge Codecov result will be recorded here next.
