@@ -118,8 +118,8 @@ func infoPanelHasSection(ip *InfoPanel, title string) bool {
 }
 
 func infoPanelHasUsageMeter(ip *InfoPanel, label string) bool {
-	for i := 1; i+1 < len(ip.rows); i++ {
-		totalRow, first, second := ip.rows[i-1], ip.rows[i], ip.rows[i+1]
+	for i := 0; i+1 < len(ip.rows); i++ {
+		first, second := ip.rows[i], ip.rows[i+1]
 		if first.label == label && first.copyable && first.usageBarWidth > 0 &&
 			second.label == label && !second.copyable {
 			return true
