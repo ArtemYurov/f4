@@ -280,7 +280,13 @@ func TestHistorySearchResolvesDialogThemeAtRenderTime(t *testing.T) {
 		if got := testRune(scr.GetCell(menu.X1+1, y).Char); got != '*' {
 			t.Fatalf("selected lock marker = %q, want * at the first inner cell", got)
 		}
+		if got := testRune(scr.GetCell(menu.X1+2, y).Char); got != ' ' {
+			t.Fatalf("separator after lock marker = %q, want space", got)
+		}
 		if got := scr.GetCell(menu.X1+2, y).Attributes; got != selected {
+			t.Fatalf("separator attr = %#x, want selected-row attr %#x", got, selected)
+		}
+		if got := scr.GetCell(menu.X1+3, y).Attributes; got != selected {
 			t.Fatalf("selected row attr = %#x, want %#x", got, selected)
 		}
 		if got := scr.GetCell(menu.X1+1, y).Attributes; got != selected {
