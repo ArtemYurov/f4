@@ -93,6 +93,56 @@ func TestCaptureWorkspaceSessionPreservesPendingProviderPath(t *testing.T) {
 	}
 }
 
+type workspaceSessionNestedVFS struct {
+	*vfs.NullVFS
+	parent vfs.VFS
+	path   string
+}
+
+func (v *workspaceSessionNestedVFS) GetPath() string    { return v.path }
+func (v *workspaceSessionNestedVFS) ParentVFS() vfs.VFS { return v.parent }
+
+func TestCaptureWorkspaceSessionSkipsUnrestorableNestedPath(t *testing.T) {
+	t.Cleanup(paneltest.SwapFrameManager(t))
+	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())
+
+	remote := &workspaceSessionNestedVFS{
+		NullVFS: vfs.NewNullVFS(0),
+		parent:  vfs.NewNullVFS(0),
+		path:    "/home/user",
+	}
+	pf := &panel.PanelsFrame{
+		Panels: [2]panel.Panel{
+			&panel.FileSystemPanel{Vfs: remote},
+			&panel.FileSystemPanel{Vfs: vfs.NewOSVFS(t.TempDir())},
+		},
+	}
+
+	state := panel.CaptureWorkspaceSession(pf)
+	if state.Left.Path != "" {
+		t.Fatalf("unrestorable nested path saved as %q, want empty", state.Left.Path)
+	}
+}
+
+func TestCaptureWorkspaceSessionKeepsPersistentNestedURI(t *testing.T) {
+	remote := &workspaceSessionNestedVFS{
+		NullVFS: vfs.NewNullVFS(0),
+		parent:  vfs.NewNullVFS(0),
+		path:    "archive://bundle/path",
+	}
+	pf := &panel.PanelsFrame{
+		Panels: [2]panel.Panel{
+			&panel.FileSystemPanel{Vfs: remote},
+			&panel.FileSystemPanel{Vfs: vfs.NewOSVFS(t.TempDir())},
+		},
+	}
+
+	state := panel.CaptureWorkspaceSession(pf)
+	if state.Left.Path != remote.path {
+		t.Fatalf("persistent nested URI saved as %q, want %q", state.Left.Path, remote.path)
+	}
+}
+
 func TestApplyWorkspaceSessionInitializesFreshPanelsFrame(t *testing.T) {
 	t.Cleanup(paneltest.SwapFrameManager(t))
 	vtui.FrameManager.Init(vtui.NewSilentScreenBuf())

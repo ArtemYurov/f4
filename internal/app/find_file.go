@@ -56,6 +56,45 @@ func padLabelTo(s string, w int) string {
 	return s + strings.Repeat(" ", pad)
 }
 
+// splitFindMasks separates the ordinary and excluded name masks accepted by
+// Find File. Excluded masks are deliberately kept client-side: not every VFS
+// FileFinder can express directory pruning, while the generic VFS walk works
+// for both local and remote providers.
+func splitFindMasks(mask string) (includes, excludes []string) {
+	parts := strings.SplitN(mask, "|", 2)
+	normalize := func(value string) []string {
+		fields := strings.Split(value, ",")
+		masks := make([]string, 0, len(fields))
+		for _, field := range fields {
+			field = strings.TrimSpace(field)
+			if field == "" {
+				continue
+			}
+			// Far compatibility: *.* translates to * in filepath.Match logic.
+			masks = append(masks, strings.ReplaceAll(field, "*.*", "*"))
+		}
+		return masks
+	}
+
+	includes = normalize(parts[0])
+	if len(includes) == 0 {
+		includes = []string{"*"}
+	}
+	if len(parts) == 2 {
+		excludes = normalize(parts[1])
+	}
+	return includes, excludes
+}
+
+func findFileMaskMatches(name string, masks []string) bool {
+	for _, mask := range masks {
+		if matched, _ := filepath.Match(mask, name); matched {
+			return true
+		}
+	}
+	return false
+}
+
 // ExecuteFindFile initiates a background search and displays a progress dialog.
 func ExecuteFindFile(pf *panel.PanelsFrame, v vfs.VFS, startDir, mask, text string, options FindFileOptions) {
 	dlg := vtui.NewCenteredDialog(60, 9, i18n.Msg("FindFile.SearchingTitle"))
@@ -102,16 +141,7 @@ func ExecuteFindFile(pf *panel.PanelsFrame, v vfs.VFS, startDir, mask, text stri
 	vtui.FrameManager.AddScreenHeadless(dlg)
 
 	taskCtx = vtui.RunAsync(func(ctx *vtui.TaskContext) {
-		// Parse masks (e.g. "*.go, *.txt")
-		masks := strings.Split(mask, ",")
-		for i := range masks {
-			masks[i] = strings.TrimSpace(masks[i])
-			// Far compatibility: *.* translates to * in filepath.Match logic
-			masks[i] = strings.ReplaceAll(masks[i], "*.*", "*")
-		}
-		if len(masks) == 0 || mask == "" {
-			masks = []string{"*"}
-		}
+		masks, excludeMasks := splitFindMasks(mask)
 
 		matcher, matcherErr := newFindTextMatcher(text, options)
 		if matcherErr != nil {
@@ -184,6 +214,11 @@ func ExecuteFindFile(pf *panel.PanelsFrame, v vfs.VFS, startDir, mask, text stri
 					if item.Name == ".." {
 						continue
 					}
+					if findFileMaskMatches(item.Name, excludeMasks) {
+						// An excluded directory is pruned, not merely omitted from
+						// the result, so an excluded tree cannot contribute hits.
+						continue
+					}
 
 					itemPath := v.Join(dir, item.Name)
 					if item.IsSymlink {
@@ -195,17 +230,7 @@ func ExecuteFindFile(pf *panel.PanelsFrame, v vfs.VFS, startDir, mask, text stri
 						item.IsDir = false
 					}
 
-					matched := false
-					for _, m := range masks {
-						if m == "" {
-							continue
-						}
-						match, _ := filepath.Match(m, item.Name)
-						if match {
-							matched = true
-							break
-						}
-					}
+					matched := findFileMaskMatches(item.Name, masks)
 
 					if item.IsDir {
 						if options.FindFolders && text == "" && matched {
@@ -234,7 +259,7 @@ func ExecuteFindFile(pf *panel.PanelsFrame, v vfs.VFS, startDir, mask, text stri
 		// grep instead of downloading every candidate only to reject it.
 		var err error
 		searched := false
-		if finder, ok := v.(vfs.FileFinder); ok && options.usesDefaultSearchEngine() {
+		if finder, ok := v.(vfs.FileFinder); ok && options.usesDefaultSearchEngine() && len(excludeMasks) == 0 {
 			updateUI(startDir, true)
 			hits, findErr := finder.FindFiles(ctx.Context, startDir, vfs.FindQuery{
 				Masks:        masks,
