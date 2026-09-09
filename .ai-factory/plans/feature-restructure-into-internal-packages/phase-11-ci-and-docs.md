@@ -450,13 +450,21 @@ grep -rn 'flat package\|one flat\|687 files\|345 files' docs/ README.md AGENTS.m
 
 ### Note: `docs/FILELIST.md` is generated
 
-`scripts/filelist_update.sh` writes it from a `tree -a` of the repository, so
-every commit that moves a file makes it stale. Do **not** regenerate it per
-commit: the current snapshot predates this branch's own tooling, and a fresh run
-would add `.ai-factory/`, `.claude/`, `.agents/` and `build/` to the diff in the
-same breath as the file being moved. Regenerate it once, here, when the tree has
-stopped moving — and check the result before committing it, since `tree -a`
-happily lists directories that are git-ignored.
+`scripts/filelist_update.sh` used to write it from a `tree -a` of the working
+directory, which is why the note above warned about `build/` and the tool state
+directories: a walk has to be told what to leave out, and that exclusion list
+goes stale in silence — it says nothing when a new ignored directory appears, it
+simply lists it. It builds from `git ls-files` now, which answers the same
+question the file claims to answer and needs no list at all. `.claude/` and
+`.agents/` appear in it because they are tracked, which is the honest answer.
+
+**Whether the file should exist is a separate question, and it belongs in the
+PR.** `grep -rl FILELIST` finds the file, its generator and this plan — nothing
+reads it. It described the flat `cmd/f4` of the base revision for eleven phases
+and nobody noticed, which is the usual fate of a generated artefact that no
+check regenerates. Propose deleting it and its generator as its own item in the
+PR body; do not delete it here, because what belongs in the maintainer's
+repository is the maintainer's call.
 
 ---
 
@@ -656,6 +664,13 @@ None.
 ---
 
 ## Task 45: Write the pull request
+
+**And one item of its own: `docs/FILELIST.md`.** Nothing reads it, no check
+regenerates it, and it described the base revision's tree for eleven phases
+without anybody noticing. It is correct again and its generator no longer walks
+the working directory, but a generated file that only a human remembers to run
+will go stale again. Propose deleting both, and say what replaced the need: `git
+ls-files` answers the same question on demand.
 
 **The body needs a section for what the restructuring found rather than broke,
 and it must be separate from the moves.** A reader of a 300-commit branch cannot
@@ -976,6 +991,27 @@ whole tree.
    lint, all 63 were reviewed, M were kept with a stated reason." "We removed 99
    findings" is not an argument, and a maintainer who looks will read it as the
    opposite.
+
+7a. **A test double that embeds a live implementation hides a missing method,
+   and neither the compiler nor the test says so.** This is the only silent
+   damage in the whole branch that left no trace at all — no build error, no
+   failing assertion, no changed line. Copying `mockMetadataVFS` into
+   `internal/dialog` with a regexp took its `type` block and left the two
+   methods below it. The double embeds `vfs.VFS` and the field is populated
+   with `vfs.NewOSVFS(t.TempDir())`, so `Stat` and `SetAttributes` resolved
+   through the embedded value to the real filesystem. The package compiled, the
+   test ran, and it hung on a two-second timeout — the only evidence was two
+   seconds nobody would look at.
+
+   Measured on the finished tree: **21** test doubles embed `vfs.VFS`, and **13**
+   of those populate it with a real implementation. Each is one missing method
+   away from testing the operating system instead of the double.
+
+   The narrow fix is to copy types with the parser. The general one is that a
+   double which embeds an interface should either assert it never reaches
+   outward, or embed a struct of panicking stubs instead — the second is
+   cheaper and fails on the first call rather than on a timeout. Decide which,
+   once, for the thirteen.
 
 8. **Record that the frame manager has a disciplined path that almost nobody
    takes.** `testutil.SwapFrameManager` gives a test a fresh manager and, in its

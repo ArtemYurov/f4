@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -169,4 +170,27 @@ func runUITasksUntil(t *testing.T, taskChan <-chan func(), done func() bool) {
 			t.Fatal("timeout waiting for UI task")
 		}
 	}
+}
+
+func (m *mockMetadataVFS) Stat(ctx context.Context, path string) (vfs.VFSItem, error) {
+	if m.statErr != nil {
+		return vfs.VFSItem{}, m.statErr
+	}
+	if m.statToReturn.Name != "" {
+		return m.statToReturn, nil
+	}
+	return m.VFS.Stat(ctx, path)
+}
+
+func (m *mockMetadataVFS) SetAttributes(ctx context.Context, path string, item vfs.VFSItem) error {
+	if m.setAttrErr != nil {
+		return m.setAttrErr
+	}
+	if m.onSetAttr != nil {
+		m.onSetAttr(item)
+	}
+	if m.onSetAttrPath != nil {
+		m.onSetAttrPath(path, item)
+	}
+	return nil
 }

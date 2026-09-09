@@ -32,24 +32,21 @@ own despite 156 direct `FrameManager.Init` calls (see Task 44 step 7).
 
 ## Where the work stands
 
-Tasks 26-39 and 46 are done and committed; phases 6 through 10 are closed and
-phase 11 has started. `cmd/f4` is **five files** — `main.go`
+Tasks 26-40 and 46 are done and committed; phases 6 through 10 are closed and
+phase 11 is under way. Four upstream merges have landed; `HEAD`, `origin/main`
+and `upstream/main` all agree. `cmd/f4` is **five files** — `main.go`
 and the four module-wide auditors — down from 596. `internal/app` holds 235,
 `internal/panel` 77, and there are 40 packages under `internal`. `cmd/f4` is down from 596 files to
 241, `internal/panel` holds 75, and there are 39 packages under `internal`. The
 checkboxes in `index.md` match the tree.
 
-Next is **Task 40**, the `/aif-docs` checkpoint: `AGENTS.md` and eleven files
-under `docs/` still name files that moved, and Task 37's step-3 sweep cannot
-pass until they do. Then 41 (`ARCHITECTURE.md`, including the step 1a the
-composition-root deviation added), 42, 44, 45 and 47.
+Next is **Task 41**, `ARCHITECTURE.md` from target to fact — including step 1a,
+which replaces the `app.New`/`Run(ctx)` example with what `main` actually does.
+Then 42, 44, 45 and 47.
 
-**A third upstream merge landed** (`da85d539`, 43 commits) and `HEAD` is level
-with `upstream/main` again. **`origin/main` is not**: it is 165 commits behind,
-fast-forwardable, and levelling it is a push to the fork's `main` that nobody
-has authorised. The incremental lint takes it as its base and reports 0 either
-way, so nothing is blocked on it — but Task 39's step 1 asks for it, and it is
-the sort of thing a maintainer notices.
+**`origin/main` is level with `upstream/main`**, so the incremental lint runs
+against a real base. Re-measured on it: still **0**. The zero held on rename
+detection, not on the base lagging.
 
 Everything that waited for Task 34 is closed. `text_editor_bridge.go` and
 `visren_editor_bridge.go` are `internal/panel/bridge_texteditor.go` and
