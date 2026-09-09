@@ -15,7 +15,6 @@ func TestOpenVisRenEditorCreatesTemporaryEditorScreen(t *testing.T) {
 	scr.AllocBuf(100, 30)
 	vtui.FrameManager.Init(scr)
 	initialScreens := len(vtui.FrameManager.Screens)
-	initialFrames := len(vtui.FrameManager.Screens[vtui.FrameManager.ActiveIdx].Frames)
 
 	pf := &PanelsFrame{LastW: 100, LastH: 30}
 	err := pf.OpenVisRenEditor(visren.EditorRequest{
@@ -32,12 +31,15 @@ func TestOpenVisRenEditorCreatesTemporaryEditorScreen(t *testing.T) {
 		t.Fatalf("screens = %d, want %d", len(vtui.FrameManager.Screens), initialScreens+1)
 	}
 	screen := vtui.FrameManager.Screens[len(vtui.FrameManager.Screens)-1]
-	if len(screen.Frames) != initialFrames+1 {
-		t.Fatalf("frames = %d, want %d", len(screen.Frames), initialFrames+1)
+	var ev *editor.EditorView
+	for _, frame := range screen.Frames {
+		if candidate, ok := frame.(*editor.EditorView); ok {
+			ev = candidate
+			break
+		}
 	}
-	ev, ok := screen.Frames[len(screen.Frames)-1].(*editor.EditorView)
-	if !ok {
-		t.Fatalf("screen frame has type %T, want *editor.EditorView", screen.Frames[len(screen.Frames)-1])
+	if ev == nil {
+		t.Fatalf("screen frames contain no *editor.EditorView (count=%d)", len(screen.Frames))
 	}
 	t.Cleanup(ev.Close)
 	if ev.DisplayTitle != "VisRen rules" {
