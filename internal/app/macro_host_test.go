@@ -134,7 +134,7 @@ func TestF4MacroHostUIState(t *testing.T) {
 	if got := callMacroHost(t, host.CommandLine); got != pf.CmdLine.Edit.GetText() {
 		t.Fatalf("CommandLine = %q, want %q", got, pf.CmdLine.Edit.GetText())
 	}
-	size := callMacroHostScreenSize(t, host)
+	size = callMacroHostScreenSize(t, host)
 	if size.width != 80 || size.height != 25 {
 		t.Fatalf("ScreenSize = %dx%d, want 80x25", size.width, size.height)
 	}
