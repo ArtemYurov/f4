@@ -1320,13 +1320,10 @@ func createDefaultHighlightIni(path string) {
 # FileNameUnderCursor = foreground:#FFFFFF | background:#008080
 # FileNameSelectedUnderCursor = foreground:#FFFF00 | background:#008080
 #
-# [SortGroup_N] sections below define sort groups. They accept the same
-# matching keys as a highlight rule (Mask, IncludeAttributes,
-# ExcludeAttributes, SizeAbove/SizeBelow, DateAfter/DateBefore) and are
-# used only when a panel has "Use sort groups" switched on: files are then
-# clustered by group first and sorted by the current sort mode inside each
-# group. Group decides where a cluster goes; sections that share a number
-# form one group, and files matching no group land after all of them.
+# To use one coloured rule for sorting too, add Group to that Highlight
+# section. The same mask and attributes then control both its colour and its
+# position; sections with the same Group number form one cluster. Legacy
+# [SortGroup_N] sections are still accepted for old profiles.
 
 [SortGroup_1]
 Name = Executables

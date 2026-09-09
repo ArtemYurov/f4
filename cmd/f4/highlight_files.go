@@ -34,6 +34,9 @@ const (
 )
 
 type HighlightRule struct {
+	Name              string
+	SortGroup         int
+	HasSortGroup      bool
 	Masks             []string
 	AttrSet           AttrFlags
 	AttrClear         AttrFlags
@@ -97,9 +100,9 @@ func (fh *FileHighlighter) CombineRules() {
 	}
 }
 
-// ruleSection pairs a parsed rule with the ini section it came from, so a
-// caller that needs section-local keys (sort groups read Name and Group) can
-// still reach them after the shared matcher fields have been parsed.
+// ruleSection pairs a parsed rule with the ini section it came from. The
+// section name is retained for legacy [SortGroup_N] sections; ordinary
+// [Highlight_N] rules carry their Name and Group in HighlightRule itself.
 type ruleSection struct {
 	Section string
 	Rule    HighlightRule
@@ -135,6 +138,13 @@ func parseRuleSections(ini *IniFile, prefix string) []ruleSection {
 	for _, secName := range sections {
 		rule := HighlightRule{
 			IgnoreCase: true,
+			Name:       ini.GetString(secName, "Name", ""),
+		}
+		if raw := strings.TrimSpace(ini.GetString(secName, "Group", "")); raw != "" {
+			if group, err := strconv.Atoi(raw); err == nil {
+				rule.SortGroup = group
+				rule.HasSortGroup = true
+			}
 		}
 		maskStr := ini.GetString(secName, "Mask", "")
 		if maskStr != "" {
