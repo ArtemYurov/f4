@@ -142,7 +142,6 @@ Every file tracked in the repository. Regenerate with
     │   │       ├── phase-09-panel-and-cmdline.md
     │   │       ├── phase-10-composition-root.md
     │   │       └── phase-11-ci-and-docs.md
-    │   ├── RESTRUCTURE_BASELINE.md
     │   └── rules
     │       └── base.md
     ├── .ai-factory.json
@@ -640,7 +639,6 @@ Every file tracked in the repository. Regenerate with
     │   │   ├── dragdrop_test.go
     │   │   ├── drive_bookmarks_test.go
     │   │   ├── drive_menu_options_test.go
-    │   │   ├── edit_command_test.go
     │   │   ├── editor_actions_test.go
     │   │   ├── editor_binary_open_test.go
     │   │   ├── editor_host_test.go
@@ -865,6 +863,7 @@ Every file tracked in the repository. Regenerate with
     │   │   ├── help_test.go
     │   │   ├── help.go
     │   │   ├── label.go
+    │   │   ├── main_test.go
     │   │   ├── path.go
     │   │   ├── settings_codepage.go
     │   │   ├── settings_portable_test.go
@@ -1201,6 +1200,7 @@ Every file tracked in the repository. Regenerate with
     │   │   ├── drives_menu_unix.go
     │   │   ├── drives_menu_windows.go
     │   │   ├── drives_menu.go
+    │   │   ├── edit_command_test.go
     │   │   ├── exec.go
     │   │   ├── file_panel_test.go
     │   │   ├── frame_dragdrop.go

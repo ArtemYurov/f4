@@ -700,6 +700,12 @@ far, each with its evidence:
   highlighter had no equivalent. Pre-existing, product-side, found by the race
   detector on run 34298174157 and fixed here.
 - **`tools/icons`' own test never passed** (below).
+- **`plugring_policy_test.go` asserted nothing.**
+  `TestShippedCatalogMeetsItsOwnPolicy` read `plugring/index.yaml` relative to
+  the working directory, which from `cmd/f4` is nothing, so every run reached
+  `t.Skipf` and reported as passing. It resolves the path from its own file now
+  and checks what it claims to. Same family as everything else this branch
+  found: green because it had nothing to look at.
 - **The `.lng` key that reaches the user as `{KeyBar.EditorAltF8}`** — upstream's
   gap, found by the sweep Task 46 added, and left as theirs to fix.
 
@@ -707,6 +713,20 @@ far, each with its evidence:
 `vtui.FrameManager` under a goroutine it had started, which is this work's own
 test hygiene, not a bug in f4. Keeping the two apart is the whole point of the
 section.
+
+**The migration baseline is gone, and its three findings resolved as follows**
+— say this rather than leaving the reader to wonder what `RESTRUCTURE_BASELINE.md`
+was:
+
+- `tools/icons`' own test never passed, and passes now.
+- `plugring_policy_test.go` reported as passing while asserting nothing, and
+  asserts now.
+- `tools/wine_syscall_probe` does not build on `darwin/arm64` — and that is not
+  a failure. `rawGetpid` has no Go body because it is written in
+  `probe_amd64.s`; the tool is a `windows/amd64` probe, it builds for that
+  target, and CI never builds it for another. The baseline recorded it as a
+  pre-existing failure; it is a single-target tool being asked the wrong
+  question.
 
 **One more line the body owes the reader**, recorded here so it survives to
 Task 45: `tools/icons`' own test never passed. It read
