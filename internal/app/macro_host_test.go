@@ -126,7 +126,7 @@ func TestF4MacroHostUIState(t *testing.T) {
 		t.Fatalf("ScreenSize = %dx%d, want 80x25", width, height)
 	}
 	_ = callMacroHost(t, host.WindowTitle)
-	if host.RunAction("missing") {
+	if callMacroHost(t, func() bool { return host.RunAction("missing") }) {
 		t.Fatal("RunAction for missing action unexpectedly succeeded")
 	}
 
@@ -136,7 +136,7 @@ func TestF4MacroHostUIState(t *testing.T) {
 	runMacroHostTask(t)
 	host.Log("macro host UI-state test")
 
-	_, err := host.CallPlugin(context.Background(), "missing-plugin", nil)
+	err := callMacroHost(t, func() error { _, err := host.CallPlugin(context.Background(), "missing-plugin", nil); return err })
 	if err == nil {
 		t.Fatal("CallPlugin for missing plugin returned nil error")
 	}
