@@ -258,6 +258,68 @@ The race run matters most here: the panel owns the directory-load workers that
   `WaitForDirectoryLoads` and `WaitForLoad`.
 - The palette auditor's 42 keys pass with `panel.` qualifiers.
 
+
+### What the wave actually found
+
+**`hotkeys.go` did move, and phase 5's reason for leaving it is why it could.**
+That note said the `conditionRegistry` closures ask the panels frame what is on
+screen, so the file belongs with the application. Measured, that names the
+*closures*, not the manager: the closures read `pf.cmdLine`, `pf.showPanels`,
+`pf.termView`, `pf.shellMode` and `pf.isPtyBusy`, all private members of the
+panels frame, and everything else in the file reads only the bindings. The
+registry was already fillable from outside — `RegisterCondition` has always been
+exported — so the closures moved to `internal/panel` and register themselves
+from its `init`, and the manager went to `internal/keymap` beside the Far
+key-name codec that came out of it in phase 5. `nativeShortcutOwnedByCurrentContext`
+became a seam for the same reason.
+
+That decided the rest of the cluster. `configuredHotkeyAction` reads
+`hasExplicitBinding`, a private method, so it went to `keymap` too, and
+`macro_dispatch.go` stayed in `cmd/f4` around it: `macroFilter` reaches the
+command palette, which is the application's dialog.
+
+**`plugin_hotkeys.go` went to `internal/panel`, not `internal/app`.** Phase 6
+sent it up because every binding function takes a `*HotkeyManager` and
+`pluginMenuKeyLabels` takes a `*PanelsFrame`. Both are still true; what changed
+is that `HotkeyManager` is now at layer 0, so the file follows the frame.
+
+**Two registries went to `internal/plughost`** — the plugin menu items and the
+plugin global hotkeys — the split phase 6 made for `plugin_contributions.go`,
+for the same reason: `internal/panel` reads them, so they sit below it. They
+share one mutex, which is why they travel together, and
+`SnapshotPluginRegistries` is what a test uses now that the mutex is not
+reachable from `cmd/f4`.
+
+**The panel's API is wide on purpose, and the width was measured.** 111 members
+of `PanelsFrame`, `FileSystemPanel` and their neighbours are exported, because
+the action table drives the panels and the action table is the application. The
+five names that looked accidental — `Pf`, `Free`, `SourcePath`, `Filesystem`,
+`Chord` — were un-exported to check, and every one of them broke a caller in
+`cmd/f4`. Nothing here is exported that nothing outside uses.
+
+**Tests split by what they need, not by what they name.** A test that inspects
+the frame's state is a panel test and moved with the frame; a test that presses
+a key and expects an action to run needs the action table, which the panel's
+`RunAction` seam cannot supply — the seam is inert in the panel's own `TestMain`
+and cannot be otherwise, because the table is layer 4. That is 36 tests, now in
+`cmd/f4/panels_frame_app_test.go`, and it is the reason
+`internal/panel/press_key_test.go` exists: a key handed straight to a frame
+tests a path the user never takes, so the helper goes through `KeyFilter`.
+
+**The build-tag export trap fired again.** `shellPromptReady` is read only from
+a Windows-only test, `conInMouseInput` and its two neighbours only from
+Windows-only files, and `getActivePTY`/`writePTY` only from
+`console_ctrl_handler_windows.go`. None of them are visible to a tool running on
+darwin. The ten-target cross-build and `GOOS` vet on four systems are what
+found them, and they are the only things that can.
+
+**One string-literal rewrite got through and was caught by the diff.** Stripping
+the `panel.` qualifier from a file moved into the package ate it inside five
+string literals too: `"panel.activate"`, `"panel.cursor"`, `"panel.open"`,
+`"panel.refresh"` and `"panel.toggleSelection"`, the semantic action names the
+UI protocol sends. The code compiled and every test passed; only the
+before/after literal multiset saw it.
+
 ### Verification
 
 - `go test -race -shuffle=on -timeout 10m ./internal/panel/...`

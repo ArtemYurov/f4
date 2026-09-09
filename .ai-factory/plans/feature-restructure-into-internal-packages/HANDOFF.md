@@ -5,29 +5,33 @@ nowhere else.
 
 ## Where this stands
 
-Written at `c92a6e72`, on a clean, green tree, level with `upstream/main`
+Written at `f59248f4`, on a clean, green tree, level with `upstream/main`
 (`git rev-list --count HEAD..upstream/main` reports 0). Two merges brought in
 27 upstream commits; both are recorded in `index.md`'s Open Findings, along with
 the live bug the first of them fixed.
 
+**Nothing is pushed since `7d7f5309`.** A phase boundary without a push is a
+boundary without CI, and this wave is the largest commit on the branch: 252
+files, 70 of them renames. Twenty-six matrix cells have not seen it.
+
 ## Where the work stands
 
-Tasks 26-33 and 46 are done and committed; phases 6, 7 and 8 are closed.
-`cmd/f4` is down from 596 files to 328. The checkboxes in `index.md` match the
-tree.
+Tasks 26-34 and 46 are done and committed; phases 6, 7 and 8 are closed and
+Task 34 closes the larger half of phase 9. `cmd/f4` is down from 596 files to
+241, `internal/panel` holds 75, and there are 39 packages under `internal`. The
+checkboxes in `index.md` match the tree.
 
-Next is **Task 34, `internal/panel`** — the largest wave left, and the one most
-likely to reorder the menu: it takes `fuse_mount_action.go` and
-`fuse_mount_list.go`, and with them the last three action registrations in
-`cmd/f4`. `TestActionOrderIsStable` is the check that says so.
+Next is **Task 35, `internal/cmdline`**. Task 34 measured its dependency away:
+all five files the roster called "cmdline" read private members of the panel
+frame, so they are panel code and `cmdline -> panel` is zero edges.
 
-Three things wait for it. `text_editor_bridge.go` and `visren_editor_bridge.go`
-are named for the editor and belong here, by the assertion at
-`text_editor_bridge.go:16`. `panel_lookup.go` is the four panel lookups Task 33
-lifted out of `editor_view.go`; they read `pf.closed` and `pf.getActivePanel`.
-And `semantic_fields.go` now exists twice, in `internal/viewer` and
-`internal/editor`, both marked `ponytail:` — Task 34 owns the split of
-`cmd/f4/semantic.go` and gives those three readers one layer-0 home.
+Everything that waited for Task 34 is closed. `text_editor_bridge.go` and
+`visren_editor_bridge.go` are `internal/panel/bridge_texteditor.go` and
+`bridge_visren.go`; `panel_lookup.go` is `internal/panel/lookup.go`;
+`fuse_mount_*.go` are `fuse_mount.go` and `fuse_list.go`; `cmd/f4/semantic.go`
+split, with the frame's half in `internal/panel/frame_semantic.go`; and the two
+`semantic_fields.go` copies are gone into `internal/semantic`.
+`TestActionOrderIsStable` passes, so the menu did not move.
 
 ## Deviations from the plan, and where each is recorded
 
@@ -46,18 +50,27 @@ session can check the record rather than rediscover it.
 | `fuse_mount_*.go` go to `internal/panel` (Task 34) — they read `fsp.vfs` and `pf.getActivePanel` | `phase-08`, Task 32 |
 | `attributes_dialog.go` goes to `internal/dialog`, not `fileops` | `phase-08`, Task 32 |
 | `commands.go` cannot go to `internal/cmdline` | `phase-07` |
+| `hotkeys.go` did move after all — the manager to `internal/keymap`, its conditions to `internal/panel` | `phase-09`, "What the wave actually found" |
+| `plugin_hotkeys.go` goes to `internal/panel`, not `internal/app` — it follows `HotkeyManager` | `phase-09` |
+| The plugin menu and global-hotkey registries go to `internal/plughost` | `phase-09` |
+| 36 panel tests stay in `cmd/f4`: they need the action table, which no seam can supply | `phase-09` |
 | Package-name question for Task 44 | `phase-11`, Task 44 step 3 |
 
 ## Open tails
 
-1. **`semantic_fields.go` exists twice**, in `internal/viewer` and
-   `internal/editor`, both carrying a `ponytail:` marker. Three generic readers
-   copied rather than hoisted, because Task 34 owns `cmd/f4/semantic.go`'s split
-   across five packages. Two copies is where copying stops paying: Task 34 gives
-   them one layer-0 home and deletes both files.
-2. **`panel_lookup.go`** holds the four panel lookups Task 33 lifted out of
-   `editor_view.go`. They read `pf.closed` and `pf.getActivePanel`, so Task 34
-   takes them.
+1. **`internal/panel/panels_frame_test.go` and its four neighbours are still
+   mixed.** The 36 tests that needed the action table were moved out one at a
+   time, by running them and watching which failed. That found every test that
+   *fails* without dispatch; it cannot find one that passes for the wrong reason
+   — a test asserting "nothing happened" passes with an inert seam whatever it
+   is really testing. The honest split is by what each test asserts, and nobody
+   has read them one by one.
+2. **`internal/paneltest` duplicates two helpers into `internal/panel`.**
+   `frame_manager_test_helpers_test.go` and the mocks the moved tests share
+   exist on both sides, because an in-package test cannot import a package that
+   imports it. Twenty lines of scaffolding; the alternative is making every
+   panel test an external test package, which the doc comment on
+   `internal/paneltest/doc.go` already contemplates.
 3. **`internal/editor/view.go`'s `saveUndo` op classes stay private.** The one
    external caller gets `Checkpoint()` instead. If a second appears, the enum is
    the thing to export, not another method.
