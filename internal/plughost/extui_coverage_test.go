@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/unxed/vtinput"
@@ -59,8 +60,10 @@ func TestExtUiMessageValidationAndIntegerConversions(t *testing.T) {
 		{"uint64", uint64(12), 12, true},
 		{"string", "12", 0, false},
 		{"float", float64(12), 0, false},
-		{"int64-overflow", int64(^uint64(0)>>1), 0, false},
 		{"uint64-overflow", ^uint64(0), 0, false},
+	}
+	if got, ok := extUiAnyInt(int64(^uint64(0) >> 1)); (strconv.IntSize == 64 && (!ok || got != int(^uint64(0)>>1))) || (strconv.IntSize == 32 && ok) {
+		t.Fatalf("int64 max conversion = (%d, %t) on %d-bit platform", got, ok, strconv.IntSize)
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -103,7 +106,7 @@ func TestExtUiRendererQueuesAndFlushesUpdates(t *testing.T) {
 	renderer.SetPalette(&palette)
 	palette[0] = 0xffffff
 	renderer.SetCursor(3, 2, true, vtui.CursorShapeBlock)
-	renderer.Render([]vtui.CharInfo{{Char: 'A', Attributes: 7}}, nil, 1, 1, false)
+	renderer.Render([]vtui.CharInfo{{Char: 'A', Attributes: 7}}, nil, 1, 1, true)
 	renderer.SetSemanticScene(map[string]any{"type": "scene", "id": "main"})
 	renderer.SetWindowTitle("title")
 
