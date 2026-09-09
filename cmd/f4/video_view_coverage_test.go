@@ -70,7 +70,7 @@ func TestVideoViewStartNeedsLaidOutScreenAndSession(t *testing.T) {
 	if !vv.start(nil) {
 		t.Fatal("start must be idempotent once a player exists")
 	}
-	if ok := vv.pictureRect(nil); ok {
+	if _, ok := vv.pictureRect(nil); ok {
 		t.Fatal("pictureRect(nil) must fail")
 	}
 }
