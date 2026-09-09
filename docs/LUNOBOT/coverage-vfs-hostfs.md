@@ -11,3 +11,7 @@ metadata conversion, open-flag translation, and directory-entry helpers.
 
 Local builds and tests were not run. GitHub Actions is the authoritative
 verification for this change.
+
+The initial PR commit `460adffdd445c7109f0fe0dec7bb3cfe0198ad71` passed the
+full GitHub Actions run [34293187360](https://github.com/unxed/f4/actions/runs/34293187360),
+including the Windows A-D tests for the Windows-only helper paths.
