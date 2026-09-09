@@ -18,7 +18,7 @@ func TestDisplayValueFormatsSQLiteValuesAndBoundsOutput(t *testing.T) {
 	long := strings.Repeat("x", 513)
 	for _, tc := range []struct {
 		name, want string
-		value    any
+		value      any
 	}{
 		{"NULL", "NULL", nil},
 		{"binary", "x'0001ff'", []byte{0, 1, 255}},
