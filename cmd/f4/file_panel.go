@@ -1959,7 +1959,11 @@ func (fp *FileSystemPanel) persistentPath() string {
 	if fp == nil || fp.vfs == nil {
 		return ""
 	}
-	return fp.vfs.GetPath()
+	path := fp.vfs.GetPath()
+	if !shouldPersistPanelPath(fp, path) {
+		return ""
+	}
+	return path
 }
 
 // openVFSAsync runs a provider or URI mount without allowing a slow or
@@ -2110,6 +2114,20 @@ func (fp *FileSystemPanel) consumeFolderHistorySuppression(path string, token ui
 	}
 	fp.suppressFolderHistoryPath = ""
 	return true
+}
+
+// shouldPersistPanelPath keeps paths that can be restored without the VFS
+// instance that produced them. A nested provider may expose an absolute
+// remote path such as /home/user, but saving it in session.ini would make the
+// next startup interpret that path as a local OS directory.
+func shouldPersistPanelPath(fp *FileSystemPanel, path string) bool {
+	if fp == nil || fp.vfs == nil || path == "" {
+		return false
+	}
+	if fp.vfs.ParentVFS() == nil {
+		return true
+	}
+	return isPersistentURIPath(path) || vfs.FindStandaloneProvider(context.Background(), nil, path) != nil
 }
 
 // shouldRecordFolderHistory prevents an internal path of a nested VFS from
