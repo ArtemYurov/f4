@@ -125,7 +125,7 @@ func TestHandleSemanticFrameAction(t *testing.T) {
 		t.Fatal("frame child did not receive focus")
 	}
 
-	frame := vtui.NewBorderedFrame(0, 0, 20, 6, vtui.SingleBox, "semantic")
+	frame := vtui.NewWindow(0, 0, 20, 6, "semantic")
 	if !handleSemanticFrameAction(frame, vtui.SemanticID(frame), map[string]any{
 		"action": "close",
 	}) {
