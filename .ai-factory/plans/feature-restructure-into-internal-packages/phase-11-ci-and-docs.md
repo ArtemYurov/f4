@@ -141,6 +141,7 @@ touched landed in it, and a shard of the *whole module* being empty means the
 assignment dropped packages. The action errors on the second and skips the
 first.
 
+
 ### Required Interfaces and Contracts
 
 - Every package in `go list ./...` is linted by exactly one shard and raced by
@@ -280,6 +281,42 @@ Finding this locally costs one run. Finding it in review costs the PR.
    green. The failure mode to watch for is a staged deletion travelling in
    somebody else's commit — `git commit` takes the whole index, not the paths
    just handed to `git add`.
+
+### What Task 39 actually measured
+
+The fear the task was written around did not happen, and the numbers are the
+answer to it. Measured on `da85d539`, whole tree, default configuration,
+`--max-same-issues=0 --max-issues-per-linter=0`:
+
+| tree | issues | errcheck | gosec | unused |
+|---|---|---|---|---|
+| `origin/main` (165 upstream commits stale) | 389 | 308 | 80 | 1 |
+| `upstream/main` | 375 | 294 | 80 | 1 |
+| this branch | **276** | 206 | 69 | 1 |
+| `--new-from-rev=origin/main` | **0** | | | |
+
+So rename detection survives: if it had failed, the incremental job would have
+reported the branch's whole 276 as new. It reports nothing, and the maintainer's
+first impression is a green job rather than the red one with thousands of
+entries the task was written to prevent.
+
+The branch also **removes 99 findings** relative to `upstream/main`, which is
+not a goal it set out with. They are the `_ =` and `#nosec` the waves added
+where a rename made an old line new to `--new-from-rev` and the incremental job
+demanded an answer for it. Every one of them is on a line whose behaviour did
+not change; the count is a side effect of the linter's attention moving, not of
+error handling improving, and the PR body should say so rather than claim
+credit.
+
+The strict configuration (`.golangci-strict.yml`) reports the same single
+`unused` on both trees: the linters that graduated to whole-tree checking still
+have no backlog, and the branch adds none.
+
+**The ~2450 the task predicted was never measured**, and it is worth saying why
+the guess was so far off rather than only that it was: it appears to have come
+from a whole-tree run under a configuration that has since narrowed, and nobody
+re-derived it after. A number carried through eleven phases without being
+re-measured is the same kind of debt as a check that names a place.
 
 ### Required Interfaces and Contracts
 
