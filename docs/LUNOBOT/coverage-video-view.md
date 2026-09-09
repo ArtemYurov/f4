@@ -1,4 +1,4 @@
-# Coverage: `cmd/f4/video_view.go`
+# Coverage: `internal/media/video_view.go`
 
 ## Scope
 
@@ -13,8 +13,8 @@ or requiring an X session:
 ## Baseline
 
 The file was selected from the fresh Codecov report for main commit
-`a1aa5fda`: `cmd/f4/video_view.go` had 0% line coverage for 102 lines.
-Total repository coverage was 61.06%.
+`729ed42d`: `internal/media/video_view.go` had 0% line coverage for 102 lines.
+Total repository coverage was 61.31%.
 
 ## Verification
 
