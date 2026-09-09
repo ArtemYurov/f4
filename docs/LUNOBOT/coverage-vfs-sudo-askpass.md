@@ -8,4 +8,4 @@
 - Исправление: путь для listen-failure теперь занят каталогом, а намеренный запуск текущего test binary помечен `#nosec G204`.
 - Следующий hosted CI run `34337108768` на exact head `1c407a28b7198542207d30b76fb25238943cb83b` также завершился failure: `Lint (rest)` из-за G702 на запуске test binary, а Linux test/race jobs снова зависли в `TestAskpassServerReturnsWhenSocketCannotBeCreated`; существующий каталог всё ещё был принят Unix listener.
 - Исправление: путь listen-failure теперь содержит несуществующий родительский каталог, а запуск test binary помечен `#nosec G204 G702`.
-- Следующий hosted CI: ожидается после исправляющего коммита.
+- Финальный hosted CI run `34339306299` на exact head `ad82426bcec7a1196766aa32399ac57b71865d48` завершился `completed/success`; все 26 jobs прошли без ошибок.
