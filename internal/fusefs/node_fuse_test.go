@@ -20,11 +20,9 @@ func TestFuseWriteCount(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		in   int
-		want uint32
 	}{
-		{name: "zero", in: 0, want: 0},
-		{name: "one", in: 1, want: 1},
-		{name: "maximum", in: int(^uint32(0)), want: math.MaxUint32},
+		{name: "zero", in: 0},
+		{name: "one", in: 1},
 		{name: "negative", in: -1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -35,17 +33,28 @@ func TestFuseWriteCount(t *testing.T) {
 				}
 				return
 			}
-			if !ok || got != tc.want {
-				t.Fatalf("fuseWriteCount(%d) = (%d, %v), want (%d, true)", tc.in, got, ok, tc.want)
+			if !ok || got != uint32(tc.in) {
+				t.Fatalf("fuseWriteCount(%d) = (%d, %v), want (%d, true)", tc.in, got, ok, tc.in)
 			}
 		})
 	}
 
-	// Keep the overflow case portable to 32-bit Unix: there is no int value
-	// above MaxUint32 there, while incrementing still exercises the negative
-	// guard on that platform.
-	tooLarge := int(^uint32(0))
-	if tooLarge >= 0 {
+	maxInt := int(^uint(0) >> 1)
+	maxUint32 := uint64(math.MaxUint32)
+	got, ok := fuseWriteCount(maxInt)
+	if uint64(maxInt) > maxUint32 {
+		if ok {
+			t.Fatalf("count above MaxUint32 was accepted: %d", maxInt)
+		}
+	} else if !ok || got != uint32(maxInt) {
+		t.Fatalf("fuseWriteCount(maxInt) = (%d, %v), want (%d, true)", got, ok, maxInt)
+	}
+
+	// Keep the overflow case portable to 32-bit Unix, where no int can be
+	// larger than MaxUint32. The non-constant conversion compiles on both
+	// widths; on 32-bit it is unreachable and on 64-bit it is exact.
+	if uint64(maxInt) > maxUint32 {
+		tooLarge := int(maxUint32)
 		tooLarge++
 		if _, ok := fuseWriteCount(tooLarge); ok {
 			t.Fatalf("count above MaxUint32 was accepted: %d", tooLarge)
@@ -70,7 +79,7 @@ func TestTypeBitsAndFuseID(t *testing.T) {
 		})
 	}
 
-	for _, value := range []int{-1, 0, 1, int(^uint32(0))} {
+	for _, value := range []int{-1, 0, 1} {
 		got, ok := fuseID(value)
 		if value < 0 {
 			if ok {
@@ -82,8 +91,18 @@ func TestTypeBitsAndFuseID(t *testing.T) {
 			t.Fatalf("fuseID(%d) = (%d, %v)", value, got, ok)
 		}
 	}
-	tooLarge := int(^uint32(0))
-	if tooLarge >= 0 {
+	maxInt := int(^uint(0) >> 1)
+	maxUint32 := uint64(math.MaxUint32)
+	got, ok := fuseID(maxInt)
+	if uint64(maxInt) > maxUint32 {
+		if ok {
+			t.Fatalf("fuseID(%d) accepted an out-of-range id", maxInt)
+		}
+	} else if !ok || got != uint32(maxInt) {
+		t.Fatalf("fuseID(maxInt) = (%d, %v), want (%d, true)", got, ok, maxInt)
+	}
+	if uint64(maxInt) > maxUint32 {
+		tooLarge := int(maxUint32)
 		tooLarge++
 		if _, ok := fuseID(tooLarge); ok {
 			t.Fatalf("fuseID(%d) accepted an out-of-range id", tooLarge)
