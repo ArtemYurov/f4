@@ -153,6 +153,8 @@ func TestExtUiRendererQueuesAndFlushesUpdates(t *testing.T) {
 	var diff bytes.Buffer
 	diffRenderer := NewExtUiRenderer(nil, &extUiMessageSender{w: &diff})
 	cell := vtui.CharInfo{Char: 'A', Attributes: 1}
+	diffRenderer.Flush()
+	diff.Reset()
 	diffRenderer.Render([]vtui.CharInfo{cell}, []vtui.CharInfo{cell}, 1, 1, false)
 	diffRenderer.Flush()
 	if diff.Len() != 0 {
