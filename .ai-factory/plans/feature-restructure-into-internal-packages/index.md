@@ -447,7 +447,7 @@ upstream merge that must happen first, the open tails and the tool hazards.
 - [x] Task 34: Extract `internal/panel`, finish `semantic.go`, fill `internal/paneltest` ([details](phase-09-panel-and-cmdline.md#task-34-extract-internalpanel)) (depends on 26, 33, 35)
 
 ### Phase 10: The Composition Root
-- [ ] Task 36: Extract `internal/app` ([details](phase-10-composition-root.md#task-36-extract-internalapp)) (depends on 35)
+- [x] Task 36: Extract `internal/app` ([details](phase-10-composition-root.md#task-36-extract-internalapp)) (depends on 35)
 - [ ] Task 37: Reduce `cmd/f4` to the entry point ([details](phase-10-composition-root.md#task-37-reduce-cmdf4-to-the-entry-point)) (depends on 36)
 
 ### Phase 11: CI, Lint and Documentation

@@ -32,14 +32,19 @@ own despite 156 direct `FrameManager.Init` calls (see Task 44 step 7).
 
 ## Where the work stands
 
-Tasks 26-35 and 46 are done and committed; phases 6, 7, 8 and 9 are closed —
-Task 35 ran before Task 34, which is the order `index.md`'s dependency note
-asks for. `cmd/f4` is down from 596 files to
+Tasks 26-36 and 46 are done and committed; phases 6, 7, 8 and 9 are closed and
+Task 36 is the larger half of phase 10. `cmd/f4` is **five files** — `main.go`
+and the four module-wide auditors — down from 596. `internal/app` holds 235,
+`internal/panel` 77, and there are 40 packages under `internal`. `cmd/f4` is down from 596 files to
 241, `internal/panel` holds 75, and there are 39 packages under `internal`. The
 checkboxes in `index.md` match the tree.
 
-Next is **Task 36, `internal/app`** — but not before the CI run is read. See
-below.
+Next is **Task 37**, which is mostly done by Task 36 already: `cmd/f4` is
+already what that task asks for. What is left of it is real work, though —
+removing the `cmd/f4` special case from `.github/actions/affected-packages`
+(lines 50-54, 64-67 and 76-77 map every path under `cmd/f4/` to one indivisible
+unit, which was true of a 345-file flat package and is false of a package
+holding `main.go`), and the reference sweep in its step 3.
 
 Everything that waited for Task 34 is closed. `text_editor_bridge.go` and
 `visren_editor_bridge.go` are `internal/panel/bridge_texteditor.go` and
@@ -70,6 +75,9 @@ session can check the record rather than rediscover it.
 | `plugin_hotkeys.go` goes to `internal/panel`, not `internal/app` — it follows `HotkeyManager` | `phase-09` |
 | The plugin menu and global-hotkey registries go to `internal/plughost` | `phase-09` |
 | 36 panel tests stay in `cmd/f4`: they need the action table, which no seam can supply | `phase-09` |
+| `app.Main()` instead of the `New`/`Run(ctx)` contract — a redesign of the startup path, not a move | `phase-10`, "Deviation" |
+| `PlayerPanel` goes to `internal/panel`; `grabber.go` and `share_dialog.go` stay in `app` | `phase-10`, "What the wave actually found" |
+| `cmd/f4` has no `TestMain`: the auditors parse files and build no frame | `phase-10` |
 | Package-name question for Task 44 | `phase-11`, Task 44 step 3 |
 
 ## Open tails

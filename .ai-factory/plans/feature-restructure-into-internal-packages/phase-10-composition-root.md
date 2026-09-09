@@ -116,6 +116,81 @@ that all of them exist.
    golden slice, split out under that name in Task 21 step 6 — to `internal/app`,
    where the table now lives. The golden slice is unmodified since Task 3.
 
+
+### What the wave actually found
+
+**It needed no seams and exported nothing.** Every earlier wave spent most of
+its effort on the boundary: what the lower package needs from above, declared as
+a `var` with an inert default and filled in by the root. Here there is no above.
+`internal/app` may import every layer 0-3 package, so each of the 235 files
+landed with the calls it already made, and the only renames were the twenty the
+topic convention asked for. Six hours of the panel wave went into seams; this
+one took the afternoon.
+
+**Rule 3 passes with no exemption**, which is the result the ordering was for. It
+says nothing below layer 4 imports `internal/app`, and it had nothing to check
+until this package existed. It found nothing, so no wave left an upward edge
+behind — the failure the whole sequence was arranged to prevent did not happen
+once in eleven phases.
+
+**Five files the palette auditor's map sent elsewhere, and only one went.**
+`commandPaletteTargetPackage` forward-declares where each audited `cmd/f4` file
+will land, so an audit key survives the move. It predicted `dialog` for
+`grabber.go`, `find_file.go`, `hotkeys_ui.go` and `command_palette_ui.go`, and
+`panel` for `player_panel.go`. Measured against the graph:
+
+- `player_panel.go` **went to `internal/panel`**. `PlayerPanel` is an alt panel
+  beside `InfoPanel` and `QuickViewPanel`, which are already there, it has zero
+  references into `app`, and `panel` already imports `media` and `theme`, so the
+  move costs no new package edge.
+- `find_file.go` calls `actionOpenEditor` and `actionOpenViewer`;
+  `hotkeys_ui.go` calls the action table's `GetAction`; `command_palette_ui.go`
+  is the palette's own rendering. All three are application code and stay.
+- `share_dialog.go` and `grabber.go` have **zero** references into `app`, so
+  neither is held here by need. `share_dialog.go` still cannot go to
+  `internal/dialog`: it takes a `*panel.PanelsFrame`, and `internal/panel`
+  imports `internal/dialog` already, so the edge would close a cycle.
+  `grabber.go` could, at the price of a new `dialog -> terminal` edge for one
+  file — Task 25 already declined it once, and Task 44 step 2 is where that
+  question belongs, not in the wave that is only moving things.
+
+The map has now emptied itself, as its own comment said it would. It is kept,
+empty, because a file that moves again needs an entry for exactly one commit or
+its key goes stale in a way that reads as a missing surface rather than a move.
+
+**`cmd/f4` has no `TestMain`, and does not need one.** The plan expected a
+five-line wrapper around `testutil.Main` for the auditors. The auditors parse
+files and read imports; none of them builds a frame or reads the configuration.
+The one test there that did — `TestCommandPaletteResolvesEveryActionGeneratedMenuLeafByID`,
+which calls `BuildMenuBarItems` and the palette — is not module-wide and moved
+to `internal/app` with its subject, leaving the file with the inventory auditor
+alone. A `TestMain` here would be scaffolding for a need that left with it.
+
+### Deviation: the `New`/`Run(ctx)` contract is not built
+
+The task's Required Interfaces name `app.New(cfg, fs, host, t, left, right)` and
+`(*App).Run(ctx) error`, with `main` reporting the error and exiting non-zero.
+That is not what this commit does; `cmd/f4/main.go` calls `app.Main()`, which is
+today's `main` verbatim.
+
+The reason is that the two are not the same change. `main` exits through
+`os.Exit` at seven points — the update helper, the plugin scaffolder, the mount
+CLI, the sudo dispatcher and three error paths — and returns nothing. Threading
+an error back out of them is a redesign of the startup path, and the startup
+path has no test: `main_test.go` does not exist, and the seven `main.go` tests
+the plan names all test helpers rather than the entry point. A move whose
+correctness rests on "the tests still pass" cannot also rewrite the one function
+the tests do not reach.
+
+What this leaves for later, stated so it is not discovered as a surprise: the
+constructor arguments in that contract describe an application that receives its
+subsystems rather than reaching for package globals, and f4 does not work that
+way yet — `config.App`, `vtui.FrameManager`, `macro.MacroMgr` and
+`keymap.GlobalHotkeysMgr` are all package-level. Building `New` honestly means
+threading those through, which is a larger change than this branch, and pretending
+to build it by wrapping globals in a struct would make the signature true and the
+design no different.
+
 ### Required Interfaces and Contracts
 
 ```go
