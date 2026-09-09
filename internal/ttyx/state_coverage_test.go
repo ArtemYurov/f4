@@ -28,7 +28,7 @@ func TestFocusEventFilter(t *testing.T) {
 }
 
 func TestSessionFocusTransitionsNotifyOnce(t *testing.T) {
-	s := &Session{changed: make(chan struct{}, 1)}
+	s := &Session{alive: true, changed: make(chan struct{}, 1)}
 	if s.Focused() {
 		t.Fatal("an empty session must not start focused")
 	}
