@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/unxed/f4/vfs"
@@ -43,7 +44,11 @@ func TestRPCVFSOperationsAndWrappers(t *testing.T) {
 	if got, err := v.Abs("file.txt"); err != nil || got != filepath.FromSlash("/folder/sub/file.txt") {
 		t.Fatalf("Abs relative = %q", got)
 	}
-	if got, err := v.Abs("/root.txt"); err != nil || got != filepath.FromSlash("/root.txt") {
+	absolutePath := filepath.FromSlash("/root.txt")
+	if runtime.GOOS == "windows" {
+		absolutePath = `C:\root.txt`
+	}
+	if got, err := v.Abs(absolutePath); err != nil || got != absolutePath {
 		t.Fatalf("Abs absolute = %q", got)
 	}
 	if got := v.Base("/folder/file.txt"); got != "file.txt" {
