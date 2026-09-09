@@ -205,6 +205,7 @@ func TestBookmarksDialog_SaveCurrentDirReplacesPluginBookmark(t *testing.T) {
 
 	pf := &PanelsFrame{activeIdx: 0}
 	pf.panels[0] = &FileSystemPanel{vfs: vfs.NewNullVFS(0)}
+	wantPath := pf.panels[0].(*FileSystemPanel).vfs.GetPath()
 	path := filepath.Join(t.TempDir(), "bookmarks.ini")
 	d := &bookmarksDialog{
 		pf:   pf,
@@ -214,8 +215,8 @@ func TestBookmarksDialog_SaveCurrentDirReplacesPluginBookmark(t *testing.T) {
 	}
 
 	d.saveCurrentDir(4)
-	if got := d.set[4]; got != (Bookmark{Path: "/"}) {
-		t.Fatalf("saved active directory = %#v, want local root bookmark", got)
+	if got := d.set[4]; got != (Bookmark{Path: wantPath}) {
+		t.Fatalf("saved active directory = %#v, want local root %q bookmark", got, wantPath)
 	}
 	d.saveCurrentDir(-1)
 }
