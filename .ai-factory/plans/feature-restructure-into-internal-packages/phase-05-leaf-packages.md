@@ -134,10 +134,19 @@ each wave phase file so a task can be implemented from one file.
    does not compile there, and every local check stays green. `go vet`
    type-checks tests, so the sweep is
    ```
-   for os in linux windows darwin freebsd; do GOOS=$os go vet ./...; done
+   for os in linux windows darwin; do GOOS=$os go vet ./...; done
+   GOOS=freebsd go vet -gcflags=github.com/go-webgpu/goffi/internal/fakecgo=-std ./...
    ```
    Task 23 stranded `child_env_universal_linux_test.go` this way and four waves
    passed before anything noticed.
+
+   **The freebsd line needs the same `-gcflags` as the cross-compile below, and
+   for the same reason.** `go vet` compiles, so without it every freebsd run
+   stops on `fakecgo` — a third-party file, before reaching any of ours. A check
+   whose answer never changes is not a check: a real type error under freebsd
+   would arrive looking exactly like that noise. The matrix's own vet cell
+   already passes the flag (`build.yml:912`); this is the local gate catching
+   up with it.
 
    Run all six modules, not only `go test ./...`: the four `tools/` modules are
    invisible to it and are touched by Task 13 (plugring) and Task 27 (icons).

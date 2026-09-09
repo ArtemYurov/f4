@@ -119,9 +119,20 @@ and three of its checks turned out to pass on an empty result:
   auditor files while the unfiltered job carried 235. Shards are computed by
   weight now, and no package is named in `build.yml`.
 
-The general form, which is worth more than the three fixes: **a check that names
-a place must fail when it finds nothing there.** `cp` refuses a missing source;
-`go test`, `go generate` and a shard filter all succeed on nothing.
+A fourth one answers the same way from the other end. `go vet` type-checks test
+files, which makes it the only thing that ever compiles a `//go:build freebsd`
+test — and under `GOOS=freebsd` it stops on a third-party dependency before
+reaching any of this repository's code, unless it is given the same
+`-gcflags=…fakecgo=-std` the build matrix passes. The matrix's own vet cell has
+the flag; a local sweep written without it fails identically every time, so a
+real type error under freebsd would have arrived looking exactly like that
+noise.
+
+The general form, which is worth more than the four fixes: **a check whose
+answer never changes is not a check** — most often a check that names a place
+and passes when it finds nothing there, and just as often one that fails on
+something that is not the subject. `cp` refuses a missing source; `go test`,
+`go generate` and a shard filter all succeed on nothing.
 
 Two tests in this branch had the same shape from the other side — they passed
 only because a sibling in the same flat package had run first, and `-shuffle`
