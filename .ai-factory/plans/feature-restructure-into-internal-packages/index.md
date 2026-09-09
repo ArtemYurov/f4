@@ -167,6 +167,16 @@ leaves 346: `navigation_mode.go` is deleted, `drive_registry.go` and
 `action_order.go` are created, and all three score zero, so the zero bucket
 becomes 236.
 
+**A call graph attributes by name, and 722 names here have more than one
+bearer.** Across 4247 nodes, `Close` has 203 and `Read` 95 — Go's implicit
+interfaces mean a method name is shared by everything that satisfies the same
+shape. So a graph query that asks "which package does this file point at" can
+answer with a package the file does not import: `internal/plughost/application.go`
+and `internal/viewer/application.go` both came back pointing at `internal/app`,
+because each declares its own `Application`. The graph proposes; the file's own
+import list decides. That is one extra command and it removes fourteen of
+fifteen candidates.
+
 **The eight-type grep is necessary, not sufficient.** It finds view types only. A
 file also may not reference any *other* symbol still in `cmd/f4`, and the gate is
 silent about those. `plugin_permissions_ui.go` scores `0` on all eight and still

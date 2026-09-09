@@ -1001,6 +1001,49 @@ whole tree.
    global at a time, and the first one is `config.App` because it is read rather
    than mutated and 1575 of the 4490 sites are its.
 
+1c. **Reconcile every file against the call graph — in two stages, because one
+   stage does not work.** The obvious query is "which files reference another
+   package more than their own", and run alone it is unusable: fifteen files on
+   this tree, fourteen of them noise, in two kinds.
+
+   The harmless kind is a file in `internal/app` calling `i18n.Msg` 314 times,
+   or `actions_table.go` with 351 references into `internal/action`. Neither is
+   misplaced — localisation is called from everywhere and the table *is* the
+   registry's caller. No threshold separates those, because the count is right
+   and the conclusion is wrong.
+
+   The dangerous kind is **name collision**. CodeGraph attributes a reference by
+   name, and 722 names in this tree have more than one bearer across 4247 nodes
+   — `Close` has 203, `Read` 95, and Go's implicit interfaces are why. So
+   `internal/plughost/application.go` and `internal/viewer/application.go` both
+   came back pointing at `internal/app`: each declares its own `Application`
+   interface, and neither imports `internal/app` at all. `keymap/farkeys.go`
+   pointed at `sheet` with no f4 imports whatever.
+
+   So: **the query proposes, the import list decides.** Take the candidates from
+   the graph, then read each file's own imports. A file that does not import the
+   package the graph named is answered, and answered in seconds.
+
+   Run over the finished tree, that leaves exactly one:
+   `internal/terminal/ttyx_session.go` — 72 lines, importing `internal/ttyx` and
+   `vtui`, no reference into its own package, six into `ttyx`, callers in
+   `terminal` (3), `media` (4) and `app` (1).
+
+   **It stays, and the reason is the interesting part.** It is not an opener; it
+   is a process-wide singleton with a policy: one `*ttyx.Session` behind a
+   mutex, opened lazily, and stood down when `sess.Source().Trusted()` is false
+   because everything built on the session draws over a window that was only
+   guessed. A stateless opener belongs in the layer-0 library and would be
+   reusable there. One that caches per process and refuses on a trust judgement
+   is not: who holds the session, and on what terms, is the caller's decision,
+   and moving it into `internal/ttyx` would put global state and a policy into a
+   library whose whole value is having neither. Moving it would remove one
+   `media → terminal` edge and buy that with a worse `ttyx`.
+
+   State this in the PR body as a result, not an intention: every file was
+   reconciled against the call graph, the one candidate was examined, and it
+   stays for a stated reason.
+
 2a. **Ask the split question where the parts have different callers.** The named
    candidate is `internal/media`: its `image_*`, `audio_*` and `video_*` families
    were measured as effectively unconnected before the move — one reference in
