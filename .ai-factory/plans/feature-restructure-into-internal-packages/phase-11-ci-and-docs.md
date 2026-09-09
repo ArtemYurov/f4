@@ -936,7 +936,48 @@ whole tree.
 6. **Verify the tree against `ARCHITECTURE.md` as rewritten in Task 41** — the
    layer table, the dependency rules, the file-naming convention. Where the code
    and the document disagree, one of them is wrong; say which.
-7. **Record that the frame manager has a disciplined path that almost nobody
+7. **Review the suppressions the branch added, once, as a list.** Measured
+   on the finished tree the branch reports 276 lint findings where
+   `upstream/main` reports 375. That difference is not error handling
+   improving. It is `_ =` and `#nosec` accepted **under pressure from a tool**:
+   a rename made an old line new to `--new-from-rev`, the incremental job
+   demanded an answer for a line whose behaviour had not changed, and the
+   cheapest answer that let the wave continue was a suppression. Sixty-three
+   of those, spread across eleven phases, each decided in passing while the
+   attention was on moving files.
+
+   `_ =` on an error is a real decision — "there is nobody here to tell" — and
+   it is sometimes right; Task 38 closed a state file and a history write that
+   way, with the reason written next to each. But a decision taken sixty-three
+   times in passing is one that has not been taken.
+
+   **Count them by comparing the trees, not the diff.** A diff over a branch
+   that moved 600 files reports every line of a moved file as added:
+   `git diff upstream/main...HEAD | grep -E '^\+.*(_ =|#nosec)'` returns 222,
+   and most of those merely travelled with their file. The set difference is
+   the number:
+
+   ```
+   count() { (cd "$1" && grep -rhoE '(^|[^A-Za-z_])_ = |#nosec' --include='*.go' . | grep -c .); }
+   ```
+
+   `upstream/main` holds 601, this branch 664 — **63 added**, of which 15 are
+   `#nosec` (216 against 231). That is the list to review, and it is a third of
+   what the diff suggests. Locate them by running the same grep over both trees
+   into sorted files and taking the difference of the *lines*, since the same
+   line may exist in both under different paths.
+
+   For each, answer the only question that matters: is there anybody to tell?
+   Where there is, handle the error. Where there is not, leave the suppression
+   and say why beside it.
+
+   What goes in the PR body is then honest and is an argument in favour of the
+   work: "the branch added 63 suppressions under pressure from the incremental
+   lint, all 63 were reviewed, M were kept with a stated reason." "We removed 99
+   findings" is not an argument, and a maintainer who looks will read it as the
+   opposite.
+
+8. **Record that the frame manager has a disciplined path that almost nobody
    takes.** `testutil.SwapFrameManager` gives a test a fresh manager and, in its
    returned closure, closes the frames and shuts that manager down;
    `vtui.FrameManager.Init` gives it a fresh screen on the shared manager and
@@ -959,7 +1000,7 @@ whole tree.
    follow-up, and the goroutine-leak failure recorded in `index.md` is the first
    bill for it.
 
-8. **Write the outcome into the PR body**, in a short section: what was reviewed,
+9. **Write the outcome into the PR body**, in a short section: what was reviewed,
    what stays as is, and what is proposed as a follow-up with the evidence behind
    it. A reviewer should not have to ask whether the structure was thought about
    after it was built.

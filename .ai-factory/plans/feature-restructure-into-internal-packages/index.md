@@ -138,6 +138,17 @@ because the tool will not. The layout re-run now greps its own `--- PASS`; the
 generate step now asserts a directive exists before running it; the shards no
 longer name a package at all.
 
+**A number carried without being re-derived is the same failure wearing a
+different coat.** Task 39 was written around ~2450 pre-existing lint findings —
+the maintainer's first impression of the pull request would be a red job with
+thousands of entries, and the task existed to prevent that. Measured on the
+finished tree: `origin/main` has **389**, `upstream/main` **375**, this branch
+**276**, and the incremental job reports **0**. Nobody re-derived the 2450 in
+eleven phases; it appears to come from a configuration that has since narrowed.
+A whole task stood on it, and the problem it guarded against did not exist. Like
+a check that names a place, a number looks like it is working right up until
+somebody asks it.
+
 The distinguishing question is what a command does with empty input, not how
 important the command is. `cp -r internal/i18n/lang internal/dialog/help build/`
 is self-checking — `cp` fails on a missing source — which is why moving `lang/`
