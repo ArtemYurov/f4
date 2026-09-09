@@ -36,22 +36,19 @@
 
 ## Module Structure
 
-Current layout. The structure the project is moving to, and the rules that
-govern where new code goes, are in `.ai-factory/ARCHITECTURE.md` — read it before
-adding a package or a file.
+The reasoning behind the layers, and what may import what, is in
+`.ai-factory/ARCHITECTURE.md`. This section is the rule; that document is the
+argument.
 
-- `cmd/f4/` — the application, one flat `package main` of ~345 non-test files.
-  It is being split into `internal/*` packages: put new code in the package it
-  belongs to, and create that package when none fits. Adding to the flat package
-  is what the split exists to stop.
+- `cmd/f4/` — the composition root: `main.go`, the four module-wide auditors,
+  and the Windows `.syso` resources the linker takes from the main package's own
+  directory. Five files.
+- `internal/` — the application, 40 packages in four layers. `internal/app` is
+  layer 4 and the only package permitted to import every other one;
+  `cmd/f4/architecture_test.go` enforces that in both directions.
 - `vfs/` — the filesystem abstraction all panels and plugins go through
 - `sdk/` — the plugin API third parties compile against
 - `plugins/<name>/` — one package per plugin
-- `internal/` — module-private code: platform helpers today, the application
-  core as extraction proceeds
-- `internal/piecetable/`, `internal/textlayout/`, `internal/sheet/`,
-  `internal/fusefs/`, `internal/vtvibe/`, `internal/luaplug/` —
-  self-contained subsystems, module-private since they moved
 - `internal/testutil/`, `internal/paneltest/` — test scaffolding shared across
   packages. Go will not let one package import another's tests, so these are
   ordinary packages; import them from `_test.go` files only. A helper only one
@@ -62,12 +59,28 @@ adding a package or a file.
 - `tools/` — developer tooling, not shipped in the binary
 - UI and input live outside this repository, in the `vtui` and `vtinput` libraries
 
+### File Placement
+
+- **A file goes to the package that owns its subject.** If none does, create
+  one. Never `internal/app`: it wires subsystems together and implements none of
+  them, and a file parked there is a file whose home was not looked for.
+- **Nothing new in `cmd/f4`.** It is `main.go`, the auditors and the `.syso`.
+- **Inside a package, `<topic>.go` and `<topic>_<aspect>.go`.** The prefix names
+  the topic, not the package: `panel/frame.go`, never `panel/panel_frame.go`. A
+  platform suffix comes last: `panel/frame_procenv_windows.go`.
+- **A test lives with its subject.** A test that spans packages is hosted by the
+  highest one it needs; if that pulls it away from private members it must
+  reach, split it or make it a `package X_test`.
+- **Resources travel with the package that embeds them**, and a test that reads
+  them from disk asserts it found some — a sweep over an empty directory passes.
+
 ## Code Navigation
 
 - The repository is indexed by CodeGraph (`.mcp.json`, index in `.codegraph/`).
   For symbol questions use it, not `grep`: `callers`, `callees`, `impact`,
-  `explore`, `node`. `cmd/f4` is one flat `package main` of ~109k lines, so grep
-  over it is slow and matches identifiers it should not.
+  `explore`, `node`. The tree is 69 packages and a symbol's package is not
+  always the one its name suggests, so grep over the module is slow and
+  imprecise.
 - The index is git-ignored and the server never builds one on its own, so a fresh
   clone needs `npx -y @colbymchenry/codegraph@1.6.0 init` once.
 - There is no `codegraph` binary on PATH — always run the full form:

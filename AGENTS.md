@@ -20,8 +20,51 @@ static binary and runs either in a terminal or as a standalone graphical window.
 ## Project Structure
 
 ```
-cmd/f4/          # the application: 687 files in one flat package main
-                 # panels, dialogs, editor, viewer, actions, macros, terminal
+cmd/f4/          # the composition root: main.go, four module-wide auditors,
+                 # and the Windows .syso resources the linker takes from here
+internal/        # everything the application is, in layers
+  app/           #   layer 4: the action table, the event loop, the bootstrap;
+                 #   the only package allowed to import every other one
+  panel/         #   layer 3: the panels frame and the file panel
+  editor/        #   layer 3: the editor view
+  viewer/        #   layer 3: the viewer
+  terminal/      #   layer 3: the terminal view, PTY sessions, ConPTY
+  cmdline/       #   layer 3: the command line and apply-command
+  dialog/        #   layer 3: dialogs, help, settings screens
+  media/         #   layer 3: images, audio, video
+  macro/         #   layer 3: the macro engine
+  plughost/      #   layer 2: the plugin host and its registries
+  gui/           #   layer 2: the GUI backends
+  fileops/       #   layer 1: file operations and the operation queue
+  update/        #   layer 1: the updater
+  fusefs/        #   layer 1: FUSE mounting
+  textlayout/    #   layer 1: text layout and wrapping
+  vtvibe/        #   layer 1: the vtvibe session/provider layer
+                 #   layer 0 leaves, imported by anything above them:
+  action/        #     the action registry
+  appcmd/        #     frame command constants
+  colorer/       #     the colour scheme f4 installs for colorer4go
+  config/        #     configuration and the profile directory
+  history/       #     command, folder and view/edit history
+  i18n/          #     the message catalogue and the .lng files
+  ini/           #     the INI parser
+  keymap/        #     key names, remapping and the hotkey manager
+  luaplug/       #     the Lua plugin engine
+  netproxy/      #     network proxy
+  numeric/       #     numeric helpers
+  piecetable/    #     the piece table backing the editor
+  semantic/      #     the GUI semantic protocol's shared fields
+  sheet/         #     spreadsheet mode
+  sysinfo/       #     drives, CPU, memory
+  textsearch/    #     text search
+  theme/         #     colours, styles, file highlighting
+  toast/         #     transient notifications
+  ttyx/          #     tty extensions
+  unpack/        #     archive extraction
+  wincon/        #     Windows console
+  hideconsole/   #     a vendored fork, console hiding on Windows
+  testutil/      #   test scaffolding shared across packages; _test.go use only
+  paneltest/     #   the same, for helpers that need a panels frame
 vfs/             # filesystem abstraction used by every panel and plugin
   hostfs/        #   host filesystem access
   hostmode/      #   host console mode
@@ -32,20 +75,6 @@ plugins/         # one package per plugin: archive, cloudfox, netfox, mediainfo,
                  # envman, ios, android, sqlite, visren, id3editor, chroma
                  # dummy_internal / dummy_rpc / dummy_lua are transport fixtures
 sdk/             # plugin API: f4plugin, f4rpc, lua, extui
-internal/        # module-private platform helpers
-  wincon/        #   Windows console
-  ttyx/          #   tty extensions
-  netproxy/      #   network proxy
-  testutil/      #   test scaffolding shared across packages; _test.go use only
-  paneltest/     #   the same, for helpers that need a panels frame
-  colorer/       #   the colour scheme f4 installs for colorer4go
-  piecetable/    #   piece table backing the editor
-  textlayout/    #   text layout and wrapping over it
-  sheet/         #   spreadsheet mode
-  fusefs/        #   FUSE mounting
-  vtvibe/        #   vtvibe session/provider layer
-  luaplug/       #   Lua plugin engine
-  hideconsole/   #   console hiding on Windows
 tools/           # developer tooling, incl. the ttytest terminal harness
 docs/            # 48 subsystem documents — read the relevant one before editing
 packaging/       # distribution packaging
@@ -57,9 +86,10 @@ artifacts/       # build artifacts
 
 | File | Purpose |
 | --- | --- |
-| `cmd/f4/main.go` | Program entry point, CLI flags, startup mode selection |
-| `cmd/f4/api.go` | Internal API surface used across the application package |
-| `cmd/f4/actions.go`, `cmd/f4/action_registry.go` | Action definitions and dispatch |
+| `cmd/f4/main.go` | The entry point: one call to `app.Main` |
+| `internal/app/bootstrap.go` | CLI flags, startup mode selection, and the wiring of every subsystem's seam |
+| `internal/app/api.go` | `coreAPI`, the host surface plugins are given |
+| `internal/app/actions_table.go`, `internal/action/registry.go` | Action definitions and dispatch |
 | `embedded.go` | Assets embedded into the binary |
 | `go.mod` | Module `github.com/unxed/f4`, Go 1.26.6, dependency set |
 | `f4.example.ini` | Reference configuration file |
@@ -99,8 +129,9 @@ artifacts/       # build artifacts
 - There is no `codegraph` binary on PATH. Every invocation takes the form
   `npx -y @colbymchenry/codegraph@1.6.0 <command>`; the commands below are the
   `<command>` part.
-- Use it instead of `grep` for symbol questions — `cmd/f4` is one flat
-  `package main` of ~109k lines, where grep is both slow and imprecise:
+- Use it instead of `grep` for symbol questions. The tree is 69 packages and a
+  symbol's package is not always the one its name suggests, so grep over the
+  whole module is both slow and imprecise:
   - `callers <symbol>` — who calls it
   - `callees <symbol>` — what it calls
   - `impact <symbol>` — what a change touches
