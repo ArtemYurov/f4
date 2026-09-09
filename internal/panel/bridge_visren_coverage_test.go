@@ -19,7 +19,7 @@ func TestOpenVisRenEditorCreatesTemporaryEditorScreen(t *testing.T) {
 	pf := &PanelsFrame{LastW: 100, LastH: 30}
 	err := pf.OpenVisRenEditor(visren.EditorRequest{
 		Title:      "VisRen rules",
-		Content:    []byte("*.go => go\n"),
+		Content:    []byte("first\nsecond\nthird\n"),
 		CursorLine: 2,
 		CursorCol:  4,
 	})
