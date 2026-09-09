@@ -848,6 +848,20 @@ context a maintainer needs to judge a 300-file change he did not plan.
     no renamed Far-derived type, no further splitting of packages — that is
     proposed as follow-up with evidence rather than smuggled in.
 
+13. **Re-measure the diff numbers in the same minute the PR is opened.** The
+    body leads with a file and line count, and every commit moves it — the first
+    draft was already stale by two commits before it was reviewed. The order is:
+    commit everything, then measure, then paste, then open.
+
+    ```
+    git diff --shortstat -M upstream/main...HEAD
+    git diff --name-status -M upstream/main...HEAD | grep -c '^R'
+    git diff --shortstat -M upstream/main...HEAD -- ':!.claude' ':!.agents' ':!.ai-factory'
+    ```
+
+    A number in a PR body that is wrong on the first line is the cheapest
+    possible way to lose a reader who was willing.
+
 ### Required Interfaces and Contracts
 
 - The body is **prepared, not sent**. No `git push` and no `gh pr create`: when
@@ -1225,6 +1239,31 @@ prediction failed the measurement stands and the prediction is marked.
 (`media`). None is a merge candidate: a subject with its own tests is a package
 whatever the importer count, and merging any of them back would put a second
 subject into the importer, which is the shape this branch exists to undo.
+
+**Step 1a, verified a second way.** The re-homing above answers "did anything
+arrive without a home"; it does not answer "does what arrived still run". The
+seventeen test files that came in on merges were checked against
+`go test -list '.*'` in the package each now lives in, function by function.
+None is invisible — no file landed somewhere it compiles but is never
+collected:
+
+`internal/panel/edit_command_test.go`, `internal/app/local_language_files_test.go`,
+`internal/dialog/attributes_mixed_test.go`,
+`internal/dialog/settings_portable_test.go`,
+`internal/editor/external_freebsd_test.go`, `internal/app/sort_groups_test.go`,
+`internal/plughost/manager_lifecycle_test.go`,
+`internal/ttyx/{keys_coverage,overlay_lifecycle,session_state}_test.go`,
+`plugins/archive/sfx_test.go`,
+`plugins/id3editor/{plugin_handle,plugin_paths}_test.go`,
+`sdk/f4plugin/plugin_test.go`,
+`vfs/hostfs/{hostfs_posix,hostfs_windows}_test.go`,
+`vfs/registry_vfs_windows_test.go`.
+
+One of them executes nowhere, and not through anything this branch did:
+`external_freebsd_test.go` is `//go:build freebsd` and GitHub has no freebsd
+runner. The only thing that ever compiles it is the `GOOS=freebsd` vet cell —
+which is why that cell failing on a third-party dependency, rather than on our
+code, mattered enough to fix.
 
 **Step 2a — `internal/media` stays one package.** Counting package-level symbols
 only, the image half and the audio half share **zero** references and image and

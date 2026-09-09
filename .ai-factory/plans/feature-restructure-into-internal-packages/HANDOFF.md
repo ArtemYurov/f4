@@ -32,18 +32,19 @@ own despite 156 direct `FrameManager.Init` calls (see Task 44 step 7).
 
 ## Where the work stands
 
-Tasks 26-40 and 46 are done and committed; phases 6 through 10 are closed and
-phase 11 is under way. Four upstream merges have landed; `HEAD`, `origin/main`
-and `upstream/main` all agree. `cmd/f4` is **five files** — `main.go`
-and the four module-wide auditors — down from 596. `internal/app` holds 235,
-`internal/panel` 77, and there are 40 packages under `internal`. `cmd/f4` is down from 596 files to
-241, `internal/panel` holds 75, and there are 39 packages under `internal`. The
-checkboxes in `index.md` match the tree.
+**Every task is done.** Phases 1 through 11 are closed, the checkboxes in
+`index.md` match the tree, and what remains is not a task but a decision: when
+to open the pull request. `cmd/f4` is **five files** — `main.go` and the four
+module-wide auditors — down from 691; `internal/app` holds 234,
+`internal/panel` 80, and there are 40 packages under `internal`.
 
-Next is **Task 41**, `ARCHITECTURE.md` from target to fact — including step 1a,
-which replaces the `app.New`/`Run(ctx)` example with what `main` actually does.
-Then 42, 44 and 45; Task 45 is now the last, because re-homing upstream's
-arrivals moved into Task 44 as its step 1a.
+The body of the pull request is written and sits in `PR-BODY.md` beside this
+file. It is prepared, not sent: `gh pr create` is the user's call, and Task 45
+step 13 says what to re-measure in the minute before it runs.
+
+Five upstream merges have landed; `HEAD`, `origin/main` and `upstream/main` all
+agree. The full matrix is green on the current head — run 34312085495, 34 cells,
+zero failures — and that run is the first one to see the last twenty commits.
 
 **`origin/main` is level with `upstream/main`**, so the incremental lint runs
 against a real base. Re-measured on it: still **0**. The zero held on rename
