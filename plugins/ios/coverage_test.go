@@ -58,9 +58,9 @@ func TestCollectAppGroupsMergesAndSortsContainerForms(t *testing.T) {
 
 func TestNativeMetadataHelpersClassifyLockdownFailures(t *testing.T) {
 	for _, test := range []struct {
-		err       error
-		state     string
-		paired    bool
+		err    error
+		state  string
+		paired bool
 	}{
 		{err: errors.New("device is not paired"), state: DeviceStateUnpaired, paired: false},
 		{err: errors.New("device is locked by passcode"), state: DeviceStateLocked, paired: true},
