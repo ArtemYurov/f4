@@ -46,6 +46,51 @@ func TestOverlayZeroValueLifecycle(t *testing.T) {
 	o.Close()
 }
 
+func TestOverlayNoWindowPaths(t *testing.T) {
+	var nilOverlay *Overlay
+	if got := nilOverlay.Stats(); got != (Stats{}) {
+		t.Fatalf("nil overlay stats = %+v, want zero", got)
+	}
+
+	var o Overlay
+	o.post()
+	o.push(0)
+	o.track(0)
+	if !o.st.isClosed() {
+		t.Fatal("tracking a dead console did not close the overlay")
+	}
+	if o.SetBounds(nil) {
+		t.Fatal("SetBounds reported success without a window")
+	}
+	if _, _, ok := o.ClientSize(); ok {
+		t.Fatal("ClientSize reported a size for a zero target")
+	}
+
+	withWindow := Overlay{hwnd: 1}
+	if !withWindow.SetBounds(nil) {
+		t.Fatal("SetBounds reported failure with a window")
+	}
+	withWindow.Close()
+	withWindow.Close()
+
+	hide := Overlay{}
+	hide.st.shown = true
+	hide.apply(0)
+	if got := hide.Stats(); got.Applies != 1 || hide.tracker.OnScreen {
+		t.Fatalf("hide apply = stats %+v, tracker %+v; want one apply and hidden tracker", got, hide.tracker)
+	}
+}
+
+func TestOverlayNewRejectsMissingTrustedConsole(t *testing.T) {
+	_, source := ConsoleWindow()
+	if source.Trusted() {
+		t.Skip("the test process has a trusted classic console")
+	}
+	if overlay, err := New(); overlay != nil || err == nil {
+		t.Fatalf("New() = overlay %v, error %v; want no overlay and an error", overlay, err)
+	}
+}
+
 func TestOverlayDrawValidationAndUnstartedWindow(t *testing.T) {
 	var o Overlay
 	for _, test := range []struct {
@@ -100,4 +145,27 @@ func TestWndProcIgnoresSyncForUnknownWindow(t *testing.T) {
 	if got := wndProc(123, wmOverlaySync, 0, 0); got != 0 {
 		t.Fatalf("wndProc returned %#x for an unregistered window", got)
 	}
+}
+
+func TestWndProcHandlesOverlayMessages(t *testing.T) {
+	const hwnd = uintptr(123)
+	regMu.Lock()
+	reg[hwnd] = &Overlay{}
+	regMu.Unlock()
+	t.Cleanup(func() {
+		regMu.Lock()
+		delete(reg, hwnd)
+		regMu.Unlock()
+	})
+
+	if got := wndProc(hwnd, wmOverlaySync, 0, 0); got != 0 {
+		t.Fatalf("sync wndProc returned %#x, want 0", got)
+	}
+	if got := wndProc(hwnd, wmOverlayQuit, 0, 0); got != 0 {
+		t.Fatalf("quit wndProc returned %#x, want 0", got)
+	}
+	if got := wndProc(hwnd, wmDestroy, 0, 0); got != 0 {
+		t.Fatalf("destroy wndProc returned %#x, want 0", got)
+	}
+	_ = wndProc(hwnd, 0x1234, 0, 0)
 }
