@@ -127,12 +127,13 @@ func TestSessionHelpersHandleInvalidDescriptorsAndLongStartupLogs(t *testing.T) 
 	}
 
 	path := filepath.Join(t.TempDir(), "startup.log")
-	content := strings.Repeat("x", maxStartupLog+37)
+	const startupLogLimit = 4 << 10
+	content := strings.Repeat("x", startupLogLimit+37)
 	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
 		t.Fatal(err)
 	}
 	got := readStartupLog(path)
-	want := content[len(content)-maxStartupLog:]
+	want := content[len(content)-startupLogLimit:]
 	if got != want {
 		t.Fatalf("readStartupLog long content length/value mismatch: got %d bytes, want %d", len(got), len(want))
 	}
