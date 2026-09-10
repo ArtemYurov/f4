@@ -18,7 +18,7 @@ func TestOverlayZeroValueLifecycle(t *testing.T) {
 	if !o.Visible() {
 		t.Fatal("Place did not make the overlay visible")
 	}
-	if got := o.currentRect(); got != (Rect{X: 1, Y: 2, W: 3, H: 4}) {
+	if got := o.st.currentRect(); got != (Rect{X: 1, Y: 2, W: 3, H: 4}) {
 		t.Fatalf("currentRect = %+v, want {1 2 3 4}", got)
 	}
 
