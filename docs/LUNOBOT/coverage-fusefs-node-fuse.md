@@ -1,9 +1,0 @@
-# Лунобот-2: покрытие `internal/fusefs/node_fuse`
-
-- Claim: кастомная задача «покрыть тестами пакет `internal/fusefs/node_fuse`», часть 1 из 1.
-- Основание выбора: последний доступный отчёт Codecov для `main` `e40b44db248b72deb958a8fe6c70ac6bca31e349`; файл имел 8.89% покрытия (28/315 строк). Более свежий отчёт для быстро меняющегося `main` на момент выбора ещё не был опубликован Codecov.
-- Изменение: добавлен Unix-only `internal/fusefs/node_fuse_test.go` с покрытием преобразований FUSE-атрибутов и errno, `Getattr` для staged-файла, `Readdir`, чтения и освобождения read-handle, writable `Open`/`Write`/`Fsync`/`Flush`/`Release`, `Statfs`, отказов записи и неподдерживаемого `Readlink`.
-- Локально выполнены только `gofmt` и `git diff --check`; Go build/test не запускались согласно `LUNOBOT.md`.
-- Первый hosted CI run `34351074103` на head `ad3ffcd0f49f65618b42bc0dc2b0ec670d4f94cf` выявил, что `main` уже перенёс пакет из `fusefs/` в `internal/fusefs/`: typecheck не находил символы node-адаптера в верхнеуровневом тесте. Тест перемещён в актуальный пакет; новый run будет проверять этот head.
-- Run `34351704874` на head `53d8c79a04531b746da5745b44abf308026d2062` подтвердил исправление пути, но `Vet (linux/arm)` обнаружил compile-time overflow в проверке максимального `int` (`constant 4294967295 overflows int`). Тест переписан на runtime-проверки разрядности; этот run будет заменён новым head после публикации исправления.
-- Run `34352424820` на head `15e7b70c83700b4e8ac8f1210ba1c888882c6936` подтвердил, что `internal/fusefs` тесты собираются и проходят на linux/arm64, но lint нашёл errcheck/gosec/staticcheck в тестовом коде; тот же run также поймал независимый сбой `internal/editor/TestAsyncBuffer_CancellationMidFetch`. Lint-замечания исправлены; editor-сбой оставлен отдельным сигналом текущего main и не маскируется изменением чужого пакета.

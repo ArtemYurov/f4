@@ -5,8 +5,7 @@
 
 ## Незавершённые прогоны
 
-- 09-09-2026 14:25:24 CEST — PR #1060, commit `23cfa25e`, run #3881 ([34350913972](https://github.com/unxed/f4/actions/runs/34350913972)) — queued.
-- 09-09-2026 14:26:33 CEST — PR #1060, commit `902a95c8`, run #3883 ([34350994028](https://github.com/unxed/f4/actions/runs/34350994028)) — pending.
+Нет.
 
 ## Последний проверенный прогон
 
